@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dev-dist/
+*.local
+
+# Captures d'écran ovrsee : régénérées à chaque commit, purge auto côté
+# disque (30j puis 1/semaine) — inutile de les suivre dans git.
+ovrsee/pages/shots/
+
+# Les paquets binaires de public/data/ SONT suivis : un clone doit pouvoir
+# démarrer hors réseau (§12.2). Les régénérer avec `pnpm data:build`.

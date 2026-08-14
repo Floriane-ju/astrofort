@@ -1,0 +1,175 @@
+/* Écran de vérification du Lot 0 : lisible, sans direction visuelle. Le mode nuit du §11
+   viendra au lot 3 et gouvernera la palette réelle. */
+
+:root {
+  color-scheme: dark;
+  --fond: #101014;
+  --texte: #e8e8ea;
+  --attenue: #9a9aa4;
+  --bordure: #2c2c34;
+  --alerte: #d98b5f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--texte);
+  font: 15px/1.5 system-ui, sans-serif;
+}
+
+main {
+  max-width: 70rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1.05rem;
+  margin: 2rem 0 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--bordure);
+}
+
+.champs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--attenue);
+}
+
+input {
+  padding: 0.4rem 0.5rem;
+  background: #17171d;
+  color: var(--texte);
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+  font: inherit;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--bordure);
+  vertical-align: top;
+}
+
+th {
+  color: var(--attenue);
+  font-weight: 500;
+}
+
+.etat {
+  margin: 0.25rem 0;
+  color: var(--attenue);
+  font-size: 0.85rem;
+}
+
+.cause,
+.erreur {
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.75rem;
+  border-left: 3px solid var(--alerte);
+  background: #1a1720;
+  font-size: 0.9rem;
+}
+
+.tracee {
+  border-bottom: 1px solid var(--bordure);
+  padding: 0.35rem 0;
+}
+
+.tracee summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+}
+
+.tracee-valeur {
+  font-variant-numeric: tabular-nums;
+}
+
+.tracee-detail {
+  padding: 0.5rem 0 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: var(--attenue);
+}
+
+.tracee-formule code {
+  color: var(--texte);
+}
+
+.tracee-entrees {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.25rem 1rem;
+  margin: 0.5rem 0;
+}
+
+.tracee-entrees div {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tracee-entrees dt,
+.tracee-entrees dd {
+  margin: 0;
+}
+
+.tracee-constantes {
+  margin: 0.5rem 0;
+  padding-left: 1rem;
+}
+
+.tracee-flags {
+  color: var(--alerte);
+}
+
+.depreciee td {
+  text-decoration: line-through;
+  color: var(--attenue);
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  align-items: center;
+}
+
+button,
+.bouton-fichier {
+  padding: 0.45rem 0.9rem;
+  background: #1f1f28;
+  color: var(--texte);
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.bouton-fichier input {
+  display: none;
+}

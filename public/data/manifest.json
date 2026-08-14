@@ -1,0 +1,29 @@
+[
+  {
+    "nom": "hyg",
+    "version": "1",
+    "nombreEntrees": 83479,
+    "octets": 1001748,
+    "sha256": "01e65d04bbd4961f6dc01029cd969b876ff062f1fe8b80d08fe421c60a03c4b7",
+    "source": "HYG Database CURRENT (v4.1), filtré à magnitude ≤ 9 — https://raw.githubusercontent.com/astronexus/HYG-Database/main/hyg/CURRENT/hygdata_v41.csv",
+    "obligatoire": true
+  },
+  {
+    "nom": "openngc",
+    "version": "1",
+    "nombreEntrees": 12458,
+    "octets": 348824,
+    "sha256": "904c1f5790c8ec822aa204ef6e1107448d445e1c10b69f10aa9028fba99e8a46",
+    "source": "OpenNGC — https://raw.githubusercontent.com/mattiaverga/OpenNGC/master/database_files/NGC.csv",
+    "obligatoire": true
+  },
+  {
+    "nom": "openngc-noms",
+    "version": "1",
+    "nombreEntrees": 12458,
+    "octets": 100225,
+    "sha256": "7f601a240cf571f12d0b29d35f8beca1745353aad52bb93071b3d8704cdf2bb9",
+    "source": "Bloc de chaînes du paquet openngc",
+    "obligatoire": true
+  }
+]
