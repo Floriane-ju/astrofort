@@ -47,6 +47,31 @@
         "tsconfig.json",
         "vite.config.ts"
       ]
+    },
+    {
+      "sha": "a24a4a0",
+      "date": "2026-08-15",
+      "files": [
+        ".gitignore",
+        "src/App.tsx",
+        "src/core/optics.ts",
+        "src/core/site.ts",
+        "src/core/traced.ts",
+        "src/core/tracking.ts",
+        "src/data/equipment.ts",
+        "src/registry/constants.ts",
+        "src/registry/domains.ts",
+        "src/registry/glossaire.ts",
+        "src/ui/Terme.tsx",
+        "src/ui/TracedValue.tsx",
+        "src/ui/styles.css",
+        "tests/contrat-entree.test.tsx",
+        "tests/glossaire.test.ts",
+        "tests/horizon.test.ts",
+        "tests/optics.test.ts",
+        "tests/tracking.test.ts",
+        "vite.config.ts"
+      ]
     }
   ]
 }

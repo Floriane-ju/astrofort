@@ -2,14 +2,14 @@
 {
   "id": "T-0009",
   "titre": "Lot 1 — Contrat d'entrée : profils Lieu, Optique et Suivi",
-  "colonne": "en-cours",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "l",
   "tags": [
     "lot-1"
   ],
   "cree": "2026-08-14",
-  "maj": "2026-08-14",
+  "maj": "2026-08-15",
   "plan": "2026-08-14-plan-initialisation-d-astrofort.md"
 }
 ---
