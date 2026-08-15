@@ -33,11 +33,16 @@ import { SaisieRefuseeError } from './registry/domains.ts'
 import { HorsDomaineSeriesError } from './core/ephem.ts'
 import { MATRICE_DEGRADATION, abonneModeReseau, modeReseauCourant } from './data/degradation.ts'
 import {
+  chargeConstellations,
   chargeEtoiles,
   chargeObjetsCielProfond,
   demarre,
+  gaiaCharge,
   type EtatDemarrage,
 } from './data/bootstrap.ts'
+import { PAQUET_VIDE, type PaquetConstellations } from './data/constellations.ts'
+import type { ProfilCadre } from './core/cadre.ts'
+import { Planetarium } from './ui/Planetarium.tsx'
 import type { ObjetCielProfond } from './data/deepsky.ts'
 import type { Etoile } from './data/catalog.ts'
 import {
@@ -113,6 +118,7 @@ export function App() {
   const [focale, setFocale] = useState(DEFAUT.focale)
   const [ouverture, setOuverture] = useState(DEFAUT.ouverture)
   const [capteurMode, setCapteurMode] = useState<CapteurMode>('FULL_FRAME')
+  const [comparerRecadrage, setComparerRecadrage] = useState(false)
 
   const [suiviActif, setSuiviActif] = useState(false)
   const [qualiteMes, setQualiteMes] = useState<QualiteMiseEnStation>('INCONNUE')
@@ -121,6 +127,8 @@ export function App() {
   const [etat, setEtat] = useState<EtatDemarrage | null>(null)
   const [catalogue, setCatalogue] = useState<readonly ObjetCielProfond[]>([])
   const [etoiles, setEtoiles] = useState<readonly Etoile[]>([])
+  const [constellations, setConstellations] = useState<PaquetConstellations>(PAQUET_VIDE)
+  const [cibleDuCiel, setCibleDuCiel] = useState<ObjetCielProfond | null>(null)
   const [modeNuit, setModeNuit] = useState<EtatModeNuit>(litEtatPersiste)
   const [messagePersistance, setMessagePersistance] = useState<string | null>(null)
   // §12.5 — l'état affiché suit les bascules, il n'est pas figé au démarrage.
@@ -135,6 +143,8 @@ export function App() {
       .then(setCatalogue)
       .then(chargeEtoiles)
       .then(setEtoiles)
+      .then(chargeConstellations)
+      .then(setConstellations)
   }, [])
 
   // §11.1 — le mode nuit reste actif au redémarrage et entre les vues.
@@ -230,6 +240,30 @@ export function App() {
   )
 
   const iso = isoRecommande(BOITIER_REFERENCE)
+
+  /**
+   * §3.5 — profils de cadre superposés. Le second profil matérialise l'effet du recadrage
+   * de capteur, que §5.1 explique en mots : cadre plus serré, échantillonnage inchangé.
+   */
+  const profilsCadre = useMemo((): readonly ProfilCadre[] => {
+    if (!calcul.ok) return []
+    const focaleMm = Number(focale)
+    const ouvertureN = Number(ouverture)
+    const autre: CapteurMode = capteurMode === 'FULL_FRAME' ? 'APSC_CROP' : 'FULL_FRAME'
+    const modes: readonly CapteurMode[] = comparerRecadrage ? [capteurMode, autre] : [capteurMode]
+    const tPoseS = calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value
+    return modes.map((m) => {
+      const capteur = capteurEffectif(BOITIER_REFERENCE, m)
+      const optique = profilOptique({ focaleMm, ouvertureN, ...capteur })
+      return {
+        libelle: `${focaleMm} mm f/${ouvertureN} — ${m === 'FULL_FRAME' ? 'plein format' : 'recadrage APS-C'}`,
+        fovLDeg: optique.fovLDeg.value,
+        fovHDeg: optique.fovHDeg.value,
+        echApx: optique.echApx.value,
+        tPoseS,
+      }
+    })
+  }, [calcul, focale, ouverture, capteurMode, comparerRecadrage])
 
   /**
    * §8.3 — le plan complet. Il n'est calculé qu'une fois les catalogues vérifiés.
@@ -376,6 +410,14 @@ export function App() {
               </select>
             </label>
           </div>
+          <label className="interrupteur">
+            <input
+              type="checkbox"
+              checked={comparerRecadrage}
+              onChange={(e) => setComparerRecadrage(e.target.checked)}
+            />
+            Superposer les deux cadres, plein format et recadrage APS-C (§3.5)
+          </label>
           {calcul.ok && calcul.noteRecadrage !== undefined && (
             <p className="cause">{calcul.noteRecadrage}</p>
           )}
@@ -524,7 +566,20 @@ export function App() {
               />
             </section>
 
+            <Planetarium
+              site={site}
+              etoiles={etoiles}
+              objets={catalogue}
+              constellations={constellations}
+              profils={profilsCadre}
+              mLimOeil={calcul.ciel.mLimOeil.value}
+              gaiaCharge={etat === null ? false : gaiaCharge(etat.catalogues)}
+              modeNuit={modeNuit.actif}
+              surSelectionObjet={setCibleDuCiel}
+            />
+
             <FicheCible
+              objetSelectionne={cibleDuCiel}
               optique={calcul.optique}
               capteurHMm={calcul.capteur.capteurHMm}
               pitchUm={calcul.capteur.pitchUm}

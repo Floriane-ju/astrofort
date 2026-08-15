@@ -1,6 +1,6 @@
 {
   "date": "2026-08-15",
-  "commit": "30c1e1d",
+  "commit": "ef9c66b",
   "pages": [
     {
       "route": "/",
@@ -9,7 +9,7 @@
       "sample": "/",
       "excerpt": "Astrofort — contrat d’entrée\n\nNiveau d’explication : \nDébutant — gloses visibles\nConfirmé — gloses au survol\n\nLieu\nLatitude\nposition nord-sud du site\nLongitude\nposition est-ouest du site\nAltitude du site\nhauteur du lieu d’observation\nDate\nBortle\néchelle de pollution lumineuse\nSQM mesuré\nmesure directe du ciel\nMasque d’horizon\nrelief qui bouche l’horizon\n\n[HYP] Aucune donnée de relief pour ce site ",
       "links": [],
-      "shot": "shots/accueil/2026-08-15-30c1e1d.png",
+      "shot": "shots/accueil/2026-08-15-ef9c66b.png",
       "shotDate": "2026-08-15",
       "shotSize": {
         "width": 1280,

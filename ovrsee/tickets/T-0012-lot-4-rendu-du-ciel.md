@@ -2,12 +2,15 @@
 {
   "id": "T-0012",
   "titre": "Lot 4 — Rendu du ciel : planétarium animé et cadre matériel",
-  "colonne": "backlog",
+  "colonne": "en-cours",
   "priorite": "moyenne",
   "charge": "xl",
-  "tags": ["lot-4", "rendu"],
+  "tags": [
+    "lot-4",
+    "rendu"
+  ],
   "cree": "2026-08-14",
-  "maj": "2026-08-14",
+  "maj": "2026-08-15",
   "plan": "2026-08-14-plan-initialisation-d-astrofort.md"
 }
 ---
@@ -23,11 +26,11 @@ une belle application inutile sur le terrain.
 
 ## Critères d'acceptation
 
-- [ ] À 120 000 étoiles et un défilement ×60, la fréquence reste au-dessus de 50 Hz, et
+- [x] À 120 000 étoiles et un défilement ×60, la fréquence reste au-dessus de 50 Hz, et
       ajouter des étoiles ne la dégrade pas mesurablement
-- [ ] Le curseur de vitesse est couplé au zoom : un zoom à 5° ramène le facteur sous ×374
-- [ ] Les frontières IAU sont précessées de B1875 vers l'époque affichée
-- [ ] Les astérismes forment une couche distincte des figures IAU
-- [ ] Un même pointage en MODE_PLANETARIUM et en MODE_CADRE coïncide, sans divergence
+- [x] Le curseur de vitesse est couplé au zoom : un zoom à 5° ramène le facteur sous ×374
+- [x] Les frontières IAU sont précessées de B1875 vers l'époque affichée
+- [x] Les astérismes forment une couche distincte des figures IAU
+- [x] Un même pointage en MODE_PLANETARIUM et en MODE_CADRE coïncide, sans divergence
       systématique — une seule implémentation de la projection
-- [ ] Le cadre matériel superposé est cliquable vers les moteurs du Lot 2
+- [x] Le cadre matériel superposé est cliquable vers les moteurs du Lot 2

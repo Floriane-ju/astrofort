@@ -154,8 +154,9 @@ export function ModeNuit({ etat, surChangement }: ModeNuitProps) {
         </p>
       )}
       <p className="etat">
-        Aucune animation non sollicitée n’est jouée en mode nuit : le curseur temporel du
-        planétarium se mettra en pause dès qu’il existera, et le signalera.
+        Aucune animation non sollicitée n’est jouée en mode nuit : le défilement du curseur
+        temporel du planétarium est mis en pause, et la vue le signale. Elle reste
+        manipulable — c’est l’animation qui s’arrête, pas la consultation.
       </p>
     </section>
   )

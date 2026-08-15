@@ -362,11 +362,30 @@ button,
   font-weight: 700;
 }
 
+/* §3 — canevas du planétarium. Le fond est peint par le rendu, pas par la feuille de
+   style : c'est lui qui bascule en palette de nuit avec le reste (§11.1). */
+.planetarium {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+  touch-action: none;
+  cursor: grab;
+}
+
+.planetarium:active {
+  cursor: grabbing;
+}
+
 @media print {
   /* §11.2 — le plan est imprimable : ce qui n'est pas le plan ne l'est pas. */
   .actions,
   .niveau,
-  .champs {
+  .champs,
+  .planetarium {
     display: none;
   }
 }

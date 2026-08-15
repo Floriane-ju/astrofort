@@ -1,0 +1,290 @@
+/**
+ * §3.3 — Moteur de rendu unifié.
+ *
+ * UN MOTEUR, TROIS MODES. Le planétarium (§3), la prévisualisation de champ (§9.2) et le
+ * filé (§9.3) passent tous par `projecteur()`. Le mode ne change qu'une chose : la fonction
+ * radiale R(θ). Si ces trois modes divergeaient en deux bases de code, le cadre affiché
+ * dans le planétarium ne correspondrait pas à la prévisualisation — défaut invisible en
+ * développement, fatal sur le terrain.
+ *
+ *   MODE_PLANETARIUM  stéréographique   R = 2·tan(θ/2)   conforme, champ 1° à 180°
+ *   MODE_CADRE        gnomonique        R = tan(θ)       projection d'un objectif rectilinéaire
+ *   MODE_FISHEYE      équidistante      R = θ            objectifs fisheye (§5.1)
+ *
+ * Les deux premiers modes s'écrivent sans une seule fonction transcendante : à partir du
+ * vecteur unitaire (X, Y, Z) exprimé dans le repère de la vue, R/sin(θ) vaut 1/Z en
+ * gnomonique et 2/(1 + Z) en stéréographique. C'est ce qui rend le coût par étoile constant.
+ */
+
+import { K } from '../registry/constants.ts'
+import { DEG, multiplie, transpose, type Mat3, type Vec3 } from './mat3.ts'
+import { trace, type Traced } from './traced.ts'
+
+export type ModeProjection = 'MODE_PLANETARIUM' | 'MODE_CADRE' | 'MODE_FISHEYE'
+
+export interface Vue {
+  readonly mode: ModeProjection
+  /** Champ horizontal, en degrés. */
+  readonly fovDeg: number
+  readonly largeurPx: number
+  readonly hauteurPx: number
+  /** Centre de visée, en coordonnées horizontales du site. */
+  readonly azimutDeg: number
+  readonly hauteurDeg: number
+  /** Roulis de la vue, en degrés. */
+  readonly rotationDeg: number
+}
+
+export interface PointEcran {
+  readonly xPx: number
+  readonly yPx: number
+  /** Distance angulaire au centre de visée, en degrés. */
+  readonly thetaDeg: number
+}
+
+/**
+ * Repère de la vue : x vers la droite de l'écran, y vers le haut, z vers le centre de visée.
+ * Aucune singularité au zénith — l'azimut y tient lieu de roulis, ce qu'il est réellement.
+ */
+export function matriceVue(azimutDeg: number, hauteurDeg: number, rotationDeg: number): Mat3 {
+  const a = azimutDeg * DEG
+  const h = hauteurDeg * DEG
+  const r = rotationDeg * DEG
+  const cosR = Math.cos(r)
+  const sinR = Math.sin(r)
+
+  const droite: Vec3 = { x: -Math.sin(a), y: Math.cos(a), z: 0 }
+  const haut: Vec3 = {
+    x: -Math.sin(h) * Math.cos(a),
+    y: -Math.sin(h) * Math.sin(a),
+    z: Math.cos(h),
+  }
+  const centre: Vec3 = {
+    x: Math.cos(h) * Math.cos(a),
+    y: Math.cos(h) * Math.sin(a),
+    z: Math.sin(h),
+  }
+  return [
+    droite.x * cosR + haut.x * sinR,
+    droite.y * cosR + haut.y * sinR,
+    droite.z * cosR + haut.z * sinR,
+    -droite.x * sinR + haut.x * cosR,
+    -droite.y * sinR + haut.y * cosR,
+    -droite.z * sinR + haut.z * cosR,
+    centre.x,
+    centre.y,
+    centre.z,
+  ]
+}
+
+/** Rayon projeté d'un angle au centre, en unités de projection (θ en radians). */
+export function rayonProjete(mode: ModeProjection, thetaRad: number): number {
+  if (mode === 'MODE_CADRE') return Math.tan(thetaRad)
+  if (mode === 'MODE_FISHEYE') return thetaRad
+  return 2 * Math.tan(thetaRad / 2)
+}
+
+/** Réciproque de `rayonProjete`. Un clic la traverse une fois, jamais une étoile. */
+export function angleProjete(mode: ModeProjection, rayon: number): number {
+  if (mode === 'MODE_CADRE') return Math.atan(rayon)
+  if (mode === 'MODE_FISHEYE') return rayon
+  return 2 * Math.atan(rayon / 2)
+}
+
+/** Échelle pixel : le champ horizontal demandé remplit exactement la largeur du canevas. */
+export function echelleProjection(vue: Vue): number {
+  return vue.largeurPx / 2 / rayonProjete(vue.mode, (vue.fovDeg / 2) * DEG)
+}
+
+export interface Projecteur {
+  readonly vue: Vue
+  /** J2000 équatorial → repère de la vue. Une seule matrice pour toute l'image (§3.1). */
+  readonly matrice: Mat3
+  readonly echelle: number
+  /** `null` quand la direction n'est pas projetable : jamais un point à l'infini. */
+  projette(v: Vec3): PointEcran | null
+  /** Direction J2000 sous un point de l'écran, pour le pointage à la souris. */
+  inverse(xPx: number, yPx: number): Vec3
+}
+
+/**
+ * Compose la matrice de l'image et retourne le projecteur. `matriceCiel` va du repère
+ * équatorial J2000 au repère horizontal du site ; la matrice de vue enchaîne vers l'écran.
+ */
+export function projecteur(vue: Vue, matriceCiel: Mat3): Projecteur {
+  const matrice = multiplie(matriceVue(vue.azimutDeg, vue.hauteurDeg, vue.rotationDeg), matriceCiel)
+  const [m11, m12, m13, m21, m22, m23, m31, m32, m33] = matrice
+  const inverseMatrice = transpose(matrice)
+  const k = echelleProjection(vue)
+  const centreX = vue.largeurPx / 2
+  const centreY = vue.hauteurPx / 2
+  const mode = vue.mode
+
+  return {
+    vue,
+    matrice,
+    echelle: k,
+    projette(v: Vec3): PointEcran | null {
+      const x = m11 * v.x + m12 * v.y + m13 * v.z
+      const y = m21 * v.x + m22 * v.y + m23 * v.z
+      const z = m31 * v.x + m32 * v.y + m33 * v.z
+
+      // Facteur R/sin(θ), écrit sous la forme qui ne divise jamais par zéro dans son
+      // domaine. Hors domaine, la direction n'est pas projetable : on retourne null
+      // plutôt qu'un point à l'infini (§3.3, dernier critère).
+      let facteur: number
+      if (mode === 'MODE_CADRE') {
+        if (z <= Number.EPSILON) return null
+        facteur = 1 / z
+      } else if (mode === 'MODE_PLANETARIUM') {
+        if (1 + z <= Number.EPSILON) return null
+        facteur = 2 / (1 + z)
+      } else {
+        const s = Math.hypot(x, y)
+        if (s <= Number.EPSILON) {
+          return { xPx: centreX, yPx: centreY, thetaDeg: 0 }
+        }
+        facteur = Math.atan2(s, z) / s
+      }
+      return {
+        xPx: centreX + k * facteur * x,
+        yPx: centreY - k * facteur * y,
+        thetaDeg: Math.atan2(Math.hypot(x, y), z) / DEG,
+      }
+    },
+    inverse(xPx: number, yPx: number): Vec3 {
+      const u = (xPx - centreX) / k
+      const v = (centreY - yPx) / k
+      const rayon = Math.hypot(u, v)
+      const theta = angleProjete(mode, rayon)
+      const sin = Math.sin(theta)
+      const vueVec: Vec3 =
+        rayon <= Number.EPSILON
+          ? { x: 0, y: 0, z: 1 }
+          : { x: (sin * u) / rayon, y: (sin * v) / rayon, z: Math.cos(theta) }
+      const [i11, i12, i13, i21, i22, i23, i31, i32, i33] = inverseMatrice
+      return {
+        x: i11 * vueVec.x + i12 * vueVec.y + i13 * vueVec.z,
+        y: i21 * vueVec.x + i22 * vueVec.y + i23 * vueVec.z,
+        z: i31 * vueVec.x + i32 * vueVec.y + i33 * vueVec.z,
+      }
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Profondeur du catalogue asservie au zoom
+// ---------------------------------------------------------------------------
+
+/** §3.3 — mag_limite = mag_base + 5 × log10(fov_ref / fov_courant). */
+export function magnitudeLimite(fovDeg: number): Traced<number> {
+  // Le « 5 » du PRD est le double du coefficient de Pogson : cinq magnitudes pour un
+  // rapport de flux de cent. Il se dérive, il ne s'écrit pas en dur (§2.1).
+  return trace({
+    value:
+      K('MAG_BASE_RENDU') +
+      2 * K('POGSON') * Math.log10(K('FOV_REFERENCE_RENDU_DEG') / fovDeg),
+    formula: 'MAGNITUDE_LIMITE_ZOOM',
+    inputs: { fov_deg: fovDeg },
+    constants: ['MAG_BASE_RENDU', 'FOV_REFERENCE_RENDU_DEG', 'POGSON'],
+  })
+}
+
+/**
+ * Vue réaliste : le fond de ciel local plafonne la profondeur affichée. Le rendu montre
+ * alors le ciel tel qu'il serait vu, non le catalogue complet (§3.3).
+ */
+export function magnitudeRendue(
+  fovDeg: number,
+  mLimOeil: number | null,
+  vueRealiste: boolean,
+): Traced<number> {
+  const zoom = magnitudeLimite(fovDeg)
+  if (!vueRealiste || mLimOeil === null) return zoom
+  return trace({
+    value: Math.min(zoom.value, mLimOeil),
+    formula: 'MAGNITUDE_LIMITE_RENDUE',
+    inputs: { mag_limite_zoom: zoom.value, m_lim_oeil: mLimOeil },
+    note:
+      'Vue réaliste : la magnitude affichée est plafonnée par le fond de ciel du site. ' +
+      'Désactiver la vue réaliste montre le catalogue complet, qui n’est pas ce que l’œil voit.',
+  })
+}
+
+export interface BornesZoom {
+  readonly fovMinDeg: number
+  readonly fovMaxDeg: number
+  /** Renseignée quand le plancher de zoom vient de l'absence du paquet Gaia (§3.3). */
+  readonly cause?: string
+}
+
+/** §3.3 — sans le paquet Gaia, l'application plafonne à 15° de champ et le déclare. */
+export function bornesZoom(gaiaCharge: boolean): BornesZoom {
+  const fovMaxDeg = K('FOV_MAX_DEG')
+  if (gaiaCharge) return { fovMinDeg: K('FOV_MIN_AVEC_GAIA_DEG'), fovMaxDeg }
+  return {
+    fovMinDeg: K('FOV_MIN_SANS_GAIA_DEG'),
+    fovMaxDeg,
+    cause:
+      `Zoom limité à ${K('FOV_MIN_SANS_GAIA_DEG')}° de champ : sans le paquet Gaia, le ` +
+      'catalogue HYG donne environ 48 étoiles sur un champ de 5°, et le ciel paraîtrait vide. ' +
+      'Le paquet Gaia (≈ 12 Mo) descend le zoom utile à ' +
+      `${K('FOV_MIN_AVEC_GAIA_DEG')}°.`,
+  }
+}
+
+export interface EtatProfondeur {
+  readonly magLimite: Traced<number>
+  /** Magnitude la plus faible réellement présente dans le catalogue chargé. */
+  readonly profondeurCatalogue: number
+  readonly catalogueEpuise: boolean
+  readonly cause?: string
+}
+
+/**
+ * §3.3 — `catalogue_epuise` doit être affiché. Sous la borne du catalogue chargé, le semis
+ * génératif de §9.2 complèterait le rendu, TOUJOURS en le déclarant : tant qu'il n'existe
+ * pas, l'application déclare le manque plutôt que d'inventer des étoiles.
+ */
+export function etatProfondeur(
+  fovDeg: number,
+  profondeurCatalogue: number,
+  mLimOeil: number | null,
+  vueRealiste: boolean,
+): EtatProfondeur {
+  const magLimite = magnitudeRendue(fovDeg, mLimOeil, vueRealiste)
+  const epuise = magLimite.value > profondeurCatalogue
+  return {
+    magLimite,
+    profondeurCatalogue,
+    catalogueEpuise: epuise,
+    ...(epuise
+      ? {
+          cause:
+            `À ${fovDeg.toFixed(1)}° de champ, la profondeur utile atteint la magnitude ` +
+            `${magLimite.value.toFixed(1)}, au-delà de la magnitude ${profondeurCatalogue.toFixed(1)} ` +
+            'du catalogue chargé. Les étoiles plus faibles ne sont pas affichées : elles ne ' +
+            'sont pas générées non plus, et le champ paraît donc plus pauvre qu’il ne l’est. ' +
+            'Charger le paquet Gaia (≈ 12 Mo) comble l’écart.',
+        }
+      : {}),
+  }
+}
+
+/** §3.3 — rayon de rendu d'une étoile, modèle commun avec la prévisualisation §9.2. */
+export function rayonEtoilePx(magV: number): number {
+  return (
+    K('RAYON_ETOILE_R0_PX') *
+    K('BASE_MAGNITUDE') ** (-K('COEF_RAYON_MAGNITUDE') * (magV - K('MAG_REFERENCE_RAYON')))
+  )
+}
+
+/** Même modèle, tracé, pour l'explication §10.2. */
+export function traceRayonEtoile(magV: number): Traced<number> {
+  return trace({
+    value: rayonEtoilePx(magV),
+    formula: 'RAYON_ETOILE',
+    inputs: { mag: magV },
+    constants: ['RAYON_ETOILE_R0_PX', 'COEF_RAYON_MAGNITUDE', 'MAG_REFERENCE_RAYON'],
+  })
+}

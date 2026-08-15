@@ -796,6 +796,68 @@ export const GLOSSAIRE = Object.freeze({
     sections: ['11.1'],
   }),
 
+  // §3 — planétarium et rendu du ciel
+  deux_horloges: terme({
+    libelle: 'Pipeline à deux horloges',
+    glose: 'rendu rapide, éphémérides lentes',
+    explication:
+      'L’image est produite soixante fois par seconde, les positions planétaires dix fois ' +
+      'seulement, et l’écart est comblé par interpolation. Les étoiles, elles, ne sont jamais ' +
+      'interpolées : elles sont fixes, seule la matrice de rotation du ciel change. C’est ce ' +
+      'découplage qui rend l’animation fluide, quel que soit le nombre d’étoiles.',
+    consequence:
+      'Ajouter des étoiles au catalogue ne ralentit pas l’animation : le coût suit ce qui est ' +
+      'affiché, pas ce qui est stocké.',
+    sections: ['3.1'],
+  }),
+  vitesse_ecran: terme({
+    libelle: 'Vitesse à l’écran',
+    glose: 'défilement perçu, en pixels/seconde',
+    explication:
+      'La vitesse utile ne se mesure pas en heures par seconde mais en pixels par seconde. ' +
+      'Sous 2 px/s le mouvement est invisible ; au-delà de 600 px/s l’image se replie et le ' +
+      'ciel devient illisible. Entre les deux se trouve la plage lisible.',
+    consequence:
+      'Le temps réel, à 0,13 px/s, ne montre rien : l’animation n’a d’intérêt qu’accélérée.',
+    sections: ['3.2'],
+  }),
+  facteur_vitesse_max: terme({
+    libelle: 'Plafond de défilement',
+    glose: 'vitesse maximale encore lisible',
+    explication:
+      'Le plafond est dérivé de la lisibilité, pas de la puissance de la machine. Il dépend du ' +
+      'zoom : un champ serré grandit l’échelle en pixels par degré, donc abaisse le facteur ' +
+      'admissible. Un réglage fixe serait fluide en vue large et illisible en vue serrée.',
+    consequence:
+      'Zoomer ramène automatiquement le facteur sous le plafond, et l’application le signale.',
+    sections: ['3.2'],
+  }),
+  magnitude_limite_rendue: terme({
+    libelle: 'Profondeur affichée',
+    glose: 'magnitude la plus faible tracée',
+    explication:
+      'La profondeur suit le zoom : un champ deux fois plus serré descend d’environ 1,5 ' +
+      'magnitude. En vue réaliste, elle est en outre plafonnée par le fond de ciel du site — ' +
+      'le rendu montre alors ce que l’œil verrait, non le catalogue complet.',
+    consequence:
+      'Quand la profondeur dépasse celle du catalogue chargé, l’application le déclare plutôt ' +
+      'que de compléter le champ par des étoiles inventées.',
+    sections: ['3.3'],
+  }),
+  precession: terme({
+    libelle: 'Précession',
+    glose: 'lente dérive des coordonnées',
+    explication:
+      'L’axe de la Terre décrit un cône en 26 000 ans : les coordonnées d’un astre changent ' +
+      'de 50,29 secondes d’arc par an, soit un degré tous les 71,6 ans. Les frontières IAU ' +
+      'sont définies dans les coordonnées de 1875 ; sans correction, elles seraient décalées ' +
+      'de plus de deux degrés aujourd’hui.',
+    consequence:
+      'Les positions sont précessées vers l’époque affichée ; ni les magnitudes ni les noms ' +
+      'ne le sont, et les mouvements propres restent ignorés.',
+    sections: ['3.1', '3.4'],
+  }),
+
   ordre_de_grandeur: terme({
     libelle: 'Ordre de grandeur',
     glose: 'valeur approchée, affichée en plage',

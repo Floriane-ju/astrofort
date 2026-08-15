@@ -8,7 +8,7 @@
  * formule et sa constante source.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ficheCadrage, verdictDomaine, type FicheCadrage, type VerdictDomaine } from '../core/framing.ts'
 import { detectabilite, type Detectabilite } from '../core/detectability.ts'
 import {
@@ -61,6 +61,12 @@ const CIBLE_REFERENCE = {
 }
 
 export interface FicheCibleProps {
+  /**
+   * §3.4 — cible ouverte depuis le planétarium. Un clic sur un objet du ciel profond charge
+   * ici son verdict de cadrage, de détectabilité et son plan de capture : le planétarium
+   * n'est pas décoratif, c'est le point d'entrée vers les moteurs.
+   */
+  readonly objetSelectionne?: ObjetCielProfond | null
   readonly optique: ProfilOptique
   readonly capteurHMm: number
   readonly pitchUm: number
@@ -113,9 +119,7 @@ export function FicheCible(props: FicheCibleProps) {
 
   const iso = isoRecommande(props.boitier)
 
-  function choisitDansCatalogue(designationChoisie: string) {
-    const objet = props.catalogue.find((o) => o.designation === designationChoisie)
-    if (objet === undefined) return
+  function appliqueObjet(objet: ObjetCielProfond) {
     setDesignation(objet.designation)
     setTypeObjet(objet.type)
     setMInt(objet.vMag === null ? '' : String(objet.vMag))
@@ -123,6 +127,17 @@ export function FicheCible(props: FicheCibleProps) {
     setBArcmin(objet.minAxArcmin === null ? '' : String(objet.minAxArcmin))
     setPosAngDeg(objet.posAngDeg === null ? '' : String(objet.posAngDeg))
   }
+
+  function choisitDansCatalogue(designationChoisie: string) {
+    const objet = props.catalogue.find((o) => o.designation === designationChoisie)
+    if (objet !== undefined) appliqueObjet(objet)
+  }
+
+  const objetSelectionne = props.objetSelectionne ?? null
+  useEffect(() => {
+    if (objetSelectionne !== null) appliqueObjet(objetSelectionne)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [objetSelectionne])
 
   const calcul = useMemo<{ ok: true; r: Resultat } | { ok: false; erreur: string }>(() => {
     try {

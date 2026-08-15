@@ -11,6 +11,11 @@ import type { IntegritePaquet, ManifestePaquet } from './catalog.ts'
 import { verifieIntegrite } from './catalog.ts'
 import { decodeEtoiles, type Etoile } from './catalog.ts'
 import { decodeObjets, type ObjetCielProfond } from './deepsky.ts'
+import {
+  PAQUET_VIDE,
+  decodeConstellations,
+  type PaquetConstellations,
+} from './constellations.ts'
 import { modeReseauCourant, type ModeReseau } from './degradation.ts'
 import { etatStockage, type EtatStockage } from './persistence.ts'
 
@@ -146,6 +151,26 @@ export const PAQUET_ETOILES = 'hyg'
 export async function chargeEtoiles(): Promise<readonly Etoile[]> {
   const paquet = await litPaquet(PAQUET_ETOILES)
   return paquet === null ? [] : decodeEtoiles(paquet)
+}
+
+export const PAQUET_CONSTELLATIONS = 'constellations'
+
+/**
+ * §3.4 — figures, astérismes et frontières. Un paquet absent laisse le planétarium
+ * afficher les étoiles : les couches de repérage manquent, le ciel reste juste.
+ */
+export async function chargeConstellations(): Promise<PaquetConstellations> {
+  const paquet = await litPaquet(PAQUET_CONSTELLATIONS)
+  return paquet === null ? PAQUET_VIDE : decodeConstellations(paquet)
+}
+
+/** §3.3 — le paquet Gaia est différé : sa présence conditionne le plancher de zoom. */
+export const PAQUET_GAIA = 'gaia'
+
+export function gaiaCharge(catalogues: EtatCatalogues): boolean {
+  return catalogues.paquets.some(
+    (p) => p.manifeste.nom === PAQUET_GAIA && p.integrite === 'OK',
+  )
 }
 
 export interface EtatDemarrage {

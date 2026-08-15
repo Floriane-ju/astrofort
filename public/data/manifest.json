@@ -25,5 +25,14 @@
     "sha256": "7f601a240cf571f12d0b29d35f8beca1745353aad52bb93071b3d8704cdf2bb9",
     "source": "Bloc de chaînes du paquet openngc",
     "obligatoire": true
+  },
+  {
+    "nom": "constellations",
+    "version": "1",
+    "nombreEntrees": 943,
+    "octets": 269604,
+    "sha256": "c0b619801b33ab0b73bd993ca5009cf357a48fcc07b6a9f62bab0e52f7d6f789",
+    "source": "Stellarium, culture « modern » — https://raw.githubusercontent.com/Stellarium/stellarium/master/skycultures/modern/index.json ; frontières IAU de Delporte (B1875)",
+    "obligatoire": true
   }
 ]

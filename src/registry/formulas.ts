@@ -415,6 +415,42 @@ export const FORMULES = Object.freeze({
     unite: 'étoiles/deg²',
     section: '9.2',
   },
+  MAGNITUDE_LIMITE_RENDUE: {
+    expression: 'mag_rendue = min( mag_limite, m_lim_oeil )',
+    unite: 'mag',
+    section: '3.3',
+    note:
+      'Vue réaliste : le fond de ciel local plafonne la profondeur affichée. Le rendu montre ' +
+      'le ciel tel qu’il serait vu, non le catalogue complet.',
+  },
+  PROJECTION_RADIALE: {
+    expression:
+      'R(θ) = 2·tan(θ/2) [stéréographique] · tan(θ) [gnomonique] · θ [équidistante] · ' +
+      'x = k·R·sin(φ), y = −k·R·cos(φ), k = (largeur_px / 2) / R(fov / 2)',
+    unite: 'px',
+    section: '3.3',
+    note:
+      'Une seule implémentation : le mode ne change que la fonction radiale R. Deux bases de ' +
+      'code feraient diverger le cadre du planétarium et la prévisualisation.',
+  },
+  PRECESSION_MATRICE: {
+    expression:
+      'P = R_x(−ε) · R_z(ψ) · R_x(ε), avec ψ = 50,29"/an × (époque − 2000)',
+    unite: '—',
+    section: '3.1',
+    note:
+      'Précession générale autour du pôle de l’écliptique. Ni nutation, ni termes planétaires ' +
+      'du développement IAU 2006 : à l’échelle de lecture d’un planétarium, l’écart reste très ' +
+      'inférieur au pixel sur le domaine des séries.',
+  },
+  INTERPOLATION_CORPS: {
+    expression: 'pos(t) = pos(t₀) + ( pos(t₁) − pos(t₀) ) × (t − t₀) / (t₁ − t₀)',
+    unite: '°',
+    section: '3.1',
+    note:
+      'Interpolation linéaire entre deux échantillons d’éphémérides. Les étoiles ne sont ' +
+      'JAMAIS interpolées : seule la matrice de rotation du ciel change.',
+  },
   VITESSE_ECRAN: {
     expression: 'v_ecran = 15,041 × facteur × px_par_degre / 3600',
     unite: 'px/s',

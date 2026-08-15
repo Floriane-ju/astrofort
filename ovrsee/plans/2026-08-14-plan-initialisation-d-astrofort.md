@@ -106,6 +106,35 @@
         "tests/framing.test.ts",
         "tests/registry.test.ts"
       ]
+    },
+    {
+      "sha": "ef9c66b",
+      "date": "2026-08-15",
+      "files": [
+        "src/App.tsx",
+        "src/core/creneaux.ts",
+        "src/core/moon.ts",
+        "src/core/night.ts",
+        "src/core/plan-texte.ts",
+        "src/core/pointage.ts",
+        "src/core/recommandations.ts",
+        "src/core/session.ts",
+        "src/data/bootstrap.ts",
+        "src/registry/constants.ts",
+        "src/registry/filters.ts",
+        "src/registry/formulas.ts",
+        "src/registry/glossaire.ts",
+        "src/ui/FicheCible.tsx",
+        "src/ui/ModeNuit.tsx",
+        "src/ui/PlanSession.tsx",
+        "src/ui/styles.css",
+        "tests/creneaux.test.ts",
+        "tests/lune.test.ts",
+        "tests/mode-nuit.test.tsx",
+        "tests/plan-session.test.ts",
+        "tests/pointage.test.ts",
+        "tests/recommandations.test.ts"
+      ]
     }
   ]
 }
