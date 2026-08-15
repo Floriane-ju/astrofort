@@ -2,7 +2,7 @@
 {
   "id": "T-0012",
   "titre": "Lot 4 — Rendu du ciel : planétarium animé et cadre matériel",
-  "colonne": "en-cours",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "xl",
   "tags": [

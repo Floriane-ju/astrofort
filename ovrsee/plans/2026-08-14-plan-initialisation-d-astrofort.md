@@ -135,6 +135,42 @@
         "tests/pointage.test.ts",
         "tests/recommandations.test.ts"
       ]
+    },
+    {
+      "sha": "13c2e31",
+      "date": "2026-08-15",
+      "files": [
+        "public/data/constellations-1.bin",
+        "public/data/manifest.json",
+        "scripts/build-catalogs.ts",
+        "src/App.tsx",
+        "src/core/cadre.ts",
+        "src/core/constellations.ts",
+        "src/core/curseur-temps.ts",
+        "src/core/horloges.ts",
+        "src/core/index-ciel.ts",
+        "src/core/labels.ts",
+        "src/core/mat3.ts",
+        "src/core/projection.ts",
+        "src/data/bootstrap.ts",
+        "src/data/constellations.ts",
+        "src/registry/constants.ts",
+        "src/registry/formulas.ts",
+        "src/registry/glossaire.ts",
+        "src/ui/FicheCible.tsx",
+        "src/ui/ModeNuit.tsx",
+        "src/ui/Planetarium.tsx",
+        "src/ui/couleurs.ts",
+        "src/ui/dessine-ciel.ts",
+        "src/ui/styles.css",
+        "tests/cadre.test.ts",
+        "tests/constellations.test.ts",
+        "tests/curseur-temps.test.ts",
+        "tests/dessine-ciel.test.ts",
+        "tests/horloges.test.ts",
+        "tests/index-ciel.test.ts",
+        "tests/projection.test.ts"
+      ]
     }
   ]
 }
