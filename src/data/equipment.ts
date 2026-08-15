@@ -107,6 +107,46 @@ export function pointZeroSysteme(boitier: Boitier | null): PointZeroSysteme {
   }
 }
 
+export interface IsoRetenu {
+  readonly iso: number
+  /** `null` quand la base ne donne pas la courbe : le moteur applique alors son repli. */
+  readonly readNoiseE: number | null
+  readonly message: string
+}
+
+/**
+ * §7.2 — choix de l'ISO par le double gain de conversion.
+ *
+ * Les capteurs à bascule d'amplification voient leur bruit de lecture chuter brutalement
+ * au-delà d'un seuil d'ISO. Or t_opt ∝ RN² : diviser le bruit de lecture par deux divise la
+ * pose optimale par quatre. Au-delà du seuil, le bruit ne baisse plus mais la capacité de
+ * saturation chute proportionnellement — les étoiles brillantes crament pour rien.
+ */
+export function isoRecommande(boitier: Boitier | null): IsoRetenu {
+  if (boitier === null) {
+    return {
+      iso: 0,
+      readNoiseE: null,
+      message:
+        'Aucun boîtier de la base : le bruit de lecture de repli sera appliqué et affiché ' +
+        '[ESTIMÉ], et aucun ISO n’est recommandé.',
+    }
+  }
+  const isos = Object.keys(boitier.readNoiseE)
+    .map(Number)
+    .sort((a, b) => a - b)
+  const seuil = boitier.seuilDoubleGainIso
+  const retenu = isos.find((iso) => iso >= seuil) ?? isos[isos.length - 1] ?? seuil
+  return {
+    iso: retenu,
+    readNoiseE: boitier.readNoiseE[retenu] ?? null,
+    message:
+      `ISO ${retenu} : c’est le premier palier au-dessus du seuil de double gain de ce ` +
+      `boîtier (${seuil}). Monter plus haut ne réduit plus le bruit de lecture et sacrifie ` +
+      'la dynamique.',
+  }
+}
+
 /**
  * Perte de rapport signal sur bruit pour un facteur de pose C effectif (§2.3).
  * Sert à montrer que l'optimum est plat, donc qu'aucune calibration n'est nécessaire.

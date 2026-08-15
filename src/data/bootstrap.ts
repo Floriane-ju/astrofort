@@ -9,6 +9,7 @@
 import { ecritPaquet, litPaquet } from './db.ts'
 import type { IntegritePaquet, ManifestePaquet } from './catalog.ts'
 import { verifieIntegrite } from './catalog.ts'
+import { decodeObjets, type ObjetCielProfond } from './deepsky.ts'
 import { modeReseauCourant, type ModeReseau } from './degradation.ts'
 import { etatStockage, type EtatStockage } from './persistence.ts'
 
@@ -114,6 +115,24 @@ export async function verifieCatalogues(): Promise<EtatCatalogues> {
       : `Catalogues absents ou corrompus (${noms}). Le rechargement a échoué : réessayer, ` +
         'ou régénérer les paquets avec `pnpm data:build`.',
   }
+}
+
+export const PAQUET_OBJETS = 'openngc'
+export const PAQUET_NOMS_OBJETS = 'openngc-noms'
+
+/**
+ * Catalogue d'objets du ciel profond décodé depuis les paquets rangés par `demarre()`.
+ * Retourne une liste vide quand les paquets manquent : la cause est déjà nommée par
+ * `verifieCatalogues()`, et les moteurs §6 et §7 restent utilisables sur une cible saisie
+ * à la main (§12.5).
+ */
+export async function chargeObjetsCielProfond(): Promise<readonly ObjetCielProfond[]> {
+  const [enregistrements, chaines] = await Promise.all([
+    litPaquet(PAQUET_OBJETS),
+    litPaquet(PAQUET_NOMS_OBJETS),
+  ])
+  if (enregistrements === null || chaines === null) return []
+  return decodeObjets({ enregistrements, chaines })
 }
 
 export interface EtatDemarrage {

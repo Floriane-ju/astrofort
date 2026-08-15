@@ -52,6 +52,22 @@ export const FORMULES = Object.freeze({
     unite: '—',
     section: '6.2',
   },
+  FENETRE_CADRAGE: {
+    expression: 'taille_min_deg = FOV_H_deg / 3 · taille_max_deg = FOV_H_deg / 2',
+    unite: '°',
+    section: '6.1',
+    note: 'La contrainte porte sur la PETITE dimension du champ : c’est elle qui limite.',
+  },
+  FOCALE_IDEALE: {
+    expression:
+      'focale_ideale_mm = capteur_H_mm / ( 2 × tan( (taille_objet_deg / remplissage_cible) / 2 ) )',
+    unite: 'mm',
+    section: '6.1',
+    note:
+      'Le PRD écrit « taille / (2 × 0,42) / 2 » et annonce 4 200 mm pour M84 : les deux ne ' +
+      'concordent pas. La focale visant 42 % du champ est retenue, et la plage affichée ' +
+      'couvre toute la fenêtre C-05 — sa borne basse est le 4 200 mm du PRD.',
+  },
 
   // Détectabilité — §6.3
   AIRE_ELLIPSE: {
@@ -79,6 +95,30 @@ export const FORMULES = Object.freeze({
     expression: 'm_lim_instr = m_lim_oeil + gain_mag',
     unite: 'mag',
     section: '6.3',
+  },
+  GROSSISSEMENT: {
+    expression: 'G = D_mm / pupille_oeil_mm',
+    unite: '×',
+    section: '6.3',
+    note:
+      'Grossissement à pupille de sortie pleine, celui du champ le plus riche. C’est le ' +
+      'réglage qui favorise la détection d’un objet étendu.',
+  },
+  TAILLE_APPARENTE: {
+    expression: 'taille_apparente_arcmin = taille_reelle_arcmin × G',
+    unite: "'",
+    section: '6.3',
+    note:
+      'Un instrument n’augmente jamais la brillance de surface : il augmente la taille ' +
+      'apparente, et c’est par elle qu’il abaisse le seuil de contraste.',
+  },
+  SEUIL_CONTRASTE: {
+    expression: 'seuil_ΔSB = table_de_contraste( taille_apparente_arcmin )',
+    unite: 'mag/arcsec²',
+    section: '6.3',
+    note:
+      'Tables Blackwell / Clark embarquées. Au-delà de la plus grande taille tabulée, la ' +
+      'sommation spatiale est complète : le seuil plafonne, il n’est pas extrapolé.',
   },
 
   // Pose et intégration — §7
@@ -121,6 +161,27 @@ export const FORMULES = Object.freeze({
     expression: 'perte_SNR = 1 − √( C / (C + 1) )',
     unite: '—',
     section: '2.3',
+  },
+  PLAGE_UTILE_POSE: {
+    expression: 'plage_utile = [ t_opt / 2 ; t_opt × 2 ]',
+    unite: 's',
+    section: '2.3',
+    note: 'Les trois durées sont équivalentes en pratique : l’optimum de pose est plat.',
+  },
+  VOLUME_STOCKAGE: {
+    expression: 'volume_go = N_poses × taille_raw_mo / 1024',
+    unite: 'Go',
+    section: '7.3',
+  },
+  NOMBRE_NUITS: {
+    expression: 'n_nuits = ceil( T_requis / duree_creneau_disponible )',
+    unite: '—',
+    section: '7.3',
+  },
+  TEMPS_DARKS: {
+    expression: 'temps_darks_min = n_darks × t_pose_s / 60',
+    unite: 'min',
+    section: '7.4',
   },
 
   // Suivi et filé — §5.2, §9

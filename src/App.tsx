@@ -30,11 +30,13 @@ import { BortleHorsTableError } from './registry/bortle.ts'
 import { SaisieRefuseeError } from './registry/domains.ts'
 import { HorsDomaineSeriesError } from './core/ephem.ts'
 import { MATRICE_DEGRADATION, abonneModeReseau, modeReseauCourant } from './data/degradation.ts'
-import { demarre, type EtatDemarrage } from './data/bootstrap.ts'
+import { chargeObjetsCielProfond, demarre, type EtatDemarrage } from './data/bootstrap.ts'
+import type { ObjetCielProfond } from './data/deepsky.ts'
 import {
   BOITIER_REFERENCE,
   capteurEffectif,
   pointZeroSysteme,
+  type CapteurEffectif,
   type CapteurMode,
 } from './data/equipment.ts'
 import {
@@ -45,6 +47,7 @@ import {
 import { REGISTRE } from './registry/constants.ts'
 import type { Traced } from './core/traced.ts'
 import { TracedValue } from './ui/TracedValue.tsx'
+import { FicheCible } from './ui/FicheCible.tsx'
 import { Etiquette, NiveauContext, Terme, type NiveauUtilisateur } from './ui/Terme.tsx'
 
 /** Site et configuration ciel profond de l'Annexe A. */
@@ -71,6 +74,8 @@ type Calcul =
       readonly optique: ProfilOptique
       readonly suivi: ProfilSuivi
       readonly poseNpf: Traced<number | null>
+      readonly capteur: CapteurEffectif
+      readonly ouvertureN: number
       readonly noteRecadrage?: string
     }
   | { readonly ok: false; readonly erreur: string }
@@ -94,12 +99,18 @@ export function App() {
   const [typeMonture, setTypeMonture] = useState<TypeMonture>('TRACKER')
 
   const [etat, setEtat] = useState<EtatDemarrage | null>(null)
+  const [catalogue, setCatalogue] = useState<readonly ObjetCielProfond[]>([])
   const [messagePersistance, setMessagePersistance] = useState<string | null>(null)
   // §12.5 — l'état affiché suit les bascules, il n'est pas figé au démarrage.
   const modeReseau = useSyncExternalStore(abonneModeReseau, modeReseauCourant, () => 'EN_LIGNE')
 
   useEffect(() => {
-    void demarre().then(setEtat)
+    // Le catalogue n'est décodé qu'une fois les paquets vérifiés : un binaire corrompu ne
+    // doit jamais alimenter un verdict (§12.2).
+    void demarre()
+      .then(setEtat)
+      .then(chargeObjetsCielProfond)
+      .then(setCatalogue)
   }, [])
 
   /**
@@ -137,6 +148,8 @@ export function App() {
         // §9.1 — la NPF reste affichée même avec suivi, à titre informatif. Déclinaison 0 :
         // c'est la zone la plus contraignante du ciel, la carte par cellule vient au lot 5.
         poseNpf: npf({ focaleMm, ouvertureN, pitchUm: capteur.pitchUm, decDeg: 0 }),
+        capteur,
+        ouvertureN,
         ...(capteur.noteRecadrage === undefined
           ? {}
           : { noteRecadrage: capteur.noteRecadrage }),
@@ -416,6 +429,20 @@ export function App() {
                 unite="mag"
               />
             </section>
+
+            <FicheCible
+              optique={calcul.optique}
+              capteurHMm={calcul.capteur.capteurHMm}
+              pitchUm={calcul.capteur.pitchUm}
+              ouvertureN={calcul.ouvertureN}
+              boitier={BOITIER_REFERENCE}
+              zeroSysteme={zeroSysteme}
+              sbCiel={calcul.ciel.sbCiel.value}
+              mLimOeil={calcul.ciel.mLimOeil.value}
+              // Sans suivi, c'est la NPF qui plafonne la pose (§9.1) — jamais rien.
+              tMaxS={calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value}
+              catalogue={catalogue}
+            />
           </>
         )}
 

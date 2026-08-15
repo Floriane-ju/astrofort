@@ -71,6 +71,35 @@ export const DOMAINES = Object.freeze({
     section: '5.1',
   }),
 
+  // §6.3, §7.1 — détectabilité et flux
+  m_int: domaine({ champ: 'la magnitude intégrée', min: -2, max: 20, unite: 'mag', section: '6.3' }),
+  sb_ciel: domaine({
+    champ: 'la brillance du fond de ciel',
+    min: 16,
+    max: 22,
+    unite: 'mag/as²',
+    section: '7.1',
+  }),
+  sb_obj: domaine({
+    champ: 'la brillance de surface de l’objet',
+    min: 16,
+    max: 26,
+    unite: 'mag/as²',
+    section: '7.1',
+  }),
+
+  // §7.3 — objectif de qualité
+  snr_cible: domaine({ champ: 'le rapport signal sur bruit visé', min: 5, max: 50, unite: '—', section: '7.3' }),
+
+  // §7.4 — plan de calibration
+  temp_capteur_c: domaine({
+    champ: 'la température du capteur',
+    min: -20,
+    max: 40,
+    unite: '°C',
+    section: '7.4',
+  }),
+
   // §5.2 — profil Suivi
   t_max_suivi_s: domaine({ champ: 'la pose maximale de suivi', min: 1, max: 240, unite: 's', section: '5.2' }),
 

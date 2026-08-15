@@ -1,5 +1,6 @@
 /** §12.2, §12.3 — encodage binaire, fidélité des positions et contrôle d'intégrité. */
 
+import 'fake-indexeddb/auto'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -13,6 +14,12 @@ import {
   type ManifestePaquet,
 } from '../src/data/catalog.ts'
 import { decodeObjets, encodeObjets, type ObjetCielProfond } from '../src/data/deepsky.ts'
+import {
+  chargeObjetsCielProfond,
+  PAQUET_NOMS_OBJETS,
+  PAQUET_OBJETS,
+} from '../src/data/bootstrap.ts'
+import { ecritPaquet } from '../src/data/db.ts'
 
 const RACINE = join(import.meta.dirname, '..')
 const ARCSEC_PAR_DEG = 3600
@@ -163,5 +170,33 @@ describe('paquets générés §12.2', () => {
       ) as ArrayBuffer
       expect(await verifieIntegrite(buffer, paquet), paquet.nom).toBe('OK')
     }
+  })
+})
+
+describe('chargement du catalogue ciel profond §6.1', () => {
+  it('décode les objets rangés par le démarrage, et rend une liste vide sans paquet', async () => {
+    // La fiche de cible tire ses exemples de cette liste : le chemin de bout en bout
+    // — paquet vérifié → IndexedDB → décodage — doit être couvert, pas seulement le codec.
+    expect(await chargeObjetsCielProfond()).toHaveLength(0)
+
+    const lit = async (nom: string): Promise<ArrayBuffer> => {
+      const octets = await readFile(join(RACINE, 'public', 'data', nom))
+      return octets.buffer.slice(
+        octets.byteOffset,
+        octets.byteOffset + octets.byteLength,
+      ) as ArrayBuffer
+    }
+    await ecritPaquet({ nom: PAQUET_OBJETS, version: '1', donnees: await lit('openngc-1.bin') })
+    await ecritPaquet({
+      nom: PAQUET_NOMS_OBJETS,
+      version: '1',
+      donnees: await lit('openngc-noms-1.bin'),
+    })
+
+    const objets = await chargeObjetsCielProfond()
+    expect(objets.length).toBeGreaterThan(10000)
+    const m31 = objets.find((o) => o.designation === 'M31')
+    expect(m31?.majAxArcmin).toBeCloseTo(177.8, 1)
+    expect(m31?.type).toBe('GALAXIE')
   })
 })

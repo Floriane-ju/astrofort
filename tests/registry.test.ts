@@ -17,10 +17,10 @@ const DOSSIER_MOTEURS = join(import.meta.dirname, '..', 'src', 'core')
 
 /**
  * Nombres tolérés dans un moteur : entiers d'indexation et de comparaison, conversions
- * d'unités de temps et d'angle, et les valeurs définitionnelles de la géométrie sphérique.
- * Tout le reste doit venir du registre.
+ * d'unités de temps, d'angle et de pourcentage, et les valeurs définitionnelles de la
+ * géométrie sphérique. Tout le reste doit venir du registre.
  */
-const TRIVIAUX = new Set([0, 1, 2, 3, 24, 60, 90, 180, 360, 1000, 3600, 60000])
+const TRIVIAUX = new Set([0, 1, 2, 3, 24, 60, 90, 100, 180, 360, 1000, 3600, 60000])
 
 function sansCommentairesNiChaines(source: string): string {
   return source

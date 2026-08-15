@@ -351,6 +351,284 @@ export const GLOSSAIRE = Object.freeze({
       'Avec ce type de monture, aucune pose unitaire n’est chiffrée pour le ciel profond.',
     sections: ['5.2'],
   }),
+  // §6.1, §6.2 — cadrage
+  domaine_cadrage: terme({
+    libelle: 'Domaine de cadrage',
+    glose: 'famille d’objets cadrables',
+    explication:
+      'Le domaine dit quelle famille d’objets ce matériel cadre proprement : longue focale, ' +
+      'classique, grand champ ou très grand champ. Il se déduit du champ, sans rien demander ' +
+      'd’autre. C’est le matériel qui choisit les cibles, pas l’inverse.',
+    consequence: 'Chercher hors de son domaine mène à des cibles trop petites ou débordantes.',
+    sections: ['6.1'],
+  }),
+  fenetre_cadrage: terme({
+    libelle: 'Fenêtre de cadrage',
+    glose: 'tailles bien cadrées ici',
+    explication:
+      'Un cadrage propre veut que l’objet occupe du tiers à la moitié de la petite dimension ' +
+      'du champ. La fenêtre traduit cette règle en tailles angulaires réelles pour ce setup. ' +
+      'C’est la contrainte sur la petite dimension qui décide : c’est elle qui limite.',
+    consequence: 'Toute cible hors de cette fenêtre demande une autre focale, pas un recadrage.',
+    sections: ['6.1'],
+  }),
+  remplissage: terme({
+    libelle: 'Remplissage du champ',
+    glose: 'part du champ occupée',
+    explication:
+      'Le remplissage est le rapport entre le grand axe de la cible et la petite dimension du ' +
+      'champ. Au-delà de un, la cible déborde et demande une mosaïque ; très en dessous, elle ' +
+      'se perd dans l’image.',
+    consequence: 'Il classe la cible en six verdicts, de la mosaïque au hors-domaine.',
+    sections: ['6.2'],
+  }),
+  diametre_pixels: terme({
+    libelle: 'Diamètre en pixels',
+    glose: 'taille de l’objet en pixels',
+    explication:
+      'C’est la taille de la cible sur le capteur, en pixels, une fois l’échantillonnage ' +
+      'appliqué. Sous une cinquantaine de pixels, l’objet est un amas de pixels sans détail ' +
+      'exploitable, quelle que soit la durée d’intégration. Recadrer au traitement n’y change ' +
+      'rien : cela n’ajoute aucun pixel.',
+    consequence: 'C’est ce diamètre, pas la magnitude, qui décide si une cible mérite la sortie.',
+    sections: ['6.2'],
+  }),
+  focale_ideale: terme({
+    libelle: 'Focale nécessaire',
+    glose: 'focale pour cadrer proprement',
+    explication:
+      'Quand une cible est trop petite pour ce setup, l’application indique la focale qui la ' +
+      'cadrerait dans la fenêtre visée. La valeur vise le milieu de la fenêtre ; la plage en ' +
+      'couvre les deux bornes.',
+    consequence: 'Elle chiffre l’écart au matériel actuel, au lieu d’annoncer un refus sec.',
+    sections: ['6.1'],
+  }),
+  mosaique: terme({
+    libelle: 'Mosaïque',
+    glose: 'cible débordant du champ',
+    explication:
+      'Une cible qui déborde du champ s’assemble en tuiles se recouvrant partiellement. Le ' +
+      'nombre de tuiles multiplie d’autant le temps total de session, calibration comprise.',
+    consequence: 'Une mosaïque de quatre tuiles demande quatre sessions, pas une session longue.',
+    sections: ['6.2'],
+  }),
+
+  // §6.3 — détectabilité
+  magnitude_integree: terme({
+    libelle: 'Magnitude intégrée',
+    glose: 'éclat total de l’objet',
+    explication:
+      'La magnitude intégrée additionne toute la lumière de l’objet comme s’il était ponctuel. ' +
+      'Pour un objet étendu, elle ment : M33, de magnitude 5,7, est bien plus difficile que ' +
+      'M57, de magnitude 8,8, parce que sa lumière est étalée sur mille fois plus de surface.',
+    consequence: 'Ne jamais juger la visibilité d’un objet étendu sur sa seule magnitude.',
+    sections: ['6.3'],
+  }),
+  brillance_surface: terme({
+    libelle: 'Brillance de surface',
+    glose: 'éclat par seconde d’arc carrée',
+    explication:
+      'La brillance de surface répartit la lumière de l’objet sur sa surface apparente. C’est ' +
+      'elle, et non la magnitude, qui se compare au fond de ciel. Une valeur plus grande ' +
+      'signifie un objet plus faible.',
+    consequence: 'Comparée au fond de ciel, elle décide de tout : visuel, filtre, durée.',
+    sections: ['6.3'],
+  }),
+  contraste_ciel: terme({
+    libelle: 'Contraste sur le fond de ciel',
+    glose: 'écart objet moins ciel',
+    explication:
+      'Le contraste est l’écart entre la brillance du fond de ciel et celle de l’objet. ' +
+      'Positif, l’objet est plus brillant que le ciel par seconde d’arc carrée ; négatif, il ' +
+      'est plus faible, et seule l’intégration le fera sortir.',
+    consequence: 'Un contraste négatif n’interdit pas la photo, il en fixe la durée.',
+    sections: ['6.3'],
+  }),
+  verdict_detectabilite: terme({
+    libelle: 'Verdict de détectabilité',
+    glose: 'œil, jumelles, télescope, photo',
+    explication:
+      'Les quatre verdicts sont évalués dans l’ordre et le premier satisfait gagne. Un ' +
+      'instrument n’augmente jamais la brillance de surface : il agrandit l’objet, et c’est ' +
+      'l’agrandissement qui abaisse le seuil de détection. Photo seulement n’est pas un refus, ' +
+      'c’est une durée d’intégration.',
+    consequence: 'Le verdict dit avec quoi sortir ce soir, pas si la cible est « bonne ».',
+    sections: ['6.3'],
+  }),
+  tolerance_lune: terme({
+    libelle: 'Tolérance à la Lune',
+    glose: 'sensibilité au clair de Lune',
+    explication:
+      'Elle découle du type d’objet. Une nébuleuse en émission tolère la Lune avec un filtre ' +
+      'bi-bande ; une galaxie exige un ciel noir et la Lune couchée, aucun filtre n’y aide. ' +
+      'Une Lune sous l’horizon n’entre pas dans le calcul.',
+    consequence: 'Elle réordonne les cibles d’une nuit selon la phase lunaire, sans en exclure.',
+    sections: ['6.3'],
+  }),
+  magnitude_limite_instrument: terme({
+    libelle: 'Magnitude limite de l’instrument',
+    glose: 'étoile la plus faible atteinte',
+    explication:
+      'Le gain d’un instrument sur l’œil nu ne dépend que du rapport des diamètres collecteurs. ' +
+      'Il déplace la limite sur les objets ponctuels ; sur les objets étendus, il ne fait rien ' +
+      'd’autre qu’agrandir.',
+    consequence: 'Elle tranche pour les étoiles et les amas, jamais seule pour les nébuleuses.',
+    sections: ['6.3'],
+  }),
+
+  // §7 — moteur Pose
+  flux_ciel: terme({
+    libelle: 'Flux du fond de ciel',
+    glose: 'électrons par seconde et pixel',
+    explication:
+      'Le flux du fond de ciel par pixel ne dépend pas du diamètre de l’instrument : il dépend ' +
+      'du rapport d’ouverture et de la taille des pixels. Deux setups de même ouverture et même ' +
+      'pitch collectent le même fond de ciel, quel que soit leur diamètre.',
+    consequence: 'C’est lui qui fixe la pose optimale : plus il est fort, plus la pose est courte.',
+    sections: ['7.1'],
+  }),
+  flux_objet: terme({
+    libelle: 'Flux de l’objet',
+    glose: 'signal utile par pixel',
+    explication:
+      'Même conversion que pour le fond de ciel, appliquée à la brillance de surface de la ' +
+      'cible. C’est le signal utile, celui dont dépend directement la durée totale requise.',
+    consequence: 'Diviser ce flux par deux quadruple le temps nécessaire à qualité égale.',
+    sections: ['7.1'],
+  }),
+  pose_unitaire: terme({
+    libelle: 'Pose unitaire',
+    glose: 'durée d’une image',
+    explication:
+      'La pose unitaire noie le bruit de lecture sous le bruit de photons du ciel. Elle est ' +
+      'plafonnée par ce que la monture sait suivre. Un ciel plus sombre exige des poses PLUS ' +
+      'LONGUES, pas plus courtes : c’est l’inverse de l’intuition.',
+    consequence: 'C’est la réponse chiffrée au « je pose combien de secondes » du débutant.',
+    sections: ['7.2'],
+  }),
+  plage_utile: terme({
+    libelle: 'Plage utile de pose',
+    glose: 'durées équivalentes en pratique',
+    explication:
+      'L’optimum de pose est plat : de la moitié au double de la valeur retenue, le résultat est ' +
+      'équivalent. C’est cette platitude qui rend toute calibration du matériel inutile — et il ' +
+      'n’en existe aucune dans l’application.',
+    consequence: 'Choisir la durée d’obturateur la plus pratique dans la plage ne coûte rien.',
+    sections: ['2.3', '7.2'],
+  }),
+  regime_pose: terme({
+    libelle: 'Régime de pose',
+    glose: 'physique ou monture limitante',
+    explication:
+      'En régime nominal, la physique décide et poser plus longtemps n’apporte rien. En régime ' +
+      'limité par le suivi, c’est la monture qui bride : le bruit de lecture domine, et la perte ' +
+      'de rapport signal sur bruit est chiffrée.',
+    consequence: 'En régime bridé, soigner la mise en station rapporte plus que tout achat.',
+    sections: ['7.2'],
+  }),
+  iso_recommande: terme({
+    libelle: 'ISO recommandé',
+    glose: 'palier du double gain',
+    explication:
+      'Les capteurs à double gain de conversion voient leur bruit de lecture chuter d’un coup ' +
+      'au-delà d’un seuil d’ISO. Comme la pose optimale varie comme le carré de ce bruit, ' +
+      'franchir le seuil divise la pose par plusieurs. Monter au-delà ne gagne plus rien et ' +
+      'sacrifie la dynamique.',
+    consequence: 'Régler l’ISO sur ce palier, une fois pour toutes, et ne plus y toucher.',
+    sections: ['7.2'],
+  }),
+  snr_cible: terme({
+    libelle: 'Qualité visée',
+    glose: 'rapport signal sur bruit voulu',
+    explication:
+      'La qualité visée se choisit avant de calculer une durée : aperçu, correct, bon ou ' +
+      'excellent. Le rapport signal sur bruit croît comme la racine du temps, donc doubler la ' +
+      'qualité quadruple la durée.',
+    consequence: 'Viser « correct » puis rallonger une autre nuit coûte moins qu’un abandon.',
+    sections: ['7.3'],
+  }),
+  integration_totale: terme({
+    libelle: 'Intégration totale',
+    glose: 'durée cumulée sur la cible',
+    explication:
+      'C’est le temps cumulé de toutes les poses sur une cible, pour atteindre la qualité visée. ' +
+      'Il se répartit sur autant de nuits que nécessaire, la seule contrainte étant de garder ' +
+      'des darks à température comparable.',
+    consequence: 'Elle dit si la cible tient dans une nuit, ou s’il faut planifier une série.',
+    sections: ['7.3'],
+  }),
+  nombre_poses: terme({
+    libelle: 'Nombre de poses',
+    glose: 'combien d’images empiler',
+    explication:
+      'Le nombre de poses est l’intégration totale divisée par la pose unitaire, arrondi au ' +
+      'supérieur. C’est aussi lui qui fixe le volume de carte mémoire à emporter.',
+    consequence: 'Il se vérifie avant la sortie : une carte pleine à trois heures du matin est perdue.',
+    sections: ['7.3'],
+  }),
+  volume_stockage: terme({
+    libelle: 'Volume de stockage',
+    glose: 'place occupée sur la carte',
+    explication:
+      'Le volume est le nombre de poses multiplié par la taille d’un fichier brut. Une seule ' +
+      'cible exigeante peut saturer une carte de 32 Go, et une session de trois cibles y arrive ' +
+      'presque toujours.',
+    consequence: 'C’est une contrainte bloquante en pratique, annoncée avant la sortie.',
+    sections: ['7.3'],
+  }),
+  nombre_nuits: terme({
+    libelle: 'Nombre de nuits',
+    glose: 'sessions nécessaires à la cible',
+    explication:
+      'Quand l’intégration dépasse le créneau exploitable d’une nuit, la capture se répartit ' +
+      'sur plusieurs sorties. L’empilement multi-nuits impose alors des darks pris à ' +
+      'température comparable.',
+    consequence: 'Il transforme une cible « impossible » en une série de sessions ordinaires.',
+    sections: ['7.3'],
+  }),
+  plan_calibration: terme({
+    libelle: 'Plan de calibration',
+    glose: 'images de correction à prendre',
+    explication:
+      'Offsets, darks et flats corrigent trois défauts différents du capteur et de l’optique. ' +
+      'L’ordre d’importance affiché n’est pas alphabétique : à grande ouverture, les flats ' +
+      'passent avant tout, car le vignettage atteint un à deux diaphragmes dans les coins.',
+    consequence: 'C’est l’étape oubliée qui ruine le plus de sessions, budget de temps compris.',
+    sections: ['7.4'],
+  }),
+  dithering: terme({
+    libelle: 'Dithering',
+    glose: 'décalage aléatoire entre poses',
+    explication:
+      'Le dithering décale l’image de quelques pixels entre les poses. Il supprime le bruit à ' +
+      'motif fixe et les colonnes chaudes que les darks laissent passer. Sans autoguidage, la ' +
+      'dérive naturelle du suivi le fournit gratuitement.',
+    consequence: 'Il coûte zéro minute de session et rattrape ce qu’aucun dark ne corrige.',
+    sections: ['7.4'],
+  }),
+
+  // §10.2 — explication de verdict
+  facteur_dominant: terme({
+    libelle: 'Facteur dominant',
+    glose: 'variable qui décide du verdict',
+    explication:
+      'Le facteur dominant est calculé, pas rédigé : c’est la variable dont une petite ' +
+      'variation change le plus le résultat. Deux variables de sensibilité voisine sont ' +
+      'présentées ensemble plutôt que départagées arbitrairement.',
+    consequence: 'Il désigne où agir en premier, et rend l’explication impossible à diverger du calcul.',
+    sections: ['10.2'],
+  }),
+  levier: terme({
+    libelle: 'Levier',
+    glose: 'action qui déplace le verdict',
+    explication:
+      'Les leviers sont classés par coût croissant : changer de cible, attendre un meilleur ' +
+      'créneau, gagner un site plus sombre, intégrer plus longtemps, et seulement ensuite un ' +
+      'achat. L’application ne recommande jamais un achat en premier.',
+    consequence: 'Le premier levier proposé est toujours gratuit ou presque.',
+    sections: ['10.2'],
+  }),
+
   ordre_de_grandeur: terme({
     libelle: 'Ordre de grandeur',
     glose: 'valeur approchée, affichée en plage',
