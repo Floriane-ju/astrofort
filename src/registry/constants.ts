@@ -144,6 +144,16 @@ const EXACTES = {
     ordreDeGrandeur: false,
     sections: ['8.1'],
   }),
+  HAUTEUR_CREPUSCULE_NAUTIQUE_DEG: entree({
+    ref: 'A-CRN',
+    libelle: 'Hauteur du Soleil définissant le crépuscule nautique',
+    valeur: -12,
+    unite: '°',
+    source: 'définition du crépuscule nautique',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.1'],
+  }),
   POGSON: entree({
     ref: 'A-POG',
     libelle: 'Coefficient de l’échelle de Pogson',
@@ -565,6 +575,334 @@ const CONVENTIONNELLES = {
 } as const
 
 /**
+ * §8.1 — Modèle de brillance lunaire de Krisciunas & Schaefer (1991).
+ *
+ * Les coefficients viennent de la publication, telle que le PRD la cite. Ils sont ici
+ * plutôt qu'en dur dans le moteur pour la même raison que le reste du registre : une
+ * constante recopiée dans un moteur devient invérifiable.
+ */
+const LUNE = {
+  KS_MAGNITUDE_LUNE_PLEINE: entree({
+    ref: 'L-01',
+    libelle: 'Magnitude de la Lune à l’opposition, modèle KS91',
+    valeur: 3.84,
+    unite: 'mag',
+    source: 'Krisciunas & Schaefer (1991), I*(α) = 10^(−0,4 × (3,84 + 0,026 |α| + 4e−9 α⁴))',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.1'],
+  }),
+  KS_COEF_PHASE: entree({
+    ref: 'L-01',
+    libelle: 'Coefficient linéaire de l’angle de phase, modèle KS91',
+    valeur: 0.026,
+    unite: 'mag/°',
+    source: 'Krisciunas & Schaefer (1991)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.1'],
+  }),
+  KS_COEF_PHASE_4: entree({
+    ref: 'L-01',
+    libelle: 'Coefficient quartique de l’angle de phase, modèle KS91',
+    valeur: 4e-9,
+    unite: 'mag/°⁴',
+    source: 'Krisciunas & Schaefer (1991)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.1'],
+  }),
+  KS_RAYLEIGH_LOG: entree({
+    ref: 'L-02',
+    libelle: 'Amplitude de la diffusion de Rayleigh, en log₁₀',
+    valeur: 5.36,
+    unite: '—',
+    source: 'Krisciunas & Schaefer (1991), f(ρ) = 10^5,36 × (1,06 + cos²ρ) + 10^(6,15 − ρ/40)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.1'],
+  }),
+  KS_RAYLEIGH_CONSTANTE: entree({
+    ref: 'L-02',
+    libelle: 'Terme constant de la diffusion de Rayleigh',
+    valeur: 1.06,
+    unite: '—',
+    source: 'Krisciunas & Schaefer (1991)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.1'],
+  }),
+  KS_MIE_LOG: entree({
+    ref: 'L-02',
+    libelle: 'Amplitude de la diffusion de Mie, en log₁₀',
+    valeur: 6.15,
+    unite: '—',
+    source: 'Krisciunas & Schaefer (1991)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.1'],
+  }),
+  KS_MIE_ECHELLE_DEG: entree({
+    ref: 'L-02',
+    libelle: 'Échelle angulaire de la diffusion de Mie',
+    valeur: 40,
+    unite: '°',
+    source: 'Krisciunas & Schaefer (1991)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.1'],
+  }),
+  KS_MASSE_AIR_COEF: entree({
+    ref: 'L-03',
+    libelle: 'Coefficient de la masse d’air de Krisciunas & Schaefer',
+    valeur: 0.96,
+    unite: '—',
+    source: 'Krisciunas & Schaefer (1991), X(Z) = (1 − 0,96 sin²Z)^(−1/2)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.1'],
+  }),
+  EXTINCTION_V_MAG_PAR_MASSE_AIR: entree({
+    ref: 'L-04',
+    libelle: 'Coefficient d’extinction atmosphérique en bande V',
+    valeur: 0.172,
+    unite: 'mag/masse d’air',
+    source: 'valeur de site de montagne retenue par Krisciunas & Schaefer (1991)',
+    tolerance: 'ordre de grandeur — 0,15 à 0,30 selon la transparence du soir',
+    ordreDeGrandeur: true,
+    sections: ['8.1'],
+  }),
+  NANOLAMBERT_ECHELLE: entree({
+    ref: 'L-05',
+    libelle: 'Échelle de conversion brillance de surface → nanolamberts',
+    valeur: 34.08,
+    unite: 'nL',
+    source: 'Garstang, via Krisciunas & Schaefer (1991) : B = 34,08 × exp(20,7233 − 0,92104 V)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.1'],
+  }),
+  NANOLAMBERT_OFFSET: entree({
+    ref: 'L-05',
+    libelle: 'Terme constant de la conversion en nanolamberts',
+    valeur: 20.7233,
+    unite: '—',
+    source: 'Garstang, via Krisciunas & Schaefer (1991)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.1'],
+  }),
+  NANOLAMBERT_PENTE: entree({
+    ref: 'L-05',
+    libelle: 'Pente de la conversion en nanolamberts',
+    valeur: 0.92104,
+    unite: '1/mag',
+    source: 'Garstang, via Krisciunas & Schaefer (1991)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.1'],
+  }),
+  PENALITE_SB_CREPUSCULE_NAUTIQUE_MAG: entree({
+    ref: 'C-18',
+    libelle: 'Pénalité de fond de ciel du crépuscule nautique',
+    valeur: 1.0,
+    unite: 'mag/arcsec²',
+    source:
+      '§8.1 — mode dégradé quand la nuit astronomique est nulle : la fenêtre nautique est ' +
+      'retenue et sa pénalité de fond de ciel est chiffrée plutôt que passée sous silence',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
+    sections: ['8.1'],
+  }),
+} as const
+
+/** §8.3 — plan de session ordonné : budget de nuit et scoring. */
+const PLANIFICATION = {
+  TEMPS_MISE_EN_STATION_MIN: entree({
+    ref: 'C-19',
+    libelle: 'Temps de mise en station',
+    valeur: 15,
+    unite: 'min',
+    source: '§8.3 — « temps_mise_en_station ≈ 15 min »',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
+    sections: ['8.3'],
+  }),
+  TEMPS_POINTAGE_PAR_CIBLE_MIN: entree({
+    ref: 'C-19',
+    libelle: 'Temps de pointage par cible, sans GoTo',
+    valeur: 10,
+    unite: 'min',
+    source: '§8.3 et §8.4 — cheminement ou carte directe, recadrage et vérification compris',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
+    sections: ['8.3', '8.4'],
+  }),
+  TOLERANCE_LUNE_DELTA_SB_MAG: entree({
+    ref: 'C-15',
+    libelle: 'Dégradation lunaire annulant le score de Lune',
+    valeur: 3.0,
+    unite: 'mag/arcsec²',
+    source: '§8.3 — S_lune = 1 − ΔSB_lune / 3,0, borné à [0 ; 1]',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.3'],
+  }),
+  ETENDUE_SCORE_HAUTEUR_DEG: entree({
+    ref: 'C-15',
+    libelle: 'Étendue de hauteur au-dessus du seuil saturant le score',
+    valeur: 40,
+    unite: '°',
+    source: '§8.3 — S_hauteur = min(1, (alt_culmination − 30) / 40)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.3'],
+  }),
+  CIBLES_MAX_DEBUTANT: entree({
+    ref: 'C-20',
+    libelle: 'Nombre de cibles maximal au niveau débutant',
+    valeur: 2,
+    unite: '—',
+    source: '§8.3 — « limité à deux cibles au maximum, avec marge de temps élargie »',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.3'],
+  }),
+  CIBLES_CANDIDATES_MAX: entree({
+    ref: 'C-20',
+    libelle: 'Nombre de candidates soumises au calcul de créneau',
+    valeur: 40,
+    unite: '—',
+    source:
+      '§8.3 — borne de calcul : les candidates les plus brillantes du pré-filtrage dur sont ' +
+      'seules soumises au calcul d’éphéméride, qui est le poste coûteux',
+    tolerance: 'convention produit',
+    ordreDeGrandeur: false,
+    sections: ['8.3'],
+  }),
+  MARGE_NUIT_DEBUTANT: entree({
+    ref: 'C-20',
+    libelle: 'Part de la nuit réservée en marge au niveau débutant',
+    valeur: 0.2,
+    unite: '—',
+    source: '§8.3 — marge de temps élargie pour un débutant',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
+    sections: ['8.3'],
+  }),
+} as const
+
+/** §8.4 — cheminement d'étoiles et carte de pointage. */
+const POINTAGE = {
+  FOV_SEUIL_CARTE_DIRECTE_DEG: entree({
+    ref: 'C-21',
+    libelle: 'Champ au-delà duquel la carte directe remplace le cheminement',
+    valeur: 8,
+    unite: '°',
+    source: '§8.4 — au-delà, le cadre contient toujours plusieurs étoiles brillantes',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.4'],
+  }),
+  MAG_ANCRAGE_PRINCIPAL_MAX: entree({
+    ref: 'C-21',
+    libelle: 'Magnitude maximale de l’ancrage principal',
+    valeur: 4.5,
+    unite: 'mag',
+    source: '§8.4 — fiabilité en ciel dégradé',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.4'],
+  }),
+  MAG_DEPART_CHEMINEMENT_MAX: entree({
+    ref: 'C-21',
+    libelle: 'Magnitude maximale de l’étoile de départ d’un cheminement',
+    valeur: 3.5,
+    unite: 'mag',
+    source: '§8.4 — le point de départ doit être identifiable à l’œil nu sans hésitation',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.4'],
+  }),
+  MAG_SAUT_MAX: entree({
+    ref: 'C-21',
+    libelle: 'Magnitude maximale d’une étoile de saut',
+    valeur: 6.5,
+    unite: 'mag',
+    source: '§8.4 — visible dans un chercheur',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.4'],
+  }),
+  RECOUVREMENT_SAUT: entree({
+    ref: 'C-21',
+    libelle: 'Fraction du champ de chercheur admise pour un saut',
+    valeur: 0.7,
+    unite: '—',
+    source: '§8.4 — distance ≤ 0,7 × FOV_chercheur, recouvrement garanti',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.4'],
+  }),
+  SAUTS_MAX: entree({
+    ref: 'C-21',
+    libelle: 'Nombre maximal de sauts d’un cheminement',
+    valeur: 5,
+    unite: '—',
+    source: '§8.4 — au-delà, l’app propose la contrainte à relâcher plutôt qu’un itinéraire',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['8.4'],
+  }),
+} as const
+
+/** §7.5, §10.3 — conseil filtre chiffré, et §11.1 — mode nuit. */
+const TERRAIN = {
+  LARGEUR_BANDE_LARGE_NM: entree({
+    ref: 'C-22',
+    libelle: 'Largeur de bande de référence en large bande',
+    valeur: 300,
+    unite: 'nm',
+    source:
+      '§7.5 — fenêtre visible utile d’un capteur sans filtre, base du rapport de fond de ciel ' +
+      'transmis par une bande étroite',
+    tolerance: 'ordre de grandeur — dépend de la courbe du filtre infrarouge du boîtier',
+    ordreDeGrandeur: true,
+    sections: ['7.5', '10.3'],
+  }),
+  BORTLE_SEUIL_CONSEIL_FILTRE: entree({
+    ref: 'C-22',
+    libelle: 'Classe Bortle à partir de laquelle le conseil filtre se déclenche',
+    valeur: 5,
+    unite: '—',
+    source: '§7.5 — déclenchement si SB dégradé par la Lune OU bortle ≥ 5',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['7.5', '10.3'],
+  }),
+  TUILES_SEUIL_FOCALE_COURTE: entree({
+    ref: 'C-22',
+    libelle: 'Nombre de tuiles au-delà duquel une focale plus courte est recommandée',
+    valeur: 4,
+    unite: '—',
+    source: '§10.3 — « focale plus courte si MOSAIQUE_REQUISE et n_tuiles > 4 »',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['10.3'],
+  }),
+  LUMINANCE_PLANCHER_MODE_NUIT: entree({
+    ref: 'C-23',
+    libelle: 'Plancher du facteur de luminance du mode nuit',
+    valeur: 0.02,
+    unite: '—',
+    source: '§11.1 — « réglable jusqu’à un plancher de ≈ 2 % de la luminance nominale »',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
+    sections: ['11.1'],
+  }),
+} as const
+
+/**
  * Domaine de validité des séries analytiques (§12.4). Hors de ces bornes, les corps du
  * système solaire sont masqués avec la cause nommée, jamais extrapolés en silence.
  */
@@ -595,6 +933,10 @@ const DOMAINE = {
 export const REGISTRE = Object.freeze({
   ...EXACTES,
   ...CONVENTIONNELLES,
+  ...LUNE,
+  ...PLANIFICATION,
+  ...POINTAGE,
+  ...TERRAIN,
   ...DOMAINE,
 })
 

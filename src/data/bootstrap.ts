@@ -9,6 +9,7 @@
 import { ecritPaquet, litPaquet } from './db.ts'
 import type { IntegritePaquet, ManifestePaquet } from './catalog.ts'
 import { verifieIntegrite } from './catalog.ts'
+import { decodeEtoiles, type Etoile } from './catalog.ts'
 import { decodeObjets, type ObjetCielProfond } from './deepsky.ts'
 import { modeReseauCourant, type ModeReseau } from './degradation.ts'
 import { etatStockage, type EtatStockage } from './persistence.ts'
@@ -133,6 +134,18 @@ export async function chargeObjetsCielProfond(): Promise<readonly ObjetCielProfo
   ])
   if (enregistrements === null || chaines === null) return []
   return decodeObjets({ enregistrements, chaines })
+}
+
+export const PAQUET_ETOILES = 'hyg'
+
+/**
+ * Catalogue d'étoiles décodé depuis le paquet HYG. Il sert au cheminement et à la carte de
+ * pointage (§8.4) ; la liste est vide quand le paquet manque, et l'absence est déjà nommée
+ * par `verifieCatalogues()`.
+ */
+export async function chargeEtoiles(): Promise<readonly Etoile[]> {
+  const paquet = await litPaquet(PAQUET_ETOILES)
+  return paquet === null ? [] : decodeEtoiles(paquet)
 }
 
 export interface EtatDemarrage {

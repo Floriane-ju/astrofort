@@ -38,6 +38,20 @@ export interface FenetreNocturne {
   readonly finNuitAstronomique: Date | null
   readonly milieuNuitVrai: Date | null
   readonly dureeNuitH: number
+  /** Crépuscule nautique (−12°) : repli de planification quand la nuit noire est nulle. */
+  readonly debutNautique: Date | null
+  readonly finNautique: Date | null
+  /**
+   * Fenêtre effectivement retenue pour la planification : la nuit astronomique, ou la
+   * fenêtre nautique en mode dégradé (§8.1). Jamais une durée négative.
+   */
+  readonly debutReference: Date | null
+  readonly finReference: Date | null
+  readonly dureeReferenceH: number
+  /** Vrai quand la nuit astronomique est nulle et que la fenêtre nautique la remplace. */
+  readonly modeDegrade: boolean
+  /** Pénalité de fond de ciel appliquée et affichée en mode dégradé, mag/arcsec². */
+  readonly penaliteSbMag: number
   /** Phrase adressée à l'utilisateur quand la nuit est dégradée ou absente. */
   readonly cause?: string
 }
@@ -75,6 +89,22 @@ function dureeHeures(debut: Date, fin: Date): number {
  * Fenêtre nocturne à partir d'un instant de départ — typiquement l'après-midi du jour
  * d'observation. Aucun appel réseau (§12.4).
  */
+/** Intervalle pendant lequel le Soleil reste sous une hauteur donnée. */
+function fenetreSousHauteur(
+  obs: ReturnType<typeof observateur>,
+  depart: Date,
+  hauteurDeg: number,
+): { readonly debut: Date | null; readonly fin: Date | null } {
+  const debut = versDate(
+    SearchAltitude(Body.Sun, obs, DESCENTE, depart, JOURS_DE_RECHERCHE, hauteurDeg),
+  )
+  const fin =
+    debut === null
+      ? null
+      : versDate(SearchAltitude(Body.Sun, obs, MONTEE, debut, JOURS_DE_RECHERCHE, hauteurDeg))
+  return { debut, fin }
+}
+
 export function fenetreNocturne(site: Site, depart: Date): FenetreNocturne {
   verifieDomaineDesSeries(depart)
   const obs = observateur(site)
@@ -96,37 +126,30 @@ export function fenetreNocturne(site: Site, depart: Date): FenetreNocturne {
       finNuitAstronomique: null,
       milieuNuitVrai: null,
       dureeNuitH: 0,
+      debutNautique: null,
+      finNautique: null,
+      debutReference: null,
+      finReference: null,
+      dureeReferenceH: 0,
+      modeDegrade: false,
+      penaliteSbMag: 0,
       cause:
         `À la latitude ${site.latitudeDeg}°, le Soleil ne franchit pas l'horizon à cette ` +
         `date (${soleilCirculaire}). Aucune fenêtre nocturne n'est produite.`,
     }
   }
 
-  const debut = versDate(
-    SearchAltitude(
-      Body.Sun,
-      obs,
-      DESCENTE,
-      coucherSoleil,
-      JOURS_DE_RECHERCHE,
-      K('HAUTEUR_CREPUSCULE_ASTRONOMIQUE_DEG'),
-    ),
+  const nautique = fenetreSousHauteur(obs, coucherSoleil, K('HAUTEUR_CREPUSCULE_NAUTIQUE_DEG'))
+  const { debut, fin } = fenetreSousHauteur(
+    obs,
+    coucherSoleil,
+    K('HAUTEUR_CREPUSCULE_ASTRONOMIQUE_DEG'),
   )
-  const fin =
-    debut === null
-      ? null
-      : versDate(
-          SearchAltitude(
-            Body.Sun,
-            obs,
-            MONTEE,
-            debut,
-            JOURS_DE_RECHERCHE,
-            K('HAUTEUR_CREPUSCULE_ASTRONOMIQUE_DEG'),
-          ),
-        )
 
   if (debut === null || fin === null) {
+    // §8.1 — nuit noire nulle : la fenêtre nautique est retenue en mode dégradé, avec sa
+    // pénalité de fond de ciel chiffrée. Jamais une durée négative, jamais un plantage.
+    const degrade = nautique.debut !== null && nautique.fin !== null
     return {
       etat: 'PAS_DE_NUIT_ASTRONOMIQUE',
       coucherSoleil,
@@ -135,10 +158,23 @@ export function fenetreNocturne(site: Site, depart: Date): FenetreNocturne {
       finNuitAstronomique: null,
       milieuNuitVrai: milieu(coucherSoleil, leverSoleil),
       dureeNuitH: 0,
+      debutNautique: nautique.debut,
+      finNautique: nautique.fin,
+      debutReference: nautique.debut,
+      finReference: nautique.fin,
+      dureeReferenceH: degrade ? dureeHeures(nautique.debut!, nautique.fin!) : 0,
+      modeDegrade: degrade,
+      penaliteSbMag: degrade ? K('PENALITE_SB_CREPUSCULE_NAUTIQUE_MAG') : 0,
       cause:
         `À la latitude ${site.latitudeDeg}°, le Soleil ne descend pas sous ` +
         `${K('HAUTEUR_CREPUSCULE_ASTRONOMIQUE_DEG')}° à cette date : la nuit astronomique est ` +
-        'nulle. Le crépuscule nautique reste exploitable pour les cibles les plus brillantes.',
+        'nulle, sans que cela produise une durée négative. ' +
+        (degrade
+          ? `La fenêtre nautique (${K('HAUTEUR_CREPUSCULE_NAUTIQUE_DEG')}°) est retenue en mode ` +
+            `dégradé, avec une pénalité de fond de ciel de ` +
+            `${K('PENALITE_SB_CREPUSCULE_NAUTIQUE_MAG')} mag/arcsec² appliquée et affichée.`
+          : 'Le Soleil ne descend pas non plus sous le crépuscule nautique : aucune fenêtre ' +
+            'exploitable cette nuit-là.'),
     }
   }
 
@@ -150,5 +186,12 @@ export function fenetreNocturne(site: Site, depart: Date): FenetreNocturne {
     finNuitAstronomique: fin,
     milieuNuitVrai: milieu(debut, fin),
     dureeNuitH: dureeHeures(debut, fin),
+    debutNautique: nautique.debut,
+    finNautique: nautique.fin,
+    debutReference: debut,
+    finReference: fin,
+    dureeReferenceH: dureeHeures(debut, fin),
+    modeDegrade: false,
+    penaliteSbMag: 0,
   }
 }

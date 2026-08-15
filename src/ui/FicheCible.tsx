@@ -24,6 +24,13 @@ import {
 } from '../core/exposure.ts'
 import { planCalibration, type PlanCalibration } from '../core/calibration.ts'
 import { explication, type Explication } from '../core/explain.ts'
+import {
+  conseilFiltre,
+  recommandationsEquipement,
+  type ConseilFiltre,
+  type SortieRecommandations,
+} from '../core/recommandations.ts'
+import type { FamilleFiltre } from '../registry/filters.ts'
 import type { ProfilOptique } from '../core/optics.ts'
 import type { Traced } from '../core/traced.ts'
 import { SaisieRefuseeError } from '../registry/domains.ts'
@@ -65,6 +72,15 @@ export interface FicheCibleProps {
   /** Plafond de pose : monture avec suivi (§5.2), ou pose NPF sans suivi (§9.1). */
   readonly tMaxS: number | null
   readonly catalogue: readonly ObjetCielProfond[]
+  /** Classe Bortle déclarée, quand elle l'est : elle conditionne le conseil filtre (§7.5). */
+  readonly bortle: number | null
+  readonly suiviActif: boolean
+  readonly focaleMm: number
+}
+
+interface Conseils {
+  readonly filtre: ConseilFiltre
+  readonly recommandations: SortieRecommandations
 }
 
 interface Resultat {
@@ -85,6 +101,8 @@ function nombreOuNull(texte: string): number | null {
 }
 
 export function FicheCible(props: FicheCibleProps) {
+  const [filtreDualBand, setFiltreDualBand] = useState(false)
+  const [explicationDepliee, setExplicationDepliee] = useState(false)
   const [designation, setDesignation] = useState(CIBLE_REFERENCE.designation)
   const [typeObjet, setTypeObjet] = useState<TypeObjet>(CIBLE_REFERENCE.typeObjet)
   const [mInt, setMInt] = useState(CIBLE_REFERENCE.mInt)
@@ -118,6 +136,51 @@ export function FicheCible(props: FicheCibleProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props, typeObjet, mInt, aArcmin, bArcmin, posAngDeg, snrCible, iso.iso])
+
+  /**
+   * §7.5 et §10.3 — le conseil filtre et la recommandation d'équipement ne sont calculés
+   * qu'à l'ouverture de l'explication. Jamais de bandeau, jamais de suggestion spontanée.
+   */
+  const conseils = useMemo<Conseils | null>(() => {
+    if (!calcul.ok) return null
+    const { r } = calcul
+    if (r.pose === null || r.integration === null || r.eObj === null) return null
+    const filtres: readonly FamilleFiltre[] = filtreDualBand ? ['DUAL_BAND'] : []
+    const filtre = conseilFiltre({
+      typeObjet,
+      filtresPossedes: filtres,
+      bortle: props.bortle,
+      // La fiche évalue une cible hors contexte de nuit : la Lune est portée par le plan
+      // de session (§8.1), pas ici. Seul le fond de ciel déclaré déclenche le conseil.
+      deltaSbLuneMag: 0,
+      cadragePlanifiable: r.cadrage.faisable,
+      explicationDepliee,
+      eObj: r.eObj.value,
+      eCiel: r.eCiel.value,
+      tPoseS: r.pose.tRecommandeS.value,
+      readNoiseE: r.pose.readNoiseUtiliseE,
+      snrCible,
+      tailleRawMo: props.boitier.tailleRawMo,
+    })
+    return {
+      filtre,
+      recommandations: recommandationsEquipement({
+        conseilFiltre: filtre,
+        verdictDefavorable: r.detect.verdict === 'PHOTO_SEULE' || !r.cadrage.faisable,
+        explicationDepliee,
+        leviersPresentes: (r.explique?.leviers ?? []).map((l) => l.code),
+        verdictCadrage: r.cadrage.verdict,
+        focaleActuelleMm: props.focaleMm,
+        focaleIdealeMm: r.cadrage.focaleIdealeMm?.value ?? null,
+        nTuiles: r.cadrage.nTuiles?.value ?? null,
+        regimeLimiteSuivi: r.pose.regime === 'LIMITE_SUIVI',
+        suiviActif: props.suiviActif,
+        tOptS: r.pose.tOptS.value,
+        tMaxSuiviS: props.tMaxS,
+      }),
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calcul, filtreDualBand, explicationDepliee, typeObjet, snrCible, props])
 
   return (
     <>
@@ -176,7 +239,18 @@ export function FicheCible(props: FicheCibleProps) {
       </section>
 
       {!calcul.ok && <p className="erreur">{calcul.erreur}</p>}
-      {calcul.ok && <Verdicts r={calcul.r} snrCible={snrCible} surSnr={setSnrCible} isoLibelle={iso.message} />}
+      {calcul.ok && (
+        <Verdicts
+          r={calcul.r}
+          snrCible={snrCible}
+          surSnr={setSnrCible}
+          isoLibelle={iso.message}
+          conseils={conseils}
+          filtreDualBand={filtreDualBand}
+          surFiltre={setFiltreDualBand}
+          surDeplie={setExplicationDepliee}
+        />
+      )}
     </>
   )
 }
@@ -321,9 +395,22 @@ interface VerdictsProps {
   readonly snrCible: number
   readonly surSnr: (valeur: number) => void
   readonly isoLibelle: string
+  readonly conseils: Conseils | null
+  readonly filtreDualBand: boolean
+  readonly surFiltre: (valeur: boolean) => void
+  readonly surDeplie: (valeur: boolean) => void
 }
 
-function Verdicts({ r, snrCible, surSnr, isoLibelle }: VerdictsProps) {
+function Verdicts({
+  r,
+  snrCible,
+  surSnr,
+  isoLibelle,
+  conseils,
+  filtreDualBand,
+  surFiltre,
+  surDeplie,
+}: VerdictsProps) {
   return (
     <>
       <section>
@@ -493,7 +580,18 @@ function Verdicts({ r, snrCible, surSnr, isoLibelle }: VerdictsProps) {
         <section>
           <h2>Pourquoi ce verdict — §10.2</h2>
           <p className="etat">{r.explique.n1}</p>
-          <details className="tracee">
+          <label className="interrupteur">
+            <input
+              type="checkbox"
+              checked={filtreDualBand}
+              onChange={(e) => surFiltre(e.target.checked)}
+            />
+            Je possède un filtre bi-bande Hα / OIII
+          </label>
+          <details
+            className="tracee"
+            onToggle={(e) => surDeplie((e.currentTarget as HTMLDetailsElement).open)}
+          >
             <summary>
               <span>
                 <Etiquette cle="facteur_dominant" />
@@ -517,6 +615,39 @@ function Verdicts({ r, snrCible, surSnr, isoLibelle }: VerdictsProps) {
                   </li>
                 ))}
               </ul>
+
+              {conseils !== null && (
+                <>
+                  {/* §7.5 — le conseil filtre vient APRÈS les leviers gratuits ci-dessus. */}
+                  <p className={conseils.filtre.declenche ? 'cause' : 'etat'}>
+                    {conseils.filtre.message}
+                  </p>
+                  {/* §10.3 — recommandation d'équipement : catégorie et gain chiffré, rien d'autre. */}
+                  <p className="etat">{conseils.recommandations.message}</p>
+                  {conseils.recommandations.recommandations.length > 0 && (
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Catégorie</th>
+                          <th>Sans</th>
+                          <th>Avec</th>
+                          <th>Rapport</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {conseils.recommandations.recommandations.map((reco) => (
+                          <tr key={reco.categorie}>
+                            <td>{reco.libelle}</td>
+                            <td>{reco.sans}</td>
+                            <td>{reco.avec}</td>
+                            <td>× {reco.rapport.toFixed(1)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </>
+              )}
               <details className="tracee">
                 <summary>
                   <span>Chaîne de calcul complète</span>

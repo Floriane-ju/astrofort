@@ -11,6 +11,8 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { fenetreNocturne, offsetMidiSolaireMin, type FenetreNocturne } from './core/night.ts'
+import { fenetreUtile as calculeFenetreUtile } from './core/moon.ts'
+import { planSession } from './core/session.ts'
 import {
   masquePlat,
   seuilsDeclinaison,
@@ -30,11 +32,18 @@ import { BortleHorsTableError } from './registry/bortle.ts'
 import { SaisieRefuseeError } from './registry/domains.ts'
 import { HorsDomaineSeriesError } from './core/ephem.ts'
 import { MATRICE_DEGRADATION, abonneModeReseau, modeReseauCourant } from './data/degradation.ts'
-import { chargeObjetsCielProfond, demarre, type EtatDemarrage } from './data/bootstrap.ts'
+import {
+  chargeEtoiles,
+  chargeObjetsCielProfond,
+  demarre,
+  type EtatDemarrage,
+} from './data/bootstrap.ts'
 import type { ObjetCielProfond } from './data/deepsky.ts'
+import type { Etoile } from './data/catalog.ts'
 import {
   BOITIER_REFERENCE,
   capteurEffectif,
+  isoRecommande,
   pointZeroSysteme,
   type CapteurEffectif,
   type CapteurMode,
@@ -48,7 +57,18 @@ import { REGISTRE } from './registry/constants.ts'
 import type { Traced } from './core/traced.ts'
 import { TracedValue } from './ui/TracedValue.tsx'
 import { FicheCible } from './ui/FicheCible.tsx'
+import { PlanSessionVue } from './ui/PlanSession.tsx'
+import {
+  ModeNuit,
+  appliqueModeNuit,
+  doitSActiver,
+  litEtatPersiste,
+  type EtatModeNuit,
+} from './ui/ModeNuit.tsx'
 import { Etiquette, NiveauContext, Terme, type NiveauUtilisateur } from './ui/Terme.tsx'
+
+/** Objectif de qualité retenu pour le plan de la nuit : « correct » au sens de §7.3. */
+const PRESET_SNR_PLAN = 10
 
 /** Site et configuration ciel profond de l'Annexe A. */
 const DEFAUT = {
@@ -100,6 +120,8 @@ export function App() {
 
   const [etat, setEtat] = useState<EtatDemarrage | null>(null)
   const [catalogue, setCatalogue] = useState<readonly ObjetCielProfond[]>([])
+  const [etoiles, setEtoiles] = useState<readonly Etoile[]>([])
+  const [modeNuit, setModeNuit] = useState<EtatModeNuit>(litEtatPersiste)
   const [messagePersistance, setMessagePersistance] = useState<string | null>(null)
   // §12.5 — l'état affiché suit les bascules, il n'est pas figé au démarrage.
   const modeReseau = useSyncExternalStore(abonneModeReseau, modeReseauCourant, () => 'EN_LIGNE')
@@ -111,7 +133,12 @@ export function App() {
       .then(setEtat)
       .then(chargeObjetsCielProfond)
       .then(setCatalogue)
+      .then(chargeEtoiles)
+      .then(setEtoiles)
   }, [])
+
+  // §11.1 — le mode nuit reste actif au redémarrage et entre les vues.
+  useEffect(() => appliqueModeNuit(modeNuit), [modeNuit])
 
   /**
    * §4.1 — aucune source de relief n'est disponible hors réseau ni au premier démarrage :
@@ -179,6 +206,69 @@ export function App() {
     qualiteMes,
     typeMonture,
   ])
+
+  // §11.1 — auto-activation au crépuscule nautique, quand l'utilisateur l'a demandée.
+  useEffect(() => {
+    if (!calcul.ok || modeNuit.actif) return
+    if (doitSActiver(modeNuit, calcul.nuit.debutNautique, new Date())) {
+      setModeNuit({ ...modeNuit, actif: true })
+    }
+  }, [calcul, modeNuit])
+
+  const site = useMemo(
+    () => ({
+      latitudeDeg: Number(latitude),
+      longitudeDeg: Number(longitude),
+      altitudeM: Number(altitude),
+    }),
+    [latitude, longitude, altitude],
+  )
+
+  const fenetreUtile = useMemo(
+    () => (calcul.ok ? calculeFenetreUtile(site, calcul.nuit) : null),
+    [calcul, site],
+  )
+
+  const iso = isoRecommande(BOITIER_REFERENCE)
+
+  /**
+   * §8.3 — le plan complet. Il n'est calculé qu'une fois les catalogues vérifiés.
+   *
+   * ponytail: calcul sur le thread de rendu. §12.1 le veut en Web Worker ; il tient
+   * aujourd'hui sous la centaine de millisecondes parce que le pré-filtrage dur limite à
+   * quelques dizaines de candidates. Le jour où le catalogue ou le nombre de candidates
+   * grossit, c'est ce point-là qu'il faut déporter, pas le rendu.
+   */
+  const plan = useMemo(() => {
+    if (!calcul.ok || catalogue.length === 0) return null
+    return planSession(
+      {
+        site,
+        nuit: calcul.nuit,
+        fenetreUtile: calculeFenetreUtile(site, calcul.nuit),
+        masque,
+        fovHDeg: calcul.optique.fovHDeg.value,
+        echApx: calcul.optique.echApx.value,
+        dMm: calcul.optique.dMm.value,
+        capteurHMm: calcul.capteur.capteurHMm,
+        pitchUm: calcul.capteur.pitchUm,
+        ouvertureN: calcul.ouvertureN,
+        zpSys: zeroSysteme.valeur,
+        zpEstime: zeroSysteme.estime,
+        readNoiseE: iso.readNoiseE,
+        tailleRawMo: BOITIER_REFERENCE.tailleRawMo,
+        isoSession: iso.iso,
+        sbCielNoir: calcul.ciel.sbCiel.value,
+        mLimOeil: calcul.ciel.mLimOeil.value,
+        tMaxS: calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value,
+        snrCible: PRESET_SNR_PLAN,
+        typeMonture,
+        niveau,
+      },
+      catalogue,
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calcul, catalogue, masque, niveau, typeMonture, site, iso.iso])
 
   async function surExport() {
     const donnees = await exporteDonneesUtilisateur()
@@ -379,6 +469,10 @@ export function App() {
             <section>
               <h2>Fenêtre nocturne</h2>
               <p className="etat">état : {calcul.nuit.etat}</p>
+              <Terme
+                cle={calcul.nuit.modeDegrade ? 'mode_degrade_nuit' : 'nuit_astronomique'}
+                contexte={`${calcul.nuit.dureeReferenceH.toFixed(2)} h exploitables`}
+              />
               {calcul.nuit.cause !== undefined && <p className="cause">{calcul.nuit.cause}</p>}
               <table>
                 <tbody>
@@ -442,9 +536,41 @@ export function App() {
               // Sans suivi, c'est la NPF qui plafonne la pose (§9.1) — jamais rien.
               tMaxS={calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value}
               catalogue={catalogue}
+              bortle={bortle.trim() === '' ? null : Number(bortle)}
+              suiviActif={suiviActif}
+              focaleMm={Number(focale)}
             />
+
+            {plan !== null && fenetreUtile !== null && (
+              <PlanSessionVue
+                plan={plan}
+                fenetreUtile={fenetreUtile}
+                site={site}
+                fovHDeg={calcul.optique.fovHDeg.value}
+                fovLDeg={calcul.optique.fovLDeg.value}
+                mLimOeil={calcul.ciel.mLimOeil.value}
+                etoiles={etoiles}
+                enTete={{
+                  dateIso,
+                  lieu: `${latitude}° / ${longitude}° — Bortle ${bortle}`,
+                  materiel: `${focale} mm f/${ouverture} — ${BOITIER_REFERENCE.libelle}`,
+                }}
+              />
+            )}
+            {plan === null && catalogue.length === 0 && (
+              <section>
+                <h2>Plan de session — §8.3</h2>
+                <p className="cause">
+                  Les catalogues ne sont pas encore vérifiés : aucun plan n’est produit tant
+                  qu’un binaire non validé pourrait l’alimenter. Les moteurs de cadrage, de
+                  pose et d’intégration restent utilisables sur une cible saisie à la main.
+                </p>
+              </section>
+            )}
           </>
         )}
+
+        <ModeNuit etat={modeNuit} surChangement={setModeNuit} />
 
         <section>
           <h2>État du socle</h2>

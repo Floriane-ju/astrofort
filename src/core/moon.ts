@@ -1,0 +1,301 @@
+/**
+ * §8.1 — Lune : phase, position, dégradation du fond de ciel et fenêtre utile.
+ *
+ * Deux règles du PRD gouvernent ce module :
+ *
+ *   1. UNE LUNE SOUS L'HORIZON NE DÉGRADE RIEN, quelle que soit sa phase. La phase seule
+ *      n'est jamais un motif d'exclusion : c'est la hauteur qui décide.
+ *   2. UNE NUIT DE LUNE N'EST PAS « PERDUE ». Elle a un fond de ciel plus élevé, donc des
+ *      poses plus courtes et une intégration plus longue. Le moteur le chiffre au lieu de
+ *      barrer la nuit.
+ *
+ * La dégradation vient du modèle de Krisciunas & Schaefer (1991), implémenté localement :
+ * aucun appel réseau, aucune table externe.
+ */
+
+import { Body, Equator, Illumination, SearchRiseSet } from 'astronomy-engine'
+import { K } from '../registry/constants.ts'
+import type { Site } from './ephem.ts'
+import { observateur, positionCorps, verifieDomaineDesSeries, versDate } from './ephem.ts'
+import type { FenetreNocturne } from './night.ts'
+import type { Traced } from './traced.ts'
+import { trace } from './traced.ts'
+
+const DEG = Math.PI / 180
+const ANGLE_DROIT_DEG = 90
+const MS_PAR_MINUTE = 60000
+const MINUTES_PAR_HEURE = 60
+const JOURS_DE_RECHERCHE = 2
+const DESCENTE = -1
+const MONTEE = 1
+const HEURES_PAR_TOUR = 24
+
+// ---------------------------------------------------------------------------
+// Position et phase
+// ---------------------------------------------------------------------------
+
+export interface EtatLuneInstant {
+  readonly altitudeDeg: number
+  readonly azimutDeg: number
+  readonly adH: number
+  readonly decDeg: number
+  /** Fraction illuminée du disque, de 0 (nouvelle) à 1 (pleine). */
+  readonly illumination: number
+  /** Angle de phase, en degrés : 0 à la pleine Lune, 180 à la nouvelle. */
+  readonly anglePhaseDeg: number
+  readonly lever: Date | null
+  readonly coucher: Date | null
+  /** Vrai quand la Lune est sous l'horizon : elle n'entre alors dans aucun calcul. */
+  readonly sousHorizon: boolean
+}
+
+export function etatLune(site: Site, date: Date): EtatLuneInstant {
+  verifieDomaineDesSeries(date)
+  const obs = observateur(site)
+  const position = positionCorps(Body.Moon, date, site)
+  const eclairement = Illumination(Body.Moon, date)
+  return {
+    altitudeDeg: position.hauteurDeg,
+    azimutDeg: position.azimutDeg,
+    adH: position.adH,
+    decDeg: position.decDeg,
+    illumination: eclairement.phase_fraction,
+    anglePhaseDeg: eclairement.phase_angle,
+    lever: versDate(SearchRiseSet(Body.Moon, obs, MONTEE, date, JOURS_DE_RECHERCHE)),
+    coucher: versDate(SearchRiseSet(Body.Moon, obs, DESCENTE, date, JOURS_DE_RECHERCHE)),
+    sousHorizon: position.hauteurDeg <= 0,
+  }
+}
+
+/** Séparation angulaire entre deux directions équatoriales, en degrés. */
+export function separationDeg(
+  adAH: number,
+  decADeg: number,
+  adBH: number,
+  decBDeg: number,
+): number {
+  const DEG_PAR_HEURE = 360 / HEURES_PAR_TOUR
+  const d1 = decADeg * DEG
+  const d2 = decBDeg * DEG
+  const dAd = (adAH - adBH) * DEG_PAR_HEURE * DEG
+  const cos = Math.sin(d1) * Math.sin(d2) + Math.cos(d1) * Math.cos(d2) * Math.cos(dAd)
+  return Math.acos(Math.min(1, Math.max(-1, cos))) / DEG
+}
+
+/** Position de la Lune en coordonnées équatoriales de la date, sans calcul horizontal. */
+export function positionEquatorialeLune(date: Date, site: Site): {
+  readonly adH: number
+  readonly decDeg: number
+} {
+  const eq = Equator(Body.Moon, date, observateur(site), true, true)
+  return { adH: eq.ra, decDeg: eq.dec }
+}
+
+// ---------------------------------------------------------------------------
+// §8.1 — dégradation lunaire, modèle de Krisciunas & Schaefer (1991)
+// ---------------------------------------------------------------------------
+
+/** Masse d'air du modèle KS91, valide jusqu'à l'horizon contrairement à 1 / sin(alt). */
+export function masseAirKS(hauteurDeg: number): number {
+  const zenithal = (ANGLE_DROIT_DEG - hauteurDeg) * DEG
+  const sin = Math.sin(zenithal)
+  return 1 / Math.sqrt(1 - K('KS_MASSE_AIR_COEF') * sin * sin)
+}
+
+/** Brillance de surface en nanolamberts — l'unité dans laquelle le modèle additionne. */
+export function nanolamberts(sbMagArcsec2: number): number {
+  return (
+    K('NANOLAMBERT_ECHELLE') *
+    Math.exp(K('NANOLAMBERT_OFFSET') - K('NANOLAMBERT_PENTE') * sbMagArcsec2)
+  )
+}
+
+/** Illuminance hors atmosphère de la Lune à l'angle de phase donné. */
+export function illuminanceLune(anglePhaseDeg: number): number {
+  const a = Math.abs(anglePhaseDeg)
+  const magnitude =
+    K('KS_MAGNITUDE_LUNE_PLEINE') + K('KS_COEF_PHASE') * a + K('KS_COEF_PHASE_4') * (a * a) ** 2
+  return K('BASE_MAGNITUDE') ** (-magnitude / K('POGSON'))
+}
+
+/** Fonction de diffusion : Rayleigh près de la Lune, Mie au-delà. */
+export function diffusionKS(separation: number): number {
+  const cos = Math.cos(separation * DEG)
+  return (
+    K('BASE_MAGNITUDE') ** K('KS_RAYLEIGH_LOG') * (K('KS_RAYLEIGH_CONSTANTE') + cos * cos) +
+    K('BASE_MAGNITUDE') ** (K('KS_MIE_LOG') - separation / K('KS_MIE_ECHELLE_DEG'))
+  )
+}
+
+export interface EntreeDeltaSbLune {
+  readonly sbCielNoirMag: number
+  readonly altitudeLuneDeg: number
+  readonly altitudeCibleDeg: number
+  readonly separationDeg: number
+  readonly anglePhaseDeg: number
+}
+
+/**
+ * Dégradation du fond de ciel imputable à la Lune, en mag/arcsec². Positive : le ciel est
+ * plus clair d'autant. Nulle dès que la Lune est sous l'horizon, quelle que soit sa phase.
+ */
+export function deltaSbLune(entree: EntreeDeltaSbLune): Traced<number> {
+  const inputs = {
+    sb_ciel_noir: entree.sbCielNoirMag,
+    alt_lune_deg: entree.altitudeLuneDeg,
+    alt_cible_deg: entree.altitudeCibleDeg,
+    separation_deg: entree.separationDeg,
+    angle_phase_deg: entree.anglePhaseDeg,
+  }
+  const constants = [
+    'KS_MAGNITUDE_LUNE_PLEINE',
+    'KS_COEF_PHASE',
+    'KS_COEF_PHASE_4',
+    'KS_RAYLEIGH_LOG',
+    'KS_RAYLEIGH_CONSTANTE',
+    'KS_MIE_LOG',
+    'KS_MIE_ECHELLE_DEG',
+    'KS_MASSE_AIR_COEF',
+    'EXTINCTION_V_MAG_PAR_MASSE_AIR',
+    'NANOLAMBERT_ECHELLE',
+    'NANOLAMBERT_OFFSET',
+    'NANOLAMBERT_PENTE',
+  ] as const
+
+  if (entree.altitudeLuneDeg <= 0 || entree.altitudeCibleDeg <= 0) {
+    return trace({
+      value: 0,
+      formula: 'DELTA_SB_LUNE',
+      inputs,
+      note:
+        'Lune sous l’horizon ou cible non levée : la Lune n’entre pas dans le calcul du fond ' +
+        'de ciel. Une Lune couchée ne dégrade rien, quelle que soit sa phase.',
+    })
+  }
+
+  const k = K('EXTINCTION_V_MAG_PAR_MASSE_AIR')
+  const attenuation = (masseAir: number): number =>
+    K('BASE_MAGNITUDE') ** (-(k * masseAir) / K('POGSON'))
+
+  const bLune =
+    diffusionKS(entree.separationDeg) *
+    illuminanceLune(entree.anglePhaseDeg) *
+    attenuation(masseAirKS(entree.altitudeLuneDeg)) *
+    (1 - attenuation(masseAirKS(entree.altitudeCibleDeg)))
+
+  const bCiel = nanolamberts(entree.sbCielNoirMag)
+  const delta = K('POGSON') * Math.log10((bCiel + bLune) / bCiel)
+
+  return trace({
+    value: delta,
+    formula: 'DELTA_SB_LUNE',
+    inputs,
+    constants,
+    note:
+      `La Lune éclaircit le fond de ciel de ${delta.toFixed(2)} mag/arcsec² sur cette cible. ` +
+      'Ce n’est pas une nuit perdue : le fond monte, donc les poses raccourcissent et ' +
+      'l’intégration s’allonge. Le moteur le chiffre plutôt que d’écarter la nuit.',
+  })
+}
+
+/** Fond de ciel effectif sous la Lune : plus la Lune éclaire, plus le ciel est clair. */
+export function sbCielAvecLune(sbCielNoirMag: number, deltaSb: number): number {
+  return sbCielNoirMag - deltaSb
+}
+
+// ---------------------------------------------------------------------------
+// §8.1 — fenêtre utile
+// ---------------------------------------------------------------------------
+
+export interface FenetreUtile {
+  /** Sous-intervalle de la nuit où la Lune est sous l'horizon. */
+  readonly debut: Date | null
+  readonly fin: Date | null
+  readonly dureeH: number
+  /** Durée de la nuit de référence, affichée séparément de la fenêtre utile (§8.1). */
+  readonly dureeNuitH: number
+  readonly luneInterfere: boolean
+  readonly note: string
+}
+
+function heuresEntre(debut: Date, fin: Date): number {
+  return (fin.getTime() - debut.getTime()) / (MS_PAR_MINUTE * MINUTES_PAR_HEURE)
+}
+
+/**
+ * Fenêtre utile : la part de la nuit où la Lune est couchée. Les deux durées sont rendues
+ * séparément — une fenêtre utile réduite doit rester lisible à côté de la nuit complète,
+ * sinon l'utilisateur ne comprend pas ce que la Lune lui coûte.
+ *
+ * Un objet tolérant à la Lune (§6.3) reste planifiable sur toute la nuit : c'est
+ * l'appelant qui arbitre, avec la dégradation chiffrée par `deltaSbLune`.
+ */
+export function fenetreUtile(site: Site, nuit: FenetreNocturne): FenetreUtile {
+  const debut = nuit.debutReference
+  const fin = nuit.finReference
+  if (debut === null || fin === null) {
+    return {
+      debut: null,
+      fin: null,
+      dureeH: 0,
+      dureeNuitH: 0,
+      luneInterfere: false,
+      note: 'Aucune fenêtre nocturne cette nuit-là : la fenêtre utile n’est pas calculée.',
+    }
+  }
+
+  const dureeNuitH = heuresEntre(debut, fin)
+  const pas = MS_PAR_MINUTE
+  let meilleurDebut: Date | null = null
+  let meilleureFin: Date | null = null
+  let courantDebut: Date | null = null
+
+  for (let t = debut.getTime(); t <= fin.getTime(); t += pas) {
+    const instant = new Date(t)
+    const sousHorizon = positionCorps(Body.Moon, instant, site).hauteurDeg <= 0
+    if (sousHorizon && courantDebut === null) courantDebut = instant
+    if ((!sousHorizon || t + pas > fin.getTime()) && courantDebut !== null) {
+      const finCourante = new Date(sousHorizon ? t : t - pas)
+      if (
+        meilleurDebut === null ||
+        meilleureFin === null ||
+        finCourante.getTime() - courantDebut.getTime() >
+          meilleureFin.getTime() - meilleurDebut.getTime()
+      ) {
+        meilleurDebut = courantDebut
+        meilleureFin = finCourante
+      }
+      courantDebut = null
+    }
+  }
+
+  if (meilleurDebut === null || meilleureFin === null) {
+    return {
+      debut: null,
+      fin: null,
+      dureeH: 0,
+      dureeNuitH,
+      luneInterfere: true,
+      note:
+        `La Lune reste levée toute la nuit : la fenêtre sans Lune est nulle, sur ` +
+        `${dureeNuitH.toFixed(2)} h de nuit. Les cibles tolérantes à la Lune restent ` +
+        'planifiables, avec leur dégradation chiffrée.',
+    }
+  }
+
+  const dureeH = heuresEntre(meilleurDebut, meilleureFin)
+  const luneInterfere = dureeH < dureeNuitH - pas / (MS_PAR_MINUTE * MINUTES_PAR_HEURE)
+  return {
+    debut: meilleurDebut,
+    fin: meilleureFin,
+    dureeH,
+    dureeNuitH,
+    luneInterfere,
+    note: luneInterfere
+      ? `Fenêtre sans Lune : ${dureeH.toFixed(2)} h, sur ${dureeNuitH.toFixed(2)} h de nuit. ` +
+        'Les deux durées sont affichées séparément : la seconde n’est pas perdue, elle est ' +
+        'seulement plus claire.'
+      : `La Lune ne gêne pas cette nuit : la fenêtre utile couvre les ${dureeNuitH.toFixed(2)} h ` +
+        'de nuit.',
+  }
+}

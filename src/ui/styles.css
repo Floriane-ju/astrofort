@@ -1,13 +1,43 @@
-/* Écran de vérification du Lot 0 : lisible, sans direction visuelle. Le mode nuit du §11
-   viendra au lot 3 et gouvernera la palette réelle. */
+/* §11.1 mode nuit et §11.2 ergonomie de consultation nocturne.
+
+   TOUTE COULEUR PASSE PAR UNE VARIABLE. C'est ce qui rend le mode nuit total : une seule
+   couleur écrite en dur ailleurs dans la feuille survivrait au basculement et suffirait à
+   ruiner une demi-heure d'adaptation à l'obscurité.
+
+   Le mode nuit n'est pas un filtre de teinte posé sur une interface claire — la luminance
+   globale resterait trop élevée. La palette est CONÇUE en rouge sur noir, canaux vert et
+   bleu strictement nuls. */
 
 :root {
   color-scheme: dark;
   --fond: #101014;
+  --surface: #17171d;
+  --surface-haute: #1f1f28;
   --texte: #e8e8ea;
   --attenue: #9a9aa4;
   --bordure: #2c2c34;
   --alerte: #d98b5f;
+  --fond-alerte: #1a1720;
+  /* Hauteur minimale d'une cible de clic : usage ganté sur écran tactile (§11.2). */
+  --cible-clic: 44px;
+}
+
+/* §11.1 — sortie = (R, 0, 0). Le facteur de luminance est réglable jusqu'à un plancher
+   d'environ 2 % de la luminance nominale, et il multiplie toute la palette. */
+:root[data-mode-nuit='true'] {
+  --fond: #000000;
+  --surface: rgb(calc(var(--luminance-nuit) * 26) 0 0);
+  --surface-haute: rgb(calc(var(--luminance-nuit) * 46) 0 0);
+  --texte: rgb(calc(var(--luminance-nuit) * 230) 0 0);
+  --attenue: rgb(calc(var(--luminance-nuit) * 150) 0 0);
+  --bordure: rgb(calc(var(--luminance-nuit) * 90) 0 0);
+  --alerte: rgb(calc(var(--luminance-nuit) * 255) 0 0);
+  --fond-alerte: rgb(calc(var(--luminance-nuit) * 40) 0 0);
+}
+
+/* Passage progressif, jamais un basculement brutal ni un flash (§11.1). */
+body {
+  transition: background-color 600ms ease, color 600ms ease;
 }
 
 * {
@@ -38,6 +68,11 @@ h2 {
   border-bottom: 1px solid var(--bordure);
 }
 
+h3 {
+  font-size: 0.95rem;
+  margin: 1rem 0 0.5rem;
+}
+
 .champs {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
@@ -52,13 +87,26 @@ label {
   color: var(--attenue);
 }
 
-input {
+input,
+select {
+  min-height: var(--cible-clic);
   padding: 0.4rem 0.5rem;
-  background: #17171d;
+  background: var(--surface);
   color: var(--texte);
   border: 1px solid var(--bordure);
   border-radius: 4px;
   font: inherit;
+}
+
+input[type='checkbox'] {
+  min-height: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+input[type='range'] {
+  min-height: var(--cible-clic);
+  accent-color: var(--alerte);
 }
 
 table {
@@ -91,17 +139,16 @@ th {
   margin: 0.5rem 0;
   padding: 0.6rem 0.75rem;
   border-left: 3px solid var(--alerte);
-  background: #1a1720;
+  background: var(--fond-alerte);
   font-size: 0.9rem;
 }
 
-select {
-  padding: 0.4rem 0.5rem;
-  background: #17171d;
-  color: var(--texte);
-  border: 1px solid var(--bordure);
-  border-radius: 4px;
-  font: inherit;
+/* §11.1 — le rouge ne porte jamais seul une information : l'alerte se distingue aussi par
+   sa forme, sa barre latérale et son signe. */
+.cause::before,
+.erreur::before {
+  content: '⚠ ';
+  font-weight: 700;
 }
 
 .niveau {
@@ -114,9 +161,11 @@ select {
   align-items: center;
   color: var(--texte);
   font-size: 0.9rem;
+  min-height: var(--cible-clic);
 }
 
-/* §10.1 — la glose est au survol pour tous, et visible en plus au niveau débutant. */
+/* §10.1 — la glose est au survol pour tous, et visible en plus au niveau débutant.
+   Aucune information critique ne dépend du survol : tout s'ouvre aussi au clic (§11.2). */
 .terme abbr {
   text-decoration: underline dotted var(--bordure);
   cursor: help;
@@ -131,6 +180,7 @@ select {
 
 .terme-detail summary {
   cursor: pointer;
+  min-height: var(--cible-clic);
   padding: 0.35rem 0;
 }
 
@@ -169,6 +219,8 @@ select {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
+  min-height: var(--cible-clic);
+  align-items: center;
   cursor: pointer;
 }
 
@@ -219,6 +271,7 @@ select {
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 1rem;
   align-items: center;
@@ -226,8 +279,9 @@ select {
 
 button,
 .bouton-fichier {
+  min-height: var(--cible-clic);
   padding: 0.45rem 0.9rem;
-  background: #1f1f28;
+  background: var(--surface-haute);
   color: var(--texte);
   border: 1px solid var(--bordure);
   border-radius: 4px;
@@ -237,4 +291,82 @@ button,
 
 .bouton-fichier input {
   display: none;
+}
+
+/* §8.3 — plan de session */
+.etape {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  border: 1px solid var(--bordure);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.etape-titre {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.etape-horaire {
+  font-variant-numeric: tabular-nums;
+  color: var(--attenue);
+}
+
+.score-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.35rem 0;
+  font-size: 0.8rem;
+  color: var(--attenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-export {
+  width: 100%;
+  min-height: 20rem;
+  padding: 0.75rem;
+  background: var(--surface);
+  color: var(--texte);
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+  font: 12px/1.45 ui-monospace, monospace;
+  white-space: pre;
+}
+
+/* §8.4 — schéma de pointage, orienté selon l'heure et le lieu */
+.schema {
+  position: relative;
+  width: 100%;
+  max-width: 22rem;
+  aspect-ratio: 3 / 2;
+  margin: 0.5rem 0;
+  border: 1px solid var(--bordure);
+  background: var(--fond);
+}
+
+.schema-astre {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  color: var(--texte);
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.schema-cible {
+  color: var(--alerte);
+  font-weight: 700;
+}
+
+@media print {
+  /* §11.2 — le plan est imprimable : ce qui n'est pas le plan ne l'est pas. */
+  .actions,
+  .niveau,
+  .champs {
+    display: none;
+  }
 }

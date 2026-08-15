@@ -629,6 +629,173 @@ export const GLOSSAIRE = Object.freeze({
     sections: ['10.2'],
   }),
 
+  // §8.1 — fenêtre nocturne et Lune
+  nuit_astronomique: terme({
+    libelle: 'Nuit astronomique',
+    glose: 'Soleil sous −18°',
+    explication:
+      'La nuit astronomique commence quand le Soleil descend sous 18° sous l’horizon : au-delà, ' +
+      'sa lumière diffusée ne contribue plus au fond de ciel. C’est la fenêtre de référence de ' +
+      'toute planification. À nos latitudes, elle fond de 11 h 43 en décembre à 2 h 35 en juin.',
+    consequence:
+      'Le budget d’une nuit d’été n’est pas celui d’une nuit d’hiver : le plan raisonne en ' +
+      'temps disponible, pas en faisabilité binaire.',
+    sections: ['8.1'],
+  }),
+  fenetre_utile: terme({
+    libelle: 'Fenêtre utile',
+    glose: 'nuit noire sans la Lune',
+    explication:
+      'La part de la nuit où la Lune est sous l’horizon. Une Lune couchée ne dégrade rien, ' +
+      'quelle que soit sa phase ; une Lune levée éclaircit le fond de ciel sans rendre la nuit ' +
+      'inutilisable. Les deux durées sont affichées séparément.',
+    consequence:
+      'Une fenêtre utile plus courte que la nuit signifie des poses plus courtes et une ' +
+      'intégration plus longue, pas une nuit perdue.',
+    sections: ['8.1'],
+  }),
+  degradation_lunaire: terme({
+    libelle: 'Dégradation lunaire',
+    glose: 'apport lunaire au ciel',
+    explication:
+      'La Lune diffuse sa lumière dans l’atmosphère et éclaircit le fond de ciel d’autant plus ' +
+      'qu’elle est pleine, haute et proche de la cible. Le modèle de Krisciunas & Schaefer (1991) ' +
+      'chiffre cet apport en magnitudes par seconde d’arc au carré.',
+    consequence:
+      'Une nuit de Lune reste exploitable : le moteur raccourcit la pose et allonge ' +
+      'l’intégration au lieu de barrer la nuit.',
+    sections: ['8.1'],
+  }),
+  mode_degrade_nuit: terme({
+    libelle: 'Mode dégradé de nuit',
+    glose: 'repli sur le crépuscule nautique',
+    explication:
+      'Au-delà de 48,6° de latitude, la nuit astronomique disparaît une partie de l’été. ' +
+      'L’application ne produit alors ni durée négative ni erreur : elle retient la fenêtre ' +
+      'nautique — Soleil sous 12° — et chiffre la pénalité de fond de ciel qui l’accompagne.',
+    consequence: 'Les cibles les plus brillantes restent accessibles, avec une pénalité affichée.',
+    sections: ['8.1'],
+  }),
+
+  // §8.2 — créneau
+  creneau: terme({
+    libelle: 'Créneau d’observation',
+    glose: 'quand la cible est exploitable',
+    explication:
+      'L’intervalle où la cible est simultanément assez haute, hors du relief et dans la ' +
+      'fenêtre nocturne. Sur une monture équatoriale allemande, le passage au méridien le ' +
+      'scinde en deux : le tube heurte le pied et l’orientation du capteur bascule de 180°.',
+    consequence:
+      'C’est la durée du créneau, et non celle de la nuit, qui décide si l’intégration ' +
+      'requise tient en une seule nuit.',
+    sections: ['8.2'],
+  }),
+  cause_exclusion: terme({
+    libelle: 'Cause d’exclusion',
+    glose: 'pourquoi la cible est écartée',
+    explication:
+      'Hauteur, relief, Lune, fenêtre ou cible qui ne se lève jamais depuis ce site : toute ' +
+      'cible écartée nomme la contrainte qui l’écarte. Une cible rejetée sans motif est la ' +
+      'première source de méfiance envers une application de planification.',
+    consequence:
+      'La cause dit quoi changer : la date, le site, la latitude ou simplement la cible.',
+    sections: ['8.2'],
+  }),
+
+  // §8.3 — plan de session
+  plan_session: terme({
+    libelle: 'Plan de session',
+    glose: 'chronologie exécutable de la nuit',
+    explication:
+      'Une liste de cibles ordonnée dans le temps, chacune avec son créneau alloué, sa pose, ' +
+      'son nombre d’images et sa consigne. La sortie est une chronologie, pas un palmarès : un ' +
+      'palmarès n’est pas exécutable sur le terrain.',
+    consequence: 'Le plan se suit dans l’ordre, de la première cible au lever du jour.',
+    sections: ['8.3'],
+  }),
+  score_cible: terme({
+    libelle: 'Score de cible',
+    glose: 'arbitrage entre cibles concurrentes',
+    explication:
+      'Cinq composantes pondérées — cadrage, hauteur, signal, fenêtre et Lune — avec des poids ' +
+      'déclarés au registre, exposés et réglables. Aucun apprentissage, aucune dérive : deux ' +
+      'exécutions identiques donnent le même plan.',
+    consequence:
+      'Quand deux créneaux se chevauchent, c’est le score qui tranche, et sa décomposition ' +
+      'est affichée.',
+    sections: ['8.3'],
+  }),
+  budget_nuit: terme({
+    libelle: 'Budget de nuit',
+    glose: 'temps total de la session',
+    explication:
+      'La capture, la calibration, la mise en station et le pointage de chaque cible tiennent ' +
+      'dans la durée de la nuit — ou le plan retire une cible entière. Aucune intégration n’est ' +
+      'tronquée en silence pour faire tenir la liste.',
+    consequence: 'Un budget serré se corrige en retirant une cible, jamais en rognant une pose.',
+    sections: ['8.3'],
+  }),
+
+  // §8.4 — pointage
+  mode_pointage: terme({
+    libelle: 'Mode de pointage',
+    glose: 'carte directe ou cheminement',
+    explication:
+      'Au-delà de 8° de champ, le cadre contient toujours plusieurs étoiles à l’œil nu : une ' +
+      'carte directe suffit, en une seule étape. Sous 8°, il faut cheminer d’étoile en étoile ' +
+      'depuis un repère brillant, chaque saut recouvrant le champ du chercheur.',
+    consequence: 'Le mode est déduit du matériel, jamais choisi à la main.',
+    sections: ['8.4'],
+  }),
+  angle_orientation: terme({
+    libelle: 'Orientation du champ',
+    glose: 'angle de position du zénith',
+    explication:
+      'Le champ tourne au cours de la nuit dans le référentiel de l’observateur. Le schéma de ' +
+      'pointage est orienté pour l’heure et le lieu exacts du pointage, avec le haut et le bas ' +
+      'réels tels que l’œil les verra.',
+    consequence: 'Un schéma non orienté est inutilisable dans le noir.',
+    sections: ['8.4'],
+  }),
+  decalage_pointage: terme({
+    libelle: 'Décalage de pointage',
+    glose: 'écart chiffré vers la cible',
+    explication:
+      'L’écart en ascension droite, en heures d’angle horaire, et en déclinaison, en degrés, ' +
+      'entre l’étoile d’ancrage et la cible. Il se reporte directement sur des cercles gradués ' +
+      'ou sur les flexibles d’une monture.',
+    consequence:
+      'La mise en station reste à la charge de l’observateur : l’application aide à trouver, ' +
+      'elle ne corrige pas l’installation.',
+    sections: ['8.4'],
+  }),
+
+  // §11 — mode nuit
+  mode_nuit: terme({
+    libelle: 'Mode nuit',
+    glose: 'rouge profond, sans bleu',
+    explication:
+      'Les bâtonnets de la rétine assurent la vision nocturne et s’effondrent au-delà de 640 nm : ' +
+      'un rouge profond est vu sans les blanchir. L’adaptation à l’obscurité demande 20 à 30 ' +
+      'minutes et se détruit en quelques secondes de lumière blanche — le mode est donc global ' +
+      'et sans exception, pas un thème sombre.',
+    consequence:
+      'Une seule fenêtre blanche annule une demi-heure d’attente : aucune surface claire n’est ' +
+      'affichée tant que le mode est actif.',
+    sections: ['11.1'],
+  }),
+  luminance_mode_nuit: terme({
+    libelle: 'Luminance du mode nuit',
+    glose: 'plancher à 2 %',
+    explication:
+      'La luminance du rouge est réglable jusqu’à un plancher d’environ 2 % de la luminance ' +
+      'nominale. Sur une dalle OLED le noir est un pixel éteint ; sur une dalle LCD le ' +
+      'rétroéclairage traverse toujours et une fuite de bleu subsiste.',
+    consequence:
+      'Sur LCD, le mode nuit reste efficace mais imparfait : l’application le dit une fois.',
+    sections: ['11.1'],
+  }),
+
   ordre_de_grandeur: terme({
     libelle: 'Ordre de grandeur',
     glose: 'valeur approchée, affichée en plage',

@@ -72,6 +72,40 @@
         "tests/tracking.test.ts",
         "vite.config.ts"
       ]
+    },
+    {
+      "sha": "18fbbb6",
+      "date": "2026-08-15",
+      "files": []
+    },
+    {
+      "sha": "30c1e1d",
+      "date": "2026-08-15",
+      "files": [
+        "src/App.tsx",
+        "src/core/calibration.ts",
+        "src/core/detectability.ts",
+        "src/core/explain.ts",
+        "src/core/exposure.ts",
+        "src/core/framing.ts",
+        "src/data/bootstrap.ts",
+        "src/data/equipment.ts",
+        "src/registry/constants.ts",
+        "src/registry/contrast.ts",
+        "src/registry/domains.ts",
+        "src/registry/formulas.ts",
+        "src/registry/glossaire.ts",
+        "src/registry/verdicts.ts",
+        "src/ui/FicheCible.tsx",
+        "tests/calibration.test.ts",
+        "tests/catalog.test.ts",
+        "tests/cible.test.tsx",
+        "tests/detectability.test.ts",
+        "tests/explication.test.ts",
+        "tests/exposure.test.ts",
+        "tests/framing.test.ts",
+        "tests/registry.test.ts"
+      ]
     }
   ]
 }

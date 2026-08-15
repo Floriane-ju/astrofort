@@ -277,6 +277,128 @@ export const FORMULES = Object.freeze({
     section: '3.1',
   },
 
+  // Lune et fenêtre utile — §8.1
+  ILLUMINATION_LUNE: {
+    expression: 'illumination = ( 1 + cos(α) ) / 2, α = angle de phase',
+    unite: '—',
+    section: '8.1',
+    note: 'Une Lune sous l’horizon ne dégrade rien, quelle que soit sa phase.',
+  },
+  MASSE_AIR_KS: {
+    expression: 'X(Z) = ( 1 − 0,96 × sin²(Z) )^(−1/2)',
+    unite: '—',
+    section: '8.1',
+    note: 'Masse d’air du modèle de Krisciunas & Schaefer, valide jusqu’à l’horizon.',
+  },
+  DELTA_SB_LUNE: {
+    expression:
+      'B_lune = f(ρ) × I*(α) × 10^(−0,4 k X(Z_lune)) × ( 1 − 10^(−0,4 k X(Z_cible)) ) · ' +
+      'ΔSB_lune = 2,5 × log10( (B_ciel + B_lune) / B_ciel )',
+    unite: 'mag/arcsec²',
+    section: '8.1',
+    note:
+      'Modèle de Krisciunas & Schaefer (1991). Une nuit de Lune n’est pas perdue : elle a un ' +
+      'fond de ciel plus élevé, donc des poses plus courtes et une intégration plus longue.',
+  },
+  DUREE_NUIT_NAUTIQUE: {
+    expression: 'fenetre_nautique = [ Soleil à −12° en descente ; Soleil à −12° en montée ]',
+    unite: 'h',
+    section: '8.1',
+    note:
+      'Retenue en mode dégradé quand la nuit astronomique est nulle, avec sa pénalité de fond ' +
+      'de ciel chiffrée. Jamais une durée négative, jamais un plantage.',
+  },
+
+  // Créneaux et plan de session — §8.2, §8.3
+  DUREE_CRENEAU: {
+    expression: 'creneau = [ alt > seuil ] ∩ fenetre_utile ∩ [ alt > masque(azimut) ]',
+    unite: 'min',
+    section: '8.2',
+    note: 'Consommée par §7.3 : elle décide si N_poses tient dans la nuit.',
+  },
+  SCORE_CIBLE: {
+    expression:
+      'score = w_c·S_cadrage + w_h·S_hauteur + w_s·S_signal + w_f·S_fenetre + w_l·S_lune',
+    unite: '—',
+    section: '8.3',
+    note: 'Pondération explicite C-15, exposée et réglable. La sortie est une chronologie, pas un palmarès.',
+  },
+  SCORE_CADRAGE: {
+    expression: 'S_cadrage = 1 − | remplissage − 0,42 | / 0,42',
+    unite: '—',
+    section: '8.3',
+  },
+  SCORE_HAUTEUR: {
+    expression: 'S_hauteur = min( 1, (alt_culmination − 30) / 40 )',
+    unite: '—',
+    section: '8.3',
+  },
+  SCORE_SIGNAL: {
+    expression: 'S_signal = min( 1, duree_creneau / T_requis )',
+    unite: '—',
+    section: '8.3',
+  },
+  SCORE_FENETRE: {
+    expression: 'S_fenetre = duree_creneau / duree_nuit_noire',
+    unite: '—',
+    section: '8.3',
+  },
+  SCORE_LUNE: {
+    expression: 'S_lune = 1 − ΔSB_lune / 3,0, borné à [0 ; 1]',
+    unite: '—',
+    section: '8.3',
+  },
+  BUDGET_NUIT: {
+    expression:
+      'budget = temps_capture + temps_calibration + temps_mise_en_station + temps_pointage × n_cibles',
+    unite: 'min',
+    section: '8.3',
+    note:
+      'Dépassement → retrait de la cible de plus faible score. Jamais de troncature ' +
+      'silencieuse d’une intégration.',
+  },
+
+  // Cheminement et pointage — §8.4
+  ANGLE_ZENITH: {
+    expression: 'tan(q) = sin(H) / ( tan(φ) × cos(δ) − sin(δ) × cos(H) )',
+    unite: '°',
+    section: '8.4',
+    note:
+      'Angle de position du zénith à l’instant du pointage. Un schéma non orienté est ' +
+      'inutilisable dans le noir.',
+  },
+  DECALAGE_POINTAGE: {
+    expression: 'Δad_h = AD_cible − AD_ancrage · Δdec_deg = δ_cible − δ_ancrage',
+    unite: 'h, °',
+    section: '8.4',
+  },
+  DISTANCE_SAUT: {
+    expression: 'distance_saut_deg ≤ 0,7 × FOV_chercheur_deg',
+    unite: '°',
+    section: '8.4',
+    note: 'Recouvrement garanti entre deux vignettes successives.',
+  },
+  SEPARATION_ANGULAIRE: {
+    expression: 'cos(d) = sin(δ₁)·sin(δ₂) + cos(δ₁)·cos(δ₂)·cos(AD₁ − AD₂)',
+    unite: '°',
+    section: '8.4',
+  },
+
+  // Conseil filtre et recommandation d'équipement — §7.5, §10.3
+  GAIN_FILTRE: {
+    expression: 'gain_snr = √( E_ciel_sans / E_ciel_avec )',
+    unite: '—',
+    section: '7.5',
+    note:
+      'Le dual-band ne transmet que Hα et OIII : il rejette l’essentiel du fond de ciel en ' +
+      'conservant le signal de la nébuleuse. Jamais appliqué à un objet en spectre continu.',
+  },
+  TRANSMISSION_FOND_DE_CIEL: {
+    expression: 'fraction_transmise = Σ bandes_passantes_nm / largeur_bande_large_nm',
+    unite: '—',
+    section: '7.5',
+  },
+
   // Rendu — §3.2, §3.3, §9.2
   MAGNITUDE_LIMITE_ZOOM: {
     expression: 'mag_limite = mag_base + 5 × log10( fov_ref / fov_courant )',
