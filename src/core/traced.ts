@@ -67,6 +67,15 @@ export function trace<T>(options: TraceOptions<T>): Traced<T> {
   return Object.freeze(result)
 }
 
+/**
+ * Encadrement d'une sortie qui dépend d'un ordre de grandeur (§2.1). Le facteur 2 est celui
+ * du PRD : C-12 retient 120 s en annonçant « 1 à 4 min ».
+ */
+export function plageOrdreDeGrandeur(valeur: number): readonly [number, number] {
+  const FACTEUR = 2
+  return [valeur / FACTEUR, valeur * FACTEUR]
+}
+
 /** Vrai si au moins une constante consommée est marquée « ordre de grandeur » (§2.1). */
 export function dependDUnOrdreDeGrandeur(t: Traced<unknown>): boolean {
   return t.constants.some((c) => c.ordreDeGrandeur)

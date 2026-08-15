@@ -95,6 +95,71 @@ th {
   font-size: 0.9rem;
 }
 
+select {
+  padding: 0.4rem 0.5rem;
+  background: #17171d;
+  color: var(--texte);
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+  font: inherit;
+}
+
+.niveau {
+  color: var(--attenue);
+  font-size: 0.85rem;
+}
+
+.interrupteur {
+  flex-direction: row;
+  align-items: center;
+  color: var(--texte);
+  font-size: 0.9rem;
+}
+
+/* §10.1 — la glose est au survol pour tous, et visible en plus au niveau débutant. */
+.terme abbr {
+  text-decoration: underline dotted var(--bordure);
+  cursor: help;
+}
+
+.terme-glose {
+  display: block;
+  color: var(--attenue);
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
+.terme-detail summary {
+  cursor: pointer;
+  padding: 0.35rem 0;
+}
+
+.glossaire {
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-left: 3px solid var(--bordure);
+  font-size: 0.85rem;
+  color: var(--attenue);
+}
+
+.glossaire p {
+  margin: 0 0 0.4rem;
+}
+
+.glossaire-contexte {
+  color: var(--texte);
+}
+
+.glossaire-consequence {
+  font-style: italic;
+}
+
+.tracee-suffixe,
+.tracee-plage {
+  color: var(--attenue);
+  font-size: 0.85em;
+}
+
 .tracee {
   border-bottom: 1px solid var(--bordure);
   padding: 0.35rem 0;

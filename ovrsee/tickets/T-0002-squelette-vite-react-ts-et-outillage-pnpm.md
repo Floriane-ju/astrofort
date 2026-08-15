@@ -2,7 +2,7 @@
 {
   "id": "T-0002",
   "titre": "Squelette Vite + React + TS et outillage pnpm",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "s",
   "tags": ["lot-0", "outillage"],

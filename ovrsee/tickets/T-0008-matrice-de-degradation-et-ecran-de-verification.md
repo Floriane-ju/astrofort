@@ -2,10 +2,14 @@
 {
   "id": "T-0008",
   "titre": "Matrice de dégradation §12.5 et écran de vérification du Lot 0",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "s",
-  "tags": ["lot-0", "offline", "ui"],
+  "tags": [
+    "lot-0",
+    "offline",
+    "ui"
+  ],
   "cree": "2026-08-14",
   "maj": "2026-08-14",
   "plan": "2026-08-14-plan-initialisation-d-astrofort.md",

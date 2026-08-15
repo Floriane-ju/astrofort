@@ -2,7 +2,7 @@
 {
   "id": "T-0006",
   "titre": "Encodage binaire des catalogues §12.2",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "m",
   "tags": ["lot-0", "donnees"],

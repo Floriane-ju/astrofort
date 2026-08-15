@@ -4,7 +4,51 @@
   "title": "Plan — Initialisation d'Astrofort",
   "opened": "2026-08-14",
   "closed": null,
-  "commits": []
+  "commits": [
+    {
+      "sha": "0e366aa",
+      "date": "2026-08-14",
+      "files": [
+        ".gitignore",
+        "index.html",
+        "package.json",
+        "pnpm-lock.yaml",
+        "prd.md",
+        "public/data/hyg-1.bin",
+        "public/data/manifest.json",
+        "public/data/openngc-1.bin",
+        "public/data/openngc-noms-1.bin",
+        "scripts/build-catalogs.ts",
+        "src/App.tsx",
+        "src/core/ephem.ts",
+        "src/core/night.ts",
+        "src/core/site.ts",
+        "src/core/sky-background.ts",
+        "src/core/traced.ts",
+        "src/data/bootstrap.ts",
+        "src/data/catalog.ts",
+        "src/data/db.ts",
+        "src/data/deepsky.ts",
+        "src/data/degradation.ts",
+        "src/data/equipment.ts",
+        "src/data/persistence.ts",
+        "src/main.tsx",
+        "src/registry/bortle.ts",
+        "src/registry/constants.ts",
+        "src/registry/formulas.ts",
+        "src/ui/TracedValue.tsx",
+        "src/ui/styles.css",
+        "tests/bortle.test.ts",
+        "tests/catalog.test.ts",
+        "tests/night.test.ts",
+        "tests/offline.test.ts",
+        "tests/persistence.test.ts",
+        "tests/registry.test.ts",
+        "tsconfig.json",
+        "vite.config.ts"
+      ]
+    }
+  ]
 }
 ---
 

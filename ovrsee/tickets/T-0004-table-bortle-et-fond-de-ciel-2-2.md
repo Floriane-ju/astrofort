@@ -2,7 +2,7 @@
 {
   "id": "T-0004",
   "titre": "Table Bortle et fond de ciel §2.2",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "s",
   "tags": ["lot-0", "registre"],

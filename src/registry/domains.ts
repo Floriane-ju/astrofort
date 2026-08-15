@@ -1,0 +1,111 @@
+/**
+ * Domaines de saisie — colonne « plage valide » des tableaux Entrées / Sorties du PRD
+ * (§4.1, §5.1, §5.2).
+ *
+ * Ils vivent à côté du registre §2.1 pour la même raison que lui : ce sont des valeurs
+ * déclarées par le PRD, pas des résultats de formule. Les moteurs les citent au lieu de
+ * réécrire des bornes en dur, et un refus de saisie nomme toujours le champ fautif.
+ */
+
+export interface DomaineSaisie {
+  /** Libellé du champ tel qu'il apparaît à l'utilisateur, cité dans le message de refus. */
+  readonly champ: string
+  readonly min: number
+  readonly max: number
+  readonly unite: string
+  readonly section: string
+}
+
+function domaine(d: DomaineSaisie): DomaineSaisie {
+  return Object.freeze(d)
+}
+
+export const DOMAINES = Object.freeze({
+  // §4.1 — profil Lieu
+  latitude_deg: domaine({ champ: 'la latitude', min: -90, max: 90, unite: '°', section: '4.1' }),
+  longitude_deg: domaine({ champ: 'la longitude', min: -180, max: 180, unite: '°', section: '4.1' }),
+  altitude_m: domaine({ champ: 'l’altitude', min: -400, max: 6000, unite: 'm', section: '4.1' }),
+  sqm_mesure: domaine({ champ: 'le SQM mesuré', min: 16, max: 22, unite: 'mag/as²', section: '4.1' }),
+  bortle_declare: domaine({ champ: 'le Bortle déclaré', min: 1, max: 9, unite: '—', section: '4.1' }),
+  masque_horizon_deg: domaine({
+    champ: 'le masque d’horizon',
+    min: 0,
+    max: 90,
+    unite: '°',
+    section: '4.1',
+  }),
+
+  // §5.1 — profil optique et capteur
+  focale_mm: domaine({ champ: 'la focale', min: 8, max: 4000, unite: 'mm', section: '5.1' }),
+  ouverture_N: domaine({ champ: 'l’ouverture', min: 0.95, max: 32, unite: 'f/N', section: '5.1' }),
+  capteur_mm: domaine({
+    champ: 'la dimension de capteur',
+    min: 3,
+    max: 60,
+    unite: 'mm',
+    section: '5.1',
+  }),
+  pitch_um: domaine({ champ: 'le pitch', min: 0.8, max: 24, unite: 'µm', section: '5.1' }),
+  read_noise_e: domaine({ champ: 'le bruit de lecture', min: 0.5, max: 15, unite: 'e⁻', section: '5.1' }),
+  seuil_double_gain_iso: domaine({
+    champ: 'le seuil de double gain',
+    min: 100,
+    max: 6400,
+    unite: 'ISO',
+    section: '5.1',
+  }),
+  full_well_e: domaine({
+    champ: 'la capacité de saturation',
+    min: 5000,
+    max: 200000,
+    unite: 'e⁻',
+    section: '5.1',
+  }),
+  zp_sys: domaine({ champ: 'le point zéro système', min: 18, max: 22, unite: 'mag', section: '5.1' }),
+  taille_raw_mo: domaine({ champ: 'la taille RAW', min: 5, max: 120, unite: 'Mo', section: '5.1' }),
+  autonomie_cipa: domaine({
+    champ: 'l’autonomie CIPA',
+    min: 100,
+    max: 2000,
+    unite: 'vues',
+    section: '5.1',
+  }),
+
+  // §5.2 — profil Suivi
+  t_max_suivi_s: domaine({ champ: 'la pose maximale de suivi', min: 1, max: 240, unite: 's', section: '5.2' }),
+
+  // §9.1 — déclinaison de la zone visée
+  dec_deg: domaine({ champ: 'la déclinaison', min: -90, max: 90, unite: '°', section: '9.1' }),
+})
+
+export type DomaineId = keyof typeof DOMAINES
+
+/** Saisie refusée : le champ fautif est nommé, jamais corrigé en silence (§5.1). */
+export class SaisieRefuseeError extends Error {
+  readonly champ: DomaineId
+
+  constructor(champ: DomaineId, message: string) {
+    super(message)
+    this.name = 'SaisieRefuseeError'
+    this.champ = champ
+  }
+}
+
+/** Retourne la valeur si elle est dans le domaine, lève en la nommant sinon. */
+export function valide(champ: DomaineId, valeur: number): number {
+  const d = DOMAINES[champ]
+  if (!Number.isFinite(valeur)) {
+    throw new SaisieRefuseeError(
+      champ,
+      `Saisie refusée : ${d.champ} doit être un nombre (§${d.section}).`,
+    )
+  }
+  if (valeur < d.min || valeur > d.max) {
+    throw new SaisieRefuseeError(
+      champ,
+      `Saisie refusée : ${d.champ} vaut ${valeur} ${d.unite}, hors de la plage ${d.min} à ` +
+        `${d.max} ${d.unite} (§${d.section}).`,
+    )
+  }
+  return valeur
+}

@@ -2,10 +2,12 @@
 {
   "id": "T-0009",
   "titre": "Lot 1 — Contrat d'entrée : profils Lieu, Optique et Suivi",
-  "colonne": "backlog",
+  "colonne": "en-cours",
   "priorite": "haute",
   "charge": "l",
-  "tags": ["lot-1"],
+  "tags": [
+    "lot-1"
+  ],
   "cree": "2026-08-14",
   "maj": "2026-08-14",
   "plan": "2026-08-14-plan-initialisation-d-astrofort.md"
@@ -23,10 +25,10 @@ et le recadrage APS-C ne grossit rien, il change le champ et jamais l'échantill
 
 ## Critères d'acceptation
 
-- [ ] Un lieu et un matériel saisis produisent champ, échantillonnage, pose max NPF et
+- [x] Un lieu et un matériel saisis produisent champ, échantillonnage, pose max NPF et
       seuils de déclinaison du site
-- [ ] Le profil de référence 120 mm f/2,8 plein format donne 17,0° × 11,4°, 8,80 "/px,
+- [x] Le profil de référence 120 mm f/2,8 plein format donne 17,0° × 11,4°, 8,80 "/px,
       D = 42,9 mm, Dawes 2,70", diagnostic « grand champ assumé » sans alerte bloquante
-- [ ] Le basculement en APS-C affiche explicitement que l'échantillonnage est inchangé
-- [ ] Un site sans donnée de relief reçoit un masque plat marqué [HYP], affiché comme tel
-- [ ] Chaque terme technique est glosé au contact
+- [x] Le basculement en APS-C affiche explicitement que l'échantillonnage est inchangé
+- [x] Un site sans donnée de relief reçoit un masque plat marqué [HYP], affiché comme tel
+- [x] Chaque terme technique est glosé au contact

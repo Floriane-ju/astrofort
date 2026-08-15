@@ -2,7 +2,7 @@
 {
   "id": "T-0005",
   "titre": "Éphémérides côté client §12.4 et fenêtre nocturne §8.1",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "m",
   "tags": ["lot-0", "moteur"],

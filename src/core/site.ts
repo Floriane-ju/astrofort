@@ -6,7 +6,8 @@
  */
 
 import { K } from '../registry/constants.ts'
-import type { Traced } from './traced.ts'
+import { DOMAINES, SaisieRefuseeError, valide } from '../registry/domains.ts'
+import type { Flag, Traced } from './traced.ts'
 import { trace } from './traced.ts'
 
 const ANGLE_DROIT_DEG = 90
@@ -40,6 +41,59 @@ export function seuilsDeclinaison(latitudeDeg: number): SeuilsSite {
       constants: ['SEUIL_HAUTEUR_VISUEL_DEG'],
     }),
   }
+}
+
+/** Une valeur d'obstruction par degré d'azimut, de 0 à 359 (§4.1). */
+export const NB_AZIMUTS = 360
+
+export interface MasqueHorizon {
+  /** Altitude d'obstruction en degrés, indexée par l'azimut entier. */
+  readonly altitudesDeg: readonly number[]
+  /** Vrai quand le masque est le repli plat, faute de donnée de relief. */
+  readonly estHypothese: boolean
+  readonly flags?: readonly Flag[]
+  readonly note?: string
+}
+
+/**
+ * Repli d'un site sans donnée de relief : horizon plat à 0°, marqué [HYP] (§4.1).
+ * L'hypothèse est annoncée — un site au pied des Alpes n'a pas d'horizon plat, et une
+ * recommandation calculée sur cette base serait fausse la moitié du temps.
+ */
+export function masquePlat(): MasqueHorizon {
+  return Object.freeze({
+    altitudesDeg: Object.freeze(Array.from({ length: NB_AZIMUTS }, () => 0)),
+    estHypothese: true,
+    flags: Object.freeze(['HYP' as const]),
+    note:
+      'Aucune donnée de relief pour ce site : un horizon plat à 0° est supposé. À compléter ' +
+      'à la main pour tenir compte du relief, des arbres et des bâtiments.',
+  })
+}
+
+/** Masque construit sur un profil d'altitude réel : ce n'est plus une hypothèse (§4.1). */
+export function masqueDepuisRelief(altitudesDeg: readonly number[]): MasqueHorizon {
+  if (altitudesDeg.length !== NB_AZIMUTS) {
+    throw new SaisieRefuseeError(
+      'masque_horizon_deg',
+      `Saisie refusée : ${DOMAINES.masque_horizon_deg.champ} demande ${NB_AZIMUTS} valeurs, une par degré ` +
+        `d'azimut ; ${altitudesDeg.length} reçues. Les azimuts manquants ne sont pas comblés ` +
+        'au hasard.',
+    )
+  }
+  for (const altitude of altitudesDeg) {
+    valide('masque_horizon_deg', altitude)
+  }
+  return Object.freeze({
+    altitudesDeg: Object.freeze([...altitudesDeg]),
+    estHypothese: false,
+  })
+}
+
+/** Obstruction à un azimut quelconque : l'azimut se referme sur lui-même. */
+export function obstructionDeg(masque: MasqueHorizon, azimutDeg: number): number {
+  const index = ((Math.round(azimutDeg) % NB_AZIMUTS) + NB_AZIMUTS) % NB_AZIMUTS
+  return masque.altitudesDeg[index] ?? 0
 }
 
 /** Hauteur atteinte par une cible à sa culmination, depuis ce site. */

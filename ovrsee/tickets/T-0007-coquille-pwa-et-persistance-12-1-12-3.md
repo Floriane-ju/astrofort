@@ -2,7 +2,7 @@
 {
   "id": "T-0007",
   "titre": "Coquille PWA et persistance du stockage §12.1, §12.3",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "m",
   "tags": ["lot-0", "offline"],

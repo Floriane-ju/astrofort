@@ -3,10 +3,13 @@
   "id": "T-0001",
   "type": "epic",
   "titre": "Lot 0 — Socle technique",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "xl",
-  "tags": ["lot-0", "socle"],
+  "tags": [
+    "lot-0",
+    "socle"
+  ],
   "cree": "2026-08-14",
   "maj": "2026-08-14",
   "plan": "2026-08-14-plan-initialisation-d-astrofort.md"

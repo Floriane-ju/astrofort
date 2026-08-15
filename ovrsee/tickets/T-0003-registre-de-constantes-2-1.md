@@ -2,7 +2,7 @@
 {
   "id": "T-0003",
   "titre": "Registre de constantes §2.1 et formulaire Annexe B",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "m",
   "tags": ["lot-0", "registre"],
