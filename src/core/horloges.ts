@@ -22,7 +22,7 @@ import {
   type PositionCorps,
   type Site,
 } from './ephem.ts'
-import { DEG, multiplie, rotationX, rotationZ, type Mat3 } from './mat3.ts'
+import { DEG, multiplie, rotationX, rotationZ, type Mat3, type Vec3 } from './mat3.ts'
 import { trace, type Traced } from './traced.ts'
 
 const HEURES_PAR_TOUR = 24
@@ -68,6 +68,16 @@ export function matricePrecessionAnnee(anneeEpoque: number): Mat3 {
     precessionMemo = { annee, matrice: matricePrecession(annee) }
   }
   return precessionMemo.matrice
+}
+
+/**
+ * Direction J2000 du pôle céleste NORD DE L'ÉPOQUE — l'axe autour duquel le ciel tourne
+ * réellement, et donc le centre exact des arcs de filé (§9.3). La rotation terrestre s'applique
+ * après la précession : l'axe est la troisième ligne de la matrice de précession.
+ */
+export function axePoleDeDate(anneeEpoque: number): Vec3 {
+  const [, , , , , , x, y, z] = matricePrecessionAnnee(anneeEpoque)
+  return { x, y, z }
 }
 
 /**

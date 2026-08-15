@@ -380,12 +380,55 @@ button,
   cursor: grabbing;
 }
 
+/* §9.2 — canevas de prévisualisation. Aucun rapport d'image n'est imposé ici : c'est celui
+   du capteur déclaré, et le fausser fausserait le cadrage préparé sur cet écran. */
+.previsu-champ {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+}
+
+/* §9.1 — la pose maximale est une carte, pas un nombre : la grille reprend la géométrie du
+   cadre, cellule par cellule. */
+.carte-pose {
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.carte-pose td {
+  border: 1px solid var(--bordure);
+  padding: 0.2rem 0.4rem;
+  text-align: center;
+  background: var(--surface);
+}
+
+.carte-pose-dec {
+  display: block;
+  color: var(--attenue);
+  font-size: 0.9em;
+}
+
+/* La zone limitante et ses voisines immédiates : ce sont elles qui fixent la pose. */
+.carte-pose .pose-courte {
+  background: var(--fond-alerte);
+  color: var(--alerte);
+}
+
+.carte-pose .pose-pole {
+  background: var(--surface-haute);
+}
+
 @media print {
   /* §11.2 — le plan est imprimable : ce qui n'est pas le plan ne l'est pas. */
   .actions,
   .niveau,
   .champs,
-  .planetarium {
+  .planetarium,
+  .previsu-champ {
     display: none;
   }
 }

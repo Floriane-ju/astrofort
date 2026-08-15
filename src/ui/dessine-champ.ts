@@ -1,0 +1,267 @@
+/**
+ * §9.2 et §9.3 — passe de rendu de la prévisualisation de champ et du filé.
+ *
+ * TROIS COUCHES, un seul moteur de projection : celui de §3.3. La couche 1 vient du catalogue
+ * réel, la couche 2 du semis génératif, la couche 3 du masque procédural de la Voie lactée en
+ * coordonnées galactiques.
+ *
+ * Une seule primitive dessine les étoiles, ponctuelles ou filées : l'arc de §9.3, balayé
+ * pendant la durée d'accumulation demandée. Une pose unitaire trop longue produit donc
+ * naturellement une étoile ovalisée — c'est le même code que le filé de quatre heures, à la
+ * durée près.
+ *
+ * ponytail: rendu statique, une image par changement de réglage. Les étoiles sont tracées une
+ * par une, sans regroupement par teinte comme au planétarium : l'économie de changements
+ * d'état ne vaut que dans une boucle à 60 Hz. Si cette vue s'anime un jour, regrouper ici.
+ */
+
+import { K } from '../registry/constants.ts'
+import { arcEtoile, poseParPixelS, positionPole, type PositionPole } from '../core/file-etoiles.ts'
+import {
+  contrasteVoieLactee,
+  depuisGalactique,
+  magnitudeLimitePrevisu,
+  opaciteEtoile,
+  vignettageDiaph,
+  type EntreeProfondeur,
+} from '../core/galactique.ts'
+import type { IndexCiel } from '../core/index-ciel.ts'
+import { selectionne } from '../core/index-ciel.ts'
+import { rayonEtoilePx, type PointEcran, type Projecteur } from '../core/projection.ts'
+import type { Vec3 } from '../core/mat3.ts'
+import { couleurTeinte, palette, teinte } from './couleurs.ts'
+
+const S_PAR_MIN = 60
+/** Sous ce rayon, l'antialiasing efface le disque : la plus faible étoile reste un point. */
+const RAYON_MIN_ETOILE_PX = 0.7
+/** Pas du maillage de la bande galactique, en degrés. */
+const PAS_BANDE_L_DEG = 6
+const PAS_BANDE_B_DEG = 2
+/** Latitude galactique au-delà de laquelle la bande ne se distingue plus du fond. */
+const BANDE_B_MAX_DEG = 60
+const TOUR_RAD = 2 * Math.PI
+const MARQUEUR_POLE_PX = 14
+/**
+ * Sous cette opacité, l'étoile est trop loin sous le seuil d'enregistrement pour laisser une
+ * trace : elle n'est pas tracée du tout. Sans ce plancher, des milliers de traces
+ * sous-liminaires s'additionnent et blanchissent une image qui, en vrai, resterait noire.
+ */
+const OPACITE_MIN = 0.2
+const DEMI_TOUR = 180
+/** Flou appliqué au masque de la Voie lactée, en pixels de rendu. */
+const FLOU_BANDE_PX = 32
+
+export interface EntreeDessinChamp {
+  readonly ctx: CanvasRenderingContext2D
+  readonly projecteur: Projecteur
+  /** Catalogue réel : couche 1, positions exactes jusqu'au seuil catalographié. */
+  readonly indexReel: IndexCiel
+  /** Semis génératif : couche 2, au-delà du seuil. */
+  readonly indexSemis: IndexCiel
+  /** Profondeur atteinte par la pose unitaire (§9.2) : borne de sélection du catalogue. */
+  readonly magLimite: number
+  /** Entrées de profondeur, réévaluées par étoile avec sa pose par pixel réelle (§9.3). */
+  readonly profondeur: EntreeProfondeur
+  /** Échantillonnage du capteur, en secondes d'arc par pixel : il fixe la pose par pixel. */
+  readonly echApx: number
+  /** Suivi actif (§5.2) : les étoiles restent ponctuelles et le pixel reçoit toute la pose. */
+  readonly suiviActif: boolean
+  readonly sbCiel: number
+  /** Durée d'accumulation dessinée : pose unitaire en prévisualisation, durée totale en filé. */
+  readonly dureeS: number
+  readonly latitudeDeg: number
+  /** Direction J2000 du pôle céleste nord de l'époque : centre exact des arcs (§9.3). */
+  readonly axePoleNord: Vec3
+  readonly voieLactee: boolean
+  readonly vignettage: boolean
+  readonly modeNuit: boolean
+}
+
+export interface SortieDessinChamp {
+  readonly etoilesReelles: number
+  readonly etoilesGenerees: number
+  readonly arcsTronques: number
+  readonly pole: PositionPole
+}
+
+/** Couche 3 — masque procédural de la Voie lactée, en coordonnées galactiques. */
+function dessineVoieLactee(entree: EntreeDessinChamp): void {
+  const { ctx, projecteur } = entree
+  const contraste = contrasteVoieLactee(entree.sbCiel)
+  if (contraste <= 0) return
+  const echelle = K('ECHELLE_LATITUDE_GALACTIQUE_DEG')
+  // Le masque est peint en bandes de latitude galactique, donc en marches d'escalier. Un
+  // flou de quelques dizaines de pixels les fond : la Voie lactée n'a pas de bord franc, et
+  // une bande en escalier se lirait comme un artefact de rendu plutôt que comme le ciel.
+  ctx.filter = `blur(${FLOU_BANDE_PX}px)`
+
+  // L'opacité est ramenée à zéro à la latitude de coupure : sans cette soustraction, la
+  // bande s'arrêterait sur une frontière droite bien visible en travers du ciel.
+  const plancher = Math.exp(-BANDE_B_MAX_DEG / echelle)
+  for (let b = -BANDE_B_MAX_DEG; b < BANDE_B_MAX_DEG; b += PAS_BANDE_B_DEG) {
+    const milieu = Math.abs(b + PAS_BANDE_B_DEG / 2)
+    const alpha = contraste * (Math.exp(-milieu / echelle) - plancher)
+    if (alpha <= 0) continue
+    ctx.fillStyle = entree.modeNuit
+      ? `rgb(120 0 0 / ${alpha})`
+      : `rgb(150 160 190 / ${alpha})`
+    // Une bande de latitude se remplit d'un seul tenant, jamais en carreaux juxtaposés :
+    // deux surfaces translucides voisines laissent une couture claire sur leur arête
+    // commune, et la bande se lirait alors comme une grille.
+    let basse: PointEcran[] = []
+    let haute: PointEcran[] = []
+    const remplit = (): void => {
+      if (basse.length < 2) return
+      ctx.beginPath()
+      basse.forEach((p, i) => (i === 0 ? ctx.moveTo(p.xPx, p.yPx) : ctx.lineTo(p.xPx, p.yPx)))
+      for (let i = haute.length - 1; i >= 0; i--) ctx.lineTo(haute[i]!.xPx, haute[i]!.yPx)
+      ctx.closePath()
+      ctx.fill()
+    }
+    for (let l = 0; l <= 360; l += PAS_BANDE_L_DEG) {
+      const bas = projecteur.projette(depuisGalactique(l, b))
+      const haut = projecteur.projette(depuisGalactique(l, b + PAS_BANDE_B_DEG))
+      if (bas === null || haut === null) {
+        remplit()
+        basse = []
+        haute = []
+        continue
+      }
+      basse.push(bas)
+      haute.push(haut)
+    }
+    remplit()
+  }
+  ctx.filter = 'none'
+}
+
+interface Compteur {
+  dessinees: number
+  tronques: number
+}
+
+/** Une étoile : un arc balayé pendant la durée d'accumulation, ponctuel quand elle est brève. */
+function dessineCouche(
+  entree: EntreeDessinChamp,
+  index: IndexCiel,
+  magMin: number,
+  magMax: number,
+  compteur: Compteur,
+): void {
+  const { ctx, projecteur } = entree
+  const largeur = projecteur.vue.largeurPx
+  const hauteur = projecteur.vue.hauteurPx
+  const centreJ2000 = projecteur.inverse(largeur / 2, hauteur / 2)
+  const rayonChampDeg = Math.min(
+    K('FOV_MAX_DEG') / 2,
+    (projecteur.vue.fovDeg / 2) * Math.hypot(1, hauteur / largeur),
+  )
+  // Avec suivi, l'étoile ne se déplace pas sur le capteur : ni trace, ni étalement du flux.
+  const dureeMin = entree.suiviActif ? 0 : entree.dureeS / S_PAR_MIN
+
+  selectionne(index, centreJ2000, rayonChampDeg, magMax, (x, y, z, magV, bv) => {
+    if (magV < magMin) return
+    const rayon = Math.max(RAYON_MIN_ETOILE_PX, rayonEtoilePx(magV))
+    const arc = arcEtoile(projecteur, { x, y, z }, dureeMin, entree.axePoleNord)
+    if (arc.segments.length === 0) return
+
+    // La brillance d'une trace se juge sur la pose vue PAR PIXEL, pas sur la durée totale :
+    // c'est pour cela qu'un filé de deux heures ne montre que les étoiles brillantes, là où
+    // la même durée en poses fixes empilées en montrerait des milliers.
+    const profondeurTrace = magnitudeLimitePrevisu({
+      ...entree.profondeur,
+      tPoseS: entree.suiviActif
+        ? entree.dureeS
+        : poseParPixelS(
+            entree.dureeS,
+            entree.echApx,
+            (Math.asin(Math.max(-1, Math.min(1, z))) * DEMI_TOUR) / Math.PI,
+          ),
+    }).value
+    const opacite = opaciteEtoile(magV, profondeurTrace)
+    if (opacite < OPACITE_MIN) return
+    const couleur = couleurTeinte(teinte(bv), entree.modeNuit)
+    ctx.globalAlpha = opacite
+
+    if (arc.longueurPx <= rayon) {
+      // Trace plus courte que l'étoile elle-même : elle reste un disque.
+      const point = arc.segments[0]![0]!
+      ctx.fillStyle = couleur
+      ctx.beginPath()
+      ctx.arc(point.xPx, point.yPx, rayon, 0, TOUR_RAD)
+      ctx.fill()
+    } else {
+      ctx.strokeStyle = couleur
+      ctx.lineWidth = rayon * 2
+      ctx.lineCap = 'round'
+      ctx.beginPath()
+      for (const segment of arc.segments) {
+        segment.forEach((p, i) => {
+          if (i === 0) ctx.moveTo(p.xPx, p.yPx)
+          else ctx.lineTo(p.xPx, p.yPx)
+        })
+      }
+      ctx.stroke()
+    }
+    compteur.dessinees++
+    if (arc.tronque) compteur.tronques++
+  })
+  ctx.globalAlpha = 1
+}
+
+/** Vignettage — assombrissement des coins, chiffré en diaphragmes par §9.2. */
+function dessineVignettage(entree: EntreeDessinChamp): void {
+  const { ctx, projecteur } = entree
+  const largeur = projecteur.vue.largeurPx
+  const hauteur = projecteur.vue.hauteurPx
+  const rayon = Math.hypot(largeur, hauteur) / 2
+  const attenuation = vignettageDiaph(1).value
+  const opacite = 1 - 2 ** -attenuation
+  const degrade = ctx.createRadialGradient(largeur / 2, hauteur / 2, 0, largeur / 2, hauteur / 2, rayon)
+  degrade.addColorStop(0, 'rgb(0 0 0 / 0)')
+  degrade.addColorStop(1, `rgb(0 0 0 / ${opacite})`)
+  ctx.fillStyle = degrade
+  ctx.fillRect(0, 0, largeur, hauteur)
+}
+
+export function dessineChamp(entree: EntreeDessinChamp): SortieDessinChamp {
+  const { ctx, projecteur } = entree
+  const teintes = palette(entree.modeNuit)
+  const largeur = projecteur.vue.largeurPx
+  const hauteur = projecteur.vue.hauteurPx
+
+  ctx.fillStyle = teintes.fond
+  ctx.fillRect(0, 0, largeur, hauteur)
+
+  if (entree.voieLactee) dessineVoieLactee(entree)
+
+  const seuilReel = K('SEUIL_MAG_ETOILES_REELLES')
+  const reelles: Compteur = { dessinees: 0, tronques: 0 }
+  const generees: Compteur = { dessinees: 0, tronques: 0 }
+  dessineCouche(entree, entree.indexReel, -Infinity, Math.min(entree.magLimite, seuilReel), reelles)
+  if (entree.magLimite > seuilReel) {
+    dessineCouche(entree, entree.indexSemis, seuilReel, entree.magLimite, generees)
+  }
+
+  if (entree.vignettage) dessineVignettage(entree)
+
+  // Centre de rotation : marqué s'il tombe dans le cadre, jamais ramené dedans s'il n'y est pas.
+  const pole = positionPole(projecteur, entree.latitudeDeg, entree.axePoleNord)
+  if (pole.dansCadre && pole.xPx !== null && pole.yPx !== null) {
+    ctx.strokeStyle = teintes.cadre
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(pole.xPx - MARQUEUR_POLE_PX, pole.yPx)
+    ctx.lineTo(pole.xPx + MARQUEUR_POLE_PX, pole.yPx)
+    ctx.moveTo(pole.xPx, pole.yPx - MARQUEUR_POLE_PX)
+    ctx.lineTo(pole.xPx, pole.yPx + MARQUEUR_POLE_PX)
+    ctx.stroke()
+  }
+
+  return {
+    etoilesReelles: reelles.dessinees,
+    etoilesGenerees: generees.dessinees,
+    arcsTronques: reelles.tronques + generees.tronques,
+    pole,
+  }
+}

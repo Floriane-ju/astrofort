@@ -1,0 +1,139 @@
+/**
+ * §9.1 — Pose maximale à étoiles ponctuelles.
+ *
+ * Le critère qui compte n'est pas qu'une formule soit appliquée, mais qu'elle soit appliquée
+ * PAR RÉGION DU CIEL : le setup grand angle de référence du PRD donne 25,2 s à l'équateur
+ * céleste et 1 442 s à δ = +89°, quand la règle des 500 annonce 50 s pour tout le ciel.
+ */
+
+import { describe, expect, it } from 'vitest'
+import { cartePoseMax, traceePx } from '../src/core/grand-champ.ts'
+import { focaleEquivalente24x36, fovDeg } from '../src/core/optics.ts'
+import { npf } from '../src/core/tracking.ts'
+import { K } from '../src/registry/constants.ts'
+
+/** Setup grand angle de référence du PRD : 10 mm f/2,8, pitch 5,12 µm, plein format. */
+const GRAND_ANGLE = { focaleMm: 10, ouvertureN: 2.8, pitchUm: 5.12 }
+const CAPTEUR_L_MM = 35.9
+const CAPTEUR_H_MM = 23.9
+
+const FOV_L = fovDeg(CAPTEUR_L_MM, GRAND_ANGLE.focaleMm).value
+const FOV_H = fovDeg(CAPTEUR_H_MM, GRAND_ANGLE.focaleMm).value
+
+function carte(options: {
+  centreDecDeg: number
+  fovLDeg?: number
+  fovHDeg?: number
+  tMaxSuiviS?: number | null
+}) {
+  return cartePoseMax({
+    ...GRAND_ANGLE,
+    fovLDeg: options.fovLDeg ?? FOV_L,
+    fovHDeg: options.fovHDeg ?? FOV_H,
+    centreAdDeg: 0,
+    centreDecDeg: options.centreDecDeg,
+    rotationDeg: 0,
+    focaleEquivalenteMm: focaleEquivalente24x36(
+      GRAND_ANGLE.focaleMm,
+      CAPTEUR_L_MM,
+      CAPTEUR_H_MM,
+    ).value,
+    ...(options.tMaxSuiviS === undefined ? {} : { tMaxSuiviS: options.tMaxSuiviS }),
+  })
+}
+
+describe('§9.1 — pose max par déclinaison', () => {
+  it('donne 25,2 s sur l’équateur céleste et nomme la zone limitante', () => {
+    const resultat = carte({ centreDecDeg: 0 })
+    expect(resultat.tMaxCadreS.value).toBeCloseTo(25.16, 1)
+    expect(resultat.decMinAbsDeg).toBeCloseTo(0, 6)
+    expect(resultat.zoneLimitante).toMatch(/δ = -?0°/)
+    expect(resultat.messages.join(' ')).toMatch(/[Zz]one limitante/)
+  })
+
+  it('affiche la règle des 500 en repère explicitement non retenu', () => {
+    const resultat = carte({ centreDecDeg: 0 })
+    // 500 / 10 mm équivalent plein format : la même valeur pour tout le ciel.
+    expect(resultat.t500S.value).toBeCloseTo(50, 0)
+    expect(resultat.t500S.formula.note).toMatch(/JAMAIS moteur de calcul/)
+    expect(resultat.t500S.note).toMatch(/non retenu/)
+    // Le double de la valeur correcte à l'équateur céleste.
+    expect(resultat.t500S.value / resultat.tMaxCadreS.value!).toBeCloseTo(2, 1)
+  })
+
+  it('suit la déclinaison, et non une règle uniforme', () => {
+    const zones: readonly (readonly [number, number])[] = [
+      [0, 25.16],
+      [-25, 27.76],
+      [50, 39.14],
+      [89, 1441.6],
+    ]
+    for (const [decDeg, attendu] of zones) {
+      expect(npf({ ...GRAND_ANGLE, decDeg }).value, `δ = ${decDeg}`).toBeCloseTo(attendu, 1)
+    }
+  })
+
+  it('retient la zone de plus faible déclinaison absolue, pas le centre de visée', () => {
+    // Bande verticale couvrant δ = +5° à δ = +70° : c'est δ = +5° qui commande.
+    const resultat = carte({ centreDecDeg: 37.5, fovLDeg: 2, fovHDeg: 65 })
+    expect(resultat.decMinAbsDeg).toBeCloseTo(5, 0)
+    expect(resultat.tMaxCadreS.value).toBeCloseTo(npf({ ...GRAND_ANGLE, decDeg: 5 }).value!, 0)
+    expect(resultat.messages.join(' ')).toMatch(/Recadrer vers le pôle/)
+  })
+
+  it('avertit que la contrainte change de nature près du pôle', () => {
+    const resultat = carte({ centreDecDeg: 89 })
+    const polaire = resultat.cellules.reduce((max, cellule) =>
+      Math.abs(cellule.decDeg) > Math.abs(max.decDeg) ? cellule : max,
+    )
+    expect(polaire.tNpfS === null || polaire.tNpfS > K('POSE_LONGUE_AVERTISSEMENT_S')).toBe(true)
+    expect(resultat.messages.join(' ')).toMatch(/bruit thermique/)
+  })
+
+  it('bascule sur le plafond de la monture quand le suivi est actif, en le disant', () => {
+    const sansSuivi = carte({ centreDecDeg: 0 })
+    const avecSuivi = carte({ centreDecDeg: 0, tMaxSuiviS: 120 })
+    expect(sansSuivi.regime).toBe('NPF')
+    expect(avecSuivi.regime).toBe('SUIVI')
+    expect(avecSuivi.poseOperanteS).toBe(120)
+    // La NPF reste calculée et affichée, à titre informatif.
+    expect(avecSuivi.tMaxCadreS.value).toBeCloseTo(25.16, 1)
+    expect(avecSuivi.messages.join(' ')).toMatch(/à titre informatif/)
+  })
+
+  it('produit une carte, pas un nombre', () => {
+    const resultat = carte({ centreDecDeg: 0 })
+    expect(resultat.cellules.length).toBe(resultat.cote ** 2)
+    const declinaisons = resultat.cellules.map((c) => c.decDeg)
+    // Sur un grand champ, la déclinaison varie de plusieurs dizaines de degrés dans le cadre.
+    expect(Math.max(...declinaisons) - Math.min(...declinaisons)).toBeGreaterThan(60)
+  })
+
+  it('chiffre la traînée réellement inscrite sur le capteur', () => {
+    const echApx = (K('RADIAN_EN_ARCSEC') * GRAND_ANGLE.pitchUm) / (GRAND_ANGLE.focaleMm * 1000)
+    // 15,041 "/s à δ = 0 : une pose de 60 s inscrit 902 arcsecondes de traînée.
+    const trainee = traceePx(60, 0, echApx)
+    expect(trainee.value * echApx).toBeCloseTo(15.041 * 60, 3)
+    // À déclinaison plus élevée, la même pose trace moins.
+    expect(traceePx(60, 60, echApx).value).toBeCloseTo(trainee.value / 2, 3)
+  })
+})
+
+describe('§9.1 — focale équivalente, repère et non moteur', () => {
+  it('vaut la focale réelle en plein format et croît au recadrage', () => {
+    expect(focaleEquivalente24x36(10, CAPTEUR_L_MM, CAPTEUR_H_MM).value).toBeCloseTo(10, 1)
+    const apsc = focaleEquivalente24x36(10, 23.5, 15.6).value
+    expect(apsc).toBeGreaterThan(15)
+    expect(apsc).toBeLessThan(16)
+  })
+
+  it('ne change pas la pose maximale, qui ne dépend que du pitch et de la focale', () => {
+    const pleinFormat = carte({ centreDecDeg: 0, fovLDeg: FOV_L, fovHDeg: FOV_H })
+    const recadre = carte({
+      centreDecDeg: 0,
+      fovLDeg: fovDeg(23.5, GRAND_ANGLE.focaleMm).value,
+      fovHDeg: fovDeg(15.6, GRAND_ANGLE.focaleMm).value,
+    })
+    expect(recadre.tMaxCadreS.value).toBeCloseTo(pleinFormat.tMaxCadreS.value!, 6)
+  })
+})

@@ -858,6 +858,204 @@ export const GLOSSAIRE = Object.freeze({
     sections: ['3.1', '3.4'],
   }),
 
+  // §9 — grand champ, prévisualisation et filé
+  pose_max_cadre: terme({
+    libelle: 'Pose max du cadre',
+    glose: 'pose de la zone limitante',
+    explication:
+      'Il n’existe pas une pose maximale, mais une pose maximale par déclinaison : une étoile ' +
+      'proche du pôle se déplace moins vite qu’une étoile équatoriale. Sur un grand champ, la ' +
+      'déclinaison varie de plusieurs dizaines de degrés d’un bord du cadre à l’autre. La pose ' +
+      'retenue est celle de la zone la plus contraignante, jamais celle du centre de visée.',
+    consequence:
+      'Recadrer vers le pôle rallonge la pose utile, et l’application nomme la zone qui la bride.',
+    sections: ['9.1'],
+  }),
+  regle_500: terme({
+    libelle: 'Règle des 500',
+    glose: 'repère historique, jamais retenu',
+    explication:
+      'La règle des 500 divise 500 par la focale équivalente et donne une valeur unique pour ' +
+      'tout le ciel. Elle vaut le double de la pose correcte à l’équateur céleste et trente ' +
+      'fois trop peu près du pôle. Elle est affichée parce qu’elle est partout, pas parce ' +
+      'qu’elle est juste.',
+    consequence:
+      'Aucun calcul de l’application ne la consomme : seule la NPF complète pilote la pose.',
+    sections: ['9.1'],
+  }),
+  trainee: terme({
+    libelle: 'Traînée',
+    glose: 'filé inscrit sur le capteur',
+    explication:
+      'La traînée est la longueur, en pixels, du déplacement d’une étoile pendant la pose. ' +
+      'Elle croît avec la pose et la focale, et décroît avec la déclinaison. Au-delà d’un ' +
+      'pixel ou deux, les étoiles cessent d’être ponctuelles à l’examen à cent pour cent.',
+    consequence:
+      'La prévisualisation ovalise les étoiles dès que la pose dépasse la pose max du cadre.',
+    sections: ['9.1', '9.2'],
+  }),
+  focale_equivalente: terme({
+    libelle: 'Focale équivalente',
+    glose: 'focale ramenée au plein format',
+    explication:
+      'La focale équivalente compare des cadrages entre formats de capteur différents. Elle ne ' +
+      'sert ici qu’au repère de la règle des 500. Le champ réel, l’échantillonnage et la pose ' +
+      'maximale se calculent tous sur les dimensions et le pas réels du capteur.',
+    consequence:
+      'Un recadrage de capteur change la focale équivalente sans rien changer à la pose maximale.',
+    sections: ['9.1'],
+  }),
+  profondeur_previsu: terme({
+    libelle: 'Profondeur atteinte',
+    glose: 'magnitude enregistrée par la pose',
+    explication:
+      'La profondeur atteinte dit jusqu’à quelle magnitude la pose enregistre une étoile au ' +
+      'seuil de détection retenu. Elle dépend de la pose, du diamètre de pupille, du bruit de ' +
+      'lecture et du fond de ciel du site. C’est elle qui fixe le nombre d’étoiles affichées ' +
+      'dans la prévisualisation, et non le zoom.',
+    consequence:
+      'Un ciel plus pollué ou une pose plus courte vident visiblement le champ prévisualisé.',
+    sections: ['9.2'],
+  }),
+  semis_generatif: terme({
+    libelle: 'Fond génératif',
+    glose: 'étoiles générées, non catalographiées',
+    explication:
+      'Au-delà du seuil catalographié, les étoiles affichées sont générées par un semis à ' +
+      'graine fixe : leurs positions individuelles sont fausses, leur densité est fidèle. La ' +
+      'densité est modulée par la latitude galactique, sans quoi la bande de la Voie lactée ' +
+      'n’apparaîtrait pas. Le même cadre donne toujours le même rendu.',
+    consequence:
+      'Aucun repérage ne doit s’appuyer sur ces étoiles-là, seulement sur les étoiles réelles.',
+    sections: ['9.2'],
+  }),
+  voie_lactee: terme({
+    libelle: 'Voie lactée',
+    glose: 'bande modulée par le ciel',
+    explication:
+      'La bande est rendue par un masque procédural en coordonnées galactiques, hors ligne. ' +
+      'Son contraste est piloté par le fond de ciel du site : atténuée en Bortle 4 ou 5, elle ' +
+      'disparaît en Bortle 8. L’application montre ce que vous verrez depuis ce lieu, pas une ' +
+      'carte de référence idéale.',
+    consequence:
+      'Si la bande disparaît du rendu, elle ne sortira pas non plus sur les images depuis ce site.',
+    sections: ['9.2'],
+  }),
+  vignettage: terme({
+    libelle: 'Vignettage',
+    glose: 'coins plus sombres que centre',
+    explication:
+      'Un objectif ouvert assombrit les coins de l’image de un à deux diaphragmes à pleine ' +
+      'ouverture. La prévisualisation le simule pour que le cadrage tienne compte de la ' +
+      'répartition réelle de lumière. Fermer d’un cran le réduit fortement.',
+    consequence:
+      'Placer un sujet important dans un coin le condamne à sortir plus sombre que prévu.',
+    sections: ['9.2'],
+  }),
+  pole_celeste: terme({
+    libelle: 'Centre de rotation',
+    glose: 'pôle céleste, souvent hors cadre',
+    explication:
+      'Le pôle céleste est fixe dans le repère local : sa hauteur vaut la latitude du site. ' +
+      'Il tombe très souvent hors du cadre, et les arcs sont alors concentriques autour d’un ' +
+      'point situé en dehors de l’image. L’application ne le ramène jamais artificiellement ' +
+      'dans le cadre.',
+    consequence:
+      'La direction et la distance du pôle hors champ sont indiquées pour préparer le cadrage.',
+    sections: ['9.3'],
+  }),
+  longueur_arc: terme({
+    libelle: 'Longueur d’arc',
+    glose: 'trace décrite par une étoile',
+    explication:
+      'La longueur d’arc croît avec la durée d’accumulation et décroît avec la déclinaison. ' +
+      'Elle varie donc d’une étoile à l’autre dans le même cadre, et c’est l’effet le plus ' +
+      'caractéristique du filé. À vingt minutes, l’arc ne fait qu’environ cinq pour cent de ' +
+      'la hauteur du cadre.',
+    consequence:
+      'Un filé lisible demande typiquement au moins une heure, et devient spectaculaire vers deux.',
+    sections: ['9.3'],
+  }),
+  duree_file: terme({
+    libelle: 'Durée d’accumulation',
+    glose: 'temps total de la séquence',
+    explication:
+      'La durée totale est le temps couvert par l’ensemble des poses empilées, intervalles ' +
+      'compris. Elle fixe la longueur des arcs, le nombre de fichiers et le budget batterie. ' +
+      'Elle n’est pas la durée d’une pose unitaire, qui reste courte.',
+    consequence:
+      'Doubler la durée totale double la longueur des arcs, sans rien changer à la pose unitaire.',
+    sections: ['9.3', '9.4'],
+  }),
+  intervalle_file: terme({
+    libelle: 'Intervalle inter-pose',
+    glose: 'temps mort entre deux poses',
+    explication:
+      'Chaque seconde d’obturateur fermé laisse un trou dans toutes les traces. Au-delà d’une ' +
+      'seconde, ces trous deviennent visibles et le défaut est irréparable en post-traitement. ' +
+      'La réduction de bruit longue exposition du boîtier crée à elle seule un intervalle égal ' +
+      'à la pose.',
+    consequence:
+      'Désactiver la réduction de bruit longue exposition avant de partir est une consigne bloquante.',
+    sections: ['9.4'],
+  }),
+  n_poses_file: terme({
+    libelle: 'Nombre de poses',
+    glose: 'images de la séquence',
+    explication:
+      'Le nombre de poses découle de la durée totale divisée par la cadence, pose et intervalle ' +
+      'compris. Il fixe le volume de fichiers et la consommation de batterie. La pose unique ' +
+      'très longue est écartée : bruit thermique et ciel cramé en présence de pollution lumineuse.',
+    consequence:
+      'Les poses courtes s’empilent ensuite en mode éclaircir pour reconstituer le filé complet.',
+    sections: ['9.4'],
+  }),
+  batteries: terme({
+    libelle: 'Batteries à emporter',
+    glose: 'nombre, marge d’une incluse',
+    explication:
+      'Le budget se calcule à partir de l’autonomie constructeur, corrigée par le facteur de ' +
+      'froid, avec une batterie de marge assumée. L’application annonce un nombre de batteries ' +
+      'et jamais une durée d’autonomie précise : un chiffre faux au quart d’heure près serait ' +
+      'plus nuisible qu’utile.',
+    consequence:
+      'Sans autonomie constructeur renseignée, aucun nombre n’est produit plutôt qu’estimé au hasard.',
+    sections: ['9.4'],
+  }),
+  facteur_froid: terme({
+    libelle: 'Facteur de froid',
+    glose: 'autonomie réduite par température',
+    explication:
+      'Une batterie perd une grande part de sa capacité utile dès que la température descend. ' +
+      'Le facteur retenu vaut un au-dessus de dix degrés, six dixièmes entre zéro et dix, et ' +
+      'quatre dixièmes sous zéro. Ce sont des ordres de grandeur de terrain, pas des mesures.',
+    consequence:
+      'Une nuit sous zéro peut plus que doubler le nombre de batteries à emporter.',
+    sections: ['9.4'],
+  }),
+  autonomie_cipa: terme({
+    libelle: 'Autonomie CIPA',
+    glose: 'images par batterie, norme constructeur',
+    explication:
+      'La norme CIPA donne un nombre d’images par charge, mesuré dans des conditions ' +
+      'standardisées. Elle est optimiste pour la pose longue en continu, et elle n’est pas ' +
+      'renseignée pour tous les boîtiers de la base. La valeur saisie reste un ordre de grandeur.',
+    consequence:
+      'Renseigner cette valeur débloque le budget batterie de la fiche de séquence.',
+    sections: ['9.4'],
+  }),
+  espace_carte: terme({
+    libelle: 'Espace libre sur la carte',
+    glose: 'gigaoctets encore disponibles',
+    explication:
+      'Une séquence de filé produit plusieurs centaines de fichiers bruts. La carte se remplit ' +
+      'souvent avant la fin de la durée visée, et la séquence s’arrête alors sans prévenir. Le ' +
+      'budget de stockage se vérifie avant la sortie, pas pendant.',
+    consequence:
+      'L’application chiffre l’arc réellement obtenu si la carte s’avère trop petite.',
+    sections: ['9.4'],
+  }),
+
   ordre_de_grandeur: terme({
     libelle: 'Ordre de grandeur',
     glose: 'valeur approchée, affichée en plage',

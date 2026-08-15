@@ -82,6 +82,32 @@ export function rotationZ(angleDeg: number): Mat3 {
   return [c, -s, 0, s, c, 0, 0, 0, 1]
 }
 
+/**
+ * Rotation d'un angle autour d'un axe quelconque (formule de Rodrigues). Le filé de §9.3
+ * tourne autour du pôle céleste DE L'ÉPOQUE, qui n'est pas l'axe z du repère J2000 : sans
+ * cette rotation générale, les arcs seraient centrés à un demi-degré du vrai centre en 2026.
+ */
+export function rotationAutourDe(axe: Vec3, angleDeg: number): Mat3 {
+  const norme = Math.hypot(axe.x, axe.y, axe.z)
+  const x = axe.x / norme
+  const y = axe.y / norme
+  const z = axe.z / norme
+  const c = Math.cos(angleDeg * DEG)
+  const s = Math.sin(angleDeg * DEG)
+  const u = 1 - c
+  return [
+    c + x * x * u,
+    x * y * u - z * s,
+    x * z * u + y * s,
+    y * x * u + z * s,
+    c + y * y * u,
+    y * z * u - x * s,
+    z * x * u - y * s,
+    z * y * u + x * s,
+    c + z * z * u,
+  ]
+}
+
 /** Direction unitaire d'une position sphérique, angles en degrés. */
 export function versVecteur(longitudeDeg: number, latitudeDeg: number): Vec3 {
   const lon = longitudeDeg * DEG

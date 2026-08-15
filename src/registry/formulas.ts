@@ -215,6 +215,68 @@ export const FORMULES = Object.freeze({
     unite: '—',
     section: '9.4',
   },
+  POSE_MAX_CADRE: {
+    expression: 't_max_cadre = t_npf( δ_min_abs présent dans le cadre )',
+    unite: 's',
+    section: '9.1',
+    note:
+      'Sur un grand champ la déclinaison varie de plusieurs dizaines de degrés d’un bord à ' +
+      'l’autre : la pose est dictée par la zone la plus contraignante du cadre, jamais par ' +
+      'son centre.',
+  },
+  REGLE_500: {
+    expression: 't_500 = 500 / focale_equivalente_24x36',
+    unite: 's',
+    section: '9.1',
+    note:
+      'Repère historique, JAMAIS moteur de calcul : une valeur unique pour tout le ciel, ' +
+      'double de la valeur correcte à l’équateur céleste et trente fois trop faible au pôle.',
+  },
+  FOCALE_EQUIVALENTE: {
+    expression: 'focale_equiv = focale_mm × diagonale_24x36 / diagonale_capteur',
+    unite: 'mm',
+    section: '9.1',
+  },
+  MAGNITUDE_LIMITE_PREVISU: {
+    expression:
+      'm_lim = zp_sys − 2,5 × log10( F_seuil × (206 265 / (1000 × D_mm))² ) · ' +
+      'F_seuil × t = ( S² + √(S⁴ + 4 S² n_px (E_ciel t + RN²)) ) / 2',
+    unite: 'mag',
+    section: '9.2',
+    note:
+      'Profondeur réellement atteinte par la capture, marquée [À CALCULER] par le PRD : elle ' +
+      'dépend de la pose, de l’ouverture et du fond de ciel, et pilote le nombre d’étoiles ' +
+      'affichées dans la prévisualisation.',
+  },
+  VIGNETTAGE: {
+    expression: 'attenuation_diaph = v_coins × (r / r_max)²',
+    unite: 'diaphragme',
+    section: '9.2',
+  },
+  POSITION_POLE: {
+    expression: 'altitude_pole = |latitude| · azimut_pole = 0 si latitude > 0, sinon 180',
+    unite: '°',
+    section: '9.3',
+    note:
+      'Le pôle est très souvent HORS du cadre : une prévisualisation qui le force dans ' +
+      'l’image est fausse et induit un cadrage raté sur le terrain.',
+  },
+  INTENSITE_TRACE: {
+    expression:
+      'pose_par_pixel_s = duree_s / longueur_arc_px · ' +
+      'opacite = min( 1, 10^( −(mag − m_lim(pose_par_pixel_s)) / 2,5 ) )',
+    unite: '—',
+    section: '9.3',
+    note:
+      'Une étoile qui file est moins brillante par pixel qu’une étoile ponctuelle : le même ' +
+      'flux s’étale sur toute la trace.',
+  },
+  TROU_TRACE: {
+    expression: 'trou_deg = 15,041 × intervalle_s / 3600 × cos(δ)',
+    unite: '°',
+    section: '9.4',
+    note: 'Trou entre deux poses successives, défaut irréparable en post-traitement.',
+  },
 
   // Position et temps — §4, §8
   ALTITUDE_CULMINATION: {

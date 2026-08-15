@@ -43,6 +43,7 @@ import {
 import { PAQUET_VIDE, type PaquetConstellations } from './data/constellations.ts'
 import type { ProfilCadre } from './core/cadre.ts'
 import { Planetarium } from './ui/Planetarium.tsx'
+import { GrandChamp } from './ui/GrandChamp.tsx'
 import type { ObjetCielProfond } from './data/deepsky.ts'
 import type { Etoile } from './data/catalog.ts'
 import {
@@ -576,6 +577,28 @@ export function App() {
               gaiaCharge={etat === null ? false : gaiaCharge(etat.catalogues)}
               modeNuit={modeNuit.actif}
               surSelectionObjet={setCibleDuCiel}
+            />
+
+            <GrandChamp
+              site={site}
+              etoiles={etoiles}
+              focaleMm={Number(focale)}
+              ouvertureN={calcul.ouvertureN}
+              pitchUm={calcul.capteur.pitchUm}
+              capteurLMm={calcul.capteur.capteurLMm}
+              capteurHMm={calcul.capteur.capteurHMm}
+              fovLDeg={calcul.optique.fovLDeg.value}
+              fovHDeg={calcul.optique.fovHDeg.value}
+              echApx={calcul.optique.echApx.value}
+              dMm={calcul.optique.dMm.value}
+              zpSys={zeroSysteme.valeur}
+              zpEstime={zeroSysteme.estime}
+              readNoiseE={iso.readNoiseE}
+              sbCiel={calcul.ciel.sbCiel.value}
+              tailleRawMo={BOITIER_REFERENCE.tailleRawMo}
+              tMaxSuiviS={calcul.suivi.tMaxSuiviS.value}
+              autonomieCipa={BOITIER_REFERENCE.autonomieCipa ?? null}
+              modeNuit={modeNuit.actif}
             />
 
             <FicheCible
