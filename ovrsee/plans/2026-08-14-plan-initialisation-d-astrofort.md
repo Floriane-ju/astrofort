@@ -1,9 +1,9 @@
 ---
 {
-  "status": "open",
+  "status": "closed",
   "title": "Plan — Initialisation d'Astrofort",
   "opened": "2026-08-14",
-  "closed": null,
+  "closed": "2026-08-15",
   "commits": [
     {
       "sha": "0e366aa",
@@ -181,6 +181,31 @@
       "sha": "f822d0f",
       "date": "2026-08-15",
       "files": []
+    },
+    {
+      "sha": "23d84cd",
+      "date": "2026-08-15",
+      "files": [
+        "src/App.tsx",
+        "src/core/file-etoiles.ts",
+        "src/core/galactique.ts",
+        "src/core/grand-champ.ts",
+        "src/core/horloges.ts",
+        "src/core/mat3.ts",
+        "src/core/optics.ts",
+        "src/core/sequence-file.ts",
+        "src/data/semis.ts",
+        "src/registry/constants.ts",
+        "src/registry/formulas.ts",
+        "src/registry/glossaire.ts",
+        "src/ui/GrandChamp.tsx",
+        "src/ui/dessine-champ.ts",
+        "src/ui/styles.css",
+        "tests/file-etoiles.test.ts",
+        "tests/grand-champ.test.ts",
+        "tests/previsu-champ.test.tsx",
+        "tests/sequence-file.test.ts"
+      ]
     }
   ]
 }

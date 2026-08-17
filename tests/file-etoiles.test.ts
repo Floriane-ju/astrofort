@@ -11,14 +11,26 @@ import { describe, expect, it } from 'vitest'
 import {
   arcEtoile,
   diagnosticFile,
+  filtreArcCadre,
   poseParPixelS,
   longueurArcDeg,
   positionPole,
 } from '../src/core/file-etoiles.ts'
 import { axePoleDeDate, cielInstantane, epoqueAnnee } from '../src/core/horloges.ts'
 import type { Site } from '../src/core/ephem.ts'
-import { versVecteur } from '../src/core/mat3.ts'
-import { projecteur, type ModeProjection, type Vue } from '../src/core/projection.ts'
+import {
+  applique,
+  rotationAutourDe,
+  separationDeg,
+  versVecteur,
+  type Vec3,
+} from '../src/core/mat3.ts'
+import {
+  projecteur,
+  type ModeProjection,
+  type PointEcran,
+  type Vue,
+} from '../src/core/projection.ts'
 import { K } from '../src/registry/constants.ts'
 
 const SITE: Site = { latitudeDeg: 46.4, longitudeDeg: 6.697, altitudeM: 500 }
@@ -195,5 +207,112 @@ describe('§9.3 — brillance de la trace', () => {
   it('ne dépasse jamais la durée réellement posée', () => {
     // Pose d'une seconde : le pixel n'a pas vu l'étoile plus longtemps que ça.
     expect(poseParPixelS(1, ECH_10MM, 0)).toBe(1)
+  })
+})
+
+/** Position exacte de l'étoile après `angleDeg` d'angle horaire écoulé. */
+function apres(etoile: Vec3, angleDeg: number): Vec3 {
+  return applique(rotationAutourDe(AXE_POLE, -angleDeg), etoile)
+}
+
+/** Distance d'un point au segment [a, b], en pixels. */
+function distanceAuSegment(p: PointEcran, a: PointEcran, b: PointEcran): number {
+  const dx = b.xPx - a.xPx
+  const dy = b.yPx - a.yPx
+  const carre = dx * dx + dy * dy
+  if (carre === 0) return Math.hypot(p.xPx - a.xPx, p.yPx - a.yPx)
+  const t = Math.max(0, Math.min(1, ((p.xPx - a.xPx) * dx + (p.yPx - a.yPx) * dy) / carre))
+  return Math.hypot(p.xPx - (a.xPx + t * dx), p.yPx - (a.yPx + t * dy))
+}
+
+describe('T-0024 — pas d’échantillonnage dérivé de la longueur projetée', () => {
+  const projecteurVue = proj({ azimutDeg: 0, hauteurDeg: SITE.latitudeDeg, fovDeg: 120 })
+  const BALAYAGE_480_MIN_DEG = K('ROTATION_CIEL_DEG_H') * 8
+  const PAS_FIN = Math.ceil(BALAYAGE_480_MIN_DEG / K('PAS_ANGLE_HORAIRE_FILE_DEG'))
+
+  /** Écart maximal entre la polyligne rendue et l'arc exact, en pixels. */
+  function ecartMaxPx(etoile: Vec3, dureeMin: number): number {
+    const arc = arcEtoile(projecteurVue, etoile, dureeMin, AXE_POLE)
+    const balayageDeg = K('ROTATION_CIEL_DEG_H') * (dureeMin / 60)
+    let pire = 0
+    // L'arc exact est échantillonné dix fois plus finement que le pas de référence de §9.3 :
+    // c'est lui la vérité contre laquelle la polyligne est jugée.
+    const references = Math.ceil(balayageDeg / (K('PAS_ANGLE_HORAIRE_FILE_DEG') / 10))
+    for (let i = 0; i <= references; i++) {
+      const point = projecteurVue.projette(apres(etoile, (balayageDeg * i) / references))
+      if (point === null) continue
+      if (point.xPx < 0 || point.yPx < 0 || point.xPx > LARGEUR || point.yPx > HAUTEUR) continue
+      let distance = Infinity
+      for (const segment of arc.segments) {
+        for (let j = 1; j < segment.length; j++) {
+          distance = Math.min(distance, distanceAuSegment(point, segment[j - 1]!, segment[j]!))
+        }
+      }
+      if (distance !== Infinity && distance > pire) pire = distance
+    }
+    return pire
+  }
+
+  it('reste sous le pixel pour l’arc le plus long du cadre', () => {
+    // Équateur céleste : la trace la plus longue possible, huit heures durant.
+    expect(ecartMaxPx(versVecteur(0, 0), 480)).toBeLessThan(1)
+    expect(ecartMaxPx(versVecteur(120, 20), 480)).toBeLessThan(1)
+  })
+
+  it('ne fait plus payer 481 pas à une étoile proche du pôle', () => {
+    const polaire = arcEtoile(projecteurVue, versVecteur(0, 89.5), 480, AXE_POLE)
+    const points = polaire.segments.flat().length
+    expect(points).toBeLessThan(PAS_FIN / 4)
+    // La trace reste fidèle malgré le pas élargi : c'est la longueur en pixels qui décide.
+    expect(ecartMaxPx(versVecteur(0, 89.5), 480)).toBeLessThan(1)
+  })
+
+  it('garde le pas de §9.3 comme pas le plus fin : jamais de subdivision au-delà', () => {
+    const equatoriale = arcEtoile(projecteurVue, versVecteur(0, 0), 480, AXE_POLE)
+    expect(equatoriale.segments.flat().length).toBeLessThanOrEqual(PAS_FIN + 1)
+  })
+})
+
+describe('T-0023 — écarter une étoile dont l’arc ne peut pas toucher le cadre', () => {
+  const CENTRE = versVecteur(90, 20)
+  const RAYON_DEG = 12
+
+  /** Vérité de référence : l'arc entre-t-il réellement dans la calotte du cadre ? */
+  function toucheVraiment(etoile: Vec3, balayageDeg: number): boolean {
+    const pas = 720
+    for (let i = 0; i <= pas; i++) {
+      if (separationDeg(apres(etoile, (balayageDeg * i) / pas), CENTRE) <= RAYON_DEG) return true
+    }
+    return false
+  }
+
+  it('n’écarte jamais une étoile dont la trace entre dans le cadre', () => {
+    for (const balayageDeg of [0, 30, 120]) {
+      const filtre = filtreArcCadre(CENTRE, RAYON_DEG, AXE_POLE, balayageDeg)
+      let retenues = 0
+      let total = 0
+      // Semis régulier de toute la sphère : le filtre est jugé sur le ciel entier, pas sur
+      // quelques cas choisis.
+      for (let ad = 0; ad < 360; ad += 3) {
+        for (let dec = -87; dec <= 87; dec += 3) {
+          const etoile = versVecteur(ad, dec)
+          total++
+          const garde = filtre(etoile.x, etoile.y, etoile.z)
+          if (garde) retenues++
+          // Aucun faux négatif : c'est cette propriété qui garantit l'image inchangée.
+          if (toucheVraiment(etoile, balayageDeg)) expect(garde).toBe(true)
+        }
+      }
+      // Et il trie vraiment : sans cela, le filtre ne servirait à rien.
+      expect(retenues).toBeLessThan(total / 2)
+    }
+  })
+
+  it('ne retient que la bande de déclinaison du cadre quand rien ne balaie', () => {
+    const filtre = filtreArcCadre(CENTRE, RAYON_DEG, AXE_POLE, 0)
+    expect(filtre(CENTRE.x, CENTRE.y, CENTRE.z)).toBe(true)
+    // Même angle horaire, déclinaison très différente : le cercle passe loin du cadre.
+    const loin = versVecteur(90, -60)
+    expect(filtre(loin.x, loin.y, loin.z)).toBe(false)
   })
 })

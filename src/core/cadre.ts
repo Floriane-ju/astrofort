@@ -16,6 +16,7 @@ import { matriceVue } from './projection.ts'
 import {
   DEG,
   applique,
+  separationDeg,
   transpose,
   versVecteur,
   type Mat3,
@@ -76,6 +77,44 @@ export function contourCadreJ2000(cadre: Cadre, matriceCiel: Mat3): readonly Vec
     }
   }
   return points
+}
+
+export interface EtendueCadre {
+  /** Direction J2000 du milieu du cadre : centre du disque de sélection. */
+  readonly centre: Vec3
+  /** Rayon angulaire englobant tout le contour, en degrés. */
+  readonly rayonDeg: number
+}
+
+/**
+ * T-0023 — de quelle portion de ciel le cadre est-il rempli. Sert à ne calculer que ce que
+ * le cadre montre : l'incrustation est clippée sur ce contour, tout ce qui tombe autour est
+ * du travail perdu.
+ *
+ * Le contour est celui de `contourCadreJ2000` — aucun second code de projection n'est écrit
+ * (§3.3), et la courbure des bords à grand champ est donc celle du cadre réel.
+ */
+export function etendueCadre(cadre: Cadre, matriceCiel: Mat3): EtendueCadre {
+  const contour = contourCadreJ2000(cadre, matriceCiel)
+  let sx = 0
+  let sy = 0
+  let sz = 0
+  for (const p of contour) {
+    sx += p.x
+    sy += p.y
+    sz += p.z
+  }
+  const norme = Math.hypot(sx, sy, sz)
+  // Contour dégénéré : on ne devine pas un centre, on rend le cadre entier sélectionnable.
+  if (norme === 0) return { centre: { x: 0, y: 0, z: 1 }, rayonDeg: K('FOV_MAX_DEG') / 2 }
+  const centre: Vec3 = { x: sx / norme, y: sy / norme, z: sz / norme }
+
+  let rayonDeg = 0
+  for (const p of contour) {
+    const separation = separationDeg(centre, p)
+    if (separation > rayonDeg) rayonDeg = separation
+  }
+  return { centre, rayonDeg }
 }
 
 /** §3.5 — le refus de fabriquer un cadre en l'absence de profil déclaré. */

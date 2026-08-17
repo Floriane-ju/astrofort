@@ -25,6 +25,7 @@ import { projecteur, type Vue } from '../src/core/projection.ts'
 import type { ObjetCielProfond } from '../src/data/deepsky.ts'
 import { K } from '../src/registry/constants.ts'
 import { Planetarium } from '../src/ui/Planetarium.tsx'
+import { construitIndex } from '../src/core/index-ciel.ts'
 import { PAQUET_VIDE } from '../src/data/constellations.ts'
 
 const FOCALE_REFERENCE_MM = 120
@@ -203,11 +204,13 @@ describe('garde-fous du cadre §3.5', () => {
       createElement(Planetarium, {
         site: { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 },
         etoiles: [],
+        index: construitIndex([]),
         objets: [],
         constellations: PAQUET_VIDE,
         profils: [],
         mLimOeil: 6.05,
         gaiaCharge: false,
+        modeObjectif: 'MODE_CADRE',
         modeNuit: false,
         surSelectionObjet: () => {},
       }),

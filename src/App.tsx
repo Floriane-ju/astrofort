@@ -1,12 +1,12 @@
 /**
- * Contrat d'entrée (§4, §5.1, §5.2) posé sur l'écran de vérification du socle (§14).
+ * L'application : un lieu, un matériel, une intention, et la scène au centre.
  *
- * Un lieu et un matériel saisis produisent champ, échantillonnage, pose maximale et seuils
- * de déclinaison du site. Chaque nombre reste dépliable jusqu'à sa formule, et chaque terme
- * technique porte sa définition au contact (§10.1).
+ * Ce fichier ne dessine plus rien. Il tient l'état de saisie (§4, §5), fait tourner la chaîne
+ * de calcul (§7, §8) et distribue ses sorties aux trois régions de la coque : le matériel à
+ * gauche, la scène au centre, la séance à droite. Tout le reste est dans les panneaux.
  *
- * Ce n'est toujours pas un écran conçu : la direction visuelle et le mode nuit viennent au
- * lot 3. Ce qui est vérifiable ici, c'est le contrat, pas la mise en page.
+ * Chaque nombre affiché reste dépliable jusqu'à sa formule, et chaque terme technique porte
+ * sa définition au contact (§1.5.2, §10.1) — c'est le contrat, pas la mise en page.
  */
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
@@ -21,6 +21,10 @@ import {
 } from './core/site.ts'
 import { fondDeCiel, type FondDeCiel } from './core/sky-background.ts'
 import { profilOptique, type ProfilOptique } from './core/optics.ts'
+import { fluxCiel } from './core/exposure.ts'
+import { construitIndex } from './core/index-ciel.ts'
+import { epoqueAnnee } from './core/horloges.ts'
+import type { EntreeProfondeur } from './core/galactique.ts'
 import {
   npf,
   profilSuivi,
@@ -31,7 +35,7 @@ import {
 import { BortleHorsTableError } from './registry/bortle.ts'
 import { SaisieRefuseeError } from './registry/domains.ts'
 import { HorsDomaineSeriesError } from './core/ephem.ts'
-import { MATRICE_DEGRADATION, abonneModeReseau, modeReseauCourant } from './data/degradation.ts'
+import { abonneModeReseau, modeReseauCourant } from './data/degradation.ts'
 import {
   chargeConstellations,
   chargeEtoiles,
@@ -42,8 +46,15 @@ import {
 } from './data/bootstrap.ts'
 import { PAQUET_VIDE, type PaquetConstellations } from './data/constellations.ts'
 import type { ProfilCadre } from './core/cadre.ts'
+import { Coque } from './ui/Coque.tsx'
 import { Planetarium } from './ui/Planetarium.tsx'
-import { GrandChamp } from './ui/GrandChamp.tsx'
+import { PanneauFile } from './ui/PanneauFile.tsx'
+import { PanneauExplorer } from './ui/PanneauExplorer.tsx'
+import { PanneauSeance } from './ui/PanneauSeance.tsx'
+import { PanneauMateriel, modeObjectif, type TypeObjectif } from './ui/PanneauMateriel.tsx'
+import { Verification } from './ui/Verification.tsx'
+import { etatScene, majVue, useScene } from './ui/scene-etat.ts'
+import { ouvreCible, useSeance } from './ui/seance-etat.ts'
 import type { ObjetCielProfond } from './data/deepsky.ts'
 import type { Etoile } from './data/catalog.ts'
 import {
@@ -59,7 +70,7 @@ import {
   exporteDonneesUtilisateur,
   importeDonneesUtilisateur,
 } from './data/persistence.ts'
-import { REGISTRE } from './registry/constants.ts'
+import { K } from './registry/constants.ts'
 import type { Traced } from './core/traced.ts'
 import { TracedValue } from './ui/TracedValue.tsx'
 import { FicheCible } from './ui/FicheCible.tsx'
@@ -71,7 +82,7 @@ import {
   litEtatPersiste,
   type EtatModeNuit,
 } from './ui/ModeNuit.tsx'
-import { Etiquette, NiveauContext, Terme, type NiveauUtilisateur } from './ui/Terme.tsx'
+import { NiveauContext, Terme, type NiveauUtilisateur } from './ui/Terme.tsx'
 
 /** Objectif de qualité retenu pour le plan de la nuit : « correct » au sens de §7.3. */
 const PRESET_SNR_PLAN = 10
@@ -120,6 +131,7 @@ export function App() {
   const [ouverture, setOuverture] = useState(DEFAUT.ouverture)
   const [capteurMode, setCapteurMode] = useState<CapteurMode>('FULL_FRAME')
   const [comparerRecadrage, setComparerRecadrage] = useState(false)
+  const [typeObjectif, setTypeObjectif] = useState<TypeObjectif>('RECTILINEAIRE')
 
   const [suiviActif, setSuiviActif] = useState(false)
   const [qualiteMes, setQualiteMes] = useState<QualiteMiseEnStation>('INCONNUE')
@@ -129,11 +141,14 @@ export function App() {
   const [catalogue, setCatalogue] = useState<readonly ObjetCielProfond[]>([])
   const [etoiles, setEtoiles] = useState<readonly Etoile[]>([])
   const [constellations, setConstellations] = useState<PaquetConstellations>(PAQUET_VIDE)
-  const [cibleDuCiel, setCibleDuCiel] = useState<ObjetCielProfond | null>(null)
   const [modeNuit, setModeNuit] = useState<EtatModeNuit>(litEtatPersiste)
   const [messagePersistance, setMessagePersistance] = useState<string | null>(null)
   // §12.5 — l'état affiché suit les bascules, il n'est pas figé au démarrage.
   const modeReseau = useSyncExternalStore(abonneModeReseau, modeReseauCourant, () => 'EN_LIGNE')
+
+  // Pointage, temps et intention : les deux magasins que la scène et les panneaux partagent.
+  const { msAffiche } = useScene()
+  const { cible: cibleDuCiel, file } = useSeance()
 
   useEffect(() => {
     // Le catalogue n'est décodé qu'une fois les paquets vérifiés : un binaire corrompu ne
@@ -242,6 +257,9 @@ export function App() {
 
   const iso = isoRecommande(BOITIER_REFERENCE)
 
+  /** Index de sélection : construit une fois, lu par la scène et par l'onglet Explorer. */
+  const index = useMemo(() => construitIndex(etoiles), [etoiles])
+
   /**
    * §3.5 — profils de cadre superposés. Le second profil matérialise l'effet du recadrage
    * de capteur, que §5.1 explique en mots : cadre plus serré, échantillonnage inchangé.
@@ -265,6 +283,45 @@ export function App() {
       }
     })
   }, [calcul, focale, ouverture, capteurMode, comparerRecadrage])
+
+  /**
+   * §9.2 — profondeur atteinte par la pose unitaire. Assemblée ici parce que deux régions en
+   * dépendent : le panneau du filé, qui la chiffre, et la scène, qui l'incruste dans le cadre.
+   */
+  const profondeurFile: EntreeProfondeur | null = useMemo(() => {
+    if (!calcul.ok) return null
+    return {
+      tPoseS: file.tPoseS,
+      dMm: calcul.optique.dMm.value,
+      zpSys: zeroSysteme.valeur,
+      eCielPxS: fluxCiel({
+        sbMagArcsec2: calcul.ciel.sbCiel.value,
+        zpSys: zeroSysteme.valeur,
+        pitchUm: calcul.capteur.pitchUm,
+        ouvertureN: calcul.ouvertureN,
+        zpEstime: zeroSysteme.estime,
+      }).value,
+      readNoiseE: iso.readNoiseE ?? K('READ_NOISE_DEFAUT_E'),
+      zpEstime: zeroSysteme.estime,
+    }
+  }, [calcul, file.tPoseS, zeroSysteme.valeur, zeroSysteme.estime, iso.readNoiseE])
+
+  /**
+   * Ce que la scène doit savoir du filé pour l'incruster dans le cadre.
+   *
+   * Mémoïsée, et pas assemblée dans le JSX : l'incrustation republie ses compteurs de rendu
+   * dans le magasin de séance, ce qui rend l'application. Une identité neuve à chaque rendu
+   * relancerait donc l'incrustation, qui republierait, sans fin.
+   */
+  const materielFile = useMemo(() => {
+    if (!calcul.ok || profondeurFile === null) return null
+    return {
+      profondeur: profondeurFile,
+      echApx: calcul.optique.echApx.value,
+      sbCiel: calcul.ciel.sbCiel.value,
+      tMaxSuiviS: calcul.suivi.tMaxSuiviS.value,
+    }
+  }, [calcul, profondeurFile])
 
   /**
    * §8.3 — le plan complet. Il n'est calculé qu'une fois les catalogues vérifiés.
@@ -305,6 +362,15 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calcul, catalogue, masque, niveau, typeMonture, site, iso.iso])
 
+  /**
+   * §5.1 — changer d'objectif change la projection, pas un réglage de rendu. Si la scène
+   * regarde déjà « comme l'objectif », elle suit ; si elle est en planétarium, elle y reste.
+   */
+  function changeTypeObjectif(type: TypeObjectif) {
+    setTypeObjectif(type)
+    if (etatScene().vue.mode !== 'MODE_PLANETARIUM') majVue({ mode: modeObjectif(type) })
+  }
+
   async function surExport() {
     const donnees = await exporteDonneesUtilisateur()
     const blob = new Blob([JSON.stringify(donnees, null, 2)], { type: 'application/json' })
@@ -328,430 +394,253 @@ export function App() {
     setMessagePersistance('Import terminé : les sites, profils et plans ont été restaurés.')
   }
 
-  return (
-    <NiveauContext value={niveau}>
-      <main>
-        <h1>Astrofort — contrat d’entrée</h1>
+  const topbar = (
+    <>
+      <h1>Astrofort</h1>
+      <p className="etat">
+        {focale} mm f/{ouverture} · {capteurMode === 'FULL_FRAME' ? 'plein format' : 'APS-C'}
+      </p>
+      <p className="niveau">
+        {/* §10.1 — le niveau ne change QUE la densité d'explication, jamais un calcul. */}
+        Niveau d’explication :{' '}
+        <select value={niveau} onChange={(e) => setNiveau(e.target.value as NiveauUtilisateur)}>
+          <option value="DEBUTANT">Débutant — gloses visibles</option>
+          <option value="CONFIRME">Confirmé — gloses au survol</option>
+        </select>
+      </p>
+      {/* §11.1 — le mode nuit est un geste de terrain : il reste à portée, dans la barre. */}
+      <details className="tiroir tiroir-nuit">
+        <summary>{modeNuit.actif ? '☾ nuit — actif' : '☾ nuit'}</summary>
+        <div className="tiroir-contenu">
+          <ModeNuit etat={modeNuit} surChangement={setModeNuit} />
+        </div>
+      </details>
+      <Verification
+        etat={etat}
+        modeReseau={modeReseau}
+        messagePersistance={messagePersistance}
+        surExport={() => void surExport()}
+        surImport={(fichier) => void surImport(fichier)}
+      />
+    </>
+  )
 
-        <p className="niveau">
-          {/* §10.1 — le niveau ne change QUE la densité d'explication, jamais un calcul. */}
-          Niveau d’explication :{' '}
-          <select value={niveau} onChange={(e) => setNiveau(e.target.value as NiveauUtilisateur)}>
-            <option value="DEBUTANT">Débutant — gloses visibles</option>
-            <option value="CONFIRME">Confirmé — gloses au survol</option>
-          </select>
-        </p>
+  const materiel = (
+    <PanneauMateriel
+      focale={focale}
+      surFocale={setFocale}
+      ouverture={ouverture}
+      surOuverture={setOuverture}
+      capteurMode={capteurMode}
+      surCapteurMode={setCapteurMode}
+      comparerRecadrage={comparerRecadrage}
+      surComparerRecadrage={setComparerRecadrage}
+      typeObjectif={typeObjectif}
+      surTypeObjectif={changeTypeObjectif}
+      suiviActif={suiviActif}
+      surSuiviActif={setSuiviActif}
+      qualiteMes={qualiteMes}
+      surQualiteMes={setQualiteMes}
+      typeMonture={typeMonture}
+      surTypeMonture={setTypeMonture}
+      {...(calcul.ok
+        ? {
+            lectures: {
+              optique: calcul.optique,
+              suivi: calcul.suivi,
+              poseNpf: calcul.poseNpf,
+              ...(calcul.noteRecadrage === undefined
+                ? {}
+                : { noteRecadrage: calcul.noteRecadrage }),
+            },
+          }
+        : { erreur: calcul.erreur })}
+    />
+  )
 
+  const scene =
+    calcul.ok ? (
+      <Planetarium
+        site={site}
+        etoiles={etoiles}
+        index={index}
+        objets={catalogue}
+        constellations={constellations}
+        profils={profilsCadre}
+        mLimOeil={calcul.ciel.mLimOeil.value}
+        gaiaCharge={etat === null ? false : gaiaCharge(etat.catalogues)}
+        modeObjectif={modeObjectif(typeObjectif)}
+        modeNuit={modeNuit.actif}
+        {...(materielFile === null ? {} : { file: materielFile })}
+        surSelectionObjet={ouvreCible}
+      />
+    ) : (
+      <p className="erreur">{calcul.erreur}</p>
+    )
+
+  const explorer = (
+    <PanneauExplorer
+      modeObjectif={modeObjectif(typeObjectif)}
+      gaiaCharge={etat === null ? false : gaiaCharge(etat.catalogues)}
+      profondeurMag={index.profondeurMag}
+      mLimOeil={calcul.ok ? calcul.ciel.mLimOeil.value : null}
+      epoqueAnnee={epoqueAnnee(new Date(msAffiche))}
+      modeNuit={modeNuit.actif}
+    />
+  )
+
+  const fiche = calcul.ok ? (
+    <FicheCible
+      objetSelectionne={cibleDuCiel}
+      optique={calcul.optique}
+      capteurHMm={calcul.capteur.capteurHMm}
+      pitchUm={calcul.capteur.pitchUm}
+      ouvertureN={calcul.ouvertureN}
+      boitier={BOITIER_REFERENCE}
+      zeroSysteme={zeroSysteme}
+      sbCiel={calcul.ciel.sbCiel.value}
+      mLimOeil={calcul.ciel.mLimOeil.value}
+      // Sans suivi, c'est la NPF qui plafonne la pose (§9.1) — jamais rien.
+      tMaxS={calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value}
+      catalogue={catalogue}
+      bortle={bortle.trim() === '' ? null : Number(bortle)}
+      suiviActif={suiviActif}
+      focaleMm={Number(focale)}
+    />
+  ) : null
+
+  const nuit = calcul.ok ? (
+    <>
+      <section>
+        <h2>Fenêtre nocturne</h2>
+        <p className="etat">état : {calcul.nuit.etat}</p>
+        <Terme
+          cle={calcul.nuit.modeDegrade ? 'mode_degrade_nuit' : 'nuit_astronomique'}
+          contexte={`${calcul.nuit.dureeReferenceH.toFixed(2)} h exploitables`}
+        />
+        {calcul.nuit.cause !== undefined && <p className="cause">{calcul.nuit.cause}</p>}
+        <table>
+          <tbody>
+            <tr>
+              <th>Coucher du Soleil</th>
+              <td>{heure(calcul.nuit.coucherSoleil)}</td>
+            </tr>
+            <tr>
+              <th>Début de nuit astronomique (−18°)</th>
+              <td>{heure(calcul.nuit.debutNuitAstronomique)}</td>
+            </tr>
+            <tr>
+              <th>Milieu de nuit vrai</th>
+              <td>{heure(calcul.nuit.milieuNuitVrai)}</td>
+            </tr>
+            <tr>
+              <th>Fin de nuit astronomique</th>
+              <td>{heure(calcul.nuit.finNuitAstronomique)}</td>
+            </tr>
+            <tr>
+              <th>Lever du Soleil</th>
+              <td>{heure(calcul.nuit.leverSoleil)}</td>
+            </tr>
+            <tr>
+              <th>Durée de nuit astronomique</th>
+              <td>{calcul.nuit.dureeNuitH.toFixed(2)} h</td>
+            </tr>
+          </tbody>
+        </table>
+        <TracedValue
+          terme="midi_solaire_vrai"
+          trace={calcul.offsetMidi}
+          decimales={1}
+          unite="min"
+        />
+      </section>
+
+      <section>
+        <h2>Fond de ciel</h2>
+        <p className="etat">source : {calcul.ciel.sourceSb}</p>
+        {calcul.ciel.confirmationRequise !== undefined && (
+          <p className="cause">{calcul.ciel.confirmationRequise}</p>
+        )}
+        <TracedValue terme="fond_de_ciel" trace={calcul.ciel.sbCiel} unite="mag/as²" />
+        <TracedValue terme="magnitude_limite_oeil" trace={calcul.ciel.mLimOeil} unite="mag" />
+      </section>
+
+      {plan === null && catalogue.length === 0 && (
         <section>
-          <h2>Lieu</h2>
-          <div className="champs">
-            <label>
-              <Etiquette cle="latitude" />
-              <input value={latitude} onChange={(e) => setLatitude(e.target.value)} />
-            </label>
-            <label>
-              <Etiquette cle="longitude" />
-              <input value={longitude} onChange={(e) => setLongitude(e.target.value)} />
-            </label>
-            <label>
-              <Etiquette cle="altitude_site" />
-              <input value={altitude} onChange={(e) => setAltitude(e.target.value)} />
-            </label>
-            <label>
-              Date
-              <input type="date" value={dateIso} onChange={(e) => setDateIso(e.target.value)} />
-            </label>
-            <label>
-              <Etiquette cle="bortle" />
-              <input value={bortle} onChange={(e) => setBortle(e.target.value)} />
-            </label>
-            <label>
-              <Etiquette cle="sqm" />
-              <input
-                value={sqm}
-                placeholder="prioritaire si renseigné"
-                onChange={(e) => setSqm(e.target.value)}
-              />
-            </label>
-          </div>
-
-          <Terme
-            cle="masque_horizon"
-            contexte={`horizon plat à 0° sur les ${masque.altitudesDeg.length} azimuts ${
-              masque.estHypothese ? '— [HYP]' : ''
-            }`}
-          />
-          {masque.note !== undefined && (
-            <p className="cause">
-              {masque.flags?.map((f) => `[${f}] `).join('')}
-              {masque.note}
-            </p>
-          )}
-        </section>
-
-        <section>
-          <h2>Optique</h2>
-          <div className="champs">
-            <label>
-              <Etiquette cle="focale" />
-              <input value={focale} onChange={(e) => setFocale(e.target.value)} />
-            </label>
-            <label>
-              <Etiquette cle="ouverture" />
-              <input value={ouverture} onChange={(e) => setOuverture(e.target.value)} />
-            </label>
-            <label>
-              <Etiquette cle="recadrage_capteur" />
-              <select
-                value={capteurMode}
-                onChange={(e) => setCapteurMode(e.target.value as CapteurMode)}
-              >
-                <option value="FULL_FRAME">Plein format — {BOITIER_REFERENCE.libelle}</option>
-                <option value="APSC_CROP">Recadrage APS-C</option>
-              </select>
-            </label>
-          </div>
-          <label className="interrupteur">
-            <input
-              type="checkbox"
-              checked={comparerRecadrage}
-              onChange={(e) => setComparerRecadrage(e.target.checked)}
-            />
-            Superposer les deux cadres, plein format et recadrage APS-C (§3.5)
-          </label>
-          {calcul.ok && calcul.noteRecadrage !== undefined && (
-            <p className="cause">{calcul.noteRecadrage}</p>
-          )}
-          <p className="etat">
-            point zéro système : {zeroSysteme.valeur} mag{zeroSysteme.estime ? ' [ESTIMÉ]' : ''}
+          <h2>Plan de session — §8.3</h2>
+          <p className="cause">
+            Les catalogues ne sont pas encore vérifiés : aucun plan n’est produit tant qu’un
+            binaire non validé pourrait l’alimenter. Les moteurs de cadrage, de pose et
+            d’intégration restent utilisables sur une cible saisie à la main.
           </p>
         </section>
+      )}
+    </>
+  ) : null
 
-        <section>
-          <h2>Suivi</h2>
-          <div className="champs">
-            <label className="interrupteur">
-              <input
-                type="checkbox"
-                checked={suiviActif}
-                onChange={(e) => setSuiviActif(e.target.checked)}
-              />
-              Ma monture suit les étoiles
-            </label>
-            {suiviActif && (
-              <label>
-                <Etiquette cle="mise_en_station" />
-                <select
-                  value={qualiteMes}
-                  onChange={(e) => setQualiteMes(e.target.value as QualiteMiseEnStation)}
-                >
-                  <option value="SOIGNEE">Oui — viseur polaire réglé</option>
-                  <option value="APPROX">Non — mise en station à la boussole</option>
-                  <option value="INCONNUE">Je ne sais pas</option>
-                </select>
-              </label>
-            )}
-            <label>
-              <Etiquette cle="type_monture" />
-              <select
-                value={typeMonture}
-                onChange={(e) => setTypeMonture(e.target.value as TypeMonture)}
-              >
-                <option value="TRACKER">Monture sur rotule (tracker)</option>
-                <option value="GEM">Équatoriale allemande</option>
-                <option value="ALTAZ">Altazimutale</option>
-              </select>
-            </label>
-          </div>
-        </section>
+  const file_ =
+    calcul.ok && profondeurFile !== null ? (
+      <PanneauFile
+        site={site}
+        focaleMm={Number(focale)}
+        ouvertureN={calcul.ouvertureN}
+        pitchUm={calcul.capteur.pitchUm}
+        capteurLMm={calcul.capteur.capteurLMm}
+        capteurHMm={calcul.capteur.capteurHMm}
+        fovLDeg={calcul.optique.fovLDeg.value}
+        fovHDeg={calcul.optique.fovHDeg.value}
+        echApx={calcul.optique.echApx.value}
+        tailleRawMo={BOITIER_REFERENCE.tailleRawMo}
+        profondeur={profondeurFile}
+        tMaxSuiviS={calcul.suivi.tMaxSuiviS.value}
+        autonomieCipa={BOITIER_REFERENCE.autonomieCipa ?? null}
+        modeObjectif={modeObjectif(typeObjectif)}
+      />
+    ) : null
 
-        {!calcul.ok && <p className="erreur">{calcul.erreur}</p>}
+  /* §11.2 — la seule région qui survit à l'impression : elle est nommée pour ça. */
+  const planImprimable =
+    calcul.ok && plan !== null && fenetreUtile !== null ? (
+      <PlanSessionVue
+        plan={plan}
+        fenetreUtile={fenetreUtile}
+        site={site}
+        fovHDeg={calcul.optique.fovHDeg.value}
+        fovLDeg={calcul.optique.fovLDeg.value}
+        mLimOeil={calcul.ciel.mLimOeil.value}
+        etoiles={etoiles}
+        enTete={{
+          dateIso,
+          lieu: `${latitude}° / ${longitude}° — Bortle ${bortle}`,
+          materiel: `${focale} mm f/${ouverture} — ${BOITIER_REFERENCE.libelle}`,
+        }}
+      />
+    ) : null
 
-        {calcul.ok && (
-          <>
-            <section>
-              <h2>Ce que ce matériel donne depuis ce lieu</h2>
-              <TracedValue terme="champ" suffixe="largeur" trace={calcul.optique.fovLDeg} unite="°" />
-              <TracedValue terme="champ" suffixe="hauteur" trace={calcul.optique.fovHDeg} unite="°" />
-              <TracedValue terme="echantillonnage" trace={calcul.optique.echApx} unite="&quot;/px" />
-              <p className={calcul.optique.alerte ? 'cause' : 'etat'}>
-                {calcul.optique.messageDiag}
-              </p>
-              <TracedValue terme="diametre_pupille" trace={calcul.optique.dMm} unite="mm" />
-              <TracedValue
-                terme="pouvoir_separateur"
-                trace={calcul.optique.dawesAs}
-                unite="&quot;"
-              />
-              <TracedValue terme="npf" trace={calcul.poseNpf} unite="s" />
-              <TracedValue terme="pose_max_suivi" trace={calcul.suivi.tMaxSuiviS} unite="s" />
-              {calcul.suivi.cause !== undefined && <p className="cause">{calcul.suivi.cause}</p>}
-              {calcul.suivi.gainMiseEnStation !== undefined && (
-                <p className="cause">{calcul.suivi.gainMiseEnStation}</p>
-              )}
-              <TracedValue
-                terme="seuil_imagerie"
-                trace={calcul.seuils.decMinImagerie}
-                decimales={1}
-                unite="°"
-              />
-              <TracedValue
-                terme="seuil_visuel"
-                trace={calcul.seuils.decMinVisuel}
-                decimales={1}
-                unite="°"
-              />
-              <TracedValue
-                terme="circumpolaire"
-                trace={calcul.seuils.decCircumpolaire}
-                decimales={1}
-                unite="°"
-              />
-            </section>
+  const seance = (
+    <PanneauSeance
+      latitude={latitude}
+      surLatitude={setLatitude}
+      longitude={longitude}
+      surLongitude={setLongitude}
+      altitude={altitude}
+      surAltitude={setAltitude}
+      dateIso={dateIso}
+      surDateIso={setDateIso}
+      bortle={bortle}
+      surBortle={setBortle}
+      sqm={sqm}
+      surSqm={setSqm}
+      masque={masque}
+      {...(calcul.ok ? { seuils: calcul.seuils } : {})}
+      contenus={{ EXPLORER: explorer, CIBLE: fiche, NUIT: nuit, FILE: file_ }}
+      plan={planImprimable}
+    />
+  )
 
-            <section>
-              <h2>Fenêtre nocturne</h2>
-              <p className="etat">état : {calcul.nuit.etat}</p>
-              <Terme
-                cle={calcul.nuit.modeDegrade ? 'mode_degrade_nuit' : 'nuit_astronomique'}
-                contexte={`${calcul.nuit.dureeReferenceH.toFixed(2)} h exploitables`}
-              />
-              {calcul.nuit.cause !== undefined && <p className="cause">{calcul.nuit.cause}</p>}
-              <table>
-                <tbody>
-                  <tr>
-                    <th>Coucher du Soleil</th>
-                    <td>{heure(calcul.nuit.coucherSoleil)}</td>
-                  </tr>
-                  <tr>
-                    <th>Début de nuit astronomique (−18°)</th>
-                    <td>{heure(calcul.nuit.debutNuitAstronomique)}</td>
-                  </tr>
-                  <tr>
-                    <th>Milieu de nuit vrai</th>
-                    <td>{heure(calcul.nuit.milieuNuitVrai)}</td>
-                  </tr>
-                  <tr>
-                    <th>Fin de nuit astronomique</th>
-                    <td>{heure(calcul.nuit.finNuitAstronomique)}</td>
-                  </tr>
-                  <tr>
-                    <th>Lever du Soleil</th>
-                    <td>{heure(calcul.nuit.leverSoleil)}</td>
-                  </tr>
-                  <tr>
-                    <th>Durée de nuit astronomique</th>
-                    <td>{calcul.nuit.dureeNuitH.toFixed(2)} h</td>
-                  </tr>
-                </tbody>
-              </table>
-              <TracedValue
-                terme="midi_solaire_vrai"
-                trace={calcul.offsetMidi}
-                decimales={1}
-                unite="min"
-              />
-            </section>
-
-            <section>
-              <h2>Fond de ciel</h2>
-              <p className="etat">source : {calcul.ciel.sourceSb}</p>
-              {calcul.ciel.confirmationRequise !== undefined && (
-                <p className="cause">{calcul.ciel.confirmationRequise}</p>
-              )}
-              <TracedValue terme="fond_de_ciel" trace={calcul.ciel.sbCiel} unite="mag/as²" />
-              <TracedValue
-                terme="magnitude_limite_oeil"
-                trace={calcul.ciel.mLimOeil}
-                unite="mag"
-              />
-            </section>
-
-            <Planetarium
-              site={site}
-              etoiles={etoiles}
-              objets={catalogue}
-              constellations={constellations}
-              profils={profilsCadre}
-              mLimOeil={calcul.ciel.mLimOeil.value}
-              gaiaCharge={etat === null ? false : gaiaCharge(etat.catalogues)}
-              modeNuit={modeNuit.actif}
-              surSelectionObjet={setCibleDuCiel}
-            />
-
-            <GrandChamp
-              site={site}
-              etoiles={etoiles}
-              focaleMm={Number(focale)}
-              ouvertureN={calcul.ouvertureN}
-              pitchUm={calcul.capteur.pitchUm}
-              capteurLMm={calcul.capteur.capteurLMm}
-              capteurHMm={calcul.capteur.capteurHMm}
-              fovLDeg={calcul.optique.fovLDeg.value}
-              fovHDeg={calcul.optique.fovHDeg.value}
-              echApx={calcul.optique.echApx.value}
-              dMm={calcul.optique.dMm.value}
-              zpSys={zeroSysteme.valeur}
-              zpEstime={zeroSysteme.estime}
-              readNoiseE={iso.readNoiseE}
-              sbCiel={calcul.ciel.sbCiel.value}
-              tailleRawMo={BOITIER_REFERENCE.tailleRawMo}
-              tMaxSuiviS={calcul.suivi.tMaxSuiviS.value}
-              autonomieCipa={BOITIER_REFERENCE.autonomieCipa ?? null}
-              modeNuit={modeNuit.actif}
-            />
-
-            <FicheCible
-              objetSelectionne={cibleDuCiel}
-              optique={calcul.optique}
-              capteurHMm={calcul.capteur.capteurHMm}
-              pitchUm={calcul.capteur.pitchUm}
-              ouvertureN={calcul.ouvertureN}
-              boitier={BOITIER_REFERENCE}
-              zeroSysteme={zeroSysteme}
-              sbCiel={calcul.ciel.sbCiel.value}
-              mLimOeil={calcul.ciel.mLimOeil.value}
-              // Sans suivi, c'est la NPF qui plafonne la pose (§9.1) — jamais rien.
-              tMaxS={calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value}
-              catalogue={catalogue}
-              bortle={bortle.trim() === '' ? null : Number(bortle)}
-              suiviActif={suiviActif}
-              focaleMm={Number(focale)}
-            />
-
-            {plan !== null && fenetreUtile !== null && (
-              <PlanSessionVue
-                plan={plan}
-                fenetreUtile={fenetreUtile}
-                site={site}
-                fovHDeg={calcul.optique.fovHDeg.value}
-                fovLDeg={calcul.optique.fovLDeg.value}
-                mLimOeil={calcul.ciel.mLimOeil.value}
-                etoiles={etoiles}
-                enTete={{
-                  dateIso,
-                  lieu: `${latitude}° / ${longitude}° — Bortle ${bortle}`,
-                  materiel: `${focale} mm f/${ouverture} — ${BOITIER_REFERENCE.libelle}`,
-                }}
-              />
-            )}
-            {plan === null && catalogue.length === 0 && (
-              <section>
-                <h2>Plan de session — §8.3</h2>
-                <p className="cause">
-                  Les catalogues ne sont pas encore vérifiés : aucun plan n’est produit tant
-                  qu’un binaire non validé pourrait l’alimenter. Les moteurs de cadrage, de
-                  pose et d’intégration restent utilisables sur une cible saisie à la main.
-                </p>
-              </section>
-            )}
-          </>
-        )}
-
-        <ModeNuit etat={modeNuit} surChangement={setModeNuit} />
-
-        <section>
-          <h2>État du socle</h2>
-          {etat === null && <p>Vérification en cours…</p>}
-          {etat !== null && (
-            <>
-              <p className="etat">réseau : {modeReseau}</p>
-              <p className="etat">
-                WebGL 2 : {etat.rendu.webgl2 ? 'disponible' : 'indisponible'}
-              </p>
-              {etat.rendu.cause !== undefined && <p className="cause">{etat.rendu.cause}</p>}
-              <p className="etat">
-                stockage persistant : {etat.stockage.persistant ? 'accordé' : 'non accordé'}
-                {etat.stockage.usageMo !== null &&
-                  ` · ${etat.stockage.usageMo.toFixed(1)} Mo utilisés`}
-              </p>
-              {etat.stockage.avertissement !== undefined && (
-                <p className="cause">{etat.stockage.avertissement}</p>
-              )}
-              {etat.catalogues.cause !== undefined && (
-                <p className="cause">{etat.catalogues.cause}</p>
-              )}
-              <ul>
-                {etat.catalogues.paquets.map((p) => (
-                  <li key={p.manifeste.nom}>
-                    {p.manifeste.nom} v{p.manifeste.version} — {p.integrite} (
-                    {(p.manifeste.octets / (1024 * 1024)).toFixed(2)} Mo)
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-          <div className="actions">
-            <button type="button" onClick={() => void surExport()}>
-              Exporter mes données (JSON)
-            </button>
-            <label className="bouton-fichier">
-              Réimporter
-              <input
-                type="file"
-                accept="application/json"
-                onChange={(e) => {
-                  const fichier = e.target.files?.[0]
-                  if (fichier !== undefined) void surImport(fichier)
-                }}
-              />
-            </label>
-          </div>
-          {messagePersistance !== null && <p className="cause">{messagePersistance}</p>}
-        </section>
-
-        <section>
-          <h2>Matrice de dégradation hors-ligne</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Fonction</th>
-                <th>Sections</th>
-                <th>Hors réseau</th>
-                <th>Dégradation</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MATRICE_DEGRADATION.map((ligne) => (
-                <tr key={ligne.fonction}>
-                  <td>{ligne.fonction}</td>
-                  <td>{ligne.sections}</td>
-                  <td>{ligne.horsReseau}</td>
-                  <td>{ligne.degradation}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-
-        <section>
-          <h2>Registre de constantes</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Réf</th>
-                <th>Libellé</th>
-                <th>Valeur</th>
-                <th>Source</th>
-                <th>Tolérance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(REGISTRE).map(([id, c]) => (
-                <tr key={id} className={c.deprecie !== undefined ? 'depreciee' : undefined}>
-                  <td>{c.ref}</td>
-                  <td>{c.libelle}</td>
-                  <td>
-                    {c.valeur} {c.unite}
-                  </td>
-                  <td>{c.source}</td>
-                  <td>{c.deprecie ?? c.tolerance ?? 'valeur exacte'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      </main>
+  return (
+    <NiveauContext value={niveau}>
+      <Coque topbar={topbar} materiel={materiel} scene={scene} seance={seance} />
     </NiveauContext>
   )
 }

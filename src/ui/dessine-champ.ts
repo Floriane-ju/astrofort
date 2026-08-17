@@ -16,7 +16,13 @@
  */
 
 import { K } from '../registry/constants.ts'
-import { arcEtoile, poseParPixelS, positionPole, type PositionPole } from '../core/file-etoiles.ts'
+import {
+  arcEtoile,
+  filtreArcCadre,
+  poseParPixelS,
+  positionPole,
+  type PositionPole,
+} from '../core/file-etoiles.ts'
 import {
   contrasteVoieLactee,
   depuisGalactique,
@@ -27,11 +33,13 @@ import {
 } from '../core/galactique.ts'
 import type { IndexCiel } from '../core/index-ciel.ts'
 import { selectionne } from '../core/index-ciel.ts'
+import type { EtendueCadre } from '../core/cadre.ts'
 import { rayonEtoilePx, type PointEcran, type Projecteur } from '../core/projection.ts'
-import type { Vec3 } from '../core/mat3.ts'
+import { separationDeg, type Vec3 } from '../core/mat3.ts'
 import { couleurTeinte, palette, teinte } from './couleurs.ts'
 
 const S_PAR_MIN = 60
+const MIN_PAR_H = 60
 /** Sous ce rayon, l'antialiasing efface le disque : la plus faible étoile reste un point. */
 const RAYON_MIN_ETOILE_PX = 0.7
 /** Pas du maillage de la bande galactique, en degrés. */
@@ -75,12 +83,23 @@ export interface EntreeDessinChamp {
   readonly voieLactee: boolean
   readonly vignettage: boolean
   readonly modeNuit: boolean
+  /**
+   * T-0023 — étendue du cadre dans lequel l'image sera clippée. Absente : la passe couvre
+   * tout le champ de la scène, comme une prévisualisation en canevas propre.
+   */
+  readonly cadreSelection?: EtendueCadre
 }
 
 export interface SortieDessinChamp {
   readonly etoilesReelles: number
   readonly etoilesGenerees: number
   readonly arcsTronques: number
+  /**
+   * Étoiles lues par la sélection, tracées ou non. C'est ce compteur, et pas le nombre
+   * d'étoiles dessinées, qui dit ce que la passe a coûté : sans lui, un gain de sélection se
+   * raconte au lieu de se chiffrer (T-0021).
+   */
+  readonly etoilesVisitees: number
   readonly pole: PositionPole
 }
 
@@ -138,6 +157,8 @@ function dessineVoieLactee(entree: EntreeDessinChamp): void {
 interface Compteur {
   dessinees: number
   tronques: number
+  /** Étoiles lues par `selectionne`, avant tout tri : le coût de la passe se lit ici. */
+  visitees: number
 }
 
 /** Une étoile : un arc balayé pendant la durée d'accumulation, ponctuel quand elle est brève. */
@@ -152,22 +173,49 @@ function dessineCouche(
   const largeur = projecteur.vue.largeurPx
   const hauteur = projecteur.vue.hauteurPx
   const centreJ2000 = projecteur.inverse(largeur / 2, hauteur / 2)
-  const rayonChampDeg = Math.min(
+  const rayonSceneDeg = Math.min(
     K('FOV_MAX_DEG') / 2,
     (projecteur.vue.fovDeg / 2) * Math.hypot(1, hauteur / largeur),
   )
   // Avec suivi, l'étoile ne se déplace pas sur le capteur : ni trace, ni étalement du flux.
   const dureeMin = entree.suiviActif ? 0 : entree.dureeS / S_PAR_MIN
 
-  selectionne(index, centreJ2000, rayonChampDeg, magMax, (x, y, z, magV, bv) => {
+  // T-0023 — incrustée, l'image est clippée sur le cadre : sélectionner sur le champ de la
+  // scène revient à calculer, trier et tracer tout ce qui sera jeté. Le disque est ramené
+  // autour du cadre, MAJORÉ DU BALAYAGE de la durée demandée — sans cette marge, une étoile
+  // hors cadre dont la trace y entre disparaîtrait et les bords se videraient en filé long.
+  // Il n'est jamais élargi au-delà du champ de la scène : ce qui n'était pas dessiné avant
+  // ne doit pas apparaître, l'image du cadre reste celle d'avant.
+  const cadre = entree.cadreSelection
+  const balayageDeg = K('ROTATION_CIEL_DEG_H') * (dureeMin / MIN_PAR_H)
+  // Le disque ne suffit pas : élargi du balayage, il couvre un tiers du ciel à 480 min. Le
+  // tri fin se fait étoile par étoile, sur le cercle de déclinaison, avant tout arc.
+  const toucheLeCadre =
+    cadre === undefined
+      ? null
+      : filtreArcCadre(cadre.centre, cadre.rayonDeg, entree.axePoleNord, balayageDeg)
+  const rayonChampDeg =
+    cadre === undefined
+      ? rayonSceneDeg
+      : Math.min(
+          rayonSceneDeg,
+          separationDeg(centreJ2000, cadre.centre) + cadre.rayonDeg + balayageDeg,
+        )
+
+  const stats = selectionne(index, centreJ2000, rayonChampDeg, magMax, (x, y, z, magV, bv) => {
     if (magV < magMin) return
+    // Le tri géométrique passe en premier : quelques produits scalaires écartent l'étoile
+    // avant même le calcul de profondeur, qui alloue une valeur tracée par appel.
+    if (toucheLeCadre !== null && !toucheLeCadre(x, y, z)) return
     const rayon = Math.max(RAYON_MIN_ETOILE_PX, rayonEtoilePx(magV))
-    const arc = arcEtoile(projecteur, { x, y, z }, dureeMin, entree.axePoleNord)
-    if (arc.segments.length === 0) return
 
     // La brillance d'une trace se juge sur la pose vue PAR PIXEL, pas sur la durée totale :
     // c'est pour cela qu'un filé de deux heures ne montre que les étoiles brillantes, là où
     // la même durée en poses fixes empilées en montrerait des milliers.
+    //
+    // Ce tri passe AVANT l'arc (T-0022) : il ne dépend que de la déclinaison, lue dans `z`,
+    // et l'arc est le calcul le plus cher de la passe. Une étoile écartée ici ne doit pas
+    // l'avoir payé.
     const profondeurTrace = magnitudeLimitePrevisu({
       ...entree.profondeur,
       tPoseS: entree.suiviActif
@@ -180,6 +228,9 @@ function dessineCouche(
     }).value
     const opacite = opaciteEtoile(magV, profondeurTrace)
     if (opacite < OPACITE_MIN) return
+
+    const arc = arcEtoile(projecteur, { x, y, z }, dureeMin, entree.axePoleNord)
+    if (arc.segments.length === 0) return
     const couleur = couleurTeinte(teinte(bv), entree.modeNuit)
     ctx.globalAlpha = opacite
 
@@ -206,6 +257,7 @@ function dessineCouche(
     compteur.dessinees++
     if (arc.tronque) compteur.tronques++
   })
+  compteur.visitees += stats.etoilesExaminees
   ctx.globalAlpha = 1
 }
 
@@ -236,8 +288,8 @@ export function dessineChamp(entree: EntreeDessinChamp): SortieDessinChamp {
   if (entree.voieLactee) dessineVoieLactee(entree)
 
   const seuilReel = K('SEUIL_MAG_ETOILES_REELLES')
-  const reelles: Compteur = { dessinees: 0, tronques: 0 }
-  const generees: Compteur = { dessinees: 0, tronques: 0 }
+  const reelles: Compteur = { dessinees: 0, tronques: 0, visitees: 0 }
+  const generees: Compteur = { dessinees: 0, tronques: 0, visitees: 0 }
   dessineCouche(entree, entree.indexReel, -Infinity, Math.min(entree.magLimite, seuilReel), reelles)
   if (entree.magLimite > seuilReel) {
     dessineCouche(entree, entree.indexSemis, seuilReel, entree.magLimite, generees)
@@ -262,6 +314,7 @@ export function dessineChamp(entree: EntreeDessinChamp): SortieDessinChamp {
     etoilesReelles: reelles.dessinees,
     etoilesGenerees: generees.dessinees,
     arcsTronques: reelles.tronques + generees.tronques,
+    etoilesVisitees: reelles.visitees + generees.visitees,
     pole,
   }
 }

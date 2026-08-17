@@ -80,7 +80,8 @@ const RAYON_CORPS_PX = 5
 /** Sous ce rayon, l'antialiasing efface le disque : la plus faible étoile reste un point. */
 const RAYON_MIN_ETOILE_PX = 0.7
 
-function traceLignes(
+/** Compose le chemin sans le peindre : au tracé du ciel de le remplir, au cadre de le découper. */
+function cheminLignes(
   ctx: CanvasRenderingContext2D,
   projecteur: Projecteur,
   polylignes: readonly (readonly Vec3[])[],
@@ -99,7 +100,32 @@ function traceLignes(
       precedent = p
     }
   }
+}
+
+function traceLignes(
+  ctx: CanvasRenderingContext2D,
+  projecteur: Projecteur,
+  polylignes: readonly (readonly Vec3[])[],
+): void {
+  cheminLignes(ctx, projecteur, polylignes)
   ctx.stroke()
+}
+
+/**
+ * §3.5 — chemin fermé du contour du cadre matériel, composé mais NON peint.
+ *
+ * Exporté pour l'incrustation du filé (§9.3) : elle découpe le canevas sur ce chemin avant
+ * d'y déposer son rendu. Le contour est calculé une seule fois, ici, avec le projecteur de la
+ * scène — §3.3 interdit qu'un second code de projection existe quelque part.
+ */
+export function cheminCadre(
+  ctx: CanvasRenderingContext2D,
+  projecteur: Projecteur,
+  cadre: Cadre,
+  matriceCiel: Mat3,
+): void {
+  const contour = contourCadreJ2000(cadre, matriceCiel)
+  cheminLignes(ctx, projecteur, [[...contour, contour[0]!]])
 }
 
 function traceSegments(
@@ -331,8 +357,8 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
     ctx.strokeStyle = teintes.cadre
     ctx.lineWidth = 2
     for (const cadre of entree.cadres) {
-      const contour = contourCadreJ2000(cadre, entree.matriceCiel)
-      traceLignes(ctx, projecteur, [[...contour, contour[0]!]])
+      cheminCadre(ctx, projecteur, cadre, entree.matriceCiel)
+      ctx.stroke()
     }
     ctx.lineWidth = 1
   }

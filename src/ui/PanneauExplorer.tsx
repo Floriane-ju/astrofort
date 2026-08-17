@@ -1,0 +1,239 @@
+/**
+ * Onglet « Explorer » — les réglages de la scène de §3, sortis du planétarium.
+ *
+ * Ce qui pilote CE QU'ON VOIT vit ici : la projection, le champ, la rotation du boîtier, les
+ * couches de tracés, le curseur temporel de §3.2. La scène, elle, ne garde que le canevas et
+ * ses lectures — un réglage posé sous une image qu'il modifie oblige à faire défiler pour
+ * voir son effet, ce que le lot 6 supprime précisément.
+ *
+ * Aucun calcul ne descend ici : `etatProfondeur` et `reglageVitesse` sont les mêmes fonctions
+ * que celles que la boucle de rendu consulte, appelées sur le même état de scène.
+ */
+
+import {
+  RAPPEL_ASTERISME,
+  RAPPEL_FIGURES,
+  ecartFrontieresDeg,
+} from '../core/constellations.ts'
+import {
+  PAS_ASTRONOMIQUES,
+  pasAstronomique,
+  reglageVitesse,
+  type ModeTemps,
+  type PasAstronomique,
+} from '../core/curseur-temps.ts'
+import { bornesZoom, etatProfondeur, type ModeProjection } from '../core/projection.ts'
+import { LARGEUR_SCENE_PX, useScene } from './scene-etat.ts'
+import { TracedValue } from './TracedValue.tsx'
+
+export interface PanneauExplorerProps {
+  /** §5.1 — la projection de l'objectif déclaré au panneau matériel, pas un réglage de rendu. */
+  readonly modeObjectif: ModeProjection
+  readonly gaiaCharge: boolean
+  /** Magnitude la plus faible du paquet chargé : au-delà, le champ paraît plus pauvre qu'il n'est. */
+  readonly profondeurMag: number
+  readonly mLimOeil: number | null
+  /** Époque de l'instant affiché : elle chiffre l'écart de précession des frontières B1875. */
+  readonly epoqueAnnee: number
+  /** §11.1 — aucune animation non sollicitée en mode nuit. */
+  readonly modeNuit: boolean
+}
+
+const COUCHES: readonly (readonly [
+  'figures' | 'frontieres' | 'asterismes' | 'cadre' | 'horizon',
+  string,
+])[] = [
+  ['figures', 'Figures IAU'],
+  ['frontieres', 'Frontières IAU'],
+  ['asterismes', 'Astérismes'],
+  ['cadre', 'Cadre matériel'],
+  ['horizon', 'Horizon'],
+]
+
+export function PanneauExplorer(props: PanneauExplorerProps) {
+  const { vue, temps, rendu, actions } = useScene()
+  const { fovDeg, rotationDeg, mode } = vue
+  const { modeTemps, facteur, pas } = temps
+  const { couches, vueRealiste } = rendu
+
+  const bornes = bornesZoom(props.gaiaCharge)
+  const profondeur = etatProfondeur(fovDeg, props.profondeurMag, props.mLimOeil, vueRealiste)
+  const reglage = reglageVitesse(facteur, LARGEUR_SCENE_PX, fovDeg)
+
+  return (
+    <>
+      <section>
+        <h2>Vue — §3.3</h2>
+        <div className="champs">
+          <label>
+            Projection
+            {/* Deux choix seulement : la vue de planétarium, ou celle de l'objectif déclaré.
+                Offrir gnomonique ET équidistante ici laisserait choisir une projection que le
+                matériel ne produit pas — §5.1 en fait une propriété de l'objectif. */}
+            <select
+              value={mode === 'MODE_PLANETARIUM' ? 'MODE_PLANETARIUM' : props.modeObjectif}
+              onChange={(e) => actions.majVue({ mode: e.target.value as ModeProjection })}
+            >
+              <option value="MODE_PLANETARIUM">Planétarium — stéréographique</option>
+              <option value={props.modeObjectif}>
+                Comme l’objectif —{' '}
+                {props.modeObjectif === 'MODE_FISHEYE' ? 'équidistante' : 'gnomonique'}
+              </option>
+            </select>
+          </label>
+          <label>
+            Champ : {fovDeg.toFixed(1)}°
+            <input
+              type="range"
+              min={bornes.fovMinDeg}
+              max={bornes.fovMaxDeg}
+              step={1}
+              value={fovDeg}
+              onChange={(e) => actions.majVue({ fovDeg: Number(e.target.value) })}
+            />
+          </label>
+          <label>
+            Rotation du cadre : {rotationDeg.toFixed(0)}°
+            <input
+              type="range"
+              min={0}
+              max={360}
+              step={1}
+              value={rotationDeg}
+              onChange={(e) => actions.majVue({ rotationDeg: Number(e.target.value) })}
+            />
+          </label>
+          <label className="interrupteur">
+            <input
+              type="checkbox"
+              checked={vueRealiste}
+              onChange={(e) => actions.majRendu({ vueRealiste: e.target.checked })}
+            />
+            Vue réaliste — plafonnée par le fond de ciel
+          </label>
+        </div>
+        {bornes.cause !== undefined && <p className="cause">{bornes.cause}</p>}
+
+        <TracedValue terme="magnitude_limite_rendue" trace={profondeur.magLimite} unite="mag" />
+        {profondeur.cause !== undefined && <p className="cause">{profondeur.cause}</p>}
+      </section>
+
+      <section>
+        <h2>Couches — §3.4</h2>
+        <div className="champs">
+          {COUCHES.map(([cle, libelle]) => (
+            <label className="interrupteur" key={cle}>
+              <input
+                type="checkbox"
+                checked={couches[cle]}
+                onChange={(e) =>
+                  actions.majRendu((r) => ({
+                    couches: { ...r.couches, [cle]: e.target.checked },
+                  }))
+                }
+              />
+              {libelle}
+            </label>
+          ))}
+        </div>
+        {couches.asterismes && <p className="etat">{RAPPEL_ASTERISME}</p>}
+        {couches.figures && <p className="etat">{RAPPEL_FIGURES}</p>}
+        {couches.frontieres && (
+          <TracedValue
+            terme="precession"
+            suffixe="frontières B1875 → époque affichée"
+            trace={ecartFrontieresDeg(props.epoqueAnnee)}
+            unite="°"
+          />
+        )}
+      </section>
+
+      <section>
+        <h2>Temps — §3.2</h2>
+        <div className="champs">
+          <label>
+            Mode de temps
+            <select
+              value={modeTemps}
+              onChange={(e) => actions.majTemps({ modeTemps: e.target.value as ModeTemps })}
+            >
+              <option value="MAINTENANT">Maintenant — suit l’horloge système</option>
+              <option value="FIGE">Figé</option>
+              <option value="DEFILEMENT">Défilement</option>
+              <option value="PAS_ASTRONOMIQUES">Pas astronomiques</option>
+            </select>
+          </label>
+          {modeTemps === 'DEFILEMENT' && (
+            <label>
+              Facteur ×{facteur.toFixed(0)}
+              <input
+                type="range"
+                min={-reglage.facteurMax.value}
+                max={reglage.facteurMax.value}
+                step={1}
+                value={facteur}
+                onChange={(e) => actions.majTemps({ facteur: Number(e.target.value) })}
+              />
+            </label>
+          )}
+          {modeTemps === 'PAS_ASTRONOMIQUES' && (
+            <>
+              <label>
+                Pas
+                <select
+                  value={pas}
+                  onChange={(e) => actions.majTemps({ pas: e.target.value as PasAstronomique })}
+                >
+                  {PAS_ASTRONOMIQUES.map((p) => (
+                    <option key={p} value={p}>
+                      {pasAstronomique(p).libelle}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="actions">
+                <button type="button" onClick={() => actions.saute(-pasAstronomique(pas).dureeS)}>
+                  − 1 {pasAstronomique(pas).libelle.toLowerCase()}
+                </button>
+                <button type="button" onClick={() => actions.saute(pasAstronomique(pas).dureeS)}>
+                  + 1 {pasAstronomique(pas).libelle.toLowerCase()}
+                </button>
+              </div>
+              <p className="etat">{pasAstronomique(pas).enseigne}</p>
+            </>
+          )}
+        </div>
+
+        {modeTemps === 'DEFILEMENT' && (
+          <>
+            <TracedValue terme="vitesse_ecran" trace={reglage.vEcran} unite="px/s" />
+            <TracedValue
+              terme="facteur_vitesse_max"
+              trace={reglage.facteurMax}
+              decimales={0}
+              unite="×"
+            />
+            <p className={reglage.etat === 'LISIBLE' ? 'etat' : 'cause'}>
+              lisibilité : {reglage.etat}
+            </p>
+            {reglage.message !== undefined && <p className="cause">{reglage.message}</p>}
+            {reglage.facteurPropose !== undefined && (
+              <button
+                type="button"
+                onClick={() => actions.majTemps({ facteur: reglage.facteurPropose! })}
+              >
+                Passer à ×{reglage.facteurPropose.toFixed(0)}
+              </button>
+            )}
+            {props.modeNuit && (
+              <p className="cause">
+                Mode nuit actif : le défilement est en pause. Aucune animation non sollicitée
+                n’est jouée en mode nuit (§11.1) — la vue reste manipulable.
+              </p>
+            )}
+          </>
+        )}
+      </section>
+    </>
+  )
+}

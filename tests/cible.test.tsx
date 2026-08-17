@@ -11,7 +11,11 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
+import { choisisOnglet } from '../src/ui/seance-etat.ts'
 
+// La fiche vit sous l'onglet Cible du panneau droit : le panneau ne monte qu'un onglet à la
+// fois, et c'est celui-là que ce fichier interroge.
+choisisOnglet('CIBLE')
 const ecran = renderToStaticMarkup(<App />)
 
 describe('fiche de cible — écran par défaut, M33 depuis le site de l’Annexe A', () => {

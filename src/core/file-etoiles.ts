@@ -135,6 +135,39 @@ export interface ArcFile {
  * l'image restant celle de l'instant de départ. Le code de projection est celui de §3.3, sans
  * une ligne de géométrie propre au filé.
  */
+/**
+ * T-0024 — longueur projetée d'un segment de polyligne, en pixels.
+ *
+ * Une flèche de polyligne vaut c²/8R pour une corde c sur un rayon projeté R : à 4 px de
+ * corde, l'écart à la conique reste sous le pixel dès que le rayon dépasse 2 px, donc pour
+ * tout arc visible. C'est la fidélité que §9.3 demande, tenue là où elle se juge.
+ */
+const PAS_ARC_PX = 4
+/** Segments du pré-échantillonnage qui estime la longueur projetée avant de la parcourir. */
+const PRE_ECHANTILLONS = 4
+
+/** Longueur projetée approchée de l'arc, ou `null` si l'étoile n'est pas projetable partout. */
+function longueurApprocheePx(
+  projecteur: Projecteur,
+  etoile: Vec3,
+  balayageDeg: number,
+  axePoleNord: Vec3,
+): number | null {
+  const rotation = rotationAutourDe(axePoleNord, -balayageDeg / PRE_ECHANTILLONS)
+  let position = etoile
+  let precedent = projecteur.projette(position)
+  if (precedent === null) return null
+  let longueur = 0
+  for (let i = 0; i < PRE_ECHANTILLONS; i++) {
+    position = applique(rotation, position)
+    const point = projecteur.projette(position)
+    if (point === null) return null
+    longueur += Math.hypot(point.xPx - precedent.xPx, point.yPx - precedent.yPx)
+    precedent = point
+  }
+  return longueur
+}
+
 export function arcEtoile(
   projecteur: Projecteur,
   etoile: Vec3,
@@ -145,7 +178,18 @@ export function arcEtoile(
   const hauteur = projecteur.vue.hauteurPx
   const balayageDeg = K('ROTATION_CIEL_DEG_H') * (dureeMin / MIN_PAR_H)
   const pasDeg = K('PAS_ANGLE_HORAIRE_FILE_DEG')
-  const pas = Math.max(1, Math.ceil(balayageDeg / pasDeg))
+  // Pas de référence de §9.3 : 0,25° d'angle horaire, soit 481 positions à 480 min. Il reste
+  // le pas LE PLUS FIN — rien ne gagne à subdiviser plus loin.
+  const pasFin = Math.max(1, Math.ceil(balayageDeg / pasDeg))
+  // T-0024 — une étoile à un degré du pôle décrit une trace de quelques pixels : elle payait
+  // les mêmes 481 pas qu'une étoile de l'équateur céleste traversant tout le cadre. Le
+  // comptage suit désormais la longueur PROJETÉE, là où se juge la fidélité à la conique.
+  // Estimation impossible (étoile non projetable sur tout le balayage) : on garde le pas fin.
+  const estimation = longueurApprocheePx(projecteur, etoile, balayageDeg, axePoleNord)
+  const pas =
+    estimation === null
+      ? pasFin
+      : Math.max(1, Math.min(pasFin, Math.ceil(estimation / PAS_ARC_PX)))
   // Rotation élémentaire autour du pôle céleste de l'époque, appliquée de proche en proche :
   // l'angle horaire croît, donc l'ascension droite apparente décroît d'autant.
   const rotation = rotationAutourDe(axePoleNord, -balayageDeg / pas)
@@ -179,6 +223,76 @@ export function arcEtoile(
   if (courant.length > 0) segments.push(courant)
 
   return { segments, longueurPx, tronque }
+}
+
+/**
+ * T-0023 — l'arc de cette étoile peut-il seulement toucher le cadre ?
+ *
+ * Un disque de sélection élargi de la longueur du balayage couvre un tiers du ciel à
+ * 480 min : il ne trie plus rien. La trace, elle, ne quitte JAMAIS le cercle de déclinaison
+ * de l'étoile. Deux questions suffisent donc, et elles se répondent sans construire l'arc :
+ *
+ *   1. ce cercle entre-t-il dans la calotte du cadre ? (distances au pôle)
+ *   2. si oui, l'étoile y arrive-t-elle pendant le balayage demandé ? (angle horaire)
+ *
+ * Le test est CONSERVATEUR par construction : la calotte englobe le cadre, donc une étoile
+ * écartée ici ne pouvait pas y laisser de trace. Aucun faux négatif, donc aucune image
+ * changée — c'est ce que l'empreinte de `scripts/bench-incrustation.ts` vérifie.
+ */
+export function filtreArcCadre(
+  centreCadre: Vec3,
+  rayonCadreDeg: number,
+  axePoleNord: Vec3,
+  balayageDeg: number,
+): (x: number, y: number, z: number) => boolean {
+  const p = axePoleNord
+  const cosRayon = Math.cos(rayonCadreDeg * DEG)
+  const cosRhoC = Math.max(-1, Math.min(1, centreCadre.x * p.x + centreCadre.y * p.y + centreCadre.z * p.z))
+  const sinRhoC = Math.sqrt(Math.max(0, 1 - cosRhoC * cosRhoC))
+
+  // Repère d'angle horaire : e1 pointe vers le cadre, e2 complète le trièdre autour du pôle.
+  // L'origine des angles est donc le cadre lui-même, ce qui évite un décalage à soustraire.
+  const e1: Vec3 = {
+    x: centreCadre.x - cosRhoC * p.x,
+    y: centreCadre.y - cosRhoC * p.y,
+    z: centreCadre.z - cosRhoC * p.z,
+  }
+  const norme = Math.hypot(e1.x, e1.y, e1.z)
+  // Cadre centré sur le pôle : l'angle horaire n'y veut plus rien dire, seule la distance
+  // au pôle tranche. Le filtre se réduit alors à cette comparaison.
+  if (norme === 0 || sinRhoC === 0) {
+    return (x, y, z) => {
+      const cosRhoS = Math.max(-1, Math.min(1, x * p.x + y * p.y + z * p.z))
+      return Math.abs(Math.acos(cosRhoS) - Math.acos(cosRhoC)) <= rayonCadreDeg * DEG
+    }
+  }
+  const u1: Vec3 = { x: e1.x / norme, y: e1.y / norme, z: e1.z / norme }
+  const u2: Vec3 = {
+    x: p.y * u1.z - p.z * u1.y,
+    y: p.z * u1.x - p.x * u1.z,
+    z: p.x * u1.y - p.y * u1.x,
+  }
+  const rhoC = Math.acos(cosRhoC)
+
+  return (x, y, z) => {
+    const cosRhoS = Math.max(-1, Math.min(1, x * p.x + y * p.y + z * p.z))
+    const sinRhoS = Math.sqrt(Math.max(0, 1 - cosRhoS * cosRhoS))
+    if (sinRhoS === 0) return Math.abs(Math.acos(cosRhoS) - rhoC) <= rayonCadreDeg * DEG
+
+    // Demi-largeur en angle horaire de la calotte, à la déclinaison de cette étoile :
+    // loi des cosinus sphérique, résolue en angle au pôle.
+    const cosDelta = (cosRayon - cosRhoC * cosRhoS) / (sinRhoC * sinRhoS)
+    if (cosDelta > 1) return false // le cercle de déclinaison manque le cadre de bout en bout
+    const demiLargeurDeg = cosDelta < -1 ? DEMI_TOUR : Math.acos(cosDelta) / DEG
+
+    // L'angle horaire décroît pendant la pose : l'étoile passe par le cadre si son angle
+    // de départ tombe dans la fenêtre [cadre − demi-largeur, cadre + demi-largeur + balayage].
+    const largeurFenetreDeg = balayageDeg + 2 * demiLargeurDeg
+    if (largeurFenetreDeg >= 2 * DEMI_TOUR) return true
+    const angleDeg = Math.atan2(x * u2.x + y * u2.y + z * u2.z, x * u1.x + y * u1.y + z * u1.z) / DEG
+    const depuisBord = ((((angleDeg + demiLargeurDeg) % 360) + 360) % 360)
+    return depuisBord <= largeurFenetreDeg
+  }
 }
 
 /**

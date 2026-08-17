@@ -28,7 +28,7 @@ import type { Site } from '../src/core/ephem.ts'
 import { versVecteur } from '../src/core/mat3.ts'
 import { projecteur, type Vue } from '../src/core/projection.ts'
 import { dessineChamp, type EntreeDessinChamp } from '../src/ui/dessine-champ.ts'
-import { GrandChamp } from '../src/ui/GrandChamp.tsx'
+import { PanneauFile } from '../src/ui/PanneauFile.tsx'
 import { K } from '../src/registry/constants.ts'
 
 const SITE: Site = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
@@ -272,12 +272,11 @@ describe('§9.2 — modulation par les paramètres de capture', () => {
   })
 })
 
-describe('§9 — la vue grand champ', () => {
+describe('§9 — le panneau du filé', () => {
   it('compose les quatre features sur un seul pointage', () => {
     const html = renderToStaticMarkup(
-      createElement(GrandChamp, {
+      createElement(PanneauFile, {
         site: SITE,
-        etoiles: [etoileAuCentre()],
         focaleMm: 10,
         ouvertureN: 2.8,
         pitchUm: 5.12,
@@ -286,15 +285,11 @@ describe('§9 — la vue grand champ', () => {
         fovLDeg: 121.7,
         fovHDeg: 100.2,
         echApx: 105.6,
-        dMm: 10 / 2.8,
-        zpSys: K('ZP_SYS_GENERIQUE'),
-        zpEstime: true,
-        readNoiseE: 1.5,
-        sbCiel: 20.95,
         tailleRawMo: 33,
+        profondeur: { ...PROFONDEUR, zpEstime: true },
         tMaxSuiviS: null,
         autonomieCipa: null,
-        modeNuit: false,
+        modeObjectif: 'MODE_CADRE',
       }),
     )
     expect(html).toContain('Pose maximale par déclinaison')

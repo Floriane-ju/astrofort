@@ -51,14 +51,223 @@ body {
   font: 15px/1.5 system-ui, sans-serif;
 }
 
-main {
-  max-width: 70rem;
-  margin: 0 auto;
-  padding: 2rem 1.25rem 4rem;
+/* §11.2 — la coque. Trois colonnes sur la hauteur du viewport : le matériel, la scène,
+   la séance. Les deux panneaux défilent chacun de leur côté ; la page, jamais.
+
+   `minmax(0, 1fr)` sur la rangée basse et `min-height: 0` sur les colonnes ne sont pas des
+   précautions décoratives : sans eux, une piste de grille prend la hauteur intrinsèque de son
+   contenu — le canevas pousse la grille au-delà du viewport et le défilement de page revient. */
+.coque {
+  display: grid;
+  grid-template-columns: 20rem minmax(0, 1fr) 24rem;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    'topbar topbar topbar'
+    'materiel scene seance';
+  height: 100dvh;
+}
+
+.coque-topbar {
+  grid-area: topbar;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--bordure);
+  background: var(--surface);
+}
+
+.coque-panneau {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.5rem 1rem 3rem;
+}
+
+.coque-materiel {
+  grid-area: materiel;
+  border-right: 1px solid var(--bordure);
+}
+
+.coque-seance {
+  grid-area: seance;
+  border-left: 1px solid var(--bordure);
+}
+
+/* Au-dessus du repli, les panneaux sont dépliés en permanence : l'accordéon n'a de sens que
+   quand la largeur manque. */
+.coque-panneau > summary {
+  display: none;
+}
+
+.coque-scene {
+  grid-area: scene;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+/* La scène ne porte plus aucun réglage : le canevas prend la place disponible, les lectures
+   qui le datent tiennent dessous. Seules ces lectures défilent, et seulement si elles
+   débordent — le canevas, lui, ne bouge jamais. */
+.coque-scene > .scene {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0.5rem 1rem;
+}
+
+/* `object-fit` plutôt qu'un rapport d'image imposé : le canevas est un élément remplacé, il
+   garde ses 1920 × 1080 intrinsèques et se loge dans la place laissée sans être étiré. */
+.coque-scene .planetarium {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  aspect-ratio: auto;
+  object-fit: contain;
+}
+
+.scene-lectures {
+  max-height: 40%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.scene-lectures h3 {
+  margin-top: 0.5rem;
+}
+
+/* Repli sous 1100 px : une seule colonne, les panneaux redeviennent des accordéons sous la
+   scène. Les cibles de clic gardent leur hauteur d'usage ganté (§11.2). */
+@media (max-width: 1100px) {
+  .coque {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+    grid-template-areas:
+      'topbar'
+      'scene'
+      'materiel'
+      'seance';
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .coque-panneau > summary {
+    display: flex;
+    align-items: center;
+    min-height: var(--cible-clic);
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--bordure);
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .coque-materiel,
+  .coque-seance {
+    border-right: 0;
+    border-left: 0;
+    border-top: 1px solid var(--bordure);
+    overflow-y: visible;
+  }
+
+  .coque-scene,
+  .coque-scene > .scene {
+    display: block;
+    overflow: visible;
+    height: auto;
+  }
+
+  .coque-scene .planetarium {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+
+  .scene-lectures {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* §11.2 — les onglets d'intention du panneau droit. Un seul jeu de réglages à l'écran ; la
+   cible de clic garde sa hauteur d'usage ganté. */
+.onglets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 1.5rem 0 0;
+  border-bottom: 1px solid var(--bordure);
+}
+
+.onglet {
+  flex: 1 1 auto;
+  min-height: var(--cible-clic);
+  padding: 0.45rem 0.6rem;
+  background: var(--surface);
+  color: var(--attenue);
+  border: 1px solid var(--bordure);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+}
+
+/* L'onglet actif ne se signale pas que par sa teinte : il porte aussi le trait et la graisse. */
+.onglet.actif {
+  background: var(--surface-haute);
+  color: var(--texte);
+  font-weight: 700;
+  box-shadow: inset 0 -3px 0 0 var(--alerte);
+}
+
+/* Le plan de session échappe aux onglets : masqué à l'écran hors de l'onglet Nuit, il reste
+   imprimable depuis n'importe lequel — sinon imprimer sortirait une page blanche. */
+.hors-onglet {
+  display: none;
+}
+
+/* Tiroirs de la barre haute : mode nuit et vérification du socle. L'élément natif porte
+   l'état ouvert/fermé, le clavier et l'annonce — aucun état React n'est nécessaire. */
+.tiroir {
+  position: relative;
+  margin-left: auto;
+}
+
+.tiroir + .tiroir {
+  margin-left: 0;
+}
+
+.tiroir > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--cible-clic);
+  padding: 0.45rem 0.9rem;
+  background: var(--surface-haute);
+  color: var(--texte);
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.tiroir[open] > .tiroir-contenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.25rem);
+  z-index: 5;
+  width: min(52rem, 92vw);
+  max-height: 75vh;
+  overflow-y: auto;
+  padding: 0 1rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
 }
 
 h1 {
   font-size: 1.5rem;
+  margin: 0;
 }
 
 h2 {
@@ -380,17 +589,6 @@ button,
   cursor: grabbing;
 }
 
-/* §9.2 — canevas de prévisualisation. Aucun rapport d'image n'est imposé ici : c'est celui
-   du capteur déclaré, et le fausser fausserait le cadrage préparé sur cet écran. */
-.previsu-champ {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  height: auto;
-  border: 1px solid var(--bordure);
-  border-radius: 4px;
-}
-
 /* §9.1 — la pose maximale est une carte, pas un nombre : la grille reprend la géométrie du
    cadre, cellule par cellule. */
 .carte-pose {
@@ -427,8 +625,35 @@ button,
   .actions,
   .niveau,
   .champs,
-  .planetarium,
-  .previsu-champ {
+  .planetarium {
     display: none;
+  }
+
+  /* La coque elle-même ne s'imprime pas : ni barre haute, ni scène, ni panneau matériel.
+     Du panneau droit ne survit que le plan de session. */
+  .coque {
+    display: block;
+    height: auto;
+  }
+
+  .coque-topbar,
+  .coque-scene,
+  .coque-materiel {
+    display: none;
+  }
+
+  .coque-seance {
+    overflow: visible;
+    border: 0;
+    padding: 0;
+  }
+
+  .coque-seance > *:not(.plan-session) {
+    display: none;
+  }
+
+  /* Le plan s'imprime depuis n'importe quel onglet, y compris quand l'écran ne le montre pas. */
+  .hors-onglet {
+    display: block;
   }
 }
