@@ -4,7 +4,41 @@
   "title": "Tickets — coût du filé incrusté dans le cadre",
   "opened": "2026-08-15",
   "closed": null,
-  "commits": []
+  "commits": [
+    {
+      "sha": "e3ab59b",
+      "date": "2026-08-17",
+      "files": [
+        "package.json",
+        "scripts/bench-incrustation.ts",
+        "src/App.tsx",
+        "src/core/cadre.ts",
+        "src/core/file-etoiles.ts",
+        "src/ui/Coque.tsx",
+        "src/ui/GrandChamp.tsx",
+        "src/ui/PanneauExplorer.tsx",
+        "src/ui/PanneauFile.tsx",
+        "src/ui/PanneauMateriel.tsx",
+        "src/ui/PanneauSeance.tsx",
+        "src/ui/Planetarium.tsx",
+        "src/ui/Verification.tsx",
+        "src/ui/dessine-champ.ts",
+        "src/ui/dessine-ciel.ts",
+        "src/ui/rendu-differe.ts",
+        "src/ui/scene-etat.ts",
+        "src/ui/scene-overlay.ts",
+        "src/ui/seance-etat.ts",
+        "src/ui/styles.css",
+        "tests/cadre.test.ts",
+        "tests/cible.test.tsx",
+        "tests/coque.test.tsx",
+        "tests/file-etoiles.test.ts",
+        "tests/previsu-champ.test.tsx",
+        "tests/rendu-differe.test.ts",
+        "tests/scene-etat.test.ts"
+      ]
+    }
+  ]
 }
 ---
 
