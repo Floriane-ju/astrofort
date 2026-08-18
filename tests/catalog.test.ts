@@ -14,6 +14,7 @@ import {
   type ManifestePaquet,
 } from '../src/data/catalog.ts'
 import { decodeObjets, encodeObjets, type ObjetCielProfond } from '../src/data/deepsky.ts'
+import { chercheCatalogue } from '../src/core/recherche-catalogue.ts'
 import {
   chargeObjetsCielProfond,
   PAQUET_NOMS_OBJETS,
@@ -170,6 +171,29 @@ describe('paquets générés §12.2', () => {
       ) as ArrayBuffer
       expect(await verifieIntegrite(buffer, paquet), paquet.nom).toBe('OK')
     }
+  })
+
+  it('porte les Messier hors NGC : « M45 » se cherche par sa désignation', async () => {
+    const lit = async (nom: string) =>
+      await readFile(join(RACINE, 'public', 'data', `${nom}-1.bin`)).catch(() => null)
+    const enregistrements = await lit('openngc')
+    const chaines = await lit('openngc-noms')
+    if (enregistrements === null || chaines === null) return
+
+    const objets = decodeObjets({
+      enregistrements: enregistrements.buffer.slice(
+        enregistrements.byteOffset,
+        enregistrements.byteOffset + enregistrements.byteLength,
+      ) as ArrayBuffer,
+      chaines: chaines.buffer.slice(
+        chaines.byteOffset,
+        chaines.byteOffset + chaines.byteLength,
+      ) as ArrayBuffer,
+    })
+
+    // M45 n'est ni NGC ni IC : il vient du fichier d'appoint d'OpenNGC, pas de `NGC.csv`.
+    expect(chercheCatalogue(objets, 'M45', 10).map((o) => o.designation)).toContain('M45')
+    expect(chercheCatalogue(objets, 'pleiades', 10).map((o) => o.designation)).toContain('M45')
   })
 })
 

@@ -11,18 +11,18 @@
   {
     "nom": "openngc",
     "version": "1",
-    "nombreEntrees": 12458,
-    "octets": 348824,
-    "sha256": "904c1f5790c8ec822aa204ef6e1107448d445e1c10b69f10aa9028fba99e8a46",
-    "source": "OpenNGC — https://raw.githubusercontent.com/mattiaverga/OpenNGC/master/database_files/NGC.csv",
+    "nombreEntrees": 12518,
+    "octets": 350504,
+    "sha256": "d9fb6268575d0487d4265895f51ac578ad4af209a2466493f2e52e514356b4ff",
+    "source": "OpenNGC — https://raw.githubusercontent.com/mattiaverga/OpenNGC/master/database_files/NGC.csv + https://raw.githubusercontent.com/mattiaverga/OpenNGC/master/database_files/addendum.csv",
     "obligatoire": true
   },
   {
     "nom": "openngc-noms",
     "version": "1",
-    "nombreEntrees": 12458,
-    "octets": 100225,
-    "sha256": "7f601a240cf571f12d0b29d35f8beca1745353aad52bb93071b3d8704cdf2bb9",
+    "nombreEntrees": 12518,
+    "octets": 101090,
+    "sha256": "90e252d04af53f3cf23d1455d94dc708a72432261314216bdea8a3de0032241e",
     "source": "Bloc de chaînes du paquet openngc",
     "obligatoire": true
   },

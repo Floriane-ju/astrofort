@@ -40,6 +40,14 @@ const URL_HYG =
 const URL_OPENNGC =
   'https://raw.githubusercontent.com/mattiaverga/OpenNGC/master/database_files/NGC.csv'
 /**
+ * OpenNGC range hors de `NGC.csv` les objets qui ne portent ni numéro NGC ni numéro IC —
+ * dont M45, les Pléiades, cataloguées « Mel022 ». Sans ce second fichier, quatre Messier
+ * (M24, M40, M45, M102) manquent au catalogue et restent introuvables. Même en-tête, même
+ * séparateur : les deux se lisent avec le même analyseur.
+ */
+const URL_OPENNGC_ADDENDUM =
+  'https://raw.githubusercontent.com/mattiaverga/OpenNGC/master/database_files/addendum.csv'
+/**
  * §3.4 — un seul fichier porte les trois couches : figures (culture occidentale), astérismes
  * et frontières IAU de Delporte en coordonnées B1875. C'est le jeu de référence que le PRD
  * nomme, sous licence libre.
@@ -526,14 +534,17 @@ async function principal(): Promise<void> {
 
   if (aConstruire.has('openngc')) {
     process.stdout.write('OpenNGC (ciel profond)\n')
-    const objets = construitObjets(await telecharge(URL_OPENNGC))
+    const objets = [
+      ...construitObjets(await telecharge(URL_OPENNGC)),
+      ...construitObjets(await telecharge(URL_OPENNGC_ADDENDUM)),
+    ]
     const paquetObjets = encodeObjets(objets)
     produits.push(
       await ecritPaquet(
         'openngc',
         paquetObjets.enregistrements,
         objets.length,
-        `OpenNGC — ${URL_OPENNGC}`,
+        `OpenNGC — ${URL_OPENNGC} + ${URL_OPENNGC_ADDENDUM}`,
         true,
       ),
       await ecritPaquet(
