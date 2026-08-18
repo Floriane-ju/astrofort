@@ -2,7 +2,7 @@
 {
   "id": "T-0046",
   "titre": "Un bouton « Voir » amène la cible au centre",
-  "colonne": "pret",
+  "colonne": "revue",
   "priorite": "moyenne",
   "charge": "s",
   "epic": "T-0043",
@@ -35,10 +35,10 @@ zoom et son instant.
 
 ## Critères d'acceptation
 
-- [ ] Un bouton « Voir » est présent tant qu'une cible visible est choisie, absent
+- [x] Un bouton « Voir » est présent tant qu'une cible visible est choisie, absent
       sinon.
-- [ ] Après le clic, `azimutDeg` et `hauteurDeg` de la scène sont ceux de l'objet à
+- [x] Après le clic, `azimutDeg` et `hauteurDeg` de la scène sont ceux de l'objet à
       l'instant affiché, à moins d'un degré.
-- [ ] `fovDeg` et `rotationDeg` sont inchangés après le clic.
-- [ ] Un test (`tests/cible.test.tsx` ou `tests/scene-etat.test.ts`) le constate sur
+- [x] `fovDeg` et `rotationDeg` sont inchangés après le clic.
+- [x] Un test (`tests/cible.test.tsx` ou `tests/scene-etat.test.ts`) le constate sur
       le magasin de scène.

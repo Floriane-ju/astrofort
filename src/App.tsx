@@ -49,6 +49,7 @@ import type { ProfilCadre } from './core/cadre.ts'
 import { Coque } from './ui/Coque.tsx'
 import { Planetarium } from './ui/Planetarium.tsx'
 import { MenuInfos } from './ui/MenuInfos.tsx'
+import { MenuReglages } from './ui/MenuReglages.tsx'
 import { PanneauFile } from './ui/PanneauFile.tsx'
 import { PanneauExplorer } from './ui/PanneauExplorer.tsx'
 import { PanneauSeance } from './ui/PanneauSeance.tsx'
@@ -423,6 +424,9 @@ export function App() {
         surExport={() => void surExport()}
         surImport={(fichier) => void surImport(fichier)}
       />
+      {/* T-0047 — le choix brut dans le catalogue, hors du chemin principal. Avant le menu
+          des lectures, qui reste le dernier élément. */}
+      <MenuReglages catalogue={catalogue} />
       {/* T-0038 — les lectures qui datent l'image : dernier élément de la barre, donc le
           plus à droite, et sans hauteur tant qu'il est fermé. */}
       <MenuInfos
@@ -502,6 +506,7 @@ export function App() {
   const fiche = calcul.ok ? (
     <FicheCible
       objetSelectionne={cibleDuCiel}
+      site={site}
       optique={calcul.optique}
       capteurHMm={calcul.capteur.capteurHMm}
       pitchUm={calcul.capteur.pitchUm}

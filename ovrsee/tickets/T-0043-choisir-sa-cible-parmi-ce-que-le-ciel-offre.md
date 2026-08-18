@@ -3,7 +3,7 @@
   "id": "T-0043",
   "titre": "Choisir sa cible parmi ce que le ciel offre",
   "type": "epic",
-  "colonne": "pret",
+  "colonne": "revue",
   "priorite": "haute",
   "charge": "l",
   "tags": [
@@ -41,11 +41,11 @@ n'est pas réutilisée ici.
 
 ## Critères d'acceptation
 
-- [ ] L'onglet Cible propose une liste des objets au-dessus de l'horizon à
+- [x] L'onglet Cible propose une liste des objets au-dessus de l'horizon à
       l'instant affiché, retenus sur le verdict de détectabilité du setup, sans
       filtre de cadrage.
-- [ ] Un bouton amène la cible choisie au centre du planétarium sans changer le
+- [x] Un bouton amène la cible choisie au centre du planétarium sans changer le
       champ.
-- [ ] Une roue crantée en haut à droite ouvre un tiroir de réglages.
-- [ ] Le choix brut dans le catalogue vit dans ce tiroir, et nulle part ailleurs.
-- [ ] Les quatre tickets enfants sont soldés.
+- [x] Une roue crantée en haut à droite ouvre un tiroir de réglages.
+- [x] Le choix brut dans le catalogue vit dans ce tiroir, et nulle part ailleurs.
+- [x] Les quatre tickets enfants sont soldés.

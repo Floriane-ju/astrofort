@@ -2,7 +2,7 @@
 {
   "id": "T-0044",
   "titre": "Les cibles visibles, calculées pour ce setup",
-  "colonne": "pret",
+  "colonne": "revue",
   "priorite": "haute",
   "charge": "s",
   "epic": "T-0043",
@@ -41,13 +41,13 @@ liste de `{ objet, azimutDeg, hauteurDeg, verdict }` :
 
 ## Critères d'acceptation
 
-- [ ] Un objet sous l'horizon à l'instant donné n'est pas dans la liste.
-- [ ] Un objet sans magnitude, ou sans dimensions, n'est pas dans la liste.
-- [ ] Un objet dont le verdict est `PHOTO_SEULE` **est** dans la liste.
-- [ ] Un objet trop grand ou trop petit pour le capteur déclaré est dans la liste :
+- [x] Un objet sous l'horizon à l'instant donné n'est pas dans la liste.
+- [x] Un objet sans magnitude, ou sans dimensions, n'est pas dans la liste.
+- [x] Un objet dont le verdict est `PHOTO_SEULE` **est** dans la liste.
+- [x] Un objet trop grand ou trop petit pour le capteur déclaré est dans la liste :
       le cadrage n'entre pas dans le filtre.
-- [ ] La liste est triée du plus brillant au plus faible.
-- [ ] `tests/visibles.test.ts` couvre ces cinq points sur un catalogue forgé de
+- [x] La liste est triée du plus brillant au plus faible.
+- [x] `tests/visibles.test.ts` couvre ces cinq points sur un catalogue forgé de
       quelques objets.
-- [ ] Aucun fichier existant de `src/core/`, `src/data/` ni `src/registry/` n'est
+- [x] Aucun fichier existant de `src/core/`, `src/data/` ni `src/registry/` n'est
       modifié.

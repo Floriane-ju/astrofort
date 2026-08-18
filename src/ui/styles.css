@@ -687,3 +687,12 @@ button,
     display: block;
   }
 }
+
+/* T-0051 — une cible venue du catalogue est une donnée mesurée : elle se lit, elle ne se
+   saisit pas. « Personnalisé » dans la liste des visibles rouvre la saisie. */
+input[readonly],
+select:disabled {
+  color: var(--attenue);
+  border-style: dashed;
+  cursor: default;
+}

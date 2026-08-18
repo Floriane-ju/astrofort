@@ -2,7 +2,7 @@
 {
   "id": "T-0045",
   "titre": "La cible se choisit dans la liste des visibles",
-  "colonne": "pret",
+  "colonne": "revue",
   "priorite": "haute",
   "charge": "m",
   "epic": "T-0043",
@@ -45,10 +45,10 @@ Le choix appelle `appliqueObjet` (`FicheCible.tsx:122`), déjà écrit.
 
 ## Critères d'acceptation
 
-- [ ] L'onglet Cible porte un `<select>` de cibles visibles, groupé par verdict.
-- [ ] Choisir une entrée remplit les six champs de la fiche, comme un clic sur la
+- [x] L'onglet Cible porte un `<select>` de cibles visibles, groupé par verdict.
+- [x] Choisir une entrée remplit les six champs de la fiche, comme un clic sur la
       scène.
-- [ ] Le compte réel de cibles au-dessus de l'horizon est affiché, plafond compris.
-- [ ] La liste ne se recalcule pas plus d'une fois par minute d'horloge affichée.
-- [ ] `tests/cible.test.tsx` constate qu'un objet du catalogue sous l'horizon
+- [x] Le compte réel de cibles au-dessus de l'horizon est affiché, plafond compris.
+- [x] La liste ne se recalcule pas plus d'une fois par minute d'horloge affichée.
+- [x] `tests/cible.test.tsx` constate qu'un objet du catalogue sous l'horizon
       n'apparaît pas dans le `<select>`, et qu'un objet au-dessus y apparaît.

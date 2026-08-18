@@ -30,6 +30,7 @@ import {
   resolutionRendu,
 } from '../src/ui/scene-etat.ts'
 import { MenuInfos } from '../src/ui/MenuInfos.tsx'
+import { MenuReglages, OptionsCatalogue, objetDesigne } from '../src/ui/MenuReglages.tsx'
 import { construitIndex } from '../src/core/index-ciel.ts'
 import { projecteur } from '../src/core/projection.ts'
 import { versSpherique } from '../src/core/mat3.ts'
@@ -419,5 +420,128 @@ describe('T-0041 — le bouton du menu dit qu’il a quelque chose à lire', () 
     // La graisse et la bordure changent aussi : le rouge du mode nuit ne dit rien seul.
     expect(corps).toContain('font-weight: 700')
     expect(corps).toContain('border-color: var(--alerte)')
+  })
+})
+
+
+describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', () => {
+  it('monte un tiroir de réglages dans la barre haute', () => {
+    choisisOnglet('CIBLE')
+    const ecran = renderToStaticMarkup(<App />)
+    expect(ecran).toContain('tiroir tiroir-reglages')
+    expect(ecran).toContain('⚙ Réglages')
+  })
+
+  it('le place avant le menu des lectures, qui ferme la barre', () => {
+    const ecran = renderToStaticMarkup(<App />)
+    expect(ecran.indexOf('tiroir-reglages')).toBeLessThan(ecran.indexOf('tiroir-infos'))
+  })
+
+  it('porte l’accès au catalogue, que l’onglet Cible n’a plus', () => {
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} />)
+    expect(rendu).toContain('Chercher dans le catalogue')
+
+    choisisOnglet('CIBLE')
+    expect(renderToStaticMarkup(<App />)).not.toContain('Chercher dans le catalogue')
+  })
+
+  it('lit une entrée du catalogue comme la liste des visibles la lit', () => {
+    const rendu = renderToStaticMarkup(<OptionsCatalogue catalogue={[M31]} saisie="M31" />)
+    expect(rendu).toContain('— Andromède · galaxie · mag 3.4')
+  })
+
+  it('garde la cible de clic de §11.2 : le tiroir est un `.tiroir` comme les autres', () => {
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[]} />)
+    expect(rendu).toMatch(/class="tiroir tiroir-reglages"/)
+    const styles = readFileSync(
+      join(import.meta.dirname, '..', 'src', 'ui', 'styles.css'),
+      'utf8',
+    )
+    const debut = styles.indexOf('.tiroir > summary {')
+    expect(debut).toBeGreaterThan(-1)
+    expect(styles.slice(debut, styles.indexOf('}', debut))).toContain(
+      'min-height: var(--cible-clic)',
+    )
+  })
+})
+
+
+/**
+ * T-0053 — le catalogue se cherche au lieu de se dérouler. Le `<datalist>` ne porte que les
+ * résultats de la frappe en cours : ce qui est vérifié ici est la structure native et la
+ * résolution avant `ouvreCible`, pas le comportement de la liste déroulante du navigateur.
+ */
+describe('T-0053 — le tiroir cherche le catalogue au lieu de le dérouler', () => {
+  const M45: ObjetCielProfond = {
+    designation: 'M45',
+    nomsCommuns: 'Pléiades',
+    adDeg: 56.75,
+    decDeg: 24.12,
+    type: 'AMAS_OUVERT',
+    majAxArcmin: 110,
+    minAxArcmin: 110,
+    posAngDeg: null,
+    vMag: 1.6,
+    bMag: null,
+    surfBr: null,
+  }
+
+  it('porte un champ de saisie relié à un `datalist`, plus un `select` déroulant', () => {
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31, M45]} />)
+    expect(rendu).toContain('<datalist')
+    expect(rendu).toMatch(/<input[^>]+list="/)
+    expect(rendu).not.toContain('<select')
+  })
+
+  it('ne rend aucune option avant la première frappe : le catalogue n’est pas une liste', () => {
+    expect(renderToStaticMarkup(<OptionsCatalogue catalogue={[M31, M45]} saisie="" />)).toBe('')
+  })
+
+  it('propose M45 sur « pléiades » comme sur « M45 », et n’insère que la désignation', () => {
+    for (const saisie of ['pléiades', 'PLEIADES', 'M45']) {
+      const rendu = renderToStaticMarkup(
+        <OptionsCatalogue catalogue={[M31, M45]} saisie={saisie} />,
+      )
+      expect(rendu).toContain('value="M45"')
+      expect(rendu).not.toContain('value="M45 —')
+    }
+  })
+
+  it('atteint n’importe quelle partie du catalogue : les Messier ne sont plus hors de portée', () => {
+    const remplissage: ObjetCielProfond[] = Array.from({ length: 500 }, (_, i) => ({
+      ...M31,
+      designation: `IC${i}`,
+      nomsCommuns: '',
+    }))
+    const rendu = renderToStaticMarkup(
+      <OptionsCatalogue catalogue={[...remplissage, M45]} saisie="M45" />,
+    )
+    expect(rendu).toContain('value="M45"')
+  })
+
+  it('résout la saisie sur une désignation exacte, et sur rien d’autre', () => {
+    expect(objetDesigne([M31, M45], 'M45')).toBe(M45)
+    expect(objetDesigne([M31, M45], '  M45  ')).toBe(M45)
+    expect(objetDesigne([M31, M45], 'Pléiades')).toBeNull()
+    expect(objetDesigne([M31, M45], 'M4')).toBeNull()
+    expect(objetDesigne([M31, M45], '')).toBeNull()
+  })
+
+  it('garde le message d’attente d’intégrité quand le catalogue n’est pas vérifié', () => {
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[]} />)
+    expect(rendu).toContain('contrôle d’intégrité')
+    expect(rendu).not.toContain('<input')
+  })
+
+  it('garde la cible de clic de §11.2 : un `input` a la hauteur d’usage ganté', () => {
+    const styles = readFileSync(
+      join(import.meta.dirname, '..', 'src', 'ui', 'styles.css'),
+      'utf8',
+    )
+    const debut = styles.indexOf('input,\nselect {')
+    expect(debut).toBeGreaterThan(-1)
+    expect(styles.slice(debut, styles.indexOf('}', debut))).toContain(
+      'min-height: var(--cible-clic)',
+    )
   })
 })

@@ -10,7 +10,11 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { ficheCadrage, verdictDomaine, type FicheCadrage, type VerdictDomaine } from '../core/framing.ts'
-import { detectabilite, type Detectabilite } from '../core/detectability.ts'
+import {
+  detectabilite,
+  type Detectabilite,
+  type VerdictDetectabilite,
+} from '../core/detectability.ts'
 import {
   dureeLisible,
   fluxCiel,
@@ -43,6 +47,10 @@ import {
   type IsoRetenu,
   type PointZeroSysteme,
 } from '../data/equipment.ts'
+import { ciblesVisibles, parType, typesPresents, type CibleVisible } from '../core/visibles.ts'
+import { cielInstantane } from '../core/horloges.ts'
+import type { Site } from '../core/ephem.ts'
+import { majVue, useScene } from './scene-etat.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, Terme } from './Terme.tsx'
 
@@ -60,6 +68,73 @@ const CIBLE_REFERENCE = {
   posAngDeg: '23',
 }
 
+/**
+ * T-0045 — plafond de la liste des visibles. Le compte réel est annoncé à côté : un plafond
+ * muet mentirait sur le ciel.
+ *
+ * ponytail: un `<select>` plafonné suffit tant que la liste se parcourt à l'œil. Le jour où
+ * elle doit devenir cherchable, la sortie est `<input list>` + `<datalist>`, pas une
+ * pagination.
+ */
+const CIBLES_LISTEES_MAX = 200
+
+/**
+ * La liste des visibles est recalculée sur la minute affichée, pas sur l'instant : la scène
+ * publie `msAffiche` deux fois par seconde et le catalogue compte ~14 000 entrées. Une minute
+ * de granularité ne change pas quel objet est au-dessus de l'horizon.
+ */
+const MS_PAR_MINUTE = 60_000
+
+/** L'ordre des groupes dit ce que le setup fera de la cible, du plus direct au plus long. */
+const VERDICTS_GROUPES: readonly VerdictDetectabilite[] = [
+  'OEIL_NU',
+  'JUMELLES',
+  'TELESCOPE',
+  'PHOTO_SEULE',
+]
+
+const LIBELLE_VERDICT: Readonly<Record<VerdictDetectabilite, string>> = {
+  OEIL_NU: 'Œil nu',
+  JUMELLES: 'Jumelles',
+  TELESCOPE: 'Télescope',
+  PHOTO_SEULE: 'Photo seule',
+}
+
+/**
+ * T-0049 — les types de §6.3 en français, sur le patron de `LIBELLE_VERDICT` : le `Record`
+ * complet fait refuser par le compilateur un type ajouté sans libellé. Un seul endroit où
+ * traduire un type — la liste des visibles, son filtre (T-0050) et le champ « Type d'objet »
+ * y puisent tous les trois.
+ */
+export const LIBELLE_TYPE_OBJET: Readonly<Record<TypeObjet, string>> = {
+  INCONNU: 'type inconnu',
+  GALAXIE: 'galaxie',
+  AMAS_OUVERT: 'amas ouvert',
+  AMAS_GLOB: 'amas globulaire',
+  NEB_PLANETAIRE: 'nébuleuse planétaire',
+  EMISSION: 'nébuleuse en émission',
+  REFLEXION: 'nébuleuse par réflexion',
+  NEB_OBSCURE: 'nébuleuse obscure',
+  RESTE_SUPERNOVA: 'reste de supernova',
+  AUTRE: 'autre type',
+}
+
+/**
+ * Ce qu'on peut dire d'un objet sans rien savoir du ciel : désignation, nom commun, type,
+ * magnitude. Le tiroir de réglages (`MenuReglages`) et la liste des visibles y puisent tous
+ * les deux — un objet du catalogue se lit pareil des deux côtés.
+ */
+export function libelleObjet(objet: ObjetCielProfond): string {
+  const nom = objet.nomsCommuns === '' ? '' : ` — ${objet.nomsCommuns.split('|')[0]}`
+  const mag = objet.vMag === null ? '' : ` · mag ${objet.vMag.toFixed(1)}`
+  return `${objet.designation}${nom} · ${LIBELLE_TYPE_OBJET[objet.type]}${mag}`
+}
+
+/** La hauteur, elle, n'existe que pour une cible levée : elle reste à la liste des visibles. */
+function libelleCible(cible: CibleVisible): string {
+  return `${libelleObjet(cible.objet)} · ${cible.hauteurDeg.toFixed(0)}° de hauteur`
+}
+
 export interface FicheCibleProps {
   /**
    * §3.4 — cible ouverte depuis le planétarium. Un clic sur un objet du ciel profond charge
@@ -67,6 +142,8 @@ export interface FicheCibleProps {
    * n'est pas décoratif, c'est le point d'entrée vers les moteurs.
    */
   readonly objetSelectionne?: ObjetCielProfond | null
+  /** T-0045 — le lieu, sans lequel « au-dessus de l'horizon » ne veut rien dire. */
+  readonly site: Site
   readonly optique: ProfilOptique
   readonly capteurHMm: number
   readonly pitchUm: number
@@ -101,6 +178,23 @@ interface Resultat {
   readonly explique: Explication | null
 }
 
+/**
+ * Les six champs de la fiche, garnis depuis un objet du catalogue — ou la chaîne de référence
+ * §6.3 quand il n'y en a pas. `CIBLE_REFERENCE` est une saisie à la main, pas une entrée
+ * d'OpenNGC : l'application s'ouvre donc en personnalisé (T-0051).
+ */
+function valeursDe(objet: ObjetCielProfond | null): typeof CIBLE_REFERENCE {
+  if (objet === null) return CIBLE_REFERENCE
+  return {
+    designation: objet.designation,
+    typeObjet: objet.type,
+    mInt: objet.vMag === null ? '' : String(objet.vMag),
+    aArcmin: objet.majAxArcmin === null ? '' : String(objet.majAxArcmin),
+    bArcmin: objet.minAxArcmin === null ? '' : String(objet.minAxArcmin),
+    posAngDeg: objet.posAngDeg === null ? '' : String(objet.posAngDeg),
+  }
+}
+
 function nombreOuNull(texte: string): number | null {
   const valeur = Number(texte)
   return texte.trim() === '' || !Number.isFinite(valeur) ? null : valeur
@@ -109,28 +203,82 @@ function nombreOuNull(texte: string): number | null {
 export function FicheCible(props: FicheCibleProps) {
   const [filtreDualBand, setFiltreDualBand] = useState(false)
   const [explicationDepliee, setExplicationDepliee] = useState(false)
-  const [designation, setDesignation] = useState(CIBLE_REFERENCE.designation)
-  const [typeObjet, setTypeObjet] = useState<TypeObjet>(CIBLE_REFERENCE.typeObjet)
-  const [mInt, setMInt] = useState(CIBLE_REFERENCE.mInt)
-  const [aArcmin, setAArcmin] = useState(CIBLE_REFERENCE.aArcmin)
-  const [bArcmin, setBArcmin] = useState(CIBLE_REFERENCE.bArcmin)
-  const [posAngDeg, setPosAngDeg] = useState(CIBLE_REFERENCE.posAngDeg)
+  const initiale = valeursDe(props.objetSelectionne ?? null)
+  const [designation, setDesignation] = useState(initiale.designation)
+  const [typeObjet, setTypeObjet] = useState<TypeObjet>(initiale.typeObjet)
+  const [mInt, setMInt] = useState(initiale.mInt)
+  const [aArcmin, setAArcmin] = useState(initiale.aArcmin)
+  const [bArcmin, setBArcmin] = useState(initiale.bArcmin)
+  const [posAngDeg, setPosAngDeg] = useState(initiale.posAngDeg)
   const [snrCible, setSnrCible] = useState(PRESETS_SNR[1]!.valeur)
+  /** T-0050 — restriction de la liste à un type d'objet. `null` ne restreint rien. */
+  const [filtreType, setFiltreType] = useState<TypeObjet | null>(null)
+  /**
+   * T-0051 — l'objet du catalogue retenu tel quel, `null` valant « personnalisé ». Le verrou
+   * de la saisie est cet état, pas une déduction : le retrouver dans la liste des visibles le
+   * lèverait dès qu'un objet passe sous l'horizon, ou qu'un filtre l'écarte.
+   */
+  const [objetCatalogue, setObjetCatalogue] = useState<ObjetCielProfond | null>(
+    props.objetSelectionne ?? null,
+  )
 
   const iso = isoRecommande(props.boitier)
+  const verrouille = objetCatalogue !== null
 
-  function appliqueObjet(objet: ObjetCielProfond) {
-    setDesignation(objet.designation)
-    setTypeObjet(objet.type)
-    setMInt(objet.vMag === null ? '' : String(objet.vMag))
-    setAArcmin(objet.majAxArcmin === null ? '' : String(objet.majAxArcmin))
-    setBArcmin(objet.minAxArcmin === null ? '' : String(objet.minAxArcmin))
-    setPosAngDeg(objet.posAngDeg === null ? '' : String(objet.posAngDeg))
+  /** `null` — « Personnalisé » — garde les valeurs affichées et rouvre la saisie. */
+  function appliqueObjet(objet: ObjetCielProfond | null) {
+    setObjetCatalogue(objet)
+    if (objet === null) return
+    const valeurs = valeursDe(objet)
+    setDesignation(valeurs.designation)
+    setTypeObjet(valeurs.typeObjet)
+    setMInt(valeurs.mInt)
+    setAArcmin(valeurs.aArcmin)
+    setBArcmin(valeurs.bArcmin)
+    setPosAngDeg(valeurs.posAngDeg)
   }
 
-  function choisitDansCatalogue(designationChoisie: string) {
-    const objet = props.catalogue.find((o) => o.designation === designationChoisie)
-    if (objet !== undefined) appliqueObjet(objet)
+  const { msAffiche } = useScene()
+  const minuteAffichee = Math.floor(msAffiche / MS_PAR_MINUTE)
+  const { site, catalogue, sbCiel, mLimOeil } = props
+  const dMm = props.optique.dMm.value
+
+  const visibles = useMemo(
+    () =>
+      ciblesVisibles({
+        catalogue,
+        matriceCiel: cielInstantane(site, new Date(minuteAffichee * MS_PAR_MINUTE)).matrice,
+        sbCiel,
+        mLimOeil,
+        dMm,
+      }),
+    [catalogue, site, minuteAffichee, sbCiel, mLimOeil, dMm],
+  )
+  // T-0050 — le filtre tombe avant le plafond : filtrer les 200 plus brillantes du ciel
+  // entier ne dirait rien du ciel. Le compte annoncé suit le filtre.
+  const filtrees = parType(visibles, filtreType)
+  const listees = filtrees.slice(0, CIBLES_LISTEES_MAX)
+  const typesOfferts = useMemo(() => typesPresents(visibles), [visibles])
+
+  /**
+   * T-0046 — la cible visible courante est l'objet du catalogue retenu, relu dans `visibles`
+   * pour sa position : le bouton vise donc la minute affichée, pas l'instant du choix. Une
+   * cible personnalisée, ou passée sous l'horizon, n'a pas de position — le bouton disparaît,
+   * ce qui est juste : on ne sait plus où pointer.
+   */
+  const choisie =
+    objetCatalogue === null
+      ? null
+      : visibles.find((c) => c.objet.designation === objetCatalogue.designation) ?? null
+
+  /** La valeur vide de la liste est « Personnalisé » : elle rouvre la saisie (T-0051). */
+  function choisitParmiLesVisibles(designationChoisie: string) {
+    if (designationChoisie === '') {
+      appliqueObjet(null)
+      return
+    }
+    const cible = visibles.find((c) => c.objet.designation === designationChoisie)
+    if (cible !== undefined) appliqueObjet(cible.objet)
   }
 
   const objetSelectionne = props.objetSelectionne ?? null
@@ -204,43 +352,126 @@ export function FicheCible(props: FicheCibleProps) {
         <div className="champs">
           <label>
             Désignation
-            <input value={designation} onChange={(e) => setDesignation(e.target.value)} />
+            <input
+              value={designation}
+              onChange={(e) => setDesignation(e.target.value)}
+              readOnly={verrouille}
+            />
           </label>
           {props.catalogue.length > 0 && (
             <label>
-              Choisir dans le catalogue
-              <select value="" onChange={(e) => choisitDansCatalogue(e.target.value)}>
-                <option value="">—</option>
-                {props.catalogue.slice(0, 400).map((o) => (
-                  <option key={o.designation} value={o.designation}>
-                    {o.designation}
-                    {o.nomsCommuns === '' ? '' : ` — ${o.nomsCommuns.split('|')[0]}`}
+              Type listé
+              <select
+                value={filtreType ?? ''}
+                onChange={(e) =>
+                  setFiltreType(e.target.value === '' ? null : (e.target.value as TypeObjet))
+                }
+              >
+                <option value="">Tous types</option>
+                {typesOfferts.map((t) => (
+                  <option key={t} value={t}>
+                    {LIBELLE_TYPE_OBJET[t]}
                   </option>
                 ))}
               </select>
             </label>
           )}
+          {props.catalogue.length > 0 && (
+            <label>
+              Cibles visibles
+              <select
+                value={objetCatalogue === null ? '' : objetCatalogue.designation}
+                onChange={(e) => choisitParmiLesVisibles(e.target.value)}
+              >
+                <option value="">Personnalisé</option>
+                {/* La cible retenue reste affichée même quand le filtre ou l'horizon l'ont
+                    sortie de la liste : le verrou tient, la lecture doit le dire. */}
+                {objetCatalogue !== null &&
+                  !listees.some((c) => c.objet.designation === objetCatalogue.designation) && (
+                    <option value={objetCatalogue.designation}>
+                      {objetCatalogue.designation} (hors de la liste affichée)
+                    </option>
+                  )}
+                {VERDICTS_GROUPES.map((verdict) => {
+                  const groupe = listees.filter((c) => c.verdict === verdict)
+                  if (groupe.length === 0) return null
+                  return (
+                    <optgroup key={verdict} label={LIBELLE_VERDICT[verdict]}>
+                      {groupe.map((c) => (
+                        <option key={c.objet.designation} value={c.objet.designation}>
+                          {libelleCible(c)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )
+                })}
+              </select>
+            </label>
+          )}
+          {props.catalogue.length > 0 && (
+            <div className="actions">
+              <span className="etat">
+                {filtrees.length.toLocaleString('fr-FR')} cible
+                {filtrees.length > 1 ? 's' : ''} au-dessus de l’horizon
+                {filtreType === null ? '' : ` de type ${LIBELLE_TYPE_OBJET[filtreType]}`}
+                {filtrees.length > CIBLES_LISTEES_MAX
+                  ? `, les ${CIBLES_LISTEES_MAX} plus brillantes listées`
+                  : ''}
+                .
+              </span>
+              {/* T-0046 — « Voir » centre, et rien d'autre : ni le champ, ni la rotation, ni
+                  l'horloge ne bougent. L'utilisateur garde son zoom et son instant. */}
+              {choisie !== null && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    majVue({ azimutDeg: choisie.azimutDeg, hauteurDeg: choisie.hauteurDeg })
+                  }}
+                >
+                  Voir
+                </button>
+              )}
+            </div>
+          )}
           <label>
             Type d’objet
-            <select value={typeObjet} onChange={(e) => setTypeObjet(e.target.value as TypeObjet)}>
+            {/* Un `<select>` ne connaît pas `readonly` : c'est `disabled` qui le ferme. */}
+            <select
+              value={typeObjet}
+              onChange={(e) => setTypeObjet(e.target.value as TypeObjet)}
+              disabled={verrouille}
+            >
               {TYPES_OBJET.map((t) => (
                 <option key={t} value={t}>
-                  {t}
+                  {LIBELLE_TYPE_OBJET[t]}
                 </option>
               ))}
             </select>
           </label>
           <label>
             <Etiquette cle="magnitude_integree" />
-            <input value={mInt} onChange={(e) => setMInt(e.target.value)} placeholder="absente" />
+            <input
+              value={mInt}
+              onChange={(e) => setMInt(e.target.value)}
+              placeholder="absente"
+              readOnly={verrouille}
+            />
           </label>
           <label>
             Grand axe (’)
-            <input value={aArcmin} onChange={(e) => setAArcmin(e.target.value)} />
+            <input
+              value={aArcmin}
+              onChange={(e) => setAArcmin(e.target.value)}
+              readOnly={verrouille}
+            />
           </label>
           <label>
             Petit axe (’)
-            <input value={bArcmin} onChange={(e) => setBArcmin(e.target.value)} />
+            <input
+              value={bArcmin}
+              onChange={(e) => setBArcmin(e.target.value)}
+              readOnly={verrouille}
+            />
           </label>
           <label>
             Angle de position (°)
@@ -248,6 +479,7 @@ export function FicheCible(props: FicheCibleProps) {
               value={posAngDeg}
               onChange={(e) => setPosAngDeg(e.target.value)}
               placeholder="absent du catalogue"
+              readOnly={verrouille}
             />
           </label>
         </div>
