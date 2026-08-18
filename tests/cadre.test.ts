@@ -24,9 +24,8 @@ import { IDENTITE, separationDeg, versSpherique, versVecteur } from '../src/core
 import { projecteur, type Vue } from '../src/core/projection.ts'
 import type { ObjetCielProfond } from '../src/data/deepsky.ts'
 import { K } from '../src/registry/constants.ts'
-import { Planetarium } from '../src/ui/Planetarium.tsx'
+import { MenuInfos } from '../src/ui/MenuInfos.tsx'
 import { construitIndex } from '../src/core/index-ciel.ts'
-import { PAQUET_VIDE } from '../src/data/constellations.ts'
 
 const FOCALE_REFERENCE_MM = 120
 
@@ -200,22 +199,20 @@ describe('cible dans le cadre §3.5, §6.2', () => {
 describe('garde-fous du cadre §3.5', () => {
   it('refuse d’inventer un cadre sans profil déclaré', () => {
     expect(REFUS_SANS_PROFIL).toMatch(/ne superpose pas de cadre par défaut/)
+    // T-0038 — le refus se lit dans le menu d'information, plus sous le canevas.
     const html = renderToStaticMarkup(
-      createElement(Planetarium, {
+      createElement(MenuInfos, {
         site: { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 },
-        etoiles: [],
         index: construitIndex([]),
         objets: [],
-        constellations: PAQUET_VIDE,
         profils: [],
         mLimOeil: 6.05,
-        gaiaCharge: false,
-        modeObjectif: 'MODE_CADRE',
-        modeNuit: false,
-        surSelectionObjet: () => {},
       }),
     )
     expect(html).toContain('ne superpose pas de cadre par défaut')
+    // T-0041 — et il se signale sur le bouton du menu, fermé.
+    expect(html).toContain('data-alerte="true"')
+    expect(html).toMatch(/1 message à lire/)
   })
 
   it('borne la comparaison à trois profils simultanés', () => {

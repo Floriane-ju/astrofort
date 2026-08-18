@@ -53,7 +53,9 @@ describe('palette du mode nuit §11.1', () => {
     const parDefaut = CSS.slice(CSS.indexOf(':root {'), CSS.indexOf('}', CSS.indexOf(':root {')))
     const variables = (texte: string): readonly string[] =>
       [...texte.matchAll(/--([a-z-]+):/g)].map((m) => m[1]!)
-    const couleursParDefaut = variables(parDefaut).filter((v) => v !== 'cible-clic')
+    // Les variables de mesure — pas de couleur, rien à repeindre en rouge.
+    const mesures = ['cible-clic']
+    const couleursParDefaut = variables(parDefaut).filter((v) => !mesures.includes(v))
     const couleursNuit = variables(blocModeNuit())
     for (const variable of couleursParDefaut) {
       expect(couleursNuit, variable).toContain(variable)

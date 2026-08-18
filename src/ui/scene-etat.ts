@@ -16,17 +16,49 @@ import { useSyncExternalStore } from 'react'
 import { K } from '../registry/constants.ts'
 import type { ModeProjection } from '../core/projection.ts'
 import type { ModeTemps, PasAstronomique } from '../core/curseur-temps.ts'
+import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
 
 /**
- * Résolution de rendu de la scène, celle du viewport de référence de §3.2 : c'est elle qui
- * fixe l'échelle en pixels par degré, donc le plafond de défilement lisible. La feuille de
- * style met le canevas à la largeur disponible ; le rendu reste calculé à cette définition.
+ * Résolution de rendu de référence, celle du viewport de §3.2. Ce n'est plus qu'un point de
+ * départ : la scène rend désormais à la taille de sa boîte (voir `resolutionRendu`). Elle
+ * reste le budget de pixels que ce rendu ne dépasse pas, et la définition servie au premier
+ * rendu, avant que la boîte ait été mesurée.
  */
 export const LARGEUR_SCENE_PX = 1920
 export const HAUTEUR_SCENE_PX = 1080
 
-/** Le pointage : ce que la scène regarde, et comment elle le projette. */
+/**
+ * La définition à donner au canevas pour une boîte de `largeurCss × hauteurCss`.
+ *
+ * Rendre à une définition fixe obligeait à loger un 16/9 dans une boîte qui ne l'est pas :
+ * `object-fit: contain` laissait alors des bandes noires en haut et en bas. En suivant la
+ * boîte, l'image la remplit sans être ni étirée ni rognée.
+ *
+ * Le facteur d'échelle est plafonné par le budget de pixels de référence, pas seulement par
+ * la densité de l'écran : sur une dalle Retina, suivre `devicePixelRatio` doublerait le
+ * nombre de pixels à peindre à chaque image, et le compteur d'images du ciel avec.
+ * ponytail: budget constant plutôt qu'adaptatif ; si des machines rapides méritent mieux,
+ * c'est le compteur d'images qui doit le décider, pas une constante.
+ */
+export function resolutionRendu(
+  largeurCss: number,
+  hauteurCss: number,
+  densite: number,
+): { readonly largeurPx: number; readonly hauteurPx: number } {
+  const surface = Math.max(1, largeurCss * hauteurCss)
+  const echelle = Math.min(densite, Math.sqrt((LARGEUR_SCENE_PX * HAUTEUR_SCENE_PX) / surface))
+  return {
+    largeurPx: Math.max(1, Math.round(largeurCss * echelle)),
+    hauteurPx: Math.max(1, Math.round(hauteurCss * echelle)),
+  }
+}
+
+/**
+ * Le pointage : ce que la scène regarde, comment elle le projette, et sur combien de pixels.
+ * Structurellement un `Vue` de §3.2 — la définition en fait partie depuis qu'elle suit la
+ * boîte, et la séparer obligerait chaque appelant à la recoller.
+ */
 export interface VueScene {
   readonly azimutDeg: number
   readonly hauteurDeg: number
@@ -34,6 +66,9 @@ export interface VueScene {
   readonly rotationDeg: number
   readonly fovDeg: number
   readonly mode: ModeProjection
+  /** Définition de rendu, mesurée sur la boîte du canevas. */
+  readonly largeurPx: number
+  readonly hauteurPx: number
 }
 
 /** Le temps : le mode du curseur temporel de §3.2 et ses réglages. */
@@ -54,10 +89,43 @@ export interface RenduScene {
   readonly vueRealiste: boolean
 }
 
+/** §3 — le compte rendu de la boucle : publié deux fois par seconde, jamais à chaque image. */
+export interface DiagnosticRendu {
+  readonly fps: number
+  readonly etoilesExaminees: number
+  readonly etoilesDessinees: number
+  readonly cellules: number
+  readonly labels: number
+}
+
+/** §3.4 — l'objet cliqué dans la scène, décrit en clair. */
+export interface SelectionScene {
+  readonly titre: string
+  readonly lignes: readonly string[]
+  /** Renseigné pour un objet du ciel profond seulement : lui seul ouvre une fiche. */
+  readonly objet: ObjetCielProfond | null
+}
+
+/**
+ * T-0038 — ce que la scène a à dire sur ce qu'elle vient de rendre.
+ *
+ * Ces lectures étaient l'état local du planétarium tant qu'elles s'affichaient sous lui.
+ * Depuis qu'elles sont posées dans le menu d'information de la barre haute — à l'autre bout
+ * de l'arbre — elles suivent le même chemin que le pointage : le magasin de module, lisible
+ * en rendu serveur comme dans le navigateur.
+ */
+export interface LecturesScene {
+  readonly diagnostic: DiagnosticRendu
+  readonly selection: SelectionScene | null
+  /** §9.3 — une incrustation est demandée mais l'image affichée est la précédente. */
+  readonly fileEnAttente: boolean
+}
+
 export interface EtatScene {
   readonly vue: VueScene
   readonly temps: TempsScene
   readonly rendu: RenduScene
+  readonly lectures: LecturesScene
   /**
    * Horloge d'affichage, en millisecondes : l'instant que la boucle a effectivement rendu.
    * Elle est publiée deux fois par seconde, pas à chaque image — les panneaux datent leurs
@@ -79,11 +147,25 @@ const ETAT_INITIAL: EtatScene = {
     rotationDeg: 0,
     fovDeg: K('FOV_REFERENCE_RENDU_DEG'),
     mode: 'MODE_PLANETARIUM',
+    largeurPx: LARGEUR_SCENE_PX,
+    hauteurPx: HAUTEUR_SCENE_PX,
   },
   temps: { modeTemps: 'MAINTENANT', facteur: 60, pas: 'JOUR_SIDERAL' },
   rendu: {
-    couches: { figures: true, frontieres: false, asterismes: true, cadre: true, horizon: true },
+    couches: {
+      figures: true,
+      frontieres: false,
+      asterismes: true,
+      cadre: true,
+      horizon: true,
+      voieLactee: true,
+    },
     vueRealiste: false,
+  },
+  lectures: {
+    diagnostic: { fps: 0, etoilesExaminees: 0, etoilesDessinees: 0, cellules: 0, labels: 0 },
+    selection: null,
+    fileEnAttente: false,
   },
   msAffiche: instant.ms,
 }
@@ -129,13 +211,19 @@ export function majRendu(retouche: Retouche<RenduScene>): void {
   pose({ ...etat, rendu: applique(etat.rendu, retouche) })
 }
 
+export function majLectures(retouche: Retouche<LecturesScene>): void {
+  pose({ ...etat, lectures: applique(etat.lectures, retouche) })
+}
+
 /**
  * Publie l'instant rendu. L'égalité est testée avant de notifier : en temps figé, la boucle
  * republie le même instant deux fois par seconde et rien ne doit se redessiner pour autant.
  */
-export function afficheInstant(ms: number): void {
-  if (ms === etat.msAffiche) return
-  pose({ ...etat, msAffiche: ms })
+export function afficheInstant(ms: number, diagnostic?: DiagnosticRendu): void {
+  const lectures =
+    diagnostic === undefined ? etat.lectures : { ...etat.lectures, diagnostic }
+  if (ms === etat.msAffiche && lectures === etat.lectures) return
+  pose({ ...etat, msAffiche: ms, lectures })
 }
 
 /** §3.2 — un pas astronomique est un saut de l'horloge d'affichage, pas un défilement. */
@@ -153,12 +241,14 @@ export function useScene(): {
   readonly vue: VueScene
   readonly temps: TempsScene
   readonly rendu: RenduScene
+  readonly lectures: LecturesScene
   readonly msAffiche: number
   readonly instant: { ms: number }
   readonly actions: {
     readonly majVue: typeof majVue
     readonly majTemps: typeof majTemps
     readonly majRendu: typeof majRendu
+    readonly majLectures: typeof majLectures
     readonly saute: typeof saute
   }
 } {
@@ -167,8 +257,9 @@ export function useScene(): {
     vue: courant.vue,
     temps: courant.temps,
     rendu: courant.rendu,
+    lectures: courant.lectures,
     msAffiche: courant.msAffiche,
     instant,
-    actions: { majVue, majTemps, majRendu, saute },
+    actions: { majVue, majTemps, majRendu, majLectures, saute },
   }
 }

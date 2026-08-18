@@ -23,7 +23,8 @@ import {
   type PasAstronomique,
 } from '../core/curseur-temps.ts'
 import { bornesZoom, etatProfondeur, type ModeProjection } from '../core/projection.ts'
-import { LARGEUR_SCENE_PX, useScene } from './scene-etat.ts'
+import type { CouchesActives } from './dessine-ciel.ts'
+import { useScene } from './scene-etat.ts'
 import { TracedValue } from './TracedValue.tsx'
 
 export interface PanneauExplorerProps {
@@ -39,15 +40,13 @@ export interface PanneauExplorerProps {
   readonly modeNuit: boolean
 }
 
-const COUCHES: readonly (readonly [
-  'figures' | 'frontieres' | 'asterismes' | 'cadre' | 'horizon',
-  string,
-])[] = [
+const COUCHES: readonly (readonly [keyof CouchesActives, string])[] = [
   ['figures', 'Figures IAU'],
   ['frontieres', 'Frontières IAU'],
   ['asterismes', 'Astérismes'],
   ['cadre', 'Cadre matériel'],
   ['horizon', 'Horizon'],
+  ['voieLactee', 'Voie lactée'],
 ]
 
 export function PanneauExplorer(props: PanneauExplorerProps) {
@@ -58,7 +57,7 @@ export function PanneauExplorer(props: PanneauExplorerProps) {
 
   const bornes = bornesZoom(props.gaiaCharge)
   const profondeur = etatProfondeur(fovDeg, props.profondeurMag, props.mLimOeil, vueRealiste)
-  const reglage = reglageVitesse(facteur, LARGEUR_SCENE_PX, fovDeg)
+  const reglage = reglageVitesse(facteur, vue.largeurPx, fovDeg)
 
   return (
     <>

@@ -48,6 +48,7 @@ import { PAQUET_VIDE, type PaquetConstellations } from './data/constellations.ts
 import type { ProfilCadre } from './core/cadre.ts'
 import { Coque } from './ui/Coque.tsx'
 import { Planetarium } from './ui/Planetarium.tsx'
+import { MenuInfos } from './ui/MenuInfos.tsx'
 import { PanneauFile } from './ui/PanneauFile.tsx'
 import { PanneauExplorer } from './ui/PanneauExplorer.tsx'
 import { PanneauSeance } from './ui/PanneauSeance.tsx'
@@ -421,6 +422,15 @@ export function App() {
         messagePersistance={messagePersistance}
         surExport={() => void surExport()}
         surImport={(fichier) => void surImport(fichier)}
+      />
+      {/* T-0038 — les lectures qui datent l'image : dernier élément de la barre, donc le
+          plus à droite, et sans hauteur tant qu'il est fermé. */}
+      <MenuInfos
+        site={site}
+        index={index}
+        objets={catalogue}
+        profils={profilsCadre}
+        mLimOeil={calcul.ok ? calcul.ciel.mLimOeil.value : null}
       />
     </>
   )

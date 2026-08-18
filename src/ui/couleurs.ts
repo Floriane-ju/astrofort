@@ -77,6 +77,8 @@ export interface PaletteCiel {
   readonly corps: string
   readonly cadre: string
   readonly horizon: string
+  /** T-0033 — plan galactique : rose en vue normale, rouge pur en mode nuit comme le reste. */
+  readonly voieLactee: string
   readonly texte: string
 }
 
@@ -91,6 +93,7 @@ export function palette(modeNuit: boolean): PaletteCiel {
       corps: 'rgb(190 0 0)',
       cadre: 'rgb(200 0 0)',
       horizon: 'rgb(70 0 0)',
+      voieLactee: 'rgb(110 0 0)',
       texte: 'rgb(170 0 0)',
     }
   }
@@ -103,6 +106,7 @@ export function palette(modeNuit: boolean): PaletteCiel {
     corps: 'rgb(255 226 150)',
     cadre: 'rgb(255 170 60)',
     horizon: 'rgb(90 80 70)',
+    voieLactee: 'rgb(205 125 175)',
     texte: 'rgb(200 210 230)',
   }
 }

@@ -107,37 +107,34 @@ body {
   padding: 0;
 }
 
-/* La scène ne porte plus aucun réglage : le canevas prend la place disponible, les lectures
-   qui le datent tiennent dessous. Seules ces lectures défilent, et seulement si elles
-   débordent — le canevas, lui, ne bouge jamais. */
+/* T-0040 — la scène n'a plus qu'un enfant : le canevas. Les lectures qui la datent sont
+   passées dans le menu d'information de la barre haute (T-0039), donc la rangée basse à
+   hauteur réservée de T-0037 n'a plus lieu d'être — la taille du canevas ne dépend plus de
+   ce qui s'écrit, elle ne dépend plus que de la place entre les deux panneaux.
+
+   Ni remplissage ni marge : le canevas touche les bordures des panneaux et le bas du
+   viewport. `min-height: 0` reste indispensable — sans lui la piste de grille reprend la
+   hauteur intrinsèque du canevas et le défilement de page revient. */
 .coque-scene > .scene {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 0.5rem;
   height: 100%;
   min-height: 0;
   margin: 0;
-  padding: 0.5rem 1rem;
+  padding: 0;
 }
 
-/* `object-fit` plutôt qu'un rapport d'image imposé : le canevas est un élément remplacé, il
-   garde ses 1920 × 1080 intrinsèques et se loge dans la place laissée sans être étiré. */
+/* T-0040 — le canevas remplit sa boîte, sans `object-fit` : sa définition de rendu suit la
+   boîte (`resolutionRendu`), donc l'image n'a plus à s'y loger. Un rendu 16/9 figé se logeait
+   en `contain` et laissait des bandes noires en haut et en bas dès que la place disponible
+   n'était pas en 16/9 — c'est-à-dire presque toujours.
+
+   `display: block` : un canevas est en ligne par défaut, et l'interligne réservé sous sa
+   ligne de base suffit à faire défiler la page de quelques pixels. */
 .coque-scene .planetarium {
+  display: block;
   width: 100%;
   height: 100%;
   min-height: 0;
   aspect-ratio: auto;
-  object-fit: contain;
-}
-
-.scene-lectures {
-  max-height: 40%;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.scene-lectures h3 {
-  margin-top: 0.5rem;
 }
 
 /* Repli sous 1100 px : une seule colonne, les panneaux redeviennent des accordéons sous la
@@ -186,9 +183,26 @@ body {
     aspect-ratio: 16 / 9;
   }
 
-  .scene-lectures {
-    max-height: none;
-    overflow: visible;
+  /* Le tiroir d'information reste à portée : plafonné à la hauteur du viewport, il défile
+     chez lui plutôt que d'allonger la page. */
+  /* T-0038 — le menu d'information ferme la barre : il se pousse à droite et y reste, quelle
+   que soit la largeur des éléments qui le précèdent. */
+.tiroir.tiroir-infos {
+  margin-left: auto;
+}
+
+/* T-0041 — un tiroir fermé cache ce qu'il contient. Le bouton change d'aspect quand il a
+   quelque chose à dire ; le compte, lui, est écrit en toutes lettres dans le libellé — le
+   rouge ne porte jamais seul une information (§11.1). */
+.tiroir-infos[data-alerte='true'] > summary {
+  border-color: var(--alerte);
+  color: var(--alerte);
+  background: var(--fond-alerte);
+  font-weight: 700;
+}
+
+.tiroir[open] > .tiroir-contenu {
+    max-height: 70dvh;
   }
 }
 
@@ -249,6 +263,22 @@ body {
   border: 1px solid var(--bordure);
   border-radius: 4px;
   cursor: pointer;
+}
+
+/* T-0038 — le menu d'information ferme la barre : il se pousse à droite et y reste, quelle
+   que soit la largeur des éléments qui le précèdent. */
+.tiroir.tiroir-infos {
+  margin-left: auto;
+}
+
+/* T-0041 — un tiroir fermé cache ce qu'il contient. Le bouton change d'aspect quand il a
+   quelque chose à dire ; le compte, lui, est écrit en toutes lettres dans le libellé — le
+   rouge ne porte jamais seul une information (§11.1). */
+.tiroir-infos[data-alerte='true'] > summary {
+  border-color: var(--alerte);
+  color: var(--alerte);
+  background: var(--fond-alerte);
+  font-weight: 700;
 }
 
 .tiroir[open] > .tiroir-contenu {

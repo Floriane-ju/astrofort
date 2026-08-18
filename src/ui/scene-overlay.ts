@@ -22,7 +22,6 @@ import type { EntreeProfondeur } from '../core/galactique.ts'
 import { projecteur, type ModeProjection, type Vue } from '../core/projection.ts'
 import { dessineChamp, type SortieDessinChamp } from './dessine-champ.ts'
 import { cheminCadre } from './dessine-ciel.ts'
-import { palette } from './couleurs.ts'
 
 /**
  * §9.2 — le vignettage se centre sur le canevas, jamais sur le cadre : incrusté, il
@@ -112,8 +111,9 @@ export function rendIncrustation(entree: EntreeIncrustation): Incrustation | nul
 }
 
 /**
- * Dépose l'image hors écran dans le cadre, puis retrace le liseré par-dessus : sans lui, le
- * bord de l'incrustation se confondrait avec un bord d'image et le cadre disparaîtrait.
+ * Dépose l'image hors écran dans le cadre. Le liseré n'est pas retracé ici : l'image se pose
+ * juste après le fond, et la couche Cadre matériel — que l'incrustation exige allumée — le
+ * recercle de toute façon en fin de passe.
  */
 export function incrusteDansLeCadre(
   ctx: CanvasRenderingContext2D,
@@ -121,18 +121,10 @@ export function incrusteDansLeCadre(
   matriceCiel: Mat3,
   cadre: Cadre,
   image: CanvasImageSource,
-  modeNuit: boolean,
 ): void {
-  const proj = projecteur(vue, matriceCiel)
   ctx.save()
-  cheminCadre(ctx, proj, cadre, matriceCiel)
+  cheminCadre(ctx, projecteur(vue, matriceCiel), cadre, matriceCiel)
   ctx.clip()
   ctx.drawImage(image, 0, 0)
   ctx.restore()
-
-  ctx.strokeStyle = palette(modeNuit).cadre
-  ctx.lineWidth = 2
-  cheminCadre(ctx, proj, cadre, matriceCiel)
-  ctx.stroke()
-  ctx.lineWidth = 1
 }

@@ -1,9 +1,9 @@
 ---
 {
-  "status": "open",
+  "status": "closed",
   "title": "Tickets — coût du filé incrusté dans le cadre",
   "opened": "2026-08-15",
-  "closed": null,
+  "closed": "2026-08-17",
   "commits": [
     {
       "sha": "e3ab59b",
@@ -37,6 +37,11 @@
         "tests/rendu-differe.test.ts",
         "tests/scene-etat.test.ts"
       ]
+    },
+    {
+      "sha": "f51f989",
+      "date": "2026-08-17",
+      "files": []
     }
   ]
 }

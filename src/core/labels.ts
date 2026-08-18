@@ -24,6 +24,8 @@ export interface CandidatLabel {
   readonly priorite: number
   readonly largeurPx: number
   readonly hauteurPx: number
+  /** Teinte propre au label, quand la couleur de texte commune ne le rattacherait à rien. */
+  readonly couleur?: string
 }
 
 /** Catégories admises au champ donné. */

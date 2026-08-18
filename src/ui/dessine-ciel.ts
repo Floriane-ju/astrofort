@@ -17,6 +17,7 @@ import type { CoucheFrontieres, CoucheTraces } from '../core/constellations.ts'
 import type { IndexCiel, StatistiquesSelection } from '../core/index-ciel.ts'
 import { selectionne } from '../core/index-ciel.ts'
 import { composeLabels, etoileLabellisable, type CandidatLabel } from '../core/labels.ts'
+import { depuisGalactique } from '../core/galactique.ts'
 import { applique, transpose, versVecteur, type Mat3, type Vec3 } from '../core/mat3.ts'
 import { rayonEtoilePx, type Projecteur } from '../core/projection.ts'
 import { contourCadreJ2000, type Cadre } from '../core/cadre.ts'
@@ -29,6 +30,7 @@ export interface CouchesActives {
   readonly asterismes: boolean
   readonly cadre: boolean
   readonly horizon: boolean
+  readonly voieLactee: boolean
 }
 
 export type TypeCible = 'ETOILE' | 'OBJET' | 'CORPS'
@@ -63,6 +65,11 @@ export interface EntreeDessin {
   readonly couches: CouchesActives
   readonly magLimite: number
   readonly modeNuit: boolean
+  /**
+   * Peint entre le fond et tout le reste. C'est là que l'aperçu incrusté se dépose : sous les
+   * repères, les étoiles et les noms, jamais par-dessus.
+   */
+  readonly surLeFond?: ((ctx: CanvasRenderingContext2D) => void) | undefined
 }
 
 export interface SortieDessin {
@@ -72,13 +79,28 @@ export interface SortieDessin {
   readonly labels: readonly CandidatLabel[]
 }
 
-const HAUTEUR_LABEL_PX = 12
-const LARGEUR_CARACTERE_PX = 6
+/* T-0027 — noms des éléments trop petits à l'écran une fois le canevas 1920×1080 réduit à
+   la taille d'affichage réelle (object-fit: contain). */
+const HAUTEUR_LABEL_PX = 18
+const LARGEUR_CARACTERE_PX = 10
 const RAYON_CLIC_PX = 10
 const MARQUEUR_OBJET_PX = 4
 const RAYON_CORPS_PX = 5
 /** Sous ce rayon, l'antialiasing efface le disque : la plus faible étoile reste un point. */
 const RAYON_MIN_ETOILE_PX = 0.7
+
+const NOM_VOIE_LACTEE = 'Voie lactée'
+const PAS_LONGITUDE_GALACTIQUE_DEG = 3
+
+/**
+ * T-0033 — le plan galactique `b = 0`, échantillonné en longitude comme l'horizon l'est en
+ * azimut. Il est fixe en J2000 : la polyligne se calcule une fois au chargement du module,
+ * jamais par image. Seule sa projection dépend de l'instant et du zoom.
+ */
+const PLAN_GALACTIQUE: readonly Vec3[] = Array.from(
+  { length: 360 / PAS_LONGITUDE_GALACTIQUE_DEG + 1 },
+  (_, i) => depuisGalactique(i * PAS_LONGITUDE_GALACTIQUE_DEG, 0),
+)
 
 /** Compose le chemin sans le peindre : au tracé du ciel de le remplir, au cadre de le découper. */
 function cheminLignes(
@@ -172,6 +194,31 @@ function traceHorizon(entree: EntreeDessin, couleur: string): void {
   }
 }
 
+/**
+ * T-0034 — ancre du label : le point de la ligne visible le plus proche du centre du canevas,
+ * pour que le nom se pose sur la bande et non collé à un bord. `null` si la ligne ne traverse
+ * pas le champ affiché — le label est alors absent, pas déporté.
+ */
+function ancreVoieLactee(
+  projecteur: Projecteur,
+  largeur: number,
+  hauteur: number,
+): { xPx: number; yPx: number } | null {
+  let meilleure: { xPx: number; yPx: number } | null = null
+  let meilleureDistance = Infinity
+  for (const point of PLAN_GALACTIQUE) {
+    const p = projecteur.projette(point)
+    if (p === null) continue
+    if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
+    const distance = Math.hypot(p.xPx - largeur / 2, p.yPx - hauteur / 2)
+    if (distance < meilleureDistance) {
+      meilleureDistance = distance
+      meilleure = p
+    }
+  }
+  return meilleure
+}
+
 export function dessineCiel(entree: EntreeDessin): SortieDessin {
   const { ctx, projecteur, index } = entree
   const teintes = palette(entree.modeNuit)
@@ -180,6 +227,7 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
 
   ctx.fillStyle = teintes.fond
   ctx.fillRect(0, 0, largeur, hauteur)
+  entree.surLeFond?.(ctx)
   ctx.font = `${HAUTEUR_LABEL_PX}px system-ui, sans-serif`
   ctx.textBaseline = 'middle'
 
@@ -204,6 +252,11 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
     ctx.lineWidth = 1
   }
   if (entree.couches.horizon) traceHorizon(entree, teintes.horizon)
+  if (entree.couches.voieLactee) {
+    ctx.strokeStyle = teintes.voieLactee
+    ctx.lineWidth = 1
+    traceLignes(ctx, projecteur, [PLAN_GALACTIQUE])
+  }
 
   // --- Étoiles ------------------------------------------------------------
   const centreJ2000 = projecteur.inverse(largeur / 2, hauteur / 2)
@@ -318,6 +371,25 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
     })
   }
 
+  // --- Nom de la Voie lactée ----------------------------------------------
+  // Posé avant les noms de constellations : à priorité égale, le tri stable de
+  // `composeLabels` le laisse passer devant eux plutôt que derrière.
+  if (entree.couches.voieLactee) {
+    const ancre = ancreVoieLactee(projecteur, largeur, hauteur)
+    if (ancre !== null) {
+      candidats.push({
+        texte: NOM_VOIE_LACTEE,
+        categorie: 'CONSTELLATION',
+        xPx: ancre.xPx,
+        yPx: ancre.yPx,
+        priorite: 0,
+        largeurPx: NOM_VOIE_LACTEE.length * LARGEUR_CARACTERE_PX,
+        hauteurPx: HAUTEUR_LABEL_PX,
+        couleur: teintes.voieLactee,
+      })
+    }
+  }
+
   // --- Noms de constellations ---------------------------------------------
   for (const figure of entree.figures) {
     if (figure.centre === null) continue
@@ -365,8 +437,10 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
 
   // --- Labels --------------------------------------------------------------
   const labels = composeLabels(candidats, projecteur.vue.fovDeg)
-  ctx.fillStyle = teintes.texte
-  for (const label of labels) ctx.fillText(label.texte, label.xPx, label.yPx)
+  for (const label of labels) {
+    ctx.fillStyle = label.couleur ?? teintes.texte
+    ctx.fillText(label.texte, label.xPx, label.yPx)
+  }
 
   return { stats, etoilesDessinees, cibles, labels }
 }

@@ -4,3 +4,5 @@
 {"date":"2026-08-15","commit":"ef9c66b","ok":true,"pages":1}
 {"date":"2026-08-15","commit":"13c2e31","ok":true,"pages":1}
 {"date":"2026-08-15","commit":"23d84cd","ok":false,"error":"http://localhost:5173 répond déjà — un autre serveur occupe le port. Arrêtez-le, ou donnez un baseUrl libre dans ovrsee.config.json."}
+{"date":"2026-08-17","commit":"e3ab59b","ok":true,"pages":1}
+{"date":"2026-08-18","commit":"2c3ce6a","ok":false,"error":"http://localhost:5173 répond déjà — un autre serveur occupe le port. Arrêtez-le, ou donnez un baseUrl libre dans ovrsee.config.json."}

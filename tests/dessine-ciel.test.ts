@@ -32,6 +32,7 @@ import {
   type CouchesActives,
   type EntreeDessin,
 } from '../src/ui/dessine-ciel.ts'
+import { palette } from '../src/ui/couleurs.ts'
 import { K } from '../src/registry/constants.ts'
 
 const SITE: Site = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
@@ -106,6 +107,7 @@ const COUCHES: CouchesActives = {
   asterismes: true,
   cadre: true,
   horizon: true,
+  voieLactee: true,
 }
 
 /** Quelques étoiles brillantes bien réparties, pour ne pas dépendre du paquet HYG. */
@@ -119,7 +121,14 @@ function etoilesDeTest(): Etoile[] {
   return etoiles
 }
 
-function rend(options: { modeNuit?: boolean; couches?: CouchesActives; objets?: readonly ObjetCielProfond[] } = {}) {
+function rend(
+  options: {
+    modeNuit?: boolean
+    couches?: CouchesActives
+    objets?: readonly ObjetCielProfond[]
+    surLeFond?: (ctx: CanvasRenderingContext2D) => void
+  } = {},
+) {
   const ctx = contexteEspion()
   const ciel = cielInstantane(SITE, DATE)
   const vue: Vue = {
@@ -155,6 +164,7 @@ function rend(options: { modeNuit?: boolean; couches?: CouchesActives; objets?: 
     couches: options.couches ?? COUCHES,
     magLimite: magnitudeLimite(vue.fovDeg).value,
     modeNuit: options.modeNuit ?? false,
+    surLeFond: options.surLeFond,
   }
   return { ctx, sortie: dessineCiel(entree), entree }
 }
@@ -171,9 +181,37 @@ describe('passe de rendu §3.3', () => {
     expect(ctx.appels.some((a) => a.nom === 'stroke')).toBe(true)
   })
 
+  /**
+   * T-0042 — l'aperçu incrusté se dépose par ce crochet. S'il partait après la passe, il
+   * recouvrirait les repères ; s'il partait avant le fond, le fond l'effacerait.
+   */
+  it('appelle surLeFond après le fond et avant le premier tracé', () => {
+    let rang = -1
+    const { ctx } = rend({
+      surLeFond: (c) => {
+        rang = (c as unknown as ReturnType<typeof contexteEspion>).appels.length
+      },
+    })
+    const fonds = ctx.appels.filter((a) => a.nom === 'fillRect')
+    expect(fonds).toHaveLength(1)
+    expect(rang).toBe(ctx.appels.indexOf(fonds[0]!) + 1)
+    const premierTrace = ctx.appels.findIndex(
+      (a) => a.nom === 'stroke' || a.nom === 'fill' || a.nom === 'fillText',
+    )
+    expect(premierTrace).toBeGreaterThan(-1)
+    expect(rang).toBeLessThanOrEqual(premierTrace)
+  })
+
   it('ne trace une couche que si elle est active', () => {
     const sans = rend({
-      couches: { figures: false, frontieres: false, asterismes: false, cadre: false, horizon: false },
+      couches: {
+        figures: false,
+        frontieres: false,
+        asterismes: false,
+        cadre: false,
+        horizon: false,
+        voieLactee: false,
+      },
     })
     const avec = rend()
     const lignes = (r: ReturnType<typeof rend>) =>
@@ -189,6 +227,31 @@ describe('passe de rendu §3.3', () => {
     // Une couche, un tracé : pas de motif dépendant de la longueur du segment, qui
     // rendrait plein un segment court et pointillé un segment long.
     expect(avec.ctx.appels.some((a) => a.nom === 'setLineDash')).toBe(false)
+  })
+
+  it('trace le plan galactique et le nomme, seulement quand la couche est active', () => {
+    const avec = rend()
+    const sans = rend({ couches: { ...COUCHES, voieLactee: false } })
+    const nomme = (r: ReturnType<typeof rend>) =>
+      r.sortie.labels.some((l) => l.texte === 'Voie lactée')
+    expect(nomme(avec)).toBe(true)
+    expect(nomme(sans)).toBe(false)
+    // La ligne elle-même : la couche décochée retire des segments, elle n'en ajoute pas.
+    const lignes = (r: ReturnType<typeof rend>) =>
+      r.ctx.appels.filter((a) => a.nom === 'lineTo').length
+    expect(lignes(sans)).toBeLessThan(lignes(avec))
+  })
+
+  it('pose le label de la Voie lactée sur la ligne, dans sa teinte', () => {
+    const { sortie } = rend()
+    const label = sortie.labels.find((l) => l.texte === 'Voie lactée')!
+    expect(label.couleur).toBe(palette(false).voieLactee)
+    // Sur la ligne veut dire : à un point du plan galactique effectivement projeté, donc
+    // jamais figé dans un coin du canevas.
+    expect(label.xPx).toBeGreaterThan(0)
+    expect(label.xPx).toBeLessThan(LARGEUR)
+    expect(label.yPx).toBeGreaterThan(0)
+    expect(label.yPx).toBeLessThan(HAUTEUR)
   })
 
   it('plafonne les labels et les empêche de se chevaucher', () => {

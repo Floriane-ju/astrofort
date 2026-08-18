@@ -11,6 +11,8 @@
  * l'état local d'un composant.
  */
 
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
@@ -20,7 +22,18 @@ import type { Cadre } from '../src/core/cadre.ts'
 import { cielInstantane } from '../src/core/horloges.ts'
 import type { Vue } from '../src/core/projection.ts'
 import { incrusteDansLeCadre, mentionProjection } from '../src/ui/scene-overlay.ts'
-import { etatScene, reinitialiseScene } from '../src/ui/scene-etat.ts'
+import {
+  HAUTEUR_SCENE_PX,
+  LARGEUR_SCENE_PX,
+  etatScene,
+  reinitialiseScene,
+  resolutionRendu,
+} from '../src/ui/scene-etat.ts'
+import { MenuInfos } from '../src/ui/MenuInfos.tsx'
+import { construitIndex } from '../src/core/index-ciel.ts'
+import { projecteur } from '../src/core/projection.ts'
+import { versSpherique } from '../src/core/mat3.ts'
+import type { ProfilCadre } from '../src/core/cadre.ts'
 import {
   activeIncrustation,
   choisisOnglet,
@@ -182,7 +195,7 @@ describe('§9.3 — le filé se dépose dans le cadre, pas ailleurs', () => {
     }
   }
 
-  it('découpe sur le contour du cadre, dépose l’image, puis retrace le liseré', () => {
+  it('découpe sur le contour du cadre et dépose l’image, sans retracer le liseré', () => {
     const ctx = contexteEspion()
     const ciel = cielInstantane(SITE, new Date('2026-08-15T22:00:00Z'))
     incrusteDansLeCadre(
@@ -191,13 +204,11 @@ describe('§9.3 — le filé se dépose dans le cadre, pas ailleurs', () => {
       ciel.matrice,
       CADRE,
       {} as CanvasImageSource,
-      false,
     )
-    // L'ordre est le fond du critère : dessiner hors du clip déborderait sur le ciel, et
-    // retracer le liseré avant l'image le ferait recouvrir.
-    expect(ctx.appels.join(' ')).toMatch(
-      /save beginPath clip drawImage restore beginPath stroke/,
-    )
+    // L'ordre est le fond du critère : dessiner hors du clip déborderait sur le ciel.
+    expect(ctx.appels.join(' ')).toBe('save beginPath clip drawImage restore')
+    // T-0042 — le liseré appartient à la couche Cadre matériel, tracée en fin de passe.
+    expect(ctx.appels).not.toContain('stroke')
   })
 
   it('annonce quand la projection de la scène n’est pas celle de l’objectif', () => {
@@ -213,5 +224,200 @@ describe('§11.2 — le plan reste imprimable', () => {
     expect(ecran()).toContain('plan-session hors-onglet')
     choisisOnglet('NUIT')
     expect(ecran()).toMatch(/class="plan-session"/)
+  })
+})
+
+/**
+ * T-0039 — les lectures passent dans un menu d'information, en haut à droite.
+ *
+ * Ce qui se vérifie est le déplacement, pas la rédaction : les mêmes textes, au même endroit
+ * logique, mais dans un tiroir de la barre haute plutôt que sous le canevas.
+ */
+describe('T-0039 — le menu d’information porte les lectures', () => {
+  function barre(html: string): string {
+    return html.slice(0, html.indexOf('coque-materiel'))
+  }
+
+  it('pose un tiroir fermé en fin de barre haute, pas une bande sous le canevas', () => {
+    const html = ecran()
+    expect(html).not.toContain('scene-lectures')
+    const topbar = barre(html)
+    expect(topbar).toContain('tiroir tiroir-infos')
+    // Fermé par défaut : il ne prend aucune hauteur tant qu'on ne l'ouvre pas.
+    expect(topbar).not.toMatch(/<details class="tiroir tiroir-infos"[^>]*open/)
+    // Dernier élément de la barre, donc le plus à droite.
+    expect(topbar.indexOf('tiroir-infos')).toBeGreaterThan(topbar.indexOf('tiroir-verification'))
+  })
+
+  it('y reprend les cinq groupes de lectures, textes inchangés', () => {
+    const topbar = barre(ecran())
+    // 1 — la ligne d'état qui date l'image.
+    expect(topbar).toMatch(/visée[\s\S]*AD[\s\S]*azimut[\s\S]*hauteur[\s\S]*champ/)
+    expect(topbar).toContain('jusqu’à la magnitude')
+    expect(topbar).toContain('époque')
+    // 3 — les lectures du cadre. 5 — le diagnostic de rendu.
+    expect(topbar).toContain('images/s')
+    expect(topbar).toContain('étoiles tracées sur')
+    expect(topbar).toContain('cellules d’index retenues sur')
+  })
+
+  it('garde le bouton « Appliquer » actionnable depuis le menu', () => {
+    const html = renderToStaticMarkup(<MenuInfos {...menuAvecCible()} />)
+    expect(html).toMatch(/le grand axe de ALLONGEE s’aligne/)
+    expect(html).toMatch(/<button type="button">Appliquer -?\d+°<\/button>/)
+  })
+})
+
+/**
+ * Un menu garni : un profil de cadre, et une galaxie allongée posée pile sur la visée
+ * courante. C'est le seul montage qui déclenche à la fois la cible dominante et la rotation
+ * suggérée — les deux lectures du groupe « cadre » qui portent un geste.
+ */
+function menuAvecCible(): {
+  readonly site: Site
+  readonly index: ReturnType<typeof construitIndex>
+  readonly objets: readonly ObjetCielProfond[]
+  readonly profils: readonly ProfilCadre[]
+  readonly mLimOeil: number
+} {
+  const site: Site = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
+  const { vue, msAffiche } = etatScene()
+  const ciel = cielInstantane(site, new Date(msAffiche))
+  // La visée, ramenée en J2000 : y poser l'objet garantit qu'il tombe dans le cadre.
+  const visee = versSpherique(
+    projecteur(vue, ciel.matrice).inverse(vue.largeurPx / 2, vue.hauteurPx / 2),
+  )
+  return {
+    site,
+    index: construitIndex([]),
+    objets: [
+      {
+        ...M31,
+        designation: 'ALLONGEE',
+        adDeg: visee.longitudeDeg,
+        decDeg: visee.latitudeDeg,
+      },
+    ],
+    profils: [{ libelle: '120 mm', fovLDeg: 17, fovHDeg: 11.4, echApx: 8.8, tPoseS: 2.1 }],
+    mLimOeil: 6.05,
+  }
+}
+
+/**
+ * T-0040 — le canevas seul au centre, sans marges.
+ *
+ * Rien à observer sans moteur de rendu : ce qui se vérifie ici est la règle elle-même. La
+ * rangée basse à hauteur réservée de T-0037 n'a plus d'objet une fois les lectures parties ;
+ * ce qui reste indispensable est `min-height: 0`, sans quoi le canevas reprend sa hauteur
+ * intrinsèque et le défilement de page revient.
+ */
+describe('T-0040 — la colonne centrale ne porte plus que la scène', () => {
+  const CSS = readFileSync(join(import.meta.dirname, '..', 'src', 'ui', 'styles.css'), 'utf8')
+
+  /** Le corps d'une règle, isolé du reste de la feuille. */
+  function regle(selecteur: string): string {
+    const debut = CSS.indexOf(`${selecteur} {`)
+    expect(debut).toBeGreaterThan(-1)
+    return CSS.slice(debut, CSS.indexOf('}', debut))
+  }
+
+  it('ne réserve plus aucune hauteur sous le canevas', () => {
+    expect(CSS).not.toContain('--hauteur-lectures')
+    expect(CSS).not.toContain('.scene-lectures')
+    expect(regle('.coque-scene > .scene')).not.toContain('grid-template-rows')
+  })
+
+  it('colle le canevas aux bordures : ni marge ni remplissage', () => {
+    const scene = regle('.coque-scene > .scene')
+    expect(scene).toContain('padding: 0')
+    expect(scene).toContain('margin: 0')
+    // Sans lui, la piste de grille reprend la hauteur intrinsèque du canevas.
+    expect(scene).toContain('min-height: 0')
+    expect(regle('.coque-scene')).toContain('padding: 0')
+  })
+
+  it('remplit la boîte plutôt que d’y loger un rapport figé', () => {
+    const canevas = regle('.coque-scene .planetarium')
+    expect(canevas).toContain('width: 100%')
+    expect(canevas).toContain('height: 100%')
+    // `contain` logeait un 16/9 dans une boîte qui ne l'est pas : bandes noires en haut et
+    // en bas. La définition de rendu suit désormais la boîte, il n'y a plus rien à loger.
+    expect(canevas).not.toContain('object-fit')
+    // Un canevas en ligne réserve l'interligne sous sa ligne de base : la page défile.
+    expect(canevas).toContain('display: block')
+  })
+
+  it('fait suivre la définition de rendu à la boîte, sans déformer', () => {
+    // Le rapport de la définition est celui de la boîte : des étoiles rondes le restent.
+    const haute = resolutionRendu(1000, 1000, 1)
+    expect(haute.largeurPx / haute.hauteurPx).toBeCloseTo(1, 6)
+    const large = resolutionRendu(1600, 400, 1)
+    expect(large.largeurPx / large.hauteurPx).toBeCloseTo(4, 6)
+  })
+
+  it('plafonne le nombre de pixels peints au budget de référence', () => {
+    const budget = LARGEUR_SCENE_PX * HAUTEUR_SCENE_PX
+    // Dalle Retina sur grande fenêtre : suivre `devicePixelRatio` doublerait la charge.
+    const retina = resolutionRendu(1600, 900, 2)
+    expect(retina.largeurPx * retina.hauteurPx).toBeLessThanOrEqual(budget + 1)
+    // Petite boîte : la densité de l'écran reste la borne, pas le budget.
+    const petite = resolutionRendu(400, 300, 2)
+    expect(petite).toStrictEqual({ largeurPx: 800, hauteurPx: 600 })
+  })
+
+  it('rend la scène au flux vertical sous le repli, canevas en 16 / 9', () => {
+    const repli = CSS.slice(CSS.indexOf('@media (max-width: 1100px)'))
+    expect(repli).toMatch(/\.coque-scene > \.scene \{[^}]*display: block/)
+    expect(repli).toMatch(/\.coque-scene \.planetarium \{[^}]*aspect-ratio: 16 \/ 9/)
+    // Le menu reste utilisable : son contenu défile plutôt que d'allonger la page.
+    expect(repli).toMatch(/\.tiroir\[open\] > \.tiroir-contenu \{[^}]*max-height/)
+  })
+})
+
+/**
+ * T-0041 — une alerte se signale sur le menu fermé.
+ *
+ * Une cause rangée dans un tiroir fermé est une cause invisible : on règle quelque chose,
+ * rien ne bouge à l'écran, et l'explication est derrière un clic qu'on ne pense pas à faire.
+ */
+describe('T-0041 — le bouton du menu dit qu’il a quelque chose à lire', () => {
+  const CSS = readFileSync(join(import.meta.dirname, '..', 'src', 'ui', 'styles.css'), 'utf8')
+
+  it('annonce le compte en toutes lettres quand une cause est active', () => {
+    // Sans profil déclaré, le cadre est refusé : un message attend d'être lu.
+    const alerte = renderToStaticMarkup(
+      <MenuInfos {...menuAvecCible()} profils={[]} />,
+    )
+    expect(alerte).toContain('data-alerte="true"')
+    expect(alerte).toMatch(/1 message à lire/)
+  })
+
+  it('compte une rotation en attente comme un message à lire', () => {
+    // Son bouton « Appliquer » est le seul moyen de l'appliquer : il ne doit pas s'oublier.
+    const html = renderToStaticMarkup(<MenuInfos {...menuAvecCible()} />)
+    expect(html).toContain('data-alerte="true"')
+    expect(html).toMatch(/1 message à lire/)
+  })
+
+  it('retire le signalement dès que la dernière cause disparaît', () => {
+    // Un profil déclaré, aucune cible dans le cadre : plus rien à lire.
+    const calme = renderToStaticMarkup(
+      <MenuInfos {...menuAvecCible()} objets={[]} />,
+    )
+    expect(calme).toContain('data-alerte="false"')
+    expect(calme).not.toMatch(/à lire/)
+  })
+
+  it('expose le compte aux technologies d’assistance', () => {
+    expect(ecran()).toMatch(/<summary><span aria-live="polite">/)
+  })
+
+  it('ne fait pas porter le signalement par la seule couleur', () => {
+    const debut = CSS.indexOf(".tiroir-infos[data-alerte='true'] > summary {")
+    expect(debut).toBeGreaterThan(-1)
+    const corps = CSS.slice(debut, CSS.indexOf('}', debut))
+    // La graisse et la bordure changent aussi : le rouge du mode nuit ne dit rien seul.
+    expect(corps).toContain('font-weight: 700')
+    expect(corps).toContain('border-color: var(--alerte)')
   })
 })

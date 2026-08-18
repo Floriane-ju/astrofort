@@ -7,8 +7,11 @@
  * montre ce que le matériel déclaré capturerait vraiment — arcs compris.
  *
  * Depuis le lot 6, la scène ne porte plus ses réglages : ils sont dans le panneau droit, à
- * hauteur d'œil de l'image qu'ils modifient. Ne restent ici que le canevas, les gestes qui
- * s'y font, et les lectures qui datent ce qui est affiché.
+ * hauteur d'œil de l'image qu'ils modifient. Depuis T-0038 elle ne porte plus non plus ses
+ * lectures : elles sont dans le menu d'information de la barre haute (`MenuInfos`), et ce
+ * composant publie dans le magasin de scène ce qu'il est seul à savoir — le diagnostic de la
+ * boucle, l'objet cliqué, l'attente d'une incrustation. Ne reste ici que le canevas et les
+ * gestes qui s'y font.
  *
  * Le rendu vit dans une boucle `requestAnimationFrame` qui lit un état mutable ; React ne
  * réagit qu'aux commandes et aux diagnostics, jamais à l'image. Sans cette séparation, une
@@ -17,7 +20,7 @@
  * fait que la redéposer.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { K } from '../registry/constants.ts'
 import type { Etoile } from '../data/catalog.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
@@ -28,7 +31,6 @@ import { reglageVitesse } from '../core/curseur-temps.ts'
 import { construitIndex, type IndexCiel } from '../core/index-ciel.ts'
 import {
   avanceEphemerides,
-  avertissementEpoque,
   axePoleDeDate,
   cielInstantane,
   pasEphemeridesMs,
@@ -41,33 +43,25 @@ import {
   etatProfondeur,
   projecteur,
   type ModeProjection,
-  type Vue,
 } from '../core/projection.ts'
 import {
-  HAUTEUR_SCENE_PX,
-  LARGEUR_SCENE_PX,
   afficheInstant,
+  majLectures,
+  majVue,
+  resolutionRendu,
   useScene,
+  type SelectionScene,
 } from './scene-etat.ts'
 import { poseRenduFile, useSeance } from './seance-etat.ts'
 import { incrusteDansLeCadre, rendIncrustation } from './scene-overlay.ts'
 import { renduDiffere } from './rendu-differe.ts'
-import {
-  REFUS_SANS_PROFIL,
-  cibleDominante,
-  refusAuDelaDuMaximum,
-  rotationSuggeree,
-  type Cadre,
-  type ProfilCadre,
-} from '../core/cadre.ts'
+import type { Cadre, ProfilCadre } from '../core/cadre.ts'
 import type { Site } from '../core/ephem.ts'
-import { versSpherique } from '../core/mat3.ts'
 import {
   cibleSousLeCurseur,
   dessineCiel,
   type CibleEcran,
 } from './dessine-ciel.ts'
-import { Terme } from './Terme.tsx'
 
 /** Noms français des corps mobiles de §3.1. */
 const NOMS_CORPS: Readonly<Record<string, string>> = {
@@ -83,11 +77,22 @@ const NOMS_CORPS: Readonly<Record<string, string>> = {
 
 /** Rafraîchissement des compteurs de diagnostic : lisible sans clignoter. */
 const PERIODE_DIAGNOSTIC_MS = 500
+/** Plafond de rendu : 24 im/s max. Les scènes plus lourdes restent en dessous, sans forcer. */
+const FPS_MAX = 30
+const INTERVALLE_MIN_MS = 1000 / FPS_MAX
+/** Un cran de molette. Le pincement, lui, est continu : son amplitude se lit dans `deltaY`. */
 const FACTEUR_ZOOM_MOLETTE = 1.1
+/** Pincement au pavé : `deltaY` en pixels vers un facteur de champ, par l'exponentielle. */
+const SENSIBILITE_PINCEMENT = 0.01
+/** `WheelEvent.DOM_DELTA_PIXEL` : delta en pixels, le cas du pavé et des molettes sur macOS. */
+const DOM_DELTA_PIXEL = 0
+/** Un cran de molette vaut ±120 en `wheelDeltaY`, hérité de Windows et repris partout. */
+const CRAN_WHEEL_DELTA = 120
+/** Faute de mieux, la hauteur en pixels d'un cran de molette. À retoucher si un pavé s'y trompe. */
+const SEUIL_CRAN_PX = 40
 const HAUTEUR_MIN_DEG = -90
 const HAUTEUR_MAX_DEG = 90
 const MS_PAR_S = 1000
-const ARCMIN_PAR_DEG = 60
 const S_PAR_MIN = 60
 
 /** §9 — ce que la scène doit savoir du filé pour l'incruster dans le cadre. */
@@ -122,21 +127,7 @@ export interface PlanetariumProps {
   readonly surSelectionObjet: (objet: ObjetCielProfond) => void
 }
 
-interface Diagnostic {
-  readonly fps: number
-  readonly etoilesExaminees: number
-  readonly etoilesDessinees: number
-  readonly cellules: number
-  readonly labels: number
-}
-
-interface Selection {
-  readonly titre: string
-  readonly lignes: readonly string[]
-  readonly objet: ObjetCielProfond | null
-}
-
-function decritCible(cible: CibleEcran): Selection {
+function decritCible(cible: CibleEcran): SelectionScene {
   if (cible.type === 'OBJET' && cible.objet !== undefined) {
     const o = cible.objet
     return {
@@ -189,23 +180,60 @@ function decritCible(cible: CibleEcran): Selection {
   }
 }
 
-/** Le `Vue` de la scène : celui de la boucle, celui de l'incrustation. Un seul cadrage. */
-function vueScene(pointage: {
-  readonly mode: ModeProjection
-  readonly fovDeg: number
-  readonly azimutDeg: number
-  readonly hauteurDeg: number
-  readonly rotationDeg: number
-}): Vue {
-  return {
-    mode: pointage.mode,
-    fovDeg: pointage.fovDeg,
-    largeurPx: LARGEUR_SCENE_PX,
-    hauteurPx: HAUTEUR_SCENE_PX,
-    azimutDeg: pointage.azimutDeg,
-    hauteurDeg: pointage.hauteurDeg,
-    rotationDeg: pointage.rotationDeg,
+/**
+ * Le facteur appliqué au champ pour un `wheel`. La molette avance par crans : facteur fixe. Le
+ * pincement au pavé est continu — Chrome et Firefox le traduisent en `wheel` à `ctrlKey` — et son
+ * amplitude est dans `deltaY` : l'exponentielle en fait un facteur multiplicatif continu, où deux
+ * demi-gestes valent exactement le geste entier.
+ */
+export function facteurZoom(deltaY: number, pincement: boolean): number {
+  if (pincement) return Math.exp(deltaY * SENSIBILITE_PINCEMENT)
+  return deltaY > 0 ? FACTEUR_ZOOM_MOLETTE : 1 / FACTEUR_ZOOM_MOLETTE
+}
+
+/** Ce qu'un `wheel` doit déclencher sur la scène. */
+export type SourceGeste = 'PINCEMENT' | 'MOLETTE' | 'DEFILEMENT'
+
+/**
+ * Un `wheel` sur macOS peut venir de trois gestes qui ne doivent pas faire la même chose : le
+ * pincement zoome, le défilement à deux doigts promène la visée, la molette zoome. Aucun
+ * navigateur ne dit lequel c'est ; il faut le déduire de trois signaux, du plus sûr au moins sûr.
+ */
+export function sourceMolette(e: {
+  readonly ctrlKey: boolean
+  readonly deltaMode: number
+  readonly deltaX: number
+  readonly deltaY: number
+  readonly wheelDeltaY?: number
+}): SourceGeste {
+  // Le pincement au pavé, seul geste que le navigateur signale lui-même — par `ctrlKey`.
+  if (e.ctrlKey) return 'PINCEMENT'
+  // Un delta en lignes plutôt qu'en pixels : Firefox ne le fait que pour une vraie molette.
+  if (e.deltaMode !== DOM_DELTA_PIXEL) return 'MOLETTE'
+  // WebKit et Blink : un cran de molette vaut un multiple de 120 en `wheelDeltaY`. Le pavé, lui,
+  // renvoie −3 × `deltaY`, qui tombe rarement juste.
+  if (e.wheelDeltaY !== undefined && e.wheelDeltaY !== 0) {
+    return e.wheelDeltaY % CRAN_WHEEL_DELTA === 0 ? 'MOLETTE' : 'DEFILEMENT'
   }
+  // Faute de `wheelDeltaY` (Firefox en pixels) : un cran est gros, entier et strictement vertical.
+  const cran = e.deltaX === 0 && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= SEUIL_CRAN_PX
+  return cran ? 'MOLETTE' : 'DEFILEMENT'
+}
+
+/**
+ * `wheelDeltaY` est déprécié et absent des types du DOM, mais reste le seul signal fiable pour
+ * distinguer un cran de molette d'un défilement au pavé dans WebKit et Blink.
+ */
+interface EvenementMolette extends WheelEvent {
+  readonly wheelDeltaY?: number
+}
+
+/**
+ * Safari macOS émet ces événements non standard pour le pincement au pavé, en plus — ou à la
+ * place — du `wheel` à `ctrlKey`. Ils sont absents des types du DOM : on les déclare ici.
+ */
+interface EvenementGeste extends Event {
+  readonly scale: number
 }
 
 export function Planetarium(props: PlanetariumProps) {
@@ -213,19 +241,10 @@ export function Planetarium(props: PlanetariumProps) {
 
   // Pointage, temps et couches sont ceux de la scène, réglés depuis le panneau droit.
   const { vue: pointage, temps, rendu, msAffiche, instant, actions } = useScene()
-  const { fovDeg, azimutDeg, hauteurDeg, rotationDeg, mode } = pointage
+  const { fovDeg, azimutDeg, hauteurDeg, rotationDeg, mode, largeurPx, hauteurPx } = pointage
   const { modeTemps } = temps
   const { couches, vueRealiste } = rendu
   const { file } = useSeance()
-
-  const [diagnostic, setDiagnostic] = useState<Diagnostic>({
-    fps: 0,
-    etoilesExaminees: 0,
-    etoilesDessinees: 0,
-    cellules: 0,
-    labels: 0,
-  })
-  const [selection, setSelection] = useState<Selection | null>(null)
 
   const index = props.index
   const figures = useMemo(
@@ -243,8 +262,8 @@ export function Planetarium(props: PlanetariumProps) {
     [fovDeg, index.profondeurMag, props.mLimOeil, vueRealiste],
   )
   const reglage = useMemo(
-    () => reglageVitesse(temps.facteur, LARGEUR_SCENE_PX, fovDeg),
-    [temps.facteur, fovDeg],
+    () => reglageVitesse(temps.facteur, largeurPx, fovDeg),
+    [temps.facteur, largeurPx, fovDeg],
   )
 
   const dateAffichee = useMemo(() => new Date(msAffiche), [msAffiche])
@@ -283,7 +302,6 @@ export function Planetarium(props: PlanetariumProps) {
    */
   const cleGeste = `${azimutDeg}|${hauteurDeg}|${rotationDeg}|${fovDeg}|${file.dureeTotaleMin}`
   const cleGestePrecedente = useRef(cleGeste)
-  const [fileEnAttente, setFileEnAttente] = useState(false)
 
   const peintIncrustation = (): void => {
     if (materielFile === undefined || cadrePrincipal === null) return
@@ -292,7 +310,7 @@ export function Planetarium(props: PlanetariumProps) {
     const dureeS =
       file.apercu === 'FILE' ? file.dureeTotaleMin * S_PAR_MIN : materielFile.profondeur.tPoseS
     const sortie = rendIncrustation({
-      vue: vueScene(pointage),
+      vue: pointage,
       matriceCiel: ciel.matrice,
       cadre: cadrePrincipal,
       indexReel,
@@ -318,7 +336,7 @@ export function Planetarium(props: PlanetariumProps) {
         tronques: sortie.sortie.arcsTronques,
       })
     }
-    setFileEnAttente(false)
+    majLectures({ fileEnAttente: false })
   }
 
   // La dernière peinture demandée, lue au déclenchement : le report ne doit jamais rendre
@@ -339,7 +357,7 @@ export function Planetarium(props: PlanetariumProps) {
       planifie.annule()
       if (incrustation.current !== null) poseRenduFile(null)
       incrustation.current = null
-      setFileEnAttente(false)
+      majLectures({ fileEnAttente: false })
       return
     }
     // Premier rendu, ou changement franc : immédiat. Geste en cours : reporté, et l'écran
@@ -348,7 +366,7 @@ export function Planetarium(props: PlanetariumProps) {
       planifie.maintenant()
       return
     }
-    setFileEnAttente(true)
+    majLectures({ fileEnAttente: true })
     planifie.bientot()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -372,6 +390,25 @@ export function Planetarium(props: PlanetariumProps) {
   // Une passe reportée ne doit pas survivre au démontage : elle peindrait dans un canevas
   // que plus personne ne dépose.
   useEffect(() => () => planificateur.current?.annule(), [])
+
+  /**
+   * T-0040 — la définition de rendu suit la boîte, sinon l'image s'y loge en laissant des
+   * bandes. C'est la taille CSS qui est observée, jamais les attributs du canevas : les
+   * réécrire ne change pas la boîte, donc l'observation ne se rappelle pas elle-même.
+   */
+  useEffect(() => {
+    const cible = canevas.current
+    if (cible === null || typeof ResizeObserver === 'undefined') return
+    const observateur = new ResizeObserver((entrees) => {
+      const boite = entrees[0]?.contentRect
+      if (boite === undefined || boite.width === 0 || boite.height === 0) return
+      majVue(resolutionRendu(boite.width, boite.height, window.devicePixelRatio || 1))
+    })
+    observateur.observe(cible)
+    return () => {
+      observateur.disconnect()
+    }
+  }, [])
 
   // État mutable lu par la boucle de rendu, réécrit à chaque rendu React.
   const scene = useRef({
@@ -415,6 +452,11 @@ export function Planetarium(props: PlanetariumProps) {
 
     const image = (ts: number): void => {
       if (!actif) return
+      if (dernierTs !== null && ts - dernierTs < INTERVALLE_MIN_MS) {
+        // Plafond 24 im/s : on saute ce tick, la prochaine frame réévaluera.
+        requestAnimationFrame(image)
+        return
+      }
       const etat = scene.current
       const dt = dernierTs === null ? 0 : ts - dernierTs
       dernierTs = ts
@@ -438,7 +480,7 @@ export function Planetarium(props: PlanetariumProps) {
         ? []
         : positionsInterpolees(ephemerides.current, instant.ms)
 
-      const vue = vueScene(etat.vue)
+      const vue = etat.vue
       const cadres = etat.couches.cadre
         ? etat.props.profils.map(
             (profil): Cadre => ({
@@ -450,6 +492,10 @@ export function Planetarium(props: PlanetariumProps) {
           )
         : []
       const proj = projecteur(vue, ciel.matrice)
+      // §9.3 — le filé, déposé dans le premier cadre. Rien n'est recalculé ici : l'image
+      // se glisse juste au-dessus du fond, sous les repères et les noms du planétarium.
+      const cadre = cadres[0]
+      const apercu = incrustation.current
       const sortie = dessineCiel({
         ctx: contexte,
         projecteur: proj,
@@ -467,32 +513,24 @@ export function Planetarium(props: PlanetariumProps) {
         couches: etat.couches,
         magLimite: etat.magLimite,
         modeNuit: etat.props.modeNuit,
+        surLeFond:
+          apercu !== null && cadre !== undefined
+            ? (ctx) => {
+                incrusteDansLeCadre(ctx, vue, ciel.matrice, cadre, apercu)
+              }
+            : undefined,
       })
       cibles.current = sortie.cibles
 
-      // §9.3 — le filé, déposé dans le premier cadre. Rien n'est recalculé ici.
-      const cadre = cadres[0]
-      if (incrustation.current !== null && cadre !== undefined) {
-        incrusteDansLeCadre(
-          contexte,
-          vue,
-          ciel.matrice,
-          cadre,
-          incrustation.current,
-          etat.props.modeNuit,
-        )
-      }
-
       images++
       if (ts - dernierDiag >= PERIODE_DIAGNOSTIC_MS) {
-        setDiagnostic({
+        afficheInstant(instant.ms, {
           fps: (images * MS_PAR_S) / (ts - dernierDiag),
           etoilesExaminees: sortie.stats.etoilesExaminees,
           etoilesDessinees: sortie.etoilesDessinees,
           cellules: sortie.stats.cellulesRetenues,
           labels: sortie.labels.length,
         })
-        afficheInstant(instant.ms)
         images = 0
         dernierDiag = ts
       }
@@ -517,10 +555,10 @@ export function Planetarium(props: PlanetariumProps) {
     const depart = glisse.current
     if (depart === null) return
     const rect = e.currentTarget.getBoundingClientRect()
-    const echelle = LARGEUR_SCENE_PX / rect.width
+    const echelle = largeurPx / rect.width
     const dx = (e.clientX - depart.x) * echelle
     const dy = (e.clientY - depart.y) * echelle
-    const degresParPixel = fovDeg / LARGEUR_SCENE_PX
+    const degresParPixel = fovDeg / largeurPx
     actions.majVue((v) => ({
       azimutDeg: (((v.azimutDeg - dx * degresParPixel) % 360) + 360) % 360,
       hauteurDeg: Math.max(
@@ -537,141 +575,92 @@ export function Planetarium(props: PlanetariumProps) {
     if (depart === null) return
     if (Math.hypot(e.clientX - depart.x, e.clientY - depart.y) > 0) return
     const rect = e.currentTarget.getBoundingClientRect()
-    const echelle = LARGEUR_SCENE_PX / rect.width
+    const echelle = largeurPx / rect.width
     const cible = cibleSousLeCurseur(
       cibles.current,
       (e.clientX - rect.left) * echelle,
       (e.clientY - rect.top) * echelle,
     )
     const decrite = cible === null ? null : decritCible(cible)
-    setSelection(decrite)
+    majLectures({ selection: decrite })
     // §3.4 — un objet du ciel profond ouvre sa fiche : le geste ne s'arrête pas sur un nom.
     if (decrite?.objet != null) props.surSelectionObjet(decrite.objet)
   }
 
-  function surMolette(e: React.WheelEvent<HTMLCanvasElement>): void {
-    const facteur = e.deltaY > 0 ? FACTEUR_ZOOM_MOLETTE : 1 / FACTEUR_ZOOM_MOLETTE
+  // Le zoom est posé à la main, hors de React : `onWheel` attache un écouteur passif, où
+  // `preventDefault()` reste sans effet — le navigateur zoomerait alors toute la page par-dessus
+  // le champ de la scène. Safari ajoute ses `gesture*`, qui zooment la page de leur côté.
+  useEffect(() => {
+    const brut = canevas.current
+    if (brut === null) return
+    const cible: HTMLCanvasElement = brut
     const bornes = bornesZoom(props.gaiaCharge)
-    actions.majVue((v) => ({
-      fovDeg: Math.max(bornes.fovMinDeg, Math.min(bornes.fovMaxDeg, v.fovDeg * facteur)),
-    }))
-  }
+    const borne = (fov: number): number =>
+      Math.max(bornes.fovMinDeg, Math.min(bornes.fovMaxDeg, fov))
 
-  const dominante = useMemo(
-    () => (cadrePrincipal === null ? null : cibleDominante(props.objets, cadrePrincipal, ciel.matrice)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [props.objets, ciel, azimutDeg, hauteurDeg, rotationDeg, props.profils],
-  )
-  const suggestion = useMemo(
-    () =>
-      dominante === null || cadrePrincipal === null
-        ? null
-        : rotationSuggeree(dominante, cadrePrincipal, ciel.matrice),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dominante, ciel, azimutDeg, hauteurDeg, rotationDeg],
-  )
-  const viseeJ2000 = useMemo(
-    () =>
-      versSpherique(
-        projecteur(vueScene(pointage), ciel.matrice).inverse(
-          LARGEUR_SCENE_PX / 2,
-          HAUTEUR_SCENE_PX / 2,
-        ),
-      ),
-    [pointage, ciel],
-  )
+    function surMolette(e: WheelEvent): void {
+      e.preventDefault()
+      const source = sourceMolette(e as EvenementMolette)
+      if (source === 'DEFILEMENT') {
+        // Deux doigts sur le pavé promènent le ciel comme le ferait un glisser : le ciel suit les
+        // doigts, donc le signe des deltas s'inverse. Le champ est lu dans l'état, pas capturé.
+        const largeurCss = cible.getBoundingClientRect().width
+        majVue((v) => {
+          const degresParPixel = v.fovDeg / largeurCss
+          return {
+            azimutDeg: (((v.azimutDeg + e.deltaX * degresParPixel) % 360) + 360) % 360,
+            hauteurDeg: Math.max(
+              HAUTEUR_MIN_DEG,
+              Math.min(HAUTEUR_MAX_DEG, v.hauteurDeg - e.deltaY * degresParPixel),
+            ),
+          }
+        })
+        return
+      }
+      majVue((v) => ({ fovDeg: borne(v.fovDeg * facteurZoom(e.deltaY, source === 'PINCEMENT')) }))
+    }
 
-  const tropDeProfils = refusAuDelaDuMaximum(props.profils.length)
-  const avertissement = avertissementEpoque(ciel.epoqueAnnee)
+    // Safari : `scale` est cumulée depuis le début du geste, on n'en garde que la variation.
+    let echelleGeste = 1
+    function surGesteDebut(e: Event): void {
+      e.preventDefault()
+      echelleGeste = 1
+    }
+    function surGesteChange(e: Event): void {
+      e.preventDefault()
+      const echelle = (e as EvenementGeste).scale
+      if (!Number.isFinite(echelle) || echelle <= 0) return
+      const facteur = echelleGeste / echelle
+      echelleGeste = echelle
+      majVue((v) => ({ fovDeg: borne(v.fovDeg * facteur) }))
+    }
+    function surGesteFin(e: Event): void {
+      e.preventDefault()
+    }
+
+    cible.addEventListener('wheel', surMolette, { passive: false })
+    cible.addEventListener('gesturestart', surGesteDebut)
+    cible.addEventListener('gesturechange', surGesteChange)
+    cible.addEventListener('gestureend', surGesteFin)
+    return () => {
+      cible.removeEventListener('wheel', surMolette)
+      cible.removeEventListener('gesturestart', surGesteDebut)
+      cible.removeEventListener('gesturechange', surGesteChange)
+      cible.removeEventListener('gestureend', surGesteFin)
+    }
+  }, [props.gaiaCharge])
 
   return (
     <section className="scene">
       <canvas
         ref={canevas}
         className="planetarium"
-        width={LARGEUR_SCENE_PX}
-        height={HAUTEUR_SCENE_PX}
+        width={largeurPx}
+        height={hauteurPx}
         onPointerDown={surPointerDown}
         onPointerMove={surPointerMove}
         onPointerUp={surPointerUp}
-        onWheel={surMolette}
       />
-
-      <div className="scene-lectures">
-        <p className="etat">
-          {dateAffichee.toLocaleString('fr-FR')} · visée {viseeJ2000.longitudeDeg.toFixed(2)}° AD /{' '}
-          {viseeJ2000.latitudeDeg.toFixed(2)}° δ · azimut {azimutDeg.toFixed(0)}°, hauteur{' '}
-          {hauteurDeg.toFixed(0)}° · champ {fovDeg.toFixed(1)}° · jusqu’à la magnitude{' '}
-          {profondeur.magLimite.value.toFixed(1)} · époque {ciel.epoqueAnnee.toFixed(1)}
-          {file.incrustation && couches.cadre && ' · filé incrusté dans le cadre, temps figé'}
-          {fileEnAttente && ' · filé en cours de recalcul, le cadre montre l’image précédente'}
-        </p>
-        {ciel.cause !== undefined && <p className="cause">{ciel.cause}</p>}
-        {avertissement !== null && <p className="cause">{avertissement}</p>}
-        {file.incrustation && !couches.cadre && (
-          <p className="cause">
-            Incrustation demandée alors que la couche « Cadre matériel » est éteinte : sans
-            cadre, il n’y a pas de surface où déposer le filé. La rallumer dans l’onglet
-            Explorer.
-          </p>
-        )}
-
-        {couches.cadre && (
-          <>
-            {props.profils.length === 0 && <p className="cause">{REFUS_SANS_PROFIL}</p>}
-            {tropDeProfils !== null && <p className="cause">{tropDeProfils}</p>}
-            {props.profils.length > 1 && (
-              <p className="etat">
-                L’échantillonnage est identique dans les deux cadres : un recadrage de capteur
-                ne change ni le pitch ni la focale, donc ni la résolution (§5.1).
-              </p>
-            )}
-            {dominante !== null && (
-              <p className="etat">
-                Cible dominante dans le cadre : {dominante.objet.designation}, grand axe{' '}
-                {(dominante.tailleDeg * ARCMIN_PAR_DEG).toFixed(0)}’ — remplissage{' '}
-                {((dominante.tailleDeg / (props.profils[0]?.fovHDeg ?? 1)) * 100).toFixed(0)} % de
-                la petite dimension du champ.
-              </p>
-            )}
-            {suggestion !== null && (
-              <div className="actions">
-                <span className="etat">{suggestion.message}</span>
-                <button
-                  type="button"
-                  onClick={() => actions.majVue({ rotationDeg: suggestion.angleDeg })}
-                >
-                  Appliquer {suggestion.angleDeg.toFixed(0)}°
-                </button>
-              </div>
-            )}
-          </>
-        )}
-
-        {selection !== null && (
-          <div className="selection">
-            <h3>{selection.titre}</h3>
-            {selection.lignes.map((ligne) => (
-              <p className="etat" key={ligne}>
-                {ligne}
-              </p>
-            ))}
-            {selection.objet !== null && (
-              <p className="etat">
-                Fiche de cadrage, de détectabilité et de pose ouverte dans l’onglet Cible.
-              </p>
-            )}
-          </div>
-        )}
-
-        <Terme cle="deux_horloges" contexte={`${diagnostic.fps.toFixed(0)} images/s`} />
-        <p className="etat">
-          {diagnostic.etoilesDessinees} étoiles tracées sur {diagnostic.etoilesExaminees} lues,{' '}
-          {diagnostic.cellules} cellules d’index retenues sur {index.cellules.length},{' '}
-          {index.nombreEtoiles} étoiles au catalogue, {diagnostic.labels} labels composés sur{' '}
-          {K('LABELS_MAX')} au plus.
-        </p>
-      </div>
     </section>
   )
 }
