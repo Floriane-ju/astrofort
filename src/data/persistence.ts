@@ -14,6 +14,7 @@
 
 import { db } from './db.ts'
 import type { PlanEnregistre, ProfilMateriel, SiteEnregistre } from './db.ts'
+import { type DomaineId, valide as valideDomaine } from '../registry/domains.ts'
 
 export interface EtatStockage {
   readonly persistant: boolean
@@ -106,6 +107,117 @@ export class ExportInvalideError extends Error {
   }
 }
 
+/**
+ * Un fichier d'export est une donnée étrangère, au même titre qu'une saisie : il a pu être
+ * retouché à la main entre deux machines. Sans contrôle champ par champ, un
+ * `latitudeDeg: "abc"` entre en base et ressort en `NaN` à chaque démarrage — persisté,
+ * donc rejoué. Les plages sont celles du registre §2.1, jamais réécrites ici.
+ *
+ * Un vérificateur rend `null` quand le champ passe, sinon la raison du refus.
+ */
+type Verificateur = (valeur: unknown) => string | null
+
+const texte: Verificateur = (v) =>
+  typeof v === 'string' && v !== '' ? null : 'doit être une chaîne non vide'
+
+const booleen: Verificateur = (v) => (typeof v === 'boolean' ? null : 'doit être un booléen')
+
+/** `contenu` d'un plan : structure libre, produite et relue par l'application elle-même. */
+const quelconque: Verificateur = (v) => (v === undefined ? 'est absent' : null)
+
+function nombre(domaine?: DomaineId): Verificateur {
+  return (v) => {
+    if (typeof v !== 'number' || !Number.isFinite(v)) return 'doit être un nombre fini'
+    if (domaine === undefined) return null
+    try {
+      valideDomaine(domaine, v)
+      return null
+    } catch (erreur) {
+      return erreur instanceof Error ? erreur.message : 'est hors du domaine attendu'
+    }
+  }
+}
+
+function parmi(...valeurs: readonly string[]): Verificateur {
+  return (v) =>
+    typeof v === 'string' && valeurs.includes(v)
+      ? null
+      : `doit valoir ${valeurs.map((x) => `« ${x} »`).join(', ')}`
+}
+
+function optionnel(verifie: Verificateur): Verificateur {
+  return (v) => (v === undefined ? null : verifie(v))
+}
+
+/** Le masque d'horizon est un tableau de 360 hauteurs, une par degré d'azimut (§4.1). */
+const masqueHorizon: Verificateur = (v) => {
+  if (!Array.isArray(v) || v.length !== 360) return 'doit être un tableau de 360 hauteurs'
+  const hauteur = nombre('masque_horizon_deg')
+  for (const [azimut, valeur] of v.entries()) {
+    const raison = hauteur(valeur)
+    if (raison !== null) return `à l’azimut ${azimut} : ${raison}`
+  }
+  return null
+}
+
+type Forme = Readonly<Record<string, Verificateur>>
+
+const FORME_SITE: Forme = {
+  id: texte,
+  nom: texte,
+  latitudeDeg: nombre('latitude_deg'),
+  longitudeDeg: nombre('longitude_deg'),
+  altitudeM: nombre('altitude_m'),
+  fuseau: texte,
+  sqmMesure: optionnel(nombre('sqm_mesure')),
+  bortleDeclare: optionnel(nombre('bortle_declare')),
+  masqueHorizon: optionnel(masqueHorizon),
+  masqueEstHypothese: optionnel(booleen),
+}
+
+const FORME_PROFIL: Forme = {
+  id: texte,
+  nom: texte,
+  focaleMm: nombre('focale_mm'),
+  ouvertureN: nombre('ouverture_N'),
+  typeObjectif: parmi('RECTILINEAIRE', 'FISHEYE'),
+  boitierId: texte,
+  capteurMode: parmi('FULL_FRAME', 'APSC_CROP'),
+  suiviActif: booleen,
+  qualiteMes: optionnel(parmi('SOIGNEE', 'APPROX', 'INCONNUE')),
+  typeMonture: optionnel(parmi('GEM', 'TRACKER', 'ALTAZ')),
+}
+
+const FORME_PLAN: Forme = {
+  id: texte,
+  nom: texte,
+  dateIso: texte,
+  siteId: texte,
+  profilId: texte,
+  versionRegistre: texte,
+  contenu: quelconque,
+}
+
+/** Le refus nomme l'enregistrement fautif — par identifiant s'il en a un — et le champ. */
+function valideEnregistrements(section: string, forme: Forme, elements: readonly unknown[]): void {
+  for (const [index, element] of elements.entries()) {
+    if (typeof element !== 'object' || element === null || Array.isArray(element)) {
+      throw new ExportInvalideError(`${section} n°${index + 1} n’est pas un objet`)
+    }
+    const enregistrement = element as Record<string, unknown>
+    const identite =
+      typeof enregistrement.id === 'string' && enregistrement.id !== ''
+        ? `« ${enregistrement.id} »`
+        : `n°${index + 1}`
+    for (const [champ, verifie] of Object.entries(forme)) {
+      const raison = verifie(enregistrement[champ])
+      if (raison !== null) {
+        throw new ExportInvalideError(`${section} ${identite}, champ « ${champ} » : ${raison}`)
+      }
+    }
+  }
+}
+
 function valide(donnees: unknown): asserts donnees is ExportUtilisateur {
   if (typeof donnees !== 'object' || donnees === null) {
     throw new ExportInvalideError('le contenu n’est pas un objet JSON')
@@ -124,6 +236,26 @@ function valide(donnees: unknown): asserts donnees is ExportUtilisateur {
       throw new ExportInvalideError(`la section « ${champ} » est absente ou malformée`)
     }
   }
+  // Tout est vérifié AVANT la transaction : un fichier abîmé n'écrit rien, pas même à moitié.
+  valideEnregistrements('le site', FORME_SITE, candidat.sites as readonly unknown[])
+  valideEnregistrements('le profil', FORME_PROFIL, candidat.profils as readonly unknown[])
+  valideEnregistrements('le plan', FORME_PLAN, candidat.plans as readonly unknown[])
+}
+
+/**
+ * Point d'entrée du réimport depuis un fichier. Tout échec — JSON illisible compris — sort
+ * en `ExportInvalideError`, dont le texte est rédigé pour être affiché tel quel.
+ */
+export async function importeFichierUtilisateur(texte: string): Promise<void> {
+  let donnees: unknown
+  try {
+    donnees = JSON.parse(texte)
+  } catch (erreur) {
+    throw new ExportInvalideError(
+      `le fichier n’est pas du JSON lisible (${erreur instanceof Error ? erreur.message : String(erreur)})`,
+    )
+  }
+  await importeDonneesUtilisateur(donnees)
 }
 
 /** Réimport sans perte. Les entrées de même identifiant sont remplacées. */

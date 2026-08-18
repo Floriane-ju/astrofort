@@ -2,7 +2,7 @@
 {
   "id": "T-0053",
   "titre": "Le catalogue se cherche au lieu de se dérouler",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "m",
   "tags": [

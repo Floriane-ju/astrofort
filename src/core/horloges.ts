@@ -269,13 +269,7 @@ export function positionsInterpolees(
   })
 }
 
-/** Trace de l'interpolation, pour §10.2 : la formule et l'instant de chaque échantillon. */
-export function traceInterpolation(etat: EtatEphemerides, dateMs: number): Traced<number> {
-  const f = (dateMs - etat.t0Ms) / (etat.t1Ms - etat.t0Ms)
-  return trace({
-    value: f,
-    formula: 'INTERPOLATION_CORPS',
-    inputs: { t0_ms: etat.t0Ms, t1_ms: etat.t1Ms, t_ms: dateMs },
-    constants: ['FREQ_EPHEMERIDES_HZ'],
-  })
-}
+// L'interpolation n'a pas de trace §10.2 : aucun écran n'affiche le facteur f, et une
+// trace jamais dépliée ment sur ce qui est expliqué. La formule reste au formulaire de
+// l'Annexe B sous `INTERPOLATION_CORPS` ; y brancher un `trace()` le jour où un écran
+// la montre (T-0063).

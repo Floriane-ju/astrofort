@@ -32,28 +32,75 @@ const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..')
 const DOSSIER_SORTIE = join(RACINE, 'public', 'data')
 
 /**
+ * Sources amont — toutes épinglées à un SHA de commit, jamais à une branche.
+ *
+ * Une branche (`main`, `master`) ou un alias (`CURRENT`) désigne ce que l’amont y met
+ * aujourd’hui : le contenu peut changer sous nos pieds — accident, ou compromission du
+ * dépôt — sans que rien ne le signale, et le manifeste régénéré certifierait le résultat
+ * de bonne foi. Un SHA de commit rend l’adresse immuable ; l’empreinte ci-dessous atteste
+ * que les octets reçus sont bien ceux qui ont été relus.
+ *
+ * Mettre à jour une source, dans cet ordre :
+ *   1. Repérer le commit voulu chez l’amont, p. ex.
+ *      `gh api "repos/<dépôt>/commits?path=<chemin>&per_page=1" --jq '.[0].sha'`
+ *   2. Lire le diff amont depuis le SHA actuellement épinglé. Un changement de données
+ *      s’explique (nouvelle version du catalogue, correction publiée) ou ne s’explique pas.
+ *   3. Télécharger le fichier à ce SHA et calculer `shasum -a 256 <fichier>`.
+ *   4. Relever `url` **et** `sha256` ensemble, dans le même commit : l’un sans l’autre
+ *      arrête la construction, ce qui est le comportement voulu.
+ *   5. `pnpm data:build`, puis relire le diff des `.bin` et du manifeste.
+ */
+interface SourceEpinglee {
+  /** Nommée par le message d’interruption : c’est ce que l’on ira vérifier chez l’amont. */
+  readonly nom: string
+  readonly url: string
+  /** Empreinte des octets **téléchargés** — le manifeste, lui, couvre le paquet produit. */
+  readonly sha256: string
+}
+
+/**
  * Le PRD nomme « HYG v3 ». Le projet amont a depuis publié la v4.1 sous `hyg/CURRENT`, et
  * ne sert plus la v3 à son ancienne adresse. Même base de données, version postérieure.
  */
-const URL_HYG =
-  'https://raw.githubusercontent.com/astronexus/HYG-Database/main/hyg/CURRENT/hygdata_v41.csv'
-const URL_OPENNGC =
-  'https://raw.githubusercontent.com/mattiaverga/OpenNGC/master/database_files/NGC.csv'
+const SOURCE_HYG: SourceEpinglee = {
+  nom: 'HYG v4.1 (hygdata_v41.csv)',
+  url:
+    'https://raw.githubusercontent.com/astronexus/HYG-Database/' +
+    '3bf37f4b2d5460e1278286320d1d62fab9b493c1/hyg/CURRENT/hygdata_v41.csv',
+  sha256: 'd9f69fd86bbf90a4e4d52b4c5c53eacfa6dfc0bfdef85bfd94f095e0bebe4ebd',
+}
+const SOURCE_OPENNGC: SourceEpinglee = {
+  nom: 'OpenNGC (NGC.csv)',
+  url:
+    'https://raw.githubusercontent.com/mattiaverga/OpenNGC/' +
+    'da90466031b0372c896588b85be6016c617e205b/database_files/NGC.csv',
+  sha256: 'be150bdaa1997dacbcb39f303074403edec7a953b589b36d5f1c4522c0cc6fae',
+}
 /**
  * OpenNGC range hors de `NGC.csv` les objets qui ne portent ni numéro NGC ni numéro IC —
  * dont M45, les Pléiades, cataloguées « Mel022 ». Sans ce second fichier, quatre Messier
  * (M24, M40, M45, M102) manquent au catalogue et restent introuvables. Même en-tête, même
  * séparateur : les deux se lisent avec le même analyseur.
  */
-const URL_OPENNGC_ADDENDUM =
-  'https://raw.githubusercontent.com/mattiaverga/OpenNGC/master/database_files/addendum.csv'
+const SOURCE_OPENNGC_ADDENDUM: SourceEpinglee = {
+  nom: 'OpenNGC (addendum.csv)',
+  url:
+    'https://raw.githubusercontent.com/mattiaverga/OpenNGC/' +
+    '9609f2f29e2d6b108b16f2bfe810aab82f27aa95/database_files/addendum.csv',
+  sha256: '1d8f0914e643ada325a5a94d88d8fefad6a4937a2f77cc34f21483af22b11983',
+}
 /**
  * §3.4 — un seul fichier porte les trois couches : figures (culture occidentale), astérismes
  * et frontières IAU de Delporte en coordonnées B1875. C'est le jeu de référence que le PRD
  * nomme, sous licence libre.
  */
-const URL_STELLARIUM =
-  'https://raw.githubusercontent.com/Stellarium/stellarium/master/skycultures/modern/index.json'
+const SOURCE_STELLARIUM: SourceEpinglee = {
+  nom: 'Stellarium (culture « modern »)',
+  url:
+    'https://raw.githubusercontent.com/Stellarium/stellarium/' +
+    'daace2add6a1bf886e8ee1934f51e9c69f818d18/skycultures/modern/index.json',
+  sha256: '1f2f5ffd6c9e25a7d0dcfdbf1f756e2db03dd3b8ed4ec016a2839b09f6b0fe1e',
+}
 
 /** §3.3 : HYG est complet jusqu'à magnitude ≈ 9. Au-delà, le catalogue n'est plus fiable. */
 const MAG_LIMITE_HYG = 9
@@ -71,16 +118,31 @@ interface ManifestePaquet {
   obligatoire: boolean
 }
 
-async function telecharge(url: string): Promise<string> {
-  process.stdout.write(`  téléchargement ${url}\n`)
-  const reponse = await fetch(url)
+async function telecharge(source: SourceEpinglee): Promise<string> {
+  process.stdout.write(`  téléchargement ${source.url}\n`)
+  const reponse = await fetch(source.url)
   if (!reponse.ok) {
     throw new Error(
-      `Téléchargement impossible (${reponse.status}) : ${url}\n` +
+      `Téléchargement impossible (${reponse.status}) : ${source.url}\n` +
         'Vérifier le réseau, ou l’adresse du catalogue si le projet amont l’a déplacée.',
     )
   }
-  return reponse.text()
+  const octets = await reponse.arrayBuffer()
+  const empreinte = await sha256Hex(octets)
+  if (empreinte !== source.sha256) {
+    throw new Error(
+      `Source modifiée depuis son épinglage : ${source.nom}\n` +
+        `  ${source.url}\n` +
+        `  empreinte attendue : ${source.sha256}\n` +
+        `  empreinte reçue    : ${empreinte}\n` +
+        'À SHA de commit constant, le contenu ne devrait pas bouger. Vérifier l’amont ' +
+        'avant tout : lire le diff du fichier depuis le SHA épinglé et s’assurer que le ' +
+        'changement est légitime. S’il l’est, relever le SHA dans l’URL et cette ' +
+        'empreinte ensemble (procédure en tête de ce script). Sinon, ne rien relever et ' +
+        'signaler la source.',
+    )
+  }
+  return new TextDecoder().decode(octets)
 }
 
 /** Découpe une ligne CSV en respectant les champs entre guillemets. */
@@ -443,7 +505,7 @@ function construitConstellations(brut: string, index: Map<number, EtoileHyg>) {
     frontieres,
     etoilesNommees,
     segmentsIgnores: ignores,
-    source: `Stellarium, culture « modern » — ${URL_STELLARIUM} ; frontières IAU de Delporte (B1875)`,
+    source: `Stellarium, culture « modern » — ${SOURCE_STELLARIUM.url} ; frontières IAU de Delporte (B1875)`,
   }
 }
 
@@ -516,7 +578,7 @@ async function principal(): Promise<void> {
   const produits: ManifestePaquet[] = []
   // Le CSV HYG sert deux paquets : il n'est téléchargé qu'une fois.
   let csvHyg: string | null = null
-  const hyg = async (): Promise<string> => (csvHyg ??= await telecharge(URL_HYG))
+  const hyg = async (): Promise<string> => (csvHyg ??= await telecharge(SOURCE_HYG))
 
   if (aConstruire.has('hyg')) {
     process.stdout.write('HYG (étoiles)\n')
@@ -526,7 +588,7 @@ async function principal(): Promise<void> {
         'hyg',
         encodeEtoiles(etoiles),
         etoiles.length,
-        `HYG Database CURRENT (v4.1), filtré à magnitude ≤ ${MAG_LIMITE_HYG} — ${URL_HYG}`,
+        `HYG Database CURRENT (v4.1), filtré à magnitude ≤ ${MAG_LIMITE_HYG} — ${SOURCE_HYG.url}`,
         true,
       ),
     )
@@ -535,8 +597,8 @@ async function principal(): Promise<void> {
   if (aConstruire.has('openngc')) {
     process.stdout.write('OpenNGC (ciel profond)\n')
     const objets = [
-      ...construitObjets(await telecharge(URL_OPENNGC)),
-      ...construitObjets(await telecharge(URL_OPENNGC_ADDENDUM)),
+      ...construitObjets(await telecharge(SOURCE_OPENNGC)),
+      ...construitObjets(await telecharge(SOURCE_OPENNGC_ADDENDUM)),
     ]
     const paquetObjets = encodeObjets(objets)
     produits.push(
@@ -544,7 +606,7 @@ async function principal(): Promise<void> {
         'openngc',
         paquetObjets.enregistrements,
         objets.length,
-        `OpenNGC — ${URL_OPENNGC} + ${URL_OPENNGC_ADDENDUM}`,
+        `OpenNGC — ${SOURCE_OPENNGC.url} + ${SOURCE_OPENNGC_ADDENDUM.url}`,
         true,
       ),
       await ecritPaquet(
@@ -559,7 +621,7 @@ async function principal(): Promise<void> {
 
   if (aConstruire.has('constellations')) {
     process.stdout.write('Constellations (figures, astérismes, frontières B1875)\n')
-    const paquet = construitConstellations(await telecharge(URL_STELLARIUM), indexeHyg(await hyg()))
+    const paquet = construitConstellations(await telecharge(SOURCE_STELLARIUM), indexeHyg(await hyg()))
     process.stdout.write(
       `  ${paquet.figures.length} figures · ${paquet.asterismes.length} astérismes · ` +
         `${paquet.frontieres.length} arêtes · ${paquet.etoilesNommees.length} étoiles nommées · ` +

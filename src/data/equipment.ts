@@ -9,6 +9,9 @@
  * Il n'existe AUCUNE fonction de calibration, et aucun écran n'invite à en effectuer une :
  * l'optimum de pose est plat, une erreur d'un facteur 2 coûte 2 à 5 points de SNR, que la
  * plage utile affichée absorbe.
+ * Cette plage se calcule dans `exposure.ts` (`PLAGE_UTILE_POSE`) et s'affiche sur la fiche
+ * cible ; la perte de SNR, elle, ne s'affiche nulle part — sa formule reste au formulaire de
+ * l'Annexe B sous `PERTE_SNR` (T-0063).
  *
  * Le Lot 0 pose le schéma et la valeur de repli. Le remplissage de la base relève du Lot 1.
  */
@@ -148,20 +151,6 @@ export function isoRecommande(boitier: Boitier | null): IsoRetenu {
 }
 
 /**
- * Perte de rapport signal sur bruit pour un facteur de pose C effectif (§2.3).
- * Sert à montrer que l'optimum est plat, donc qu'aucune calibration n'est nécessaire.
- */
-export function perteSnr(cEffectif: number): number {
-  return 1 - Math.sqrt(cEffectif / (cEffectif + 1))
-}
-
-/** Plage utile d'une pose : [t/2 ; t×2], présentée comme équivalente (§2.3). */
-export function plageUtilePose(tOptS: number): readonly [number, number] {
-  const FACTEUR_PLAGE = 2
-  return [tOptS / FACTEUR_PLAGE, tOptS * FACTEUR_PLAGE]
-}
-
-/**
  * Boîtier de référence de l'Annexe A : plein format 35,9 × 23,9 mm, 7008 × 4672 px.
  * Bruit de lecture, capacité de saturation, point zéro système et autonomie CIPA sont
  * marqués `[À VÉRIFIER]` par le PRD — seule la valeur de travail sourcée est portée ici.
@@ -186,7 +175,3 @@ export const BOITIER_REFERENCE: Boitier = Object.freeze({
  * §5.1 : dimensions, pitch et ouverture saisis à la main, point zéro générique [ESTIMÉ].
  */
 export const BASE_BOITIERS: readonly Boitier[] = Object.freeze([BOITIER_REFERENCE])
-
-export function chercheBoitier(id: string): Boitier | null {
-  return BASE_BOITIERS.find((b) => b.id === id) ?? null
-}

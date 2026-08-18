@@ -8,9 +8,6 @@
  */
 
 import {
-  BORTLE_MAX,
-  BORTLE_MIN,
-  BortleHorsTableError,
   SB_PLANCHER_NATUREL,
   interpoleBortle,
   mLimOeilDepuisSb,
@@ -120,5 +117,3 @@ export function fondDeCiel(entree: EntreeFondDeCiel): FondDeCiel {
 
   throw new FondDeCielIndeterminableError()
 }
-
-export { BORTLE_MIN, BORTLE_MAX, BortleHorsTableError }

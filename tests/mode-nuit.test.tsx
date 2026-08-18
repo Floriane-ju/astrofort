@@ -105,6 +105,50 @@ describe('état du mode nuit §11.1', () => {
     expect(litEtatPersiste()).toStrictEqual(ETAT_INITIAL)
   })
 
+  it('ignore les champs de forme inattendue d’un stockage abîmé', () => {
+    // Le stockage local est hors du périmètre de confiance : un état à moitié corrompu
+    // ne doit pas se propager jusqu'à la palette (§12.3).
+    const stocke = (valeur: string) => {
+      Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        value: { getItem: () => valeur, setItem: () => undefined },
+      })
+    }
+    try {
+      stocke('{ ceci n’est pas du JSON')
+      expect(litEtatPersiste()).toStrictEqual(ETAT_INITIAL)
+
+      stocke(
+        JSON.stringify({
+          actif: 'oui',
+          luminance: 'sombre',
+          typeDalle: 'PLASMA',
+          autoActivation: 42,
+          intrus: true,
+        }),
+      )
+      expect(litEtatPersiste()).toStrictEqual(ETAT_INITIAL)
+
+      stocke(JSON.stringify({ actif: true, luminance: 12, typeDalle: 'OLED' }))
+      expect(litEtatPersiste()).toStrictEqual({
+        ...ETAT_INITIAL,
+        actif: true,
+        typeDalle: 'OLED',
+      })
+
+      const complet = {
+        actif: true,
+        luminance: 0.4,
+        typeDalle: 'LCD' as const,
+        autoActivation: 'AU_CREPUSCULE' as const,
+      }
+      stocke(JSON.stringify(complet))
+      expect(litEtatPersiste()).toStrictEqual(complet)
+    } finally {
+      delete (globalThis as { localStorage?: unknown }).localStorage
+    }
+  })
+
   it('ne s’applique pas hors navigateur, sans lever d’erreur', () => {
     expect(() => appliqueModeNuit(ETAT_INITIAL)).not.toThrow()
   })

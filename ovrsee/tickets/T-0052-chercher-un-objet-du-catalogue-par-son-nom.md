@@ -2,7 +2,7 @@
 {
   "id": "T-0052",
   "titre": "Chercher un objet du catalogue par son nom",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "s",
   "tags": [

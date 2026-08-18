@@ -2,7 +2,7 @@
 {
   "id": "T-0051",
   "titre": "Une cible du catalogue ne se saisit plus",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "m",
   "epic": "T-0048",

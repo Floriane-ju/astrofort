@@ -14,6 +14,8 @@ import { FORMULES } from '../src/registry/formulas.ts'
 import { dependDUnOrdreDeGrandeur, trace } from '../src/core/traced.ts'
 
 const DOSSIER_MOTEURS = join(import.meta.dirname, '..', 'src', 'core')
+const DOSSIER_REGISTRE = join(import.meta.dirname, '..', 'src', 'registry')
+const DOSSIER_UI = join(import.meta.dirname, '..', 'src', 'ui')
 
 /**
  * Nombres tolérés dans un moteur : entiers d'indexation et de comparaison, conversions
@@ -93,6 +95,39 @@ describe('registre §2.1', () => {
 
     const exact = trace({ value: 1, formula: 'MASSE_AIR', constants: ['ROTATION_CIEL_DEG_H'] })
     expect(dependDUnOrdreDeGrandeur(exact)).toBe(false)
+  })
+})
+
+describe('sources des tables du registre §2.1', () => {
+  /**
+   * Une source déclarée que personne n'affiche est une promesse écrite et non tenue :
+   * elle dit la limite de validité d'une table sur laquelle l'utilisateur agit. Chaque
+   * SOURCE_TABLE_* doit donc arriver à l'écran, et toutes de la même façon — sinon la
+   * traçabilité se lit de trois manières différentes (T-0062).
+   */
+  const sourcesDeclarees = readdirSync(DOSSIER_REGISTRE)
+    .filter((f) => f.endsWith('.ts'))
+    .flatMap((f) => readFileSync(join(DOSSIER_REGISTRE, f), 'utf8').match(/SOURCE_TABLE_\w+/g) ?? [])
+
+  const ui = readdirSync(DOSSIER_UI)
+    .filter((f) => f.endsWith('.tsx'))
+    .map((f) => readFileSync(join(DOSSIER_UI, f), 'utf8'))
+    .join('\n')
+
+  const affichees = new Map(
+    [...ui.matchAll(/className="tracee-source">[^<]*\{(SOURCE_TABLE_\w+)\}/g)].map((m) => [
+      m[1]!,
+      true,
+    ]),
+  )
+
+  it('déclare au moins une source par table', () => {
+    expect(sourcesDeclarees.length).toBeGreaterThan(0)
+  })
+
+  it('affiche chaque source déclarée, toutes sous la même forme', () => {
+    const orphelines = [...new Set(sourcesDeclarees)].filter((nom) => !affichees.has(nom))
+    expect(orphelines).toEqual([])
   })
 })
 

@@ -14,7 +14,17 @@ import type { Site } from '../src/core/ephem.ts'
 import { PanneauFile } from '../src/ui/PanneauFile.tsx'
 import { PanneauExplorer } from '../src/ui/PanneauExplorer.tsx'
 import { modeObjectif } from '../src/ui/PanneauMateriel.tsx'
-import { etatScene, instant, majTemps, majVue, reinitialiseScene, saute } from '../src/ui/scene-etat.ts'
+import {
+  afficheInstant,
+  etatScene,
+  instant,
+  majTemps,
+  majVue,
+  reinitialiseScene,
+  saute,
+  type EtatScene,
+} from '../src/ui/scene-etat.ts'
+import { epoqueAffichee } from '../src/App.tsx'
 
 const SITE: Site = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
 
@@ -127,5 +137,52 @@ describe('§5.1 — le type d’objectif pilote la projection de la scène', () 
     expect(html).toContain('MODE_FISHEYE')
     // Un objectif fisheye ne produit pas de projection gnomonique : elle n'est pas proposée.
     expect(html).not.toContain('MODE_CADRE')
+  })
+})
+
+describe('T-0056 — s’abonner à une tranche, pas au magasin entier', () => {
+  beforeEach(() => {
+    reinitialiseScene()
+  })
+
+  /**
+   * Dix secondes de temps qui défile, à la cadence à laquelle la boucle de rendu publie son
+   * compte rendu (`PERIODE_DIAGNOSTIC_MS` = 500 ms) et le facteur de défilement par défaut
+   * (×60). Chaque publication change l'identité de l'état : c'est le nombre de rendus qu'un
+   * abonnement complet — celui que `App` portait — impose à tout l'arbre.
+   */
+  function publieDixSecondes(): { readonly etats: number; readonly epoques: number } {
+    const depart = etatScene().msAffiche
+    const etats = new Set<EtatScene>()
+    const epoques = new Set<number>()
+    for (let n = 1; n <= 20; n++) {
+      // ×60 : une demi-seconde de montre vaut trente secondes de ciel.
+      afficheInstant(depart + n * 30_000, {
+        fps: 24 + (n % 3),
+        etoilesExaminees: 10_000 + n,
+        etoilesDessinees: 2_000 + n,
+        cellules: 40,
+        labels: 12,
+      })
+      etats.add(etatScene())
+      epoques.add(epoqueAffichee(etatScene()))
+    }
+    return { etats: etats.size, epoques: epoques.size }
+  }
+
+  it('ne réveille l’application que quand sa tranche change', () => {
+    const mesure = publieDixSecondes()
+    // Avant : un rendu de `App` par publication, soit deux par seconde.
+    expect(mesure.etats).toBe(20)
+    // Après : l'époque de précession est prise au jour près, dix minutes de ciel ne la
+    // changent pas — `App` ne se rend plus du tout pendant ces dix secondes.
+    expect(mesure.epoques).toBe(1)
+  })
+
+  it('réveille quand même l’application quand le jour affiché change', () => {
+    const depart = etatScene().msAffiche
+    const avant = epoqueAffichee(etatScene())
+    afficheInstant(depart + 2 * 86_400_000)
+    expect(epoqueAffichee(etatScene())).toBeGreaterThan(avant)
   })
 })

@@ -2,7 +2,7 @@
 {
   "id": "T-0042",
   "titre": "Les repères du planétarium passent par-dessus l’aperçu",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "s",
   "tags": [

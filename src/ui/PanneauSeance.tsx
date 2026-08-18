@@ -16,6 +16,7 @@
 
 import type { ReactNode } from 'react'
 import type { MasqueHorizon, SeuilsSite } from '../core/site.ts'
+import { SOURCE_TABLE_BORTLE } from '../registry/bortle.ts'
 import { ONGLETS, choisisOnglet, useSeance, type Onglet } from './seance-etat.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, Terme } from './Terme.tsx'
@@ -120,6 +121,10 @@ export function PanneauSeance(props: PanneauSeanceProps) {
             />
           </>
         )}
+
+        {/* La table qui traduit le Bortle saisi en fond de ciel dit sa propre limite de
+            validité : elle se lit à côté du champ qui l'alimente. */}
+        <p className="tracee-source">Fond de ciel : {SOURCE_TABLE_BORTLE}</p>
       </section>
 
       <div className="onglets" role="tablist" aria-label="Intention de séance">

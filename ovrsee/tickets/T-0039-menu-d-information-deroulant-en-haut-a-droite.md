@@ -2,7 +2,7 @@
 {
   "id": "T-0039",
   "titre": "Menu d’information déroulant en haut à droite",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "m",
   "epic": "T-0038",

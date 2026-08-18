@@ -3,7 +3,7 @@
   "id": "T-0043",
   "titre": "Choisir sa cible parmi ce que le ciel offre",
   "type": "epic",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "l",
   "tags": [

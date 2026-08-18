@@ -87,17 +87,6 @@ export function tempsSideralLocal(date: Date, longitudeDeg: number): Traced<numb
   })
 }
 
-/** Angle de rotation du ciel, une seule matrice par image (§3.1). */
-export function angleRotationCiel(date: Date, longitudeDeg: number): Traced<number> {
-  const tsl = tempsSideralLocal(date, longitudeDeg)
-  return trace({
-    value: tsl.value * K('ROTATION_CIEL_DEG_H'),
-    formula: 'ANGLE_ROTATION_CIEL',
-    inputs: { tsl_h: tsl.value },
-    constants: ['ROTATION_CIEL_DEG_H'],
-  })
-}
-
 /** Décalage angulaire dû à la précession générale, en degrés (§3.1, §3.4). */
 export function precessionDeg(nombreAnnees: number): Traced<number> {
   const ARCSEC_PAR_DEGRE = 3600

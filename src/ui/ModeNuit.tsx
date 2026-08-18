@@ -15,8 +15,11 @@ import { useEffect, useState } from 'react'
 import { K } from '../registry/constants.ts'
 import { Etiquette, Terme } from './Terme.tsx'
 
-export type TypeDalle = 'OLED' | 'LCD' | 'INCONNUE'
-export type AutoActivation = 'JAMAIS' | 'AU_CREPUSCULE'
+const DALLES = ['OLED', 'LCD', 'INCONNUE'] as const
+const AUTO_ACTIVATIONS = ['JAMAIS', 'AU_CREPUSCULE'] as const
+
+export type TypeDalle = (typeof DALLES)[number]
+export type AutoActivation = (typeof AUTO_ACTIVATIONS)[number]
 
 export interface EtatModeNuit {
   readonly actif: boolean
@@ -35,12 +38,39 @@ export const ETAT_INITIAL: EtatModeNuit = Object.freeze({
   autoActivation: 'JAMAIS',
 })
 
-/** Le mode reste actif au redémarrage et entre les vues (§11.1). */
+function estParmi<T extends string>(valeur: unknown, valeurs: readonly T[]): valeur is T {
+  return typeof valeur === 'string' && (valeurs as readonly string[]).includes(valeur)
+}
+
+/**
+ * Le mode reste actif au redémarrage et entre les vues (§11.1).
+ *
+ * Le stockage local est hors du périmètre de confiance : une clé retouchée, ou écrite par
+ * une version antérieure, ne doit pas se propager dans l'état. Chaque champ de forme
+ * inattendue retombe sur `ETAT_INITIAL`, les champs intrus sont ignorés.
+ */
 export function litEtatPersiste(): EtatModeNuit {
   if (typeof localStorage === 'undefined') return ETAT_INITIAL
   try {
     const brut = localStorage.getItem(CLE_STOCKAGE)
-    return brut === null ? ETAT_INITIAL : { ...ETAT_INITIAL, ...(JSON.parse(brut) as object) }
+    if (brut === null) return ETAT_INITIAL
+    const lu: unknown = JSON.parse(brut)
+    if (typeof lu !== 'object' || lu === null) return ETAT_INITIAL
+    const champs = lu as Record<string, unknown>
+    const plancher = K('LUMINANCE_PLANCHER_MODE_NUIT')
+    return {
+      actif: typeof champs.actif === 'boolean' ? champs.actif : ETAT_INITIAL.actif,
+      luminance:
+        typeof champs.luminance === 'number' &&
+        champs.luminance >= plancher &&
+        champs.luminance <= LUMINANCE_NOMINALE
+          ? champs.luminance
+          : ETAT_INITIAL.luminance,
+      typeDalle: estParmi(champs.typeDalle, DALLES) ? champs.typeDalle : ETAT_INITIAL.typeDalle,
+      autoActivation: estParmi(champs.autoActivation, AUTO_ACTIVATIONS)
+        ? champs.autoActivation
+        : ETAT_INITIAL.autoActivation,
+    }
   } catch {
     return ETAT_INITIAL
   }

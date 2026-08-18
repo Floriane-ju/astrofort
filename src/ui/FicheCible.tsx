@@ -40,6 +40,7 @@ import type { Traced } from '../core/traced.ts'
 import { SaisieRefuseeError } from '../registry/domains.ts'
 import { PRESETS_SNR } from '../registry/verdicts.ts'
 import { SOURCE_TABLE_CONTRASTE } from '../registry/contrast.ts'
+import { SOURCE_TABLE_FILTRES } from '../registry/filters.ts'
 import { TYPES_OBJET, type ObjetCielProfond, type TypeObjet } from '../data/deepsky.ts'
 import {
   isoRecommande,
@@ -50,7 +51,7 @@ import {
 import { ciblesVisibles, parType, typesPresents, type CibleVisible } from '../core/visibles.ts'
 import { cielInstantane } from '../core/horloges.ts'
 import type { Site } from '../core/ephem.ts'
-import { majVue, useScene } from './scene-etat.ts'
+import { majVue, useTrancheScene, type EtatScene } from './scene-etat.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, Terme } from './Terme.tsx'
 
@@ -84,6 +85,14 @@ const CIBLES_LISTEES_MAX = 200
  * de granularité ne change pas quel objet est au-dessus de l'horizon.
  */
 const MS_PAR_MINUTE = 60_000
+
+/**
+ * T-0056 — la fiche s'abonne à cette minute, pas au magasin entier : entre deux publications
+ * de la même minute, il n'y a rien à recalculer ni à redessiner.
+ */
+function minuteAffichee(etat: EtatScene): number {
+  return Math.floor(etat.msAffiche / MS_PAR_MINUTE)
+}
 
 /** L'ordre des groupes dit ce que le setup fera de la cible, du plus direct au plus long. */
 const VERDICTS_GROUPES: readonly VerdictDetectabilite[] = [
@@ -238,8 +247,7 @@ export function FicheCible(props: FicheCibleProps) {
     setPosAngDeg(valeurs.posAngDeg)
   }
 
-  const { msAffiche } = useScene()
-  const minuteAffichee = Math.floor(msAffiche / MS_PAR_MINUTE)
+  const minute = useTrancheScene(minuteAffichee)
   const { site, catalogue, sbCiel, mLimOeil } = props
   const dMm = props.optique.dMm.value
 
@@ -247,12 +255,12 @@ export function FicheCible(props: FicheCibleProps) {
     () =>
       ciblesVisibles({
         catalogue,
-        matriceCiel: cielInstantane(site, new Date(minuteAffichee * MS_PAR_MINUTE)).matrice,
+        matriceCiel: cielInstantane(site, new Date(minute * MS_PAR_MINUTE)).matrice,
         sbCiel,
         mLimOeil,
         dMm,
       }),
-    [catalogue, site, minuteAffichee, sbCiel, mLimOeil, dMm],
+    [catalogue, site, minute, sbCiel, mLimOeil, dMm],
   )
   // T-0050 — le filtre tombe avant le plafond : filtrer les 200 plus brillantes du ciel
   // entier ne dirait rien du ciel. Le compte annoncé suit le filtre.
@@ -869,6 +877,7 @@ function Verdicts({
                   <p className={conseils.filtre.declenche ? 'cause' : 'etat'}>
                     {conseils.filtre.message}
                   </p>
+                  <p className="tracee-source">Familles de filtres : {SOURCE_TABLE_FILTRES}</p>
                   {/* §10.3 — recommandation d'équipement : catégorie et gain chiffré, rien d'autre. */}
                   <p className="etat">{conseils.recommandations.message}</p>
                   {conseils.recommandations.recommandations.length > 0 && (

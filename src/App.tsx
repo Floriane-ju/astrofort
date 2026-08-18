@@ -55,7 +55,7 @@ import { PanneauExplorer } from './ui/PanneauExplorer.tsx'
 import { PanneauSeance } from './ui/PanneauSeance.tsx'
 import { PanneauMateriel, modeObjectif, type TypeObjectif } from './ui/PanneauMateriel.tsx'
 import { Verification } from './ui/Verification.tsx'
-import { etatScene, majVue, useScene } from './ui/scene-etat.ts'
+import { etatScene, majVue, useTrancheScene, type EtatScene } from './ui/scene-etat.ts'
 import { ouvreCible, useSeance } from './ui/seance-etat.ts'
 import type { ObjetCielProfond } from './data/deepsky.ts'
 import type { Etoile } from './data/catalog.ts'
@@ -70,7 +70,7 @@ import {
 import {
   demandePersistance,
   exporteDonneesUtilisateur,
-  importeDonneesUtilisateur,
+  importeFichierUtilisateur,
 } from './data/persistence.ts'
 import { K } from './registry/constants.ts'
 import type { Traced } from './core/traced.ts'
@@ -88,6 +88,25 @@ import { NiveauContext, Terme, type NiveauUtilisateur } from './ui/Terme.tsx'
 
 /** Objectif de qualité retenu pour le plan de la nuit : « correct » au sens de §7.3. */
 const PRESET_SNR_PLAN = 10
+
+/**
+ * T-0056 — le point zéro et l'ISO du boîtier de référence ne dépendent que d'une constante
+ * de module : les réévaluer à chaque rendu de l'application ne pouvait rien changer.
+ */
+const ZERO_SYSTEME = pointZeroSysteme(BOITIER_REFERENCE)
+const ISO_RETENU = isoRecommande(BOITIER_REFERENCE)
+
+const MS_PAR_JOUR = 86_400_000
+
+/**
+ * T-0056 — la tranche du magasin de scène dont l'application dépend vraiment : l'époque de
+ * précession, arrondie au jour. La boucle republie l'instant affiché deux fois par seconde ;
+ * l'écart de frontières qu'en tire l'onglet Explorer bouge de 0,014° par an. S'abonner à la
+ * journée plutôt qu'à la milliseconde, c'est ne plus rendre l'arbre entier à cette cadence.
+ */
+export function epoqueAffichee(etat: EtatScene): number {
+  return epoqueAnnee(new Date(Math.floor(etat.msAffiche / MS_PAR_JOUR) * MS_PAR_JOUR))
+}
 
 /** Site et configuration ciel profond de l'Annexe A. */
 const DEFAUT = {
@@ -149,7 +168,7 @@ export function App() {
   const modeReseau = useSyncExternalStore(abonneModeReseau, modeReseauCourant, () => 'EN_LIGNE')
 
   // Pointage, temps et intention : les deux magasins que la scène et les panneaux partagent.
-  const { msAffiche } = useScene()
+  const anneeEpoque = useTrancheScene(epoqueAffichee)
   const { cible: cibleDuCiel, file } = useSeance()
 
   useEffect(() => {
@@ -174,18 +193,20 @@ export function App() {
    */
   const masque: MasqueHorizon = useMemo(() => masquePlat(), [])
 
-  const zeroSysteme = pointZeroSysteme(BOITIER_REFERENCE)
+  const site = useMemo(
+    () => ({
+      latitudeDeg: Number(latitude),
+      longitudeDeg: Number(longitude),
+      altitudeM: Number(altitude),
+    }),
+    [latitude, longitude, altitude],
+  )
 
   const calcul = useMemo((): Calcul => {
     try {
       // Départ à midi UTC : la recherche du coucher part de là.
       const depart = new Date(`${dateIso}T12:00:00Z`)
       const offsetFuseauH = -new Date().getTimezoneOffset() / 60
-      const site = {
-        latitudeDeg: Number(latitude),
-        longitudeDeg: Number(longitude),
-        altitudeM: Number(altitude),
-      }
       const capteur = capteurEffectif(BOITIER_REFERENCE, capteurMode)
       const focaleMm = Number(focale)
       const ouvertureN = Number(ouverture)
@@ -221,9 +242,7 @@ export function App() {
       throw erreur
     }
   }, [
-    latitude,
-    longitude,
-    altitude,
+    site,
     bortle,
     sqm,
     dateIso,
@@ -243,21 +262,10 @@ export function App() {
     }
   }, [calcul, modeNuit])
 
-  const site = useMemo(
-    () => ({
-      latitudeDeg: Number(latitude),
-      longitudeDeg: Number(longitude),
-      altitudeM: Number(altitude),
-    }),
-    [latitude, longitude, altitude],
-  )
-
   const fenetreUtile = useMemo(
     () => (calcul.ok ? calculeFenetreUtile(site, calcul.nuit) : null),
     [calcul, site],
   )
-
-  const iso = isoRecommande(BOITIER_REFERENCE)
 
   /** Index de sélection : construit une fois, lu par la scène et par l'onglet Explorer. */
   const index = useMemo(() => construitIndex(etoiles), [etoiles])
@@ -295,18 +303,18 @@ export function App() {
     return {
       tPoseS: file.tPoseS,
       dMm: calcul.optique.dMm.value,
-      zpSys: zeroSysteme.valeur,
+      zpSys: ZERO_SYSTEME.valeur,
       eCielPxS: fluxCiel({
         sbMagArcsec2: calcul.ciel.sbCiel.value,
-        zpSys: zeroSysteme.valeur,
+        zpSys: ZERO_SYSTEME.valeur,
         pitchUm: calcul.capteur.pitchUm,
         ouvertureN: calcul.ouvertureN,
-        zpEstime: zeroSysteme.estime,
+        zpEstime: ZERO_SYSTEME.estime,
       }).value,
-      readNoiseE: iso.readNoiseE ?? K('READ_NOISE_DEFAUT_E'),
-      zpEstime: zeroSysteme.estime,
+      readNoiseE: ISO_RETENU.readNoiseE ?? K('READ_NOISE_DEFAUT_E'),
+      zpEstime: ZERO_SYSTEME.estime,
     }
-  }, [calcul, file.tPoseS, zeroSysteme.valeur, zeroSysteme.estime, iso.readNoiseE])
+  }, [calcul, file.tPoseS])
 
   /**
    * Ce que la scène doit savoir du filé pour l'incruster dans le cadre.
@@ -334,12 +342,12 @@ export function App() {
    * grossit, c'est ce point-là qu'il faut déporter, pas le rendu.
    */
   const plan = useMemo(() => {
-    if (!calcul.ok || catalogue.length === 0) return null
+    if (!calcul.ok || catalogue.length === 0 || fenetreUtile === null) return null
     return planSession(
       {
         site,
         nuit: calcul.nuit,
-        fenetreUtile: calculeFenetreUtile(site, calcul.nuit),
+        fenetreUtile,
         masque,
         fovHDeg: calcul.optique.fovHDeg.value,
         echApx: calcul.optique.echApx.value,
@@ -347,11 +355,11 @@ export function App() {
         capteurHMm: calcul.capteur.capteurHMm,
         pitchUm: calcul.capteur.pitchUm,
         ouvertureN: calcul.ouvertureN,
-        zpSys: zeroSysteme.valeur,
-        zpEstime: zeroSysteme.estime,
-        readNoiseE: iso.readNoiseE,
+        zpSys: ZERO_SYSTEME.valeur,
+        zpEstime: ZERO_SYSTEME.estime,
+        readNoiseE: ISO_RETENU.readNoiseE,
         tailleRawMo: BOITIER_REFERENCE.tailleRawMo,
-        isoSession: iso.iso,
+        isoSession: ISO_RETENU.iso,
         sbCielNoir: calcul.ciel.sbCiel.value,
         mLimOeil: calcul.ciel.mLimOeil.value,
         tMaxS: calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value,
@@ -361,8 +369,7 @@ export function App() {
       },
       catalogue,
     )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calcul, catalogue, masque, niveau, typeMonture, site, iso.iso])
+  }, [calcul, catalogue, masque, niveau, typeMonture, site, fenetreUtile])
 
   /**
    * §5.1 — changer d'objectif change la projection, pas un réglage de rendu. Si la scène
@@ -392,8 +399,18 @@ export function App() {
   }
 
   async function surImport(fichier: File) {
-    await importeDonneesUtilisateur(JSON.parse(await fichier.text()))
-    setMessagePersistance('Import terminé : les sites, profils et plans ont été restaurés.')
+    // Un fichier retouché ou illisible doit dire pourquoi il est refusé, pas disparaître
+    // en rejet non géré : sans message, l'import a l'air de ne rien faire (§12.3).
+    try {
+      await importeFichierUtilisateur(await fichier.text())
+      setMessagePersistance('Import terminé : les sites, profils et plans ont été restaurés.')
+    } catch (erreur) {
+      setMessagePersistance(
+        erreur instanceof Error
+          ? `Import abandonné, rien n’a été modifié. ${erreur.message}`
+          : 'Import abandonné, rien n’a été modifié : cause inconnue.',
+      )
+    }
   }
 
   const topbar = (
@@ -498,7 +515,7 @@ export function App() {
       gaiaCharge={etat === null ? false : gaiaCharge(etat.catalogues)}
       profondeurMag={index.profondeurMag}
       mLimOeil={calcul.ok ? calcul.ciel.mLimOeil.value : null}
-      epoqueAnnee={epoqueAnnee(new Date(msAffiche))}
+      epoqueAnnee={anneeEpoque}
       modeNuit={modeNuit.actif}
     />
   )
@@ -512,7 +529,7 @@ export function App() {
       pitchUm={calcul.capteur.pitchUm}
       ouvertureN={calcul.ouvertureN}
       boitier={BOITIER_REFERENCE}
-      zeroSysteme={zeroSysteme}
+      zeroSysteme={ZERO_SYSTEME}
       sbCiel={calcul.ciel.sbCiel.value}
       mLimOeil={calcul.ciel.mLimOeil.value}
       // Sans suivi, c'est la NPF qui plafonne la pose (§9.1) — jamais rien.

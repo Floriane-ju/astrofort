@@ -2,7 +2,7 @@
 {
   "id": "T-0041",
   "titre": "Une alerte se signale sur le menu fermé",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "s",
   "epic": "T-0038",

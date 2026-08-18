@@ -2,7 +2,7 @@
 {
   "id": "T-0049",
   "titre": "Le type de l’objet se lit dans la liste",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "s",
   "epic": "T-0048",

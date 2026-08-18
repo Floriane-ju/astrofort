@@ -12,7 +12,7 @@
  * scènes doivent coexister, ce module devient un contexte.
  */
 
-import { useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 import { K } from '../registry/constants.ts'
 import type { ModeProjection } from '../core/projection.ts'
 import type { ModeTemps, PasAstronomique } from '../core/curseur-temps.ts'
@@ -235,6 +235,23 @@ export function saute(secondes: number): void {
 export function reinitialiseScene(): void {
   instant.ms = Date.now()
   pose({ ...ETAT_INITIAL, msAffiche: instant.ms })
+}
+
+/**
+ * T-0056 — s'abonner à une tranche du magasin plutôt qu'à sa totalité.
+ *
+ * `useScene` réveille son composant à chaque écriture, donc deux fois par seconde : c'est la
+ * cadence à laquelle la boucle republie l'instant affiché et le diagnostic. Un composant qui
+ * ne lit qu'une valeur dérivée — l'époque à l'année, la minute affichée — n'a rien à
+ * redessiner entre deux publications identiques.
+ *
+ * Le sélecteur doit être défini au niveau du module (identité stable) et rendre une valeur
+ * comparable par `Object.is` : c'est cette comparaison que `useSyncExternalStore` applique
+ * pour décider de rendre ou non.
+ */
+export function useTrancheScene<T>(selecteur: (etat: EtatScene) => T): T {
+  const lit = useCallback(() => selecteur(etatScene()), [selecteur])
+  return useSyncExternalStore(abonne, lit, lit)
 }
 
 export function useScene(): {

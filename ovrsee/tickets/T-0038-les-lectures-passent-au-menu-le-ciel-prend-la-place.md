@@ -3,7 +3,7 @@
   "id": "T-0038",
   "titre": "Les lectures passent dans un menu, le ciel prend toute la place",
   "type": "epic",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "tags": [
     "ui",

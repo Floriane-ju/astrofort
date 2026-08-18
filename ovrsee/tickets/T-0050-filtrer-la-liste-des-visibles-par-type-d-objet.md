@@ -2,7 +2,7 @@
 {
   "id": "T-0050",
   "titre": "Filtrer la liste des visibles par type d’objet",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "s",
   "epic": "T-0048",

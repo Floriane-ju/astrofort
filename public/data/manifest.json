@@ -5,7 +5,7 @@
     "nombreEntrees": 83479,
     "octets": 1001748,
     "sha256": "01e65d04bbd4961f6dc01029cd969b876ff062f1fe8b80d08fe421c60a03c4b7",
-    "source": "HYG Database CURRENT (v4.1), filtré à magnitude ≤ 9 — https://raw.githubusercontent.com/astronexus/HYG-Database/main/hyg/CURRENT/hygdata_v41.csv",
+    "source": "HYG Database CURRENT (v4.1), filtré à magnitude ≤ 9 — https://raw.githubusercontent.com/astronexus/HYG-Database/3bf37f4b2d5460e1278286320d1d62fab9b493c1/hyg/CURRENT/hygdata_v41.csv",
     "obligatoire": true
   },
   {
@@ -14,7 +14,7 @@
     "nombreEntrees": 12518,
     "octets": 350504,
     "sha256": "d9fb6268575d0487d4265895f51ac578ad4af209a2466493f2e52e514356b4ff",
-    "source": "OpenNGC — https://raw.githubusercontent.com/mattiaverga/OpenNGC/master/database_files/NGC.csv + https://raw.githubusercontent.com/mattiaverga/OpenNGC/master/database_files/addendum.csv",
+    "source": "OpenNGC — https://raw.githubusercontent.com/mattiaverga/OpenNGC/da90466031b0372c896588b85be6016c617e205b/database_files/NGC.csv + https://raw.githubusercontent.com/mattiaverga/OpenNGC/9609f2f29e2d6b108b16f2bfe810aab82f27aa95/database_files/addendum.csv",
     "obligatoire": true
   },
   {
@@ -30,9 +30,9 @@
     "nom": "constellations",
     "version": "1",
     "nombreEntrees": 943,
-    "octets": 269604,
-    "sha256": "c0b619801b33ab0b73bd993ca5009cf357a48fcc07b6a9f62bab0e52f7d6f789",
-    "source": "Stellarium, culture « modern » — https://raw.githubusercontent.com/Stellarium/stellarium/master/skycultures/modern/index.json ; frontières IAU de Delporte (B1875)",
+    "octets": 269638,
+    "sha256": "e6052103cf335c1b999437f7998a8889ad4ee3bb837b4887dee21d153be6fbcb",
+    "source": "Stellarium, culture « modern » — https://raw.githubusercontent.com/Stellarium/stellarium/daace2add6a1bf886e8ee1934f51e9c69f818d18/skycultures/modern/index.json ; frontières IAU de Delporte (B1875)",
     "obligatoire": true
   }
 ]

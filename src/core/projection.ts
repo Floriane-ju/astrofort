@@ -279,12 +279,5 @@ export function rayonEtoilePx(magV: number): number {
   )
 }
 
-/** Même modèle, tracé, pour l'explication §10.2. */
-export function traceRayonEtoile(magV: number): Traced<number> {
-  return trace({
-    value: rayonEtoilePx(magV),
-    formula: 'RAYON_ETOILE',
-    inputs: { mag: magV },
-    constants: ['RAYON_ETOILE_R0_PX', 'COEF_RAYON_MAGNITUDE', 'MAG_REFERENCE_RAYON'],
-  })
-}
+// Le rayon n'a pas de trace §10.2 : il s'applique à des étoiles dessinées au canevas, où
+// rien ne se déplie. La formule `RAYON_ETOILE` reste au formulaire de l'Annexe B (T-0063).

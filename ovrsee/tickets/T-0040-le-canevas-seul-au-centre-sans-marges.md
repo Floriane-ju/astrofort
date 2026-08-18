@@ -2,7 +2,7 @@
 {
   "id": "T-0040",
   "titre": "Le canevas seul au centre, sans marges",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "s",
   "epic": "T-0038",

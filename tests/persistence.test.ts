@@ -13,6 +13,7 @@ import {
   VERSION_EXPORT,
   exporteDonneesUtilisateur,
   importeDonneesUtilisateur,
+  importeFichierUtilisateur,
 } from '../src/data/persistence.ts'
 
 const SITE: SiteEnregistre = {
@@ -121,5 +122,72 @@ describe('export et réimport §12.3', () => {
     ).rejects.toThrow(/version 99/)
     await expect(importeDonneesUtilisateur('pas un objet')).rejects.toThrow(ExportInvalideError)
     expect((await exporteDonneesUtilisateur()).sites[0]).toEqual(SITE)
+  })
+})
+
+/** Un export bien formé autour de la section que le test veut abîmer. */
+function exportAvec(sections: Partial<Record<'sites' | 'profils' | 'plans', readonly unknown[]>>) {
+  return {
+    format: 'astrofort-export',
+    version: VERSION_EXPORT,
+    exporteLe: new Date().toISOString(),
+    sites: [],
+    profils: [],
+    plans: [],
+    ...sections,
+  }
+}
+
+describe('validation du réimport §12.3', () => {
+  it('affiche une cause lisible quand le fichier n’est pas du JSON', async () => {
+    await expect(importeFichierUtilisateur('{ ceci n’est pas du JSON')).rejects.toThrow(
+      ExportInvalideError,
+    )
+    await expect(importeFichierUtilisateur('{ ceci n’est pas du JSON')).rejects.toThrow(/JSON/)
+  })
+
+  it('affiche une cause lisible quand la version de l’export est inconnue', async () => {
+    await expect(
+      importeFichierUtilisateur(JSON.stringify({ ...exportAvec({}), version: 99 })),
+    ).rejects.toThrow(/version 99/)
+  })
+
+  it('refuse un site à latitude non numérique en nommant le champ et l’enregistrement', async () => {
+    const abime = { ...SITE, id: 'site-abime', latitudeDeg: 'abc' }
+    await expect(importeDonneesUtilisateur(exportAvec({ sites: [abime] }))).rejects.toThrow(
+      /site-abime/,
+    )
+    await expect(importeDonneesUtilisateur(exportAvec({ sites: [abime] }))).rejects.toThrow(
+      /latitude/,
+    )
+  })
+
+  it('refuse une latitude hors de la plage du registre', async () => {
+    const abime = { ...SITE, id: 'site-hors-plage', latitudeDeg: 120 }
+    await expect(importeDonneesUtilisateur(exportAvec({ sites: [abime] }))).rejects.toThrow(
+      /latitude/,
+    )
+  })
+
+  it('refuse un profil dont l’énuméré est inconnu', async () => {
+    const abime = { ...PROFIL, id: 'profil-abime', capteurMode: 'MOYEN_FORMAT' }
+    await expect(importeDonneesUtilisateur(exportAvec({ profils: [abime] }))).rejects.toThrow(
+      /capteurMode/,
+    )
+  })
+
+  it('n’écrit rien à moitié quand un seul enregistrement est invalide', async () => {
+    const valide = { ...SITE, id: 'site-valide', nom: 'Site valide' }
+    const abime = { ...SITE, id: 'site-abime', altitudeM: null }
+    await expect(
+      importeDonneesUtilisateur(exportAvec({ sites: [valide, abime] })),
+    ).rejects.toThrow(ExportInvalideError)
+    const apres = await exporteDonneesUtilisateur()
+    expect(apres.sites.map((s) => s.id)).toEqual([SITE.id])
+  })
+
+  it('accepte un export produit par l’application', async () => {
+    const fichier = JSON.stringify(await exporteDonneesUtilisateur())
+    await expect(importeFichierUtilisateur(fichier)).resolves.toBeUndefined()
   })
 })

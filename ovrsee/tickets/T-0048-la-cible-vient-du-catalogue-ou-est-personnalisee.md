@@ -3,7 +3,7 @@
   "id": "T-0048",
   "titre": "La cible vient du catalogue, ou elle est personnalisée",
   "type": "epic",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "m",
   "tags": [
