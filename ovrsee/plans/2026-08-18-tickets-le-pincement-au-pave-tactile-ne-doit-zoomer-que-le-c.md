@@ -4,7 +4,30 @@
   "title": "Tickets — le pincement au pavé tactile ne doit zoomer que le ciel",
   "opened": "2026-08-18",
   "closed": null,
-  "commits": []
+  "commits": [
+    {
+      "sha": "1a619be",
+      "date": "2026-08-18",
+      "files": [
+        ".gitignore",
+        "src/App.tsx",
+        "src/core/labels.ts",
+        "src/ui/MenuInfos.tsx",
+        "src/ui/PanneauExplorer.tsx",
+        "src/ui/Planetarium.tsx",
+        "src/ui/couleurs.ts",
+        "src/ui/dessine-ciel.ts",
+        "src/ui/scene-etat.ts",
+        "src/ui/scene-overlay.ts",
+        "src/ui/styles.css",
+        "tests/cadre.test.ts",
+        "tests/coque.test.tsx",
+        "tests/dessine-ciel.test.ts",
+        "tests/mode-nuit.test.tsx",
+        "tests/zoom-planetarium.test.ts"
+      ]
+    }
+  ]
 }
 ---
 
