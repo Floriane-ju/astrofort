@@ -447,7 +447,7 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
 
   it('lit une entrée du catalogue comme la liste des visibles la lit', () => {
     const rendu = renderToStaticMarkup(<OptionsCatalogue catalogue={[M31]} saisie="M31" />)
-    expect(rendu).toContain('— Andromède · galaxie · mag 3.4')
+    expect(rendu).toContain('M31 — Andromède · galaxie · mag 3.4')
   })
 
   it('garde la cible de clic de §11.2 : le tiroir est un `.tiroir` comme les autres', () => {

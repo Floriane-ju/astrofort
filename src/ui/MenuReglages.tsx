@@ -57,17 +57,19 @@ export interface OptionsCatalogueProps {
 /**
  * Les options de la frappe en cours. `<datalist>` insère l'attribut `value` dans le champ et
  * ne montre le contenu textuel qu'en aide à la lecture : la désignation seule est la valeur,
- * le reste de `libelleObjet` est le commentaire — sinon la saisie retenue serait « M45 —
- * Pléiades · amas ouvert · mag 1.6 », qu'aucune recherche ultérieure ne retrouverait. Le
- * rendu de ce contenu textuel varie d'un navigateur à l'autre : c'est une aide, jamais le
- * porteur de l'information.
+ * sinon la saisie retenue serait « M45 — Pléiades · amas ouvert · mag 1.6 », qu'aucune
+ * recherche ultérieure ne retrouverait.
+ *
+ * Le contenu textuel porte `libelleObjet` en entier, désignation comprise : les navigateurs
+ * qui n'affichent que ce texte — et non la valeur à côté — laissaient sinon la liste sans son
+ * « M47 ». La répétition chez ceux qui montrent les deux coûte moins qu'une liste anonyme.
  */
 export function OptionsCatalogue(props: OptionsCatalogueProps) {
   return (
     <>
       {chercheCatalogue(props.catalogue, props.saisie, RESULTATS_RENDUS_MAX).map((o) => (
         <option key={o.designation} value={o.designation}>
-          {libelleObjet(o).slice(o.designation.length)}
+          {libelleObjet(o)}
         </option>
       ))}
     </>
@@ -117,13 +119,13 @@ export function MenuReglages(props: MenuReglagesProps) {
                 type="text"
                 list={ID_LISTE}
                 value={saisie}
-                placeholder="M45, pléiades, NGC0224…"
-                // Choisir dans la liste déroulante insère la désignation complète : la même
-                // frappe qui ouvre la fiche est celle qui la résout.
+                placeholder="M45, pléiades, NGC0224… (Entrée pour ouvrir)"
+                // Frapper ne choisit rien : « M » puis « 1 » forme « M1 », une désignation
+                // valide, et ouvrait la fiche au milieu d'une saisie plus longue. Chercher et
+                // choisir sont deux gestes distincts — seul Entrée engage la cible.
                 onChange={(e) => {
                   setSaisie(e.target.value)
                   setIntrouvable(false)
-                  if (objetDesigne(props.catalogue, e.target.value) !== null) valide(e.target.value)
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') valide(saisie)
