@@ -2,7 +2,7 @@
 {
   "id": "T-0044",
   "titre": "Les cibles visibles, calculées pour ce setup",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "s",
   "epic": "T-0043",

@@ -2,7 +2,7 @@
 {
   "id": "T-0046",
   "titre": "Un bouton « Voir » amène la cible au centre",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "s",
   "epic": "T-0043",

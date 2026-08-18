@@ -4,7 +4,24 @@
   "title": "Choisir sa cible parmi ce que le ciel offre",
   "opened": "2026-08-18",
   "closed": null,
-  "commits": []
+  "commits": [
+    {
+      "sha": "6340349",
+      "date": "2026-08-18",
+      "files": [
+        "src/App.tsx",
+        "src/core/recherche-catalogue.ts",
+        "src/core/visibles.ts",
+        "src/ui/FicheCible.tsx",
+        "src/ui/MenuReglages.tsx",
+        "src/ui/styles.css",
+        "tests/cible.test.tsx",
+        "tests/coque.test.tsx",
+        "tests/recherche-catalogue.test.ts",
+        "tests/visibles.test.ts"
+      ]
+    }
+  ]
 }
 ---
 

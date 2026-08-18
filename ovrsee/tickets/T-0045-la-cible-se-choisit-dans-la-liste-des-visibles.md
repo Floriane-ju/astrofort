@@ -2,7 +2,7 @@
 {
   "id": "T-0045",
   "titre": "La cible se choisit dans la liste des visibles",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "m",
   "epic": "T-0043",

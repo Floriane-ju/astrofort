@@ -2,7 +2,7 @@
 {
   "id": "T-0047",
   "titre": "Une roue crantée de réglages en haut à droite",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "s",
   "epic": "T-0043",
