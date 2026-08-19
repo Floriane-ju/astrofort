@@ -1,9 +1,9 @@
 ---
 {
-  "status": "open",
+  "status": "closed",
   "title": "Tickets — le pincement au pavé tactile ne doit zoomer que le ciel",
   "opened": "2026-08-18",
-  "closed": null,
+  "closed": "2026-08-18",
   "commits": [
     {
       "sha": "1a619be",

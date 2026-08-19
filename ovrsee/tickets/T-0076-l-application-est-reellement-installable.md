@@ -2,7 +2,7 @@
 {
   "id": "T-0076",
   "titre": "L'application est réellement installable",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "m",
   "tags": [

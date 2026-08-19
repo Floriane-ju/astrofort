@@ -2,7 +2,7 @@
 {
   "id": "T-0064",
   "titre": "Les composants qui mêlent état, calcul et JSX se découpent",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "l",
   "tags": [

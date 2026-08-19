@@ -40,6 +40,22 @@ body {
   transition: background-color 600ms ease, color 600ms ease;
 }
 
+/* T-0072 — arbitrage entre §11.1 et WCAG 2.3.3.
+
+   La préférence système demande qu'aucun mouvement ne s'impose ; §11.1 interdit le
+   basculement brutal et le flash. Les deux sont tenables parce que cette transition ne
+   déplace rien : c'est un fondu de luminance, pas un mouvement. Ce qu'on coupe est donc sa
+   DURÉE, pas son existence — 120 ms, sous le seuil où un fondu se lit encore comme une
+   animation, au-dessus du zéro qui redeviendrait le flash que §11.1 proscrit.
+
+   L'auto-activation au crépuscule (§11.1) est le cas qui justifie la règle : là, le
+   basculement n'est pas demandé au moment où il se produit. */
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+}
+
 * {
   box-sizing: border-box;
 }

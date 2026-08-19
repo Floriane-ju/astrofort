@@ -28,6 +28,64 @@
         "tests/registry.test.ts",
         "tests/scene-etat.test.ts"
       ]
+    },
+    {
+      "sha": "dead4ec",
+      "date": "2026-08-19",
+      "files": [
+        ".claude/rules/astrofort.md",
+        ".claude/settings.json",
+        ".claude/skills/astro-feature-review/SKILL.md",
+        ".claude/skills/astro-feature-review/references/arbitrages.md",
+        ".claude/skills/astro-feature-review/references/formules.md",
+        ".claude/skills/astro-feature-review/references/pieges.md",
+        ".claude/skills/astro-feature-review/scripts/astro_calc.py",
+        ".gitignore",
+        "CLAUDE.md",
+        "src/App.tsx",
+        "src/core/session-candidates.ts",
+        "src/core/session-nuit.ts",
+        "src/core/session-score.ts",
+        "src/core/session-types.ts",
+        "src/core/session.ts",
+        "src/ui/BarreHaut.tsx",
+        "src/ui/ChampsCible.tsx",
+        "src/ui/FicheCible.tsx",
+        "src/ui/MenuReglages.tsx",
+        "src/ui/PanneauFile-sections.tsx",
+        "src/ui/PanneauFile.tsx",
+        "src/ui/Planetarium.tsx",
+        "src/ui/RegionNuit.tsx",
+        "src/ui/RegionSeance.tsx",
+        "src/ui/Verdicts.tsx",
+        "src/ui/app-calcul.ts",
+        "src/ui/app-donnees.ts",
+        "src/ui/app-saisie.ts",
+        "src/ui/fiche-cible-calcul.ts",
+        "src/ui/fiche-cible-saisie.ts",
+        "src/ui/libelles-objet.ts",
+        "src/ui/panneau-file-lectures.ts",
+        "src/ui/planetarium-boucle.ts",
+        "src/ui/planetarium-gestes.ts",
+        "src/ui/planetarium-incrustation.ts",
+        "src/ui/planetarium-materiel.ts",
+        "src/ui/planetarium-selection.ts",
+        "src/ui/scene-etat.ts"
+      ]
+    },
+    {
+      "sha": "c44c25e",
+      "date": "2026-08-19",
+      "files": [
+        "package.json",
+        "scripts/bench-ciel.ts",
+        "scripts/bench-incrustation.ts",
+        "src/core/projection.ts",
+        "src/ui/couleurs.ts",
+        "src/ui/dessine-ciel.ts",
+        "src/ui/planetarium-boucle.ts",
+        "tests/projection.test.ts"
+      ]
     }
   ]
 }

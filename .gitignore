@@ -6,6 +6,10 @@ dev-dist/
 # Les paquets binaires de public/data/ SONT suivis : un clone doit pouvoir
 # démarrer hors réseau (§12.2). Les régénérer avec `pnpm data:build`.
 
+# Réglages Claude Code propres à une machine.
+.claude/settings.local.json
+.DS_Store
+
 # Captures d'écran ovrsee : régénérées à chaque commit, purge auto côté
 # disque (30j puis 1/semaine) — inutile de les suivre dans git.
 ovrsee/pages/shots/
@@ -15,7 +19,3 @@ ovrsee/pages/shots/
 ovrsee/.active/
 ovrsee/.active-plan
 ovrsee/.active-ticket
-
-# Réglages Claude Code propres à une machine.
-.claude/settings.local.json
-.DS_Store

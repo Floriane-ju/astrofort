@@ -2,7 +2,7 @@
 {
   "id": "T-0062",
   "titre": "Les sources du registre s'affichent toutes",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "s",
   "tags": [
@@ -11,7 +11,7 @@
     "registre"
   ],
   "cree": "2026-08-18",
-  "maj": "2026-08-18",
+  "maj": "2026-08-19",
   "epic": "T-0054",
   "plan": null
 }

@@ -2,7 +2,7 @@
 {
   "id": "T-0065",
   "titre": "Le rendu du ciel alloue moins par image",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "m",
   "tags": [

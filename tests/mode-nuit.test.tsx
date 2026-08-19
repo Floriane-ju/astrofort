@@ -22,6 +22,7 @@ import {
   litEtatPersiste,
 } from '../src/ui/ModeNuit.tsx'
 import { K } from '../src/registry/constants.ts'
+import { etatScene } from '../src/ui/scene-etat.ts'
 
 const CSS = readFileSync(join(import.meta.dirname, '..', 'src', 'ui', 'styles.css'), 'utf8')
 
@@ -181,5 +182,52 @@ describe('interface rendue', () => {
     expect(ecran).toContain('Activer le mode nuit')
     expect(ecran).toContain('Au crépuscule nautique')
     expect(ecran).toMatch(/mode nuit/i)
+  })
+})
+
+/**
+ * T-0072 — `prefers-reduced-motion` (WCAG 2.3.3).
+ *
+ * Deux exigences se contredisent en apparence : §11.1 interdit le basculement brutal et le
+ * flash, la préférence système demande qu'aucun mouvement ne s'impose. Le compromis est écrit
+ * dans la feuille — fondu de luminance conservé, durée coupée — et vérifié ici, parce qu'une
+ * règle de style supprimée par mégarde ne casse aucun rendu.
+ */
+describe('mouvement réduit — WCAG 2.3.3', () => {
+  /** Le bloc `@media (prefers-reduced-motion: reduce)`, accolade fermante comprise. */
+  function blocMouvementReduit(): string {
+    const debut = CSS.search(/@media\s*\(prefers-reduced-motion:\s*reduce\)/)
+    expect(debut, 'aucune règle prefers-reduced-motion dans la feuille').toBeGreaterThan(-1)
+    return CSS.slice(debut, CSS.indexOf('\n}', debut) + 2)
+  }
+
+  it('raccourcit la transition du mode nuit sans la supprimer', () => {
+    const bloc = blocMouvementReduit()
+    const durees = [...bloc.matchAll(/(\d+)ms/g)].map((m) => Number(m[1]))
+    expect(durees.length, 'la préférence ne redéfinit aucune durée').toBeGreaterThan(0)
+    const nominale = Number(/transition:\s*background-color\s*(\d+)ms/.exec(CSS)?.[1])
+    for (const duree of durees) {
+      // Zéro rendrait le basculement brutal que §11.1 interdit.
+      expect(duree, `${duree}ms`).toBeGreaterThan(0)
+      expect(duree, `${duree}ms`).toBeLessThan(nominale)
+    }
+  })
+
+  it('ne laisse aucune autre animation s’imposer', () => {
+    // Rien ne bouge en dehors du fondu de bascule : ni image clé, ni défilement lissé,
+    // ni transition sur une propriété de position.
+    expect(CSS).not.toMatch(/@keyframes/)
+    expect(CSS).not.toMatch(/\banimation(-name)?:/)
+    expect(CSS).not.toMatch(/scroll-behavior:\s*smooth/)
+    const transitions = [...CSS.matchAll(/transition:\s*([^;]+);/g)].map((m) => m[1]!)
+    for (const declaration of transitions) {
+      expect(declaration, declaration).toMatch(/^(background-color|color)\b/)
+    }
+  })
+
+  it('n’anime le curseur temporel que sur demande explicite', () => {
+    // §11.2 — aucune animation non sollicitée. Le défilement n'est jamais l'état de départ :
+    // il ne peut donc pas démarrer de lui-même, et reste choisissable sous la préférence.
+    expect(etatScene().temps.modeTemps).not.toBe('DEFILEMENT')
   })
 })

@@ -1,9 +1,9 @@
 ---
 {
-  "status": "open",
+  "status": "closed",
   "title": "Choisir sa cible parmi ce que le ciel offre",
   "opened": "2026-08-18",
-  "closed": null,
+  "closed": "2026-08-18",
   "commits": [
     {
       "sha": "6340349",
