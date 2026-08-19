@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "data:build": "node scripts/build-catalogs.ts",
+    "icones:build": "node scripts/build-icones.ts",
     "bench:file": "node scripts/bench-incrustation.ts",
     "bench:ciel": "node scripts/bench-ciel.ts"
   },
