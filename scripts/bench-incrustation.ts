@@ -158,6 +158,10 @@ function projecteurCompte(base: Projecteur): { proj: Projecteur; projections: ()
       n++
       return base.projette(v)
     },
+    projetteEn: (x, y, z, out) => {
+      n++
+      return base.projetteEn(x, y, z, out)
+    },
     inverse: (x, y) => base.inverse(x, y),
   }
   return { proj, projections: () => n }

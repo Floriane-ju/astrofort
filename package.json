@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "data:build": "node scripts/build-catalogs.ts",
-    "bench:file": "node scripts/bench-incrustation.ts"
+    "bench:file": "node scripts/bench-incrustation.ts",
+    "bench:ciel": "node scripts/bench-ciel.ts"
   },
   "dependencies": {
     "astronomy-engine": "^2.1.19",

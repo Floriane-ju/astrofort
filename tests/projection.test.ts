@@ -15,6 +15,7 @@ import {
   magnitudeLimite,
   magnitudeRendue,
   matriceVue,
+  pointEcran,
   projecteur,
   rayonEtoilePx,
   type Vue,
@@ -64,6 +65,38 @@ describe('projection unifiée §3.3', () => {
       expect(p, mode).not.toBeNull()
       expect(p!.xPx, mode).toBeCloseTo(LARGEUR / 2, 6)
       expect(p!.yPx, mode).toBeCloseTo(HAUTEUR / 2, 6)
+    }
+  })
+
+  /**
+   * T-0065 — `projetteEn` existe pour que les boucles chaudes n'allouent rien ; `projette`
+   * n'en est que l'emballage. Ce test est la garantie que §3.3 tient encore : deux formes
+   * de la même projection, un seul résultat, y compris hors du domaine projetable et au
+   * point singulier du fisheye.
+   */
+  it('donne le même résultat en place et en allouant, dans les trois modes', () => {
+    const out = pointEcran()
+    for (const mode of ['MODE_PLANETARIUM', 'MODE_CADRE', 'MODE_FISHEYE'] as const) {
+      const p = projecteur(vue(mode, 60), IDENTITE)
+      for (let lon = 0; lon < 360; lon += 11) {
+        for (let lat = -80; lat <= 80; lat += 13) {
+          const v = versVecteur(lon, lat)
+          const attendu = p.projette(v)
+          const projete = p.projetteEn(v.x, v.y, v.z, out)
+          expect(projete, `${mode} ${lon}/${lat}`).toBe(attendu !== null)
+          if (attendu === null) continue
+          expect(out.xPx, `${mode} ${lon}/${lat}`).toBe(attendu.xPx)
+          expect(out.yPx, `${mode} ${lon}/${lat}`).toBe(attendu.yPx)
+          expect(out.thetaDeg, `${mode} ${lon}/${lat}`).toBe(attendu.thetaDeg)
+        }
+      }
+      // Le centre de visée : c'est là que le fisheye prend sa branche singulière.
+      const centre = versVecteur(180, 40)
+      const attendu = p.projette(centre)!
+      p.projetteEn(centre.x, centre.y, centre.z, out)
+      expect(out.xPx, mode).toBe(attendu.xPx)
+      expect(out.yPx, mode).toBe(attendu.yPx)
+      expect(out.thetaDeg, mode).toBe(attendu.thetaDeg)
     }
   })
 

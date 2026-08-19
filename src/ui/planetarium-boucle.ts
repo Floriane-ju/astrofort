@@ -88,6 +88,9 @@ export function useBoucleRendu(entree: {
     let dernierTs: number | null = null
     let dernierDiag = 0
     let images = 0
+    // T-0065 — une seule `Date`, réécrite par image. `cielInstantane` la lit sans la
+    // garder : rien ne survit à l'appel, donc rien ne justifie d'en allouer une neuve.
+    const instantDate = new Date(0)
 
     const image = (ts: number): void => {
       if (!actif) return
@@ -107,7 +110,8 @@ export function useBoucleRendu(entree: {
         instant.ms += dt * courant.facteur
       }
 
-      const ciel = cielInstantane(courant.site, new Date(instant.ms))
+      instantDate.setTime(instant.ms)
+      const ciel = cielInstantane(courant.site, instantDate)
       ephemerides.current = avanceEphemerides(
         ephemerides.current,
         courant.site,
@@ -133,6 +137,10 @@ export function useBoucleRendu(entree: {
       // se glisse juste au-dessus du fond, sous les repères et les noms du planétarium.
       const cadre = cadres[0]
       const apercu = incrustation.current
+      // Ce qui reste alloué par image — le projecteur et sa fermeture, le littéral d'entrée
+      // de `dessineCiel`, la fermeture `surLeFond`, les cadres — dépend de la vue de cette
+      // image et ne se hisse donc pas. C'est une poignée d'objets, contre les milliers que
+      // la boucle par étoile n'alloue plus (T-0065).
       const sortie = dessineCiel({
         ctx: contexte,
         projecteur: projecteur(vue, ciel.matrice),

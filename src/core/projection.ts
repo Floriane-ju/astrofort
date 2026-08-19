@@ -43,6 +43,23 @@ export interface PointEcran {
 }
 
 /**
+ * T-0065 — le même point, écrit en place. Une passe de rendu en réutilise un seul pour
+ * toute une image : sans lui, `projette` alloue un objet par étoile et par polyligne, et le
+ * ramasse-miettes rend l'addition sous forme de saccades pendant un panoramique — invisible
+ * sur une moyenne d'images par seconde, visible à l'œil.
+ */
+export interface PointEcranMut {
+  xPx: number
+  yPx: number
+  thetaDeg: number
+}
+
+/** Point de travail d'une passe de rendu, à hisser hors de la boucle qui le remplit. */
+export function pointEcran(): PointEcranMut {
+  return { xPx: 0, yPx: 0, thetaDeg: 0 }
+}
+
+/**
  * Repère de la vue : x vers la droite de l'écran, y vers le haut, z vers le centre de visée.
  * Aucune singularité au zénith — l'azimut y tient lieu de roulis, ce qu'il est réellement.
  */
@@ -103,6 +120,13 @@ export interface Projecteur {
   readonly echelle: number
   /** `null` quand la direction n'est pas projetable : jamais un point à l'infini. */
   projette(v: Vec3): PointEcran | null
+  /**
+   * Même projection, sans rien allouer : la direction entre en scalaires, le résultat
+   * s'écrit dans `out`. `false` quand la direction n'est pas projetable. C'est la forme
+   * que prennent les boucles chaudes ; `projette` n'en est que l'emballage, pour que les
+   * deux ne puissent pas diverger (§3.3).
+   */
+  projetteEn(x: number, y: number, z: number, out: PointEcranMut): boolean
   /** Direction J2000 sous un point de l'écran, pour le pointage à la souris. */
   inverse(xPx: number, yPx: number): Vec3
 }
@@ -120,37 +144,47 @@ export function projecteur(vue: Vue, matriceCiel: Mat3): Projecteur {
   const centreY = vue.hauteurPx / 2
   const mode = vue.mode
 
+  // Fermeture nommée plutôt que méthode : `projette` l'appelle sans passer par `this`, et
+  // un projecteur déstructuré garde donc le même comportement.
+  const projetteEn = (vx: number, vy: number, vz: number, out: PointEcranMut): boolean => {
+    const x = m11 * vx + m12 * vy + m13 * vz
+    const y = m21 * vx + m22 * vy + m23 * vz
+    const z = m31 * vx + m32 * vy + m33 * vz
+
+    // Facteur R/sin(θ), écrit sous la forme qui ne divise jamais par zéro dans son
+    // domaine. Hors domaine, la direction n'est pas projetable : on répond false
+    // plutôt que d'écrire un point à l'infini (§3.3, dernier critère).
+    let facteur: number
+    if (mode === 'MODE_CADRE') {
+      if (z <= Number.EPSILON) return false
+      facteur = 1 / z
+    } else if (mode === 'MODE_PLANETARIUM') {
+      if (1 + z <= Number.EPSILON) return false
+      facteur = 2 / (1 + z)
+    } else {
+      const s = Math.hypot(x, y)
+      if (s <= Number.EPSILON) {
+        out.xPx = centreX
+        out.yPx = centreY
+        out.thetaDeg = 0
+        return true
+      }
+      facteur = Math.atan2(s, z) / s
+    }
+    out.xPx = centreX + k * facteur * x
+    out.yPx = centreY - k * facteur * y
+    out.thetaDeg = Math.atan2(Math.hypot(x, y), z) / DEG
+    return true
+  }
+
   return {
     vue,
     matrice,
     echelle: k,
+    projetteEn,
     projette(v: Vec3): PointEcran | null {
-      const x = m11 * v.x + m12 * v.y + m13 * v.z
-      const y = m21 * v.x + m22 * v.y + m23 * v.z
-      const z = m31 * v.x + m32 * v.y + m33 * v.z
-
-      // Facteur R/sin(θ), écrit sous la forme qui ne divise jamais par zéro dans son
-      // domaine. Hors domaine, la direction n'est pas projetable : on retourne null
-      // plutôt qu'un point à l'infini (§3.3, dernier critère).
-      let facteur: number
-      if (mode === 'MODE_CADRE') {
-        if (z <= Number.EPSILON) return null
-        facteur = 1 / z
-      } else if (mode === 'MODE_PLANETARIUM') {
-        if (1 + z <= Number.EPSILON) return null
-        facteur = 2 / (1 + z)
-      } else {
-        const s = Math.hypot(x, y)
-        if (s <= Number.EPSILON) {
-          return { xPx: centreX, yPx: centreY, thetaDeg: 0 }
-        }
-        facteur = Math.atan2(s, z) / s
-      }
-      return {
-        xPx: centreX + k * facteur * x,
-        yPx: centreY - k * facteur * y,
-        thetaDeg: Math.atan2(Math.hypot(x, y), z) / DEG,
-      }
+      const out = pointEcran()
+      return projetteEn(v.x, v.y, v.z, out) ? out : null
     },
     inverse(xPx: number, yPx: number): Vec3 {
       const u = (xPx - centreX) / k

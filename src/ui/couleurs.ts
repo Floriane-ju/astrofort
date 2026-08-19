@@ -82,31 +82,36 @@ export interface PaletteCiel {
   readonly texte: string
 }
 
+/**
+ * T-0065 — deux palettes gelées, pas deux littéraux par image. Elles ne dépendent que du
+ * mode nuit : les reconstruire à chaque passe de rendu n'apporte rien et alloue.
+ */
+const PALETTE_NUIT: PaletteCiel = Object.freeze({
+  fond: '#000000',
+  figures: 'rgb(90 0 0)',
+  frontieres: 'rgb(55 0 0)',
+  asterismes: 'rgb(140 0 0)',
+  objets: 'rgb(120 0 0)',
+  corps: 'rgb(190 0 0)',
+  cadre: 'rgb(200 0 0)',
+  horizon: 'rgb(70 0 0)',
+  voieLactee: 'rgb(110 0 0)',
+  texte: 'rgb(170 0 0)',
+})
+
+const PALETTE_JOUR: PaletteCiel = Object.freeze({
+  fond: '#05070d',
+  figures: 'rgb(90 120 170)',
+  frontieres: 'rgb(60 70 95)',
+  asterismes: 'rgb(150 190 120)',
+  objets: 'rgb(150 190 230)',
+  corps: 'rgb(255 226 150)',
+  cadre: 'rgb(255 170 60)',
+  horizon: 'rgb(90 80 70)',
+  voieLactee: 'rgb(205 125 175)',
+  texte: 'rgb(200 210 230)',
+})
+
 export function palette(modeNuit: boolean): PaletteCiel {
-  if (modeNuit) {
-    return {
-      fond: '#000000',
-      figures: 'rgb(90 0 0)',
-      frontieres: 'rgb(55 0 0)',
-      asterismes: 'rgb(140 0 0)',
-      objets: 'rgb(120 0 0)',
-      corps: 'rgb(190 0 0)',
-      cadre: 'rgb(200 0 0)',
-      horizon: 'rgb(70 0 0)',
-      voieLactee: 'rgb(110 0 0)',
-      texte: 'rgb(170 0 0)',
-    }
-  }
-  return {
-    fond: '#05070d',
-    figures: 'rgb(90 120 170)',
-    frontieres: 'rgb(60 70 95)',
-    asterismes: 'rgb(150 190 120)',
-    objets: 'rgb(150 190 230)',
-    corps: 'rgb(255 226 150)',
-    cadre: 'rgb(255 170 60)',
-    horizon: 'rgb(90 80 70)',
-    voieLactee: 'rgb(205 125 175)',
-    texte: 'rgb(200 210 230)',
-  }
+  return modeNuit ? PALETTE_NUIT : PALETTE_JOUR
 }

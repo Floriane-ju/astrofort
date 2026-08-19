@@ -19,7 +19,7 @@ import { selectionne } from '../core/index-ciel.ts'
 import { composeLabels, etoileLabellisable, type CandidatLabel } from '../core/labels.ts'
 import { depuisGalactique } from '../core/galactique.ts'
 import { applique, transpose, versVecteur, type Mat3, type Vec3 } from '../core/mat3.ts'
-import { rayonEtoilePx, type Projecteur } from '../core/projection.ts'
+import { pointEcran, rayonEtoilePx, type Projecteur } from '../core/projection.ts'
 import { contourCadreJ2000, type Cadre } from '../core/cadre.ts'
 import type { PositionCorps } from '../core/ephem.ts'
 import { couleurTeinte, palette, teinte, TEINTES } from './couleurs.ts'
@@ -108,18 +108,18 @@ function cheminLignes(
   projecteur: Projecteur,
   polylignes: readonly (readonly Vec3[])[],
 ): void {
+  const p = pointEcran()
   ctx.beginPath()
   for (const ligne of polylignes) {
-    let precedent: { xPx: number; yPx: number } | null = null
+    let enchaine = false
     for (const point of ligne) {
-      const p = projecteur.projette(point)
-      if (p === null) {
-        precedent = null
+      if (!projecteur.projetteEn(point.x, point.y, point.z, p)) {
+        enchaine = false
         continue
       }
-      if (precedent === null) ctx.moveTo(p.xPx, p.yPx)
-      else ctx.lineTo(p.xPx, p.yPx)
-      precedent = p
+      if (enchaine) ctx.lineTo(p.xPx, p.yPx)
+      else ctx.moveTo(p.xPx, p.yPx)
+      enchaine = true
     }
   }
 }
@@ -155,12 +155,13 @@ function traceSegments(
   projecteur: Projecteur,
   couches: readonly CoucheTraces[],
 ): void {
+  const a = pointEcran()
+  const b = pointEcran()
   ctx.beginPath()
   for (const couche of couches) {
     for (const segment of couche.segments) {
-      const a = projecteur.projette(segment.a)
-      const b = projecteur.projette(segment.b)
-      if (a === null || b === null) continue
+      if (!projecteur.projetteEn(segment.a.x, segment.a.y, segment.a.z, a)) continue
+      if (!projecteur.projetteEn(segment.b.x, segment.b.y, segment.b.z, b)) continue
       ctx.moveTo(a.xPx, a.yPx)
       ctx.lineTo(b.xPx, b.yPx)
     }
@@ -188,9 +189,10 @@ function traceHorizon(entree: EntreeDessin, couleur: string): void {
     [180, 'S'],
     [270, 'O'],
   ]
+  const p = pointEcran()
   for (const [az, nom] of cardinaux) {
-    const p = projecteur.projette(applique(versJ2000, versVecteur(az, 0)))
-    if (p !== null) ctx.fillText(nom, p.xPx, p.yPx)
+    const v = applique(versJ2000, versVecteur(az, 0))
+    if (projecteur.projetteEn(v.x, v.y, v.z, p)) ctx.fillText(nom, p.xPx, p.yPx)
   }
 }
 
@@ -204,19 +206,22 @@ function ancreVoieLactee(
   largeur: number,
   hauteur: number,
 ): { xPx: number; yPx: number } | null {
-  let meilleure: { xPx: number; yPx: number } | null = null
+  const p = pointEcran()
+  let meilleurX = 0
+  let meilleurY = 0
   let meilleureDistance = Infinity
   for (const point of PLAN_GALACTIQUE) {
-    const p = projecteur.projette(point)
-    if (p === null) continue
+    if (!projecteur.projetteEn(point.x, point.y, point.z, p)) continue
     if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
     const distance = Math.hypot(p.xPx - largeur / 2, p.yPx - hauteur / 2)
     if (distance < meilleureDistance) {
       meilleureDistance = distance
-      meilleure = p
+      meilleurX = p.xPx
+      meilleurY = p.yPx
     }
   }
-  return meilleure
+  // L'ancre survit à la boucle : c'est le seul point de cette passe qui se copie.
+  return meilleureDistance === Infinity ? null : { xPx: meilleurX, yPx: meilleurY }
 }
 
 export function dessineCiel(entree: EntreeDessin): SortieDessin {
@@ -265,11 +270,17 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
     K('FOV_MAX_DEG') / 2,
     (projecteur.vue.fovDeg / 2) * Math.hypot(1, hauteur / largeur),
   )
+  // Un `Path2D` par teinte, réalloué à chaque image : l'API n'offre aucun effacement, et
+  // un chemin réutilisé accumulerait les disques des images précédentes. Contrainte de la
+  // plateforme, pas négligence — huit objets par image, contre un par étoile évité plus bas.
   const chemins = Array.from({ length: TEINTES }, () => new Path2D())
   const cibles: CibleEcran[] = []
   const candidats: CandidatLabel[] = []
   let etoilesDessinees = 0
   const TOUR_RAD = 2 * Math.PI
+  // Point de travail unique pour toute l'image : la boucle par étoile n'alloue plus rien,
+  // ni en entrée — les composantes arrivent en scalaires — ni en sortie (T-0065).
+  const p = pointEcran()
 
   const stats = selectionne(
     index,
@@ -277,8 +288,7 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
     rayonChampDeg,
     entree.magLimite,
     (x, y, z, magV, bv, source) => {
-      const p = projecteur.projette({ x, y, z })
-      if (p === null) return
+      if (!projecteur.projetteEn(x, y, z, p)) return
       if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) return
       const rayon = Math.max(RAYON_MIN_ETOILE_PX, rayonEtoilePx(magV))
       const chemin = chemins[teinte(bv)]!
@@ -299,8 +309,8 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
   // --- Étoiles nommées : labels et identification au clic -----------------
   for (const nommee of entree.etoilesNommees) {
     if (!etoileLabellisable(nommee.magV)) continue
-    const p = projecteur.projette(versVecteur(nommee.adDeg, nommee.decDeg))
-    if (p === null) continue
+    const v = versVecteur(nommee.adDeg, nommee.decDeg)
+    if (!projecteur.projetteEn(v.x, v.y, v.z, p)) continue
     if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
     const texte = nommee.nomPropre === '' ? nommee.designation : nommee.nomPropre
     cibles.push({
@@ -327,8 +337,8 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
   ctx.beginPath()
   for (const objet of entree.objets) {
     if (objet.vMag === null || objet.vMag > entree.magLimite) continue
-    const p = projecteur.projette(versVecteur(objet.adDeg, objet.decDeg))
-    if (p === null) continue
+    const v = versVecteur(objet.adDeg, objet.decDeg)
+    if (!projecteur.projetteEn(v.x, v.y, v.z, p)) continue
     if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
     ctx.moveTo(p.xPx - MARQUEUR_OBJET_PX, p.yPx - MARQUEUR_OBJET_PX)
     ctx.lineTo(p.xPx + MARQUEUR_OBJET_PX, p.yPx + MARQUEUR_OBJET_PX)
@@ -351,10 +361,8 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
   const versJ2000 = transpose(entree.matriceCiel)
   ctx.fillStyle = teintes.corps
   for (const corps of entree.corps) {
-    const p = projecteur.projette(
-      applique(versJ2000, versVecteur(corps.azimutDeg, corps.hauteurDeg)),
-    )
-    if (p === null) continue
+    const v = applique(versJ2000, versVecteur(corps.azimutDeg, corps.hauteurDeg))
+    if (!projecteur.projetteEn(v.x, v.y, v.z, p)) continue
     ctx.beginPath()
     ctx.arc(p.xPx, p.yPx, RAYON_CORPS_PX, 0, TOUR_RAD)
     ctx.fill()
@@ -393,8 +401,7 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
   // --- Noms de constellations ---------------------------------------------
   for (const figure of entree.figures) {
     if (figure.centre === null) continue
-    const p = projecteur.projette(figure.centre)
-    if (p === null) continue
+    if (!projecteur.projetteEn(figure.centre.x, figure.centre.y, figure.centre.z, p)) continue
     if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
     candidats.push({
       texte: figure.nom,
@@ -409,8 +416,8 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
   if (entree.couches.asterismes) {
     for (const asterisme of entree.asterismes) {
       if (asterisme.centre === null) continue
-      const p = projecteur.projette(asterisme.centre)
-      if (p === null) continue
+      const c = asterisme.centre
+      if (!projecteur.projetteEn(c.x, c.y, c.z, p)) continue
       if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
       candidats.push({
         texte: asterisme.nom,
