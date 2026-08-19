@@ -4,7 +4,32 @@
   "title": "Ticket d'audit du code — sécurité, pratiques, code mort, optimisation",
   "opened": "2026-08-18",
   "closed": null,
-  "commits": []
+  "commits": [
+    {
+      "sha": "73eb7db",
+      "date": "2026-08-18",
+      "files": [
+        "public/data/constellations-1.bin",
+        "public/data/manifest.json",
+        "scripts/build-catalogs.ts",
+        "src/App.tsx",
+        "src/core/ephem.ts",
+        "src/core/horloges.ts",
+        "src/core/projection.ts",
+        "src/core/sky-background.ts",
+        "src/data/equipment.ts",
+        "src/data/persistence.ts",
+        "src/ui/FicheCible.tsx",
+        "src/ui/ModeNuit.tsx",
+        "src/ui/PanneauSeance.tsx",
+        "src/ui/scene-etat.ts",
+        "tests/mode-nuit.test.tsx",
+        "tests/persistence.test.ts",
+        "tests/registry.test.ts",
+        "tests/scene-etat.test.ts"
+      ]
+    }
+  ]
 }
 ---
 

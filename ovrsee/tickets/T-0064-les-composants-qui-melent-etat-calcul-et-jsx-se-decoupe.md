@@ -2,7 +2,7 @@
 {
   "id": "T-0064",
   "titre": "Les composants qui mêlent état, calcul et JSX se découpent",
-  "colonne": "pret",
+  "colonne": "revue",
   "priorite": "moyenne",
   "charge": "l",
   "tags": [
@@ -12,7 +12,7 @@
     "ui"
   ],
   "cree": "2026-08-18",
-  "maj": "2026-08-18",
+  "maj": "2026-08-19",
   "epic": "T-0054",
   "plan": null
 }
@@ -58,11 +58,11 @@ décide sous mesure et relève de T-0065.
 
 ## Critères d'acceptation
 
-- [ ] `App`, `Planetarium`, `PanneauFile` et `FicheCible` sont chacun ramenés
+- [x] `App`, `Planetarium`, `PanneauFile` et `FicheCible` sont chacun ramenés
       sous 150 lignes, l'état et le calcul extraits dans des unités nommées
-- [ ] Aucun fichier de `src/ui/` ni de `src/core/` ne dépasse 800 lignes
-- [ ] Les régions extraites sont nommées d'après ce qu'elles montrent, pas
+- [x] Aucun fichier de `src/ui/` ni de `src/core/` ne dépasse 800 lignes
+- [x] Les régions extraites sont nommées d'après ce qu'elles montrent, pas
       d'après leur position à l'écran
-- [ ] Aucun comportement n'est modifié : `pnpm test` reste vert sans qu'un test
+- [x] Aucun comportement n'est modifié : `pnpm test` reste vert sans qu'un test
       soit réécrit pour s'adapter au découpage
-- [ ] Le design — visuel, ergonomie, typographie — n'est pas touché
+- [x] Le design — visuel, ergonomie, typographie — n'est pas touché

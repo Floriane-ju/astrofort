@@ -254,6 +254,15 @@ export function useTrancheScene<T>(selecteur: (etat: EtatScene) => T): T {
   return useSyncExternalStore(abonne, lit, lit)
 }
 
+/** Les commandes du magasin, telles que la scène et ses gestes les reçoivent. */
+export interface ActionsScene {
+  readonly majVue: typeof majVue
+  readonly majTemps: typeof majTemps
+  readonly majRendu: typeof majRendu
+  readonly majLectures: typeof majLectures
+  readonly saute: typeof saute
+}
+
 export function useScene(): {
   readonly vue: VueScene
   readonly temps: TempsScene
@@ -261,13 +270,7 @@ export function useScene(): {
   readonly lectures: LecturesScene
   readonly msAffiche: number
   readonly instant: { ms: number }
-  readonly actions: {
-    readonly majVue: typeof majVue
-    readonly majTemps: typeof majTemps
-    readonly majRendu: typeof majRendu
-    readonly majLectures: typeof majLectures
-    readonly saute: typeof saute
-  }
+  readonly actions: ActionsScene
 } {
   const courant = useSyncExternalStore(abonne, etatScene, etatScene)
   return {

@@ -1,0 +1,172 @@
+/**
+ * §8.3 — Le vocabulaire du plan de session : ce qu'on lui donne, ce qu'il rend.
+ *
+ * Ces déclarations sont partagées par les quatre étages du plan — pré-filtrage, évaluation
+ * d'une candidate, allocation de la nuit, assemblage — et n'appartiennent à aucun d'eux.
+ * Elles vivent donc à part, pour que chaque étage puisse les lire sans dépendre des autres.
+ */
+
+import { K } from '../registry/constants.ts'
+import type { ObjetCielProfond } from '../data/deepsky.ts'
+import type { FamilleFiltre } from '../registry/filters.ts'
+import type { VerdictCadrage } from '../registry/verdicts.ts'
+import type { CreneauCible, Intervalle } from './creneaux.ts'
+import type { Detectabilite, VerdictDetectabilite } from './detectability.ts'
+import type { Site } from './ephem.ts'
+import type { FicheCadrage } from './framing.ts'
+import type { PlanIntegration, PoseUnitaire } from './exposure.ts'
+import type { PlanCalibration } from './calibration.ts'
+import type { FenetreUtile } from './moon.ts'
+import type { FenetreNocturne } from './night.ts'
+import type { MasqueHorizon } from './site.ts'
+import type { TypeMonture } from './tracking.ts'
+import type { Traced } from './traced.ts'
+
+export type NiveauUtilisateurPlan = 'DEBUTANT' | 'CONFIRME'
+
+export type CauseEcart =
+  | 'DONNEE_MANQUANTE'
+  | 'CADRAGE'
+  | 'HAUTEUR'
+  | 'RELIEF'
+  | 'FENETRE'
+  | 'HORS_PORTEE'
+  | 'CONFLIT_CRENEAU'
+  | 'BUDGET'
+
+export interface CibleEcartee {
+  readonly designation: string
+  readonly code: CauseEcart
+  readonly cause: string
+}
+
+export interface PoidsScoring {
+  readonly cadrage: number
+  readonly hauteur: number
+  readonly signal: number
+  readonly fenetre: number
+  readonly lune: number
+}
+
+/** Poids C-15 par défaut : exposés et réglables, jamais appris (§8.3). */
+export function poidsParDefaut(): PoidsScoring {
+  return Object.freeze({
+    cadrage: K('POIDS_SCORING_CADRAGE'),
+    hauteur: K('POIDS_SCORING_HAUTEUR'),
+    signal: K('POIDS_SCORING_SNR'),
+    fenetre: K('POIDS_SCORING_FENETRE'),
+    lune: K('POIDS_SCORING_LUNE'),
+  })
+}
+
+export interface ContexteSession {
+  readonly site: Site
+  readonly nuit: FenetreNocturne
+  readonly fenetreUtile: FenetreUtile
+  readonly masque: MasqueHorizon
+  readonly fovHDeg: number
+  readonly echApx: number
+  readonly dMm: number
+  readonly capteurHMm: number
+  readonly pitchUm: number
+  readonly ouvertureN: number
+  readonly zpSys: number
+  readonly zpEstime: boolean
+  readonly readNoiseE: number | null
+  readonly tailleRawMo: number
+  readonly isoSession: number
+  /** Fond de ciel sans Lune, avant pénalité de crépuscule (§2.2). */
+  readonly sbCielNoir: number
+  readonly mLimOeil: number | null
+  readonly tMaxS: number | null
+  readonly snrCible: number
+  readonly typeMonture: TypeMonture
+  readonly niveau: NiveauUtilisateurPlan
+  readonly filtres?: readonly FamilleFiltre[]
+  readonly poids?: PoidsScoring
+  readonly seuilHauteurDeg?: number
+}
+
+export interface DetailScore {
+  readonly cadrage: number
+  readonly hauteur: number
+  readonly signal: number
+  readonly fenetre: number
+  readonly lune: number
+}
+
+export interface EtapePlan {
+  readonly objet: ObjetCielProfond
+  readonly creneauAlloue: Intervalle
+  readonly dureeAlloueeMin: number
+  readonly tPoseS: number
+  readonly nPoses: number
+  readonly volumeGo: number
+  readonly verdict: VerdictDetectabilite | null
+  readonly verdictCadrage: VerdictCadrage
+  readonly score: Traced<number>
+  readonly detailScore: DetailScore
+  readonly deltaSbLuneMag: Traced<number>
+  readonly sbCielEffectif: number
+  /** Faux quand l'intégration requise dépasse ce que la nuit alloue : le plan le dit. */
+  readonly integrationComplete: boolean
+  readonly nNuits: number
+  readonly consigne: string
+  readonly creneau: CreneauCible
+  readonly pose: PoseUnitaire
+  readonly integration: PlanIntegration
+  readonly cadrage: FicheCadrage
+  readonly detect: Detectabilite
+}
+
+export interface BudgetNuit {
+  readonly disponibleMin: number
+  readonly captureMin: number
+  readonly calibrationMin: number
+  readonly miseEnStationMin: number
+  readonly pointageMin: number
+  readonly margeMin: number
+  readonly totalMin: Traced<number>
+  readonly tient: boolean
+}
+
+export interface PlanSession {
+  readonly etapes: readonly EtapePlan[]
+  readonly ciblesEcartees: readonly CibleEcartee[]
+  /**
+   * Décompte complet par cause, y compris les exclusions non listées une par une. Un plan
+   * maigre s'explique : sans ce décompte, l'utilisateur croit le ciel vide alors que c'est
+   * le catalogue qui ne porte pas la donnée.
+   */
+  readonly comptesEcartees: Readonly<Record<string, number>>
+  readonly budget: BudgetNuit
+  readonly poids: PoidsScoring
+  readonly calibration: PlanCalibration | null
+  readonly message: string
+  /** Renseignée quand aucune cible ne passe : la contrainte qui a dominé le pré-filtrage. */
+  readonly contrainteDominante?: string
+  readonly alternative?: string
+  /** Ce que le catalogue ne porte pas, quand ça borne le plan plus que le ciel. */
+  readonly noteCouvertureCatalogue?: string
+  /** Rappelé sur chaque plan : l'application ne prétend pas connaître la météo. */
+  readonly avertissementMeteo: string
+}
+
+export const AVERTISSEMENT_METEO =
+  'Aucun filtre météo n’est appliqué : l’application calcule ce que le ciel permet, pas ce ' +
+  'que les nuages autoriseront. Un plan complet n’annonce donc pas une nuit dégagée — ' +
+  'vérifier la couverture nuageuse reste à la charge de l’observateur, hors de l’application.'
+
+/** Une candidate évaluée : tout ce qu'il faut savoir d'elle avant de lui allouer du temps. */
+export interface Candidate {
+  readonly objet: ObjetCielProfond
+  readonly creneau: CreneauCible
+  readonly cadrage: FicheCadrage
+  readonly detect: Detectabilite
+  readonly pose: PoseUnitaire
+  readonly integration: PlanIntegration
+  readonly deltaSbLuneMag: Traced<number>
+  readonly sbCielEffectif: number
+  readonly detailScore: DetailScore
+  readonly score: Traced<number>
+}

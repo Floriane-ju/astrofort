@@ -3,7 +3,7 @@
   "id": "T-0054",
   "titre": "Auditer le code : sécurité, pratiques, code mort, optimisation",
   "type": "epic",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "l",
   "tags": [

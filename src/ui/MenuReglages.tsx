@@ -24,7 +24,7 @@
 import { useState } from 'react'
 import { chercheCatalogue } from '../core/recherche-catalogue.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
-import { libelleObjet } from './FicheCible.tsx'
+import { libelleObjet } from './libelles-objet.ts'
 import { ouvreCible } from './seance-etat.ts'
 
 /**

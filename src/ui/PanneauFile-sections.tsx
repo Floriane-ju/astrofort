@@ -1,0 +1,390 @@
+/**
+ * Les cinq régions de l'onglet « Filé », nommées d'après ce qu'elles montrent.
+ *
+ * Aucune ne calcule : elles reçoivent les lectures de `useLecturesFile` et les réglages du
+ * magasin de séance. Le rendu de l'image, lui, se voit dans le cadre matériel sur la scène.
+ */
+
+import { K } from '../registry/constants.ts'
+import { MENTION_SEMIS } from '../data/semis.ts'
+import { vignettageDiaph } from '../core/galactique.ts'
+import type { CartePoseMax } from '../core/grand-champ.ts'
+import type { ModeProjection } from '../core/projection.ts'
+import type { ActionsScene } from './scene-etat.ts'
+import { activeIncrustation, majFile, type ModeApercu, type ReglagesFile, type RenduFile } from './seance-etat.ts'
+import { MENTION_VIGNETTAGE_INCRUSTATION } from './scene-overlay.ts'
+import { TracedValue } from './TracedValue.tsx'
+import { Etiquette } from './Terme.tsx'
+import type { LecturesFile } from './panneau-file-lectures.ts'
+
+const S_PAR_MIN = 60
+const POURCENT = 100
+
+/** Une pose courte se lit à la dizaine de seconde près : l'arrondi à l'unité l'écraserait. */
+function formatePose(tS: number): string {
+  return tS < 10 ? tS.toFixed(1) : tS.toFixed(0)
+}
+
+function celluleClasse(tNpfS: number | null, tLimite: number | null): string {
+  if (tNpfS === null) return 'pose-pole'
+  if (tLimite === null) return 'pose-cellule'
+  return tNpfS <= tLimite * K('ECART_POSE_CADRE_SIGNIFICATIF') ? 'pose-courte' : 'pose-longue'
+}
+
+/** Carte de pose maximale : une grille, pas un nombre (§9.1). */
+function CartePose({ carte }: { readonly carte: CartePoseMax }) {
+  const lignes = Array.from({ length: carte.cote }, (_, ligne) =>
+    carte.cellules.slice(ligne * carte.cote, (ligne + 1) * carte.cote),
+  )
+  const limite = carte.tMaxCadreS.value
+  return (
+    <table className="carte-pose">
+      <tbody>
+        {lignes.map((cellules, ligne) => (
+          <tr key={ligne}>
+            {cellules.map((cellule, colonne) => (
+              <td key={colonne} className={celluleClasse(cellule.tNpfS, limite)}>
+                {cellule.tNpfS === null ? '∞' : `${formatePose(cellule.tNpfS)} s`}
+                <span className="carte-pose-dec">δ {cellule.decDeg.toFixed(0)}°</span>
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+interface CadrageProps {
+  readonly lectures: LecturesFile
+  readonly file: ReglagesFile
+  readonly renduFile: RenduFile | null
+  readonly fovLDeg: number
+  readonly fovHDeg: number
+  readonly rotationDeg: number
+  readonly mode: ModeProjection
+  readonly actions: ActionsScene
+}
+
+/** Ce que le boîtier vise, et les bascules qui décident de ce qu'on incruste dedans. */
+export function CadrageDuFile({
+  lectures,
+  file,
+  renduFile,
+  fovLDeg,
+  fovHDeg,
+  rotationDeg,
+  mode,
+  actions,
+}: CadrageProps) {
+  return (
+    <section>
+      <h2>Grand champ et filé — §9</h2>
+
+      <p className="etat">
+        visée {lectures.visee.longitudeDeg.toFixed(2)}° AD /{' '}
+        {lectures.visee.latitudeDeg.toFixed(2)}° δ · cadre {fovLDeg.toFixed(1)}° ×{' '}
+        {fovHDeg.toFixed(1)}°
+        {renduFile !== null &&
+          ` · ${renduFile.reelles} étoiles réelles et ${renduFile.generees} générées tracées`}
+      </p>
+      <p className="etat">{MENTION_SEMIS}</p>
+
+      <div className="champs">
+        <label className="interrupteur">
+          <input
+            type="checkbox"
+            checked={file.incrustation}
+            onChange={(e) => activeIncrustation(e.target.checked)}
+          />
+          Incruster dans le cadre, sur la scène
+        </label>
+        <label>
+          Aperçu
+          <select
+            value={file.apercu}
+            onChange={(e) => majFile({ apercu: e.target.value as ModeApercu })}
+          >
+            <option value="CHAMP">Champ à étoiles fixes — une pose</option>
+            <option value="FILE">Filé — durée totale accumulée</option>
+          </select>
+        </label>
+        {/* Azimut et hauteur n'ont pas de curseur ici : le pointage se fait à la scène,
+            en faisant glisser le planétarium (§3). Ce panneau les lit, il ne les commande
+            pas — la visée courante se relit en tête de section. */}
+        <label>
+          Rotation du boîtier : {rotationDeg.toFixed(0)}°
+          <input
+            type="range"
+            min={0}
+            max={360}
+            step={1}
+            value={rotationDeg}
+            onChange={(e) => actions.majVue({ rotationDeg: Number(e.target.value) })}
+          />
+        </label>
+        <label className="interrupteur">
+          <input
+            type="checkbox"
+            checked={file.voieLactee}
+            onChange={(e) => majFile({ voieLactee: e.target.checked })}
+          />
+          <Etiquette cle="voie_lactee" />
+        </label>
+      </div>
+
+      {file.incrustation && (
+        <>
+          <p className="etat">
+            Le temps de la scène est figé : un filé est une composition fixe, la vue animée
+            reste le planétarium de §3.
+          </p>
+          <p className="cause">{MENTION_VIGNETTAGE_INCRUSTATION}</p>
+          {lectures.mentionProj !== null && (
+            <>
+              <p className="cause">{lectures.mentionProj}</p>
+              <button type="button" onClick={() => actions.majVue({ mode, fovDeg: fovLDeg })}>
+                Voir comme l’objectif
+              </button>
+            </>
+          )}
+        </>
+      )}
+    </section>
+  )
+}
+
+/** §9.1 — la pose maximale n'est pas un nombre, c'est une carte par déclinaison. */
+export function PoseMaximale({ lectures }: { readonly lectures: LecturesFile }) {
+  const { carte } = lectures
+  return (
+    <section>
+      <h3>Pose maximale par déclinaison — §9.1</h3>
+      <CartePose carte={carte} />
+      <TracedValue terme="pose_max_cadre" trace={carte.tMaxCadreS} decimales={1} unite="s" />
+      <TracedValue terme="regle_500" trace={carte.t500S} decimales={1} unite="s" />
+      <TracedValue
+        terme="focale_equivalente"
+        trace={lectures.focaleEquivalente}
+        decimales={1}
+        unite="mm"
+      />
+      {carte.messages.map((message) => (
+        <p className="cause" key={message}>
+          {message}
+        </p>
+      ))}
+    </section>
+  )
+}
+
+/** §9.2 — ce qu'une pose unitaire atteint, et ce qu'elle traîne quand elle est trop longue. */
+export function ProfondeurDUnePose({
+  lectures,
+  file,
+  renduFile,
+}: {
+  readonly lectures: LecturesFile
+  readonly file: ReglagesFile
+  readonly renduFile: RenduFile | null
+}) {
+  const { carte, trainee, poseDepassee } = lectures
+  return (
+    <section>
+      <h3>Prévisualisation de champ — §9.2</h3>
+      <div className="champs">
+        <label>
+          Pose unitaire : {file.tPoseS.toFixed(0)} s
+          <input
+            type="range"
+            min={1}
+            max={K('PLAFOND_POSE_SANS_AUTOGUIDAGE_S')}
+            step={1}
+            value={file.tPoseS}
+            onChange={(e) => majFile({ tPoseS: Number(e.target.value) })}
+          />
+        </label>
+      </div>
+      <TracedValue
+        terme="profondeur_previsu"
+        trace={lectures.profondeur}
+        decimales={1}
+        unite="mag"
+      />
+      <TracedValue terme="trainee" trace={trainee} decimales={1} unite="px" />
+      {/* Le vignettage n'a plus d'interrupteur : il se centre sur le canevas et non sur le
+          cadre, donc il n'est jamais incrusté. Son chiffre, lui, reste une lecture du
+          matériel — et il vaut pour l'image que le capteur enregistrera (§9.2). */}
+      <TracedValue
+        terme="vignettage"
+        suffixe="coins du cadre"
+        trace={vignettageDiaph(1)}
+        decimales={1}
+        unite="diaph"
+      />
+      {poseDepassee && carte.poseOperanteS !== null && (
+        <p className="cause">
+          Pose de {file.tPoseS.toFixed(0)} s au-delà de la pose max du cadre (
+          {carte.poseOperanteS.toFixed(1)} s) : les étoiles sont rendues ovalisées, avec une
+          traînée de {trainee.value.toFixed(1)} px. Ramener la pose à{' '}
+          {carte.poseOperanteS.toFixed(0)} s les rend ponctuelles.
+        </p>
+      )}
+      {poseDepassee && carte.poseOperanteS !== null && (
+        <button
+          type="button"
+          onClick={() => majFile({ tPoseS: Math.max(1, Math.floor(carte.poseOperanteS!)) })}
+        >
+          Corriger la pose à {formatePose(carte.poseOperanteS)} s
+        </button>
+      )}
+      {renduFile !== null && renduFile.reelles === 0 && (
+        <p className="cause">
+          Aucun repère brillant dans ce champ : aucune étoile catalographiée n’y tombe. En
+          pointage manuel, ce cadre sera difficile à retrouver dans le viseur.
+        </p>
+      )}
+    </section>
+  )
+}
+
+/** §9.3 — la longueur des arcs et la place du pôle : ce que la durée dessine dans le cadre. */
+export function ArcsDuFile({
+  lectures,
+  file,
+}: {
+  readonly lectures: LecturesFile
+  readonly file: ReglagesFile
+}) {
+  const { diagnostic } = lectures
+  return (
+    <section>
+      <h3>Filé d’étoiles — §9.3</h3>
+      <div className="champs">
+        <label>
+          <Etiquette cle="duree_file" /> : {file.dureeTotaleMin.toFixed(0)} min
+          <input
+            type="range"
+            min={5}
+            max={480}
+            step={5}
+            value={file.dureeTotaleMin}
+            onChange={(e) => majFile({ dureeTotaleMin: Number(e.target.value) })}
+          />
+        </label>
+      </div>
+      <p className="etat">
+        durée dessinée dans le cadre :{' '}
+        {file.apercu === 'FILE'
+          ? `${(file.dureeTotaleMin * S_PAR_MIN).toFixed(0)} s accumulées`
+          : `${file.tPoseS.toFixed(0)} s de pose unitaire`}
+      </p>
+      <TracedValue
+        terme="longueur_arc"
+        suffixe="arc le plus long du cadre"
+        trace={diagnostic.longueurArcMaxDeg}
+        decimales={2}
+        unite="°"
+      />
+      <TracedValue
+        terme="longueur_arc"
+        suffixe="arc le plus court du cadre"
+        trace={diagnostic.longueurArcMinDeg}
+        decimales={2}
+        unite="°"
+      />
+      <p className="etat">
+        <Etiquette cle="pole_celeste" /> :{' '}
+        {diagnostic.pole.dansCadre ? 'dans le cadre' : 'hors du cadre'} · hauteur{' '}
+        {diagnostic.pole.altitudeDeg.toFixed(1)}° · azimut {diagnostic.pole.azimutDeg}° ·{' '}
+        {(diagnostic.fractionHauteurCadre * POURCENT).toFixed(0)} % de la hauteur du cadre
+      </p>
+      {diagnostic.messages.map((message) => (
+        <p className="cause" key={message}>
+          {message}
+        </p>
+      ))}
+    </section>
+  )
+}
+
+/** §9.4 — combien de photos, combien de batteries, combien de gigaoctets. */
+export function SequenceDePrises({
+  lectures,
+  file,
+}: {
+  readonly lectures: LecturesFile
+  readonly file: ReglagesFile
+}) {
+  const { sequence } = lectures
+  return (
+    <section>
+      <h3>Séquence de filé — §9.4</h3>
+      <div className="champs">
+        <label>
+          <Etiquette cle="intervalle_file" />
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={file.intervalleS}
+            onChange={(e) => majFile({ intervalleS: Number(e.target.value) })}
+          />
+        </label>
+        <label>
+          Température prévue (°C)
+          <input
+            value={file.temperatureC}
+            onChange={(e) => majFile({ temperatureC: e.target.value })}
+          />
+        </label>
+        <label>
+          <Etiquette cle="autonomie_cipa" />
+          <input
+            value={file.autonomieSaisie}
+            placeholder="images par charge"
+            onChange={(e) => majFile({ autonomieSaisie: e.target.value })}
+          />
+        </label>
+        <label>
+          <Etiquette cle="espace_carte" />
+          <input
+            value={file.espaceLibreGo}
+            placeholder="Go libres"
+            onChange={(e) => majFile({ espaceLibreGo: e.target.value })}
+          />
+        </label>
+        <label className="interrupteur">
+          <input
+            type="checkbox"
+            checked={file.reductionBruit}
+            onChange={(e) => majFile({ reductionBruit: e.target.checked })}
+          />
+          Réduction de bruit longue exposition active sur le boîtier
+        </label>
+      </div>
+
+      {sequence.intervalleRefuse !== null && <p className="erreur">{sequence.intervalleRefuse}</p>}
+      <TracedValue terme="n_poses_file" trace={sequence.nPoses} decimales={0} />
+      <TracedValue terme="volume_stockage" trace={sequence.volumeGo} decimales={1} unite="Go" />
+      <TracedValue terme="batteries" trace={sequence.nBatteries} decimales={0} />
+      <p className="etat">
+        <Etiquette cle="facteur_froid" /> : {sequence.facteurFroid.valeur} —{' '}
+        {sequence.facteurFroid.libelle}
+      </p>
+      {sequence.interruptionStockage !== null && (
+        <p className="cause">{sequence.interruptionStockage.message}</p>
+      )}
+      <ul>
+        {sequence.consignesBloquantes.map((consigne) => (
+          <li key={consigne}>{consigne}</li>
+        ))}
+      </ul>
+      {sequence.messages.map((message) => (
+        <p className="etat" key={message}>
+          {message}
+        </p>
+      ))}
+    </section>
+  )
+}

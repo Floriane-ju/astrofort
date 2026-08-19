@@ -15,3 +15,7 @@ ovrsee/pages/shots/
 ovrsee/.active/
 ovrsee/.active-plan
 ovrsee/.active-ticket
+
+# Réglages Claude Code propres à une machine.
+.claude/settings.local.json
+.DS_Store
