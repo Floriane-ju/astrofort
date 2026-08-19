@@ -20,6 +20,16 @@
         "tests/icones.test.ts",
         "vite.config.ts"
       ]
+    },
+    {
+      "sha": "5caaa4c",
+      "date": "2026-08-19",
+      "files": [
+        ".gitignore",
+        "src/ui/Planetarium.tsx",
+        "src/ui/styles.css",
+        "tests/mode-nuit.test.tsx"
+      ]
     }
   ]
 }
