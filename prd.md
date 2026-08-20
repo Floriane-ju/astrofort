@@ -1,8 +1,24 @@
 # PRD — Application planétarium orientée observation et capture
 
-**Version** 1.0 — clôture de rédaction
-**Date** 14 août 2026
+**Version** 1.2 — arbitrages de périmètre
+**Date** 19 août 2026
 **Statut** Toutes sections rédigées. Liste `[HYP]` close : 27 hypothèses ouvertes en cours de rédaction, toutes résolues par formule ou par constante sourcée au registre §2.1.
+
+**Ce que la version 1.1 a changé** — cinq features livrées mais non spécifiées entrent au document (§3.6 gestes de la scène, §3.7 Voie lactée repérée, §6.4 cibles visibles et recherche, §9.5 aperçu incrusté, §11.3 coque), le lot 6 rejoint la roadmap §14, et quatre chiffres de la rédaction initiale sont corrigés par la mesure ou par le calcul : `focale_ideale_mm` (§6.1), comptage HYG (§3.3), volumes des paquets (§12.2), arbitrage `prefers-reduced-motion` (§11.1).
+
+**Ce que la version 1.2 change** — six arbitrages de périmètre, tous journalisés en Annexe C (entrées 16 à 21) :
+
+| Sujet | Décision |
+|---|---|
+| §12.1 rendu et threads | Canvas 2D retenu, WebGL 2 non prérequis ; le Worker devient un moyen déclenché par la mesure, non une règle |
+| §3.3 et §12.2 paquet Gaia | Reporté hors MVP ; plancher de zoom à 15°, cause nommée |
+| §4.1 atlas de pollution lumineuse | **Supprimé.** Bortle déclaré ou SQM mesuré, tous deux exacts et hors ligne |
+| §4.1 multi-sites | Reporté à une version ultérieure : un seul site au MVP |
+| §7.4 lecture EXIF | **Supprimée** du périmètre |
+| §7.6 **nouvelle feature** | Atténuation atmosphérique par masse d'air sur le flux de l'objet |
+| §3.7 **feature étendue** | Bande de la Voie lactée modulée par le fond de ciel, et repère du centre galactique |
+
+Les écarts entre ce document et le code livré sont suivis dans `ovrsee/tickets/` — pas ici. Le PRD dit ce qui doit être vrai, le tableau dit où en est le travail.
 
 ---
 
@@ -237,7 +253,7 @@ Le SQM mesuré, s'il est saisi, PRÉVAUT toujours sur le Bortle estimé.
 | `sqm_mesure` | float | mag/as² | 16 – 22 | optionnel, prioritaire |
 | `sb_ciel` | float | mag/as² | sortie | |
 | `m_lim_oeil` | float | mag | sortie | consommé par §6.3, §8.4 |
-| `source_sb` | enum | — | TABLE_BORTLE / SQM_MESURE / VIIRS | affiché |
+| `source_sb` | enum | — | TABLE_BORTLE / SQM_MESURE | affiché |
 
 ### Critères d'acceptation
 
@@ -264,7 +280,7 @@ Alors l'app signale que la valeur dépasse le fond de ciel naturel le plus sombr
 
 ### Dépendances données
 
-Table embarquée, source publiée. Atlas VIIRS pour la valeur par défaut aux coordonnées (§4). Fraîcheur : VIIRS annuel. Fallback hors-ligne : saisie manuelle du Bortle.
+Table embarquée, source publiée. Aucune source en ligne : le Bortle est déclaré, ou le SQM mesuré et saisi (§4.1). Fraîcheur : liée aux releases. Fallback hors-ligne : intégral.
 
 ---
 
@@ -428,7 +444,7 @@ Le découplage n'est pas une optimisation prématurée : sans lui, chaque image 
 ### Critères d'acceptation
 
 ```gherkin
-Étant donné un catalogue de 120 000 étoiles et un défilement à ×60
+Étant donné le catalogue complet d'étoiles réelles et un défilement à ×60
 Quand le ciel est animé
 Alors la fréquence d'images reste au-dessus de 50 Hz
 Et l'ajout d'étoiles au catalogue ne dégrade pas mesurablement la fréquence
@@ -577,15 +593,21 @@ PROFONDEUR ASSERVIE AU ZOOM
   avec mag_base = 6,5 à fov_ref = 60°
 
 BORNES DE CATALOGUE
-  HYG v3       complet jusqu'à mag ≈ 9   → 120 000 étoiles → 2,91 étoiles/deg²
+  HYG v4.1     complet jusqu'à mag ≤ 9   → 83 479 étoiles → 2,02 étoiles/deg²
+               comptage MESURÉ au paquet construit, non estimé. Le socle annonçait
+               120 000 pour « HYG v3 mag ≈ 9 » : la coupure stricte à magnitude 9 sur
+               la version courante en retient un tiers de moins.
   Gaia DR3     sous-ensemble mag ≤ 11    → ordre de 1e6 étoiles → 24,2 étoiles/deg²
                [À VÉRIFIER : comptage exact par requête Gaia DR3]
 
   Densité et conséquence sur un champ de 5° × 3,3° = 16,5 deg² :
-     avec HYG seul  → ≈ 48 étoiles      : le ciel paraît vide
+     avec HYG seul  → ≈ 33 étoiles      : le ciel paraît vide
      avec Gaia      → ≈ 400 étoiles     : rendu crédible
-  → zoom utile au MVP : 5° de champ, avec le paquet Gaia chargé (12 Mo, §12.2).
-    Sans ce paquet, l'app plafonne à 15° et le déclare.
+  → ZOOM UTILE AU MVP : 15° de champ. Le paquet Gaia est reporté hors MVP (§12.2,
+    §14) : il achèterait le zoom à 5° contre 12 Mo, pour un champ où le persona
+    primaire ne prend aucune décision de capture.
+    L'application plafonne donc à 15°, NOMME la cause du plancher, et complète par
+    le semis génératif — jamais en silence.
 
   Sous la borne du catalogue chargé, le semis génératif de §9.2 complète le rendu,
   TOUJOURS en le déclarant à l'utilisateur.
@@ -605,7 +627,7 @@ INDEXATION SPATIALE
 | Champ | Type | Unité | Plage valide | Note |
 |---|---|---|---|---|
 | `mode_projection` | enum | — | 3 valeurs | |
-| `fov_deg` | float | ° | 5 – 180 | 15° min sans paquet Gaia |
+| `fov_deg` | float | ° | 15 – 180 | plancher lié au catalogue chargé |
 | `centre_visee` | az/alt ou AD/δ | ° | — | |
 | `mag_limite` | float | mag | sortie | |
 | `n_etoiles_reelles` | int | — | sortie | traçabilité |
@@ -620,11 +642,12 @@ Quand le ciel est rendu
 Alors les étoiles jusqu'à magnitude 6,5 sont affichées aux positions réelles
 Et leur taille et couleur suivent magnitude et indice B−V
 
-Étant donné un zoom à 5° de champ sans le paquet Gaia chargé      # cas limite
+Étant donné un zoom poussé jusqu'au plancher de 15° de champ     # cas limite
 Quand le rendu est produit
 Alors catalogue_epuise vaut vrai
 Et l'app déclare que les étoiles faibles affichées sont générées, non catalographiées
-Et propose le chargement du paquet Gaia en indiquant son volume
+Et elle nomme le catalogue manquant comme cause du plancher, sans laisser le geste
+    sans effet ni explication
 
 Étant donné le même pointage affiché en MODE_PLANETARIUM puis en MODE_CADRE
 Quand je superpose les deux
@@ -643,7 +666,7 @@ Alors aucune étoile n'est projetée à l'infini ni hors du canevas par division
 
 ### Dépendances données
 
-HYG v3 embarqué (positions J2000, magnitude V, indice B−V, noms). Sous-ensemble Gaia DR3 en paquet différé. Fraîcheur : statique — mouvements propres ignorés, erreur inférieure à 0,1° sur ±1 000 ans pour la quasi-totalité des étoiles. Fallback : total.
+HYG v4.1 embarqué (positions J2000, magnitude V, indice B−V, noms), coupure à mag ≤ 9. Sous-ensemble Gaia DR3 : hors MVP (§12.2). Fraîcheur : statique — mouvements propres ignorés, erreur inférieure à 0,1° sur ±1 000 ans pour la quasi-totalité des étoiles. Fallback : total.
 
 ---
 
@@ -807,6 +830,194 @@ Agrège §5.1, §6.2, §7.2, §9.1. Aucune source nouvelle. Fallback : total.
 
 ---
 
+## 3.6 Feature — Gestes de navigation de la scène
+
+**Feature** — Les trois gestes qui promènent la visée et changent le champ, distingués les uns des autres sur un matériel qui ne les distingue pas. Persona : tous. §3.2 donne le temps, §3.6 donne l'espace.
+
+### Règle métier
+
+```
+TROIS GESTES, TROIS EFFETS — et un seul événement navigateur pour les porter
+  PINCEMENT au pavé tactile   → change le champ, EN CONTINU
+  MOLETTE                     → change le champ, PAR CRANS
+  DÉFILEMENT à deux doigts    → promène la visée, sans changer le champ
+  GLISSER                     → promène la visée
+
+  Les navigateurs traduisent les trois premiers en un même `wheel`. Aucun ne dit
+  lequel c'est. La source est donc DÉDUITE de trois signaux, du plus sûr au moins sûr :
+    1. `ctrlKey` posé par le navigateur         → PINCEMENT   (signal certain)
+    2. delta exprimé en lignes, non en pixels   → MOLETTE     (Firefox seulement)
+    3. `wheelDeltaY` multiple d'un cran de 120  → MOLETTE     (WebKit, Blink)
+    sinon                                       → DÉFILEMENT
+
+CONTINU CONTRE CRANTÉ — ce n'est pas un réglage de confort
+  pincement : facteur_champ = exp( deltaY × sensibilité )
+              → deux demi-gestes valent exactement le geste entier. Un facteur fixe
+                par événement rendrait le zoom dépendant de la cadence d'événements
+                du pavé, donc du matériel.
+  molette   : facteur_champ = facteur_cran, ou son inverse selon le signe.
+
+LE ZOOM DE LA SCÈNE N'EST JAMAIS LE ZOOM DE LA PAGE
+  Un pincement au-dessus de la scène qui agrandit toute l'interface est un défaut,
+  pas une commodité : la scène est l'instrument, pas un document. L'écouteur est donc
+  posé hors du cycle de rendu, en mode non passif, pour que l'annulation de l'action
+  par défaut prenne effet. Les gestes propres à WebKit sont neutralisés de même.
+
+BORNES
+  champ borné par §3.3 — plancher lié au catalogue chargé, plafond à 180°
+  hauteur de visée bornée à [−90° ; +90°] : au-delà, la vue basculerait
+  Aucun recalcul d'éphéméride pendant le geste : le geste ne touche que la vue.
+```
+
+### Entrées / Sorties
+
+| Champ | Type | Unité | Plage valide | Note |
+|---|---|---|---|---|
+| `source_geste` | enum | — | PINCEMENT / MOLETTE / DEFILEMENT | déduite, non déclarée |
+| `facteur_champ` | float | — | > 0 | multiplicatif |
+| `fov_deg` | float | ° | §3.3 | borné par le catalogue chargé |
+| `visee_az_deg`, `visee_alt_deg` | float | ° | 0–360, −90–90 | sortie |
+
+### Critères d'acceptation
+
+```gherkin
+Étant donné un pincement à deux doigts au-dessus de la scène
+Quand le geste s'applique
+Alors seul le champ de la scène change
+Et l'interface ne subit aucun zoom de page
+
+Étant donné un pincement décomposé en deux demi-gestes de même amplitude
+Quand je compare au geste entier
+Alors le champ obtenu est identique
+
+Étant donné un défilement à deux doigts sans pincement
+Quand le geste s'applique
+Alors la visée se déplace et le champ reste inchangé
+
+Étant donné un zoom poussé jusqu'au plancher du catalogue chargé   # cas limite
+Quand je continue à pincer
+Alors le champ ne descend pas sous le plancher
+Et l'app nomme le catalogue manquant plutôt que de laisser le geste sans effet
+
+Étant donné un geste en cours
+Quand la visée change de plusieurs dizaines de degrés
+Alors aucune éphéméride n'est réévaluée pendant le geste
+```
+
+### Dépendances données
+
+Aucune. Bornes de zoom : §3.3. Fallback : total.
+
+---
+
+## 3.7 Feature — Voie lactée repérée sur la scène : plan, bande et centre galactique
+
+**Feature** — Quatrième couche de repérage : le plan de la Voie lactée, la bande telle qu'elle sera vue depuis ce site, et la position du centre galactique. Persona : amateur de Voie lactée et de filé — c'est sa cible, et aucune constellation ne la délimite.
+
+### Règle métier
+
+```
+CE QUI EST TRACÉ — une ligne, pas une bande photométrique
+  Le plan galactique b = 0°, échantillonné en longitude galactique et converti en
+  directions J2000, puis projeté par le moteur unique de §3.3 — même chemin que les
+  frontières de §3.4.
+  → à grand champ la ligne n'est pas droite : c'est la projection qui la courbe.
+
+  CE N'EST PAS la couche 3 de §9.2. §9.2 module un CONTRASTE dans une image de
+  prévisualisation ; §3.7 pose un REPÈRE sur une carte. Confondre les deux ferait
+  d'un repère de pointage une promesse photométrique.
+
+LABEL POSÉ SUR LA BANDE
+  Le nom se pose sur la ligne, dans la zone visible du canevas, et entre dans le
+  budget de labels de §3.4 — plafond, priorité et anti-chevauchement compris.
+  Un label hors du champ ou superposé à un nom de constellation ne repère rien.
+
+LA BANDE, MODULÉE PAR LE FOND DE CIEL DU SITE
+  La ligne dit OÙ passe le plan ; la bande dit CE QUE L'UTILISATEUR VERRA. Densité
+  modulée par la latitude galactique et contraste modulé par SB_ciel (§2.2), comme la
+  couche 3 de §9.2 :
+     densite(b)  = d0 × exp( −|b| / 20° )
+     contraste   ← SB_ciel : visible mais atténuée à Bortle 4–5, effacée à Bortle 8
+  → à Bortle 8 la bande disparaît, et c'est l'information juste : l'application montre
+    le ciel de ce site, pas une carte de référence idéale.
+  → la bande est peinte AVEC LE FOND, sous les repères, les étoiles et les labels —
+    même règle d'ordre que l'aperçu incrusté de §9.5. Un fond peint par-dessus le
+    repérage masque exactement ce qui sert à s'orienter.
+  → ce n'est PAS une promesse photométrique : c'est un repère de lecture. La couche 3
+    de §9.2 module un contraste dans une IMAGE DE CAPTURE ; §3.7 repère une région du
+    ciel sur une CARTE.
+
+LE CENTRE GALACTIQUE — repère nommé, avec sa conséquence site-dépendante
+  Position : l0 = 0°, b = 0° en coordonnées galactiques, soit δ ≈ −29°.
+  C'est la cible la plus demandée du grand champ d'été, et §8.2 a déjà calculé qu'elle
+  culmine à 14,6° depuis le site de référence — inaccessible. Ce chiffre vit
+  aujourd'hui dans un tableau du PRD ; un repère sur la scène le rend lisible d'un
+  coup d'œil, là où un tableau demande d'y croire.
+  → quand alt_culmination < seuil d'imagerie C-01 depuis ce site, le repère PORTE la
+    cause et la latitude en dessous de laquelle la cible deviendrait accessible (§8.2).
+  → aucune cible n'est masquée pour autant : elle est repérée ET qualifiée.
+
+ACTIVATION
+  Couche indépendante, au même titre que FIGURES, FRONTIERES et ASTERISMES (§3.4).
+  UNE SEULE BASCULE pour les trois éléments — plan, bande, centre galactique. Trois
+  interrupteurs pour une même question produisent un panneau de réglages, pas une carte.
+```
+
+### Entrées / Sorties
+
+| Champ | Type | Unité | Plage valide | Note |
+|---|---|---|---|---|
+| `couche_voie_lactee` | bool | — | — | indépendante des trois autres, bascule unique |
+| `sb_ciel` | float | mag/as² | §2.2 | pilote le contraste de la bande |
+| `latitude_site` | float | ° | §4.1 | pilote la hauteur du centre galactique |
+| `plan_galactique` | polyligne | — | sortie | directions J2000, projetées |
+| `contraste_bande` | float | — | 0 – 1 | sortie, 0 = effacée |
+| `centre_galactique` | objet | — | sortie | position, hauteur courante, verdict de portée |
+| `label_voie_lactee` | objet | — | sortie | posé sur la bande, budget §3.4 |
+
+### Critères d'acceptation
+
+```gherkin
+Étant donné la couche Voie lactée activée et un champ de 60°
+Quand la scène est rendue
+Alors la ligne du plan galactique est tracée et courbée par la projection
+Et son label est posé sur la ligne, dans le canevas
+
+Étant donné un pointage où le plan galactique ne traverse pas le champ  # cas limite
+Quand la scène est rendue
+Alors aucun label n'est posé hors du canevas
+
+Étant donné un champ dense où le budget de labels de §3.4 est atteint  # cas limite
+Quand les labels sont composés
+Alors le label de la Voie lactée est arbitré par la même règle que les autres,
+    sans passe-droit
+
+Étant donné un site à Bortle 4 puis le même site à Bortle 8
+Quand la scène est rendue
+Alors la bande est visible mais atténuée dans le premier cas, effacée dans le second
+Et la ligne du plan galactique reste tracée dans les deux
+
+Étant donné la bande affichée et la couche FRONTIERES active
+Quand la scène est rendue
+Alors les frontières, les étoiles et les labels sont visibles par-dessus la bande
+
+Étant donné le centre galactique et le site de référence à 46,391° N   # cas limite
+Quand son repère est affiché
+Alors sa hauteur de culmination de 14,6° est portée avec le repère
+Et l'app annonce qu'il n'atteint jamais le seuil d'imagerie depuis ce site,
+    en nommant la latitude qui le rendrait accessible
+
+Étant donné le mode nuit actif
+Quand la bande est composée
+Alors elle est rendue en rouge monochrome, sous la luminance plafond du mode (§11.1)
+```
+
+### Dépendances données
+
+Aucune. Conversion galactique ↔ équatorial calculée, contraste dérivé de §2.2, hauteur de culmination de §8.2. Fallback : total.
+
+---
+
 # 4 — Profil Lieu
 
 ## 4.1 Feature — Saisie et caractérisation d'un site
@@ -828,11 +1039,18 @@ DÉCALAGE DU MIDI SOLAIRE VRAI — conséquence de la longitude
   → le milieu de nuit ne tombe PAS à minuit légal. L'app centre ses créneaux
     sur le milieu de nuit vrai (§8.1), jamais sur l'heure ronde.
 
-FOND DE CIEL — trois sources, par ordre de priorité décroissante
+FOND DE CIEL — deux sources, par ordre de priorité décroissante
   1. sqm_mesure      saisi par l'utilisateur, mag/arcsec²    → prévaut toujours
-  2. viirs           atlas de pollution lumineuse aux coordonnées → Bortle estimé
-  3. bortle_declare  saisi à la main, échelle 1 à 9
+  2. bortle_declare  saisi à la main, échelle 1 à 9
   Conversion et bornes : table §2.2. Extrapolation interdite.
+
+  L'ATLAS DE POLLUTION LUMINEUSE EST ÉCARTÉ. La rédaction initiale plaçait un atlas
+  VIIRS aux coordonnées entre les deux, en source par défaut. Il exige le réseau à la
+  première visite d'un site et un cache par site, pour remplacer une saisie de deux
+  secondes par une estimation que l'utilisateur ne peut pas contester. Or le Bortle
+  déclaré et le SQM mesuré sont exacts, hors ligne et déjà prioritaires. La frontière
+  de §1.2 — le déterministe hors ligne, le probabiliste en ligne — n'a pas à être
+  franchie pour une commodité de saisie.
 
 MASQUE D'HORIZON
   masque : azimut (0–360°, pas de 1°) → altitude d'obstruction (°)
@@ -848,10 +1066,18 @@ CONSÉQUENCES SITE-DÉPENDANTES, calculées à la validation
   → l'app annonce à la validation quelle part du ciel austral est hors de portée
     depuis ce site. Information structurante que rien d'autre ne donne.
 
-MULTI-SITES
-  Plusieurs sites enregistrés, un site actif. Comparaison possible : le même plan
-  de session évalué depuis deux sites chiffre le gain d'un déplacement, ce qui
-  alimente le levier « site plus sombre » de §10.2.
+UN SEUL SITE AU MVP — le multi-sites est reporté
+  Un site enregistré, actif. Il est saisi, persisté (§12.3) et exporté.
+
+  La comparaison de deux sites — le même plan de séance évalué depuis deux endroits,
+  pour chiffrer le gain d'un déplacement — est REPORTÉE À UNE VERSION ULTÉRIEURE
+  (§14, post-MVP). Elle alimenterait le levier « site plus sombre » de §10.2 par un
+  différentiel calculé plutôt que par une phrase, ce qui reste la bonne cible ; mais
+  elle exige d'abord qu'un site survive au rechargement, et suppose une gestion de
+  collection — création, choix de l'actif, suppression — qui n'apporte rien tant qu'un
+  seul site est saisissable.
+  → en attendant, le levier « site plus sombre » de §10.2 reste énoncé sans chiffre.
+    C'est une dette assumée, pas un oubli.
 ```
 
 ### Entrées / Sorties
@@ -866,7 +1092,7 @@ MULTI-SITES
 | `bortle_declare` | float | — | 1 – 9 | |
 | `masque_horizon` | array[360] | ° | 0 – 90 | MNT + édition |
 | `sb_ciel`, `m_lim_oeil` | float | mag/as², mag | sortie | §2.2 |
-| `source_sb` | enum | — | SQM_MESURE / VIIRS / BORTLE_DECLARE | affiché |
+| `source_sb` | enum | — | SQM_MESURE / BORTLE_DECLARE | affiché |
 | `dec_min_imagerie`, `dec_min_visuel` | float | ° | sortie | |
 | `offset_midi_solaire_min` | float | min | sortie | |
 
@@ -893,15 +1119,15 @@ Quand je valide le site
 Alors l'app annonce que la nuit astronomique est nulle une partie de l'année
 Et indique la période concernée, sans refuser le site
 
-Étant donné deux sites enregistrés de Bortle 4 et Bortle 6
-Quand je compare le même plan de session depuis les deux
-Alors les durées d'intégration requises diffèrent conformément à §7.3
-Et l'app chiffre le gain du déplacement
+Étant donné un site saisi puis l'application rechargée               # cas limite
+Quand je reviens sur l'application
+Alors le site est retrouvé tel qu'il a été saisi, masque compris
+Et aucune valeur par défaut ne s'est substituée à la saisie
 ```
 
 ### Dépendances données
 
-Atlas VIIRS de pollution lumineuse (fraîcheur annuelle, mis en cache par site). Modèle numérique de terrain type SRTM (statique, mis en cache par site). Fuseaux IANA embarqués. Fallback hors-ligne : total après première mise en cache ; site inconnu hors réseau → masque plat et Bortle saisi à la main.
+Modèle numérique de terrain type SRTM (statique, mis en cache par site). Fuseaux IANA embarqués. Fallback hors-ligne : total après première mise en cache ; site inconnu hors réseau → masque plat et Bortle saisi à la main.
 
 ---
 
@@ -1120,8 +1346,15 @@ CLASSIFICATION (bornes en degrés, sur taille_min_deg)
   > 2,0       DOMAINE_TRES_GRAND_CHAMP  complexes, Voie lactée, régions entières
 
 FOCALE IDÉALE pour une cible rejetée
-  focale_ideale_mm = capteur_H_mm / ( 2 × tan( taille_objet_deg / (2 × 0,42) / 2 ) )
-  → cible un remplissage de 42 %, milieu de la plage C-05.
+  fov_h_visee_deg  = taille_objet_deg / remplissage_visé
+  focale_ideale_mm = capteur_H_mm / ( 2 × tan( fov_h_visee_deg / 2 ) )
+  → remplissage visé 0,42, milieu de la plage C-05.
+  → SORTIE AVEC SA PLAGE, jamais un nombre seul : la même formule évaluée aux deux
+    bornes de C-05 (1/3 et 1/2) encadre la focale utile. Le remplissage est
+    subjectif (C-05) ; une focale unique annoncée au millimètre le nierait.
+
+  La rédaction initiale portait un facteur 2 surnuméraire au dénominateur
+  (`taille / (2 × 0,42) / 2`), qui doublait la focale annoncée. Corrigé ici.
 ```
 
 ### Entrées / Sorties
@@ -1153,7 +1386,8 @@ Et le domaine reste TRES_GRAND_CHAMP
 Étant donné une recherche de M84 (6,5', soit 0,108°)                # cas limite
 Quand j'ouvre sa fiche
 Alors le verdict de cadrage est « hors domaine — 0,95 % du champ, 44 px de diamètre »
-Et l'app indique la focale nécessaire pour un cadrage propre : ordre de 4 200 mm
+Et l'app indique la focale nécessaire pour un cadrage propre : 5 300 mm au remplissage
+    visé de 42 %, plage 4 230 à 6 340 mm aux deux bornes de C-05
 Et l'app ne propose PAS de compenser par un recadrage logiciel
 
 Étant donné un catalogue vide pour la fenêtre calculée              # cas limite
@@ -1335,7 +1569,128 @@ Alors le SQM prévaut sur la valeur Bortle du profil
 
 ### Dépendances données
 
-Magnitudes, dimensions et types : OpenNGC, Messier, Sharpless, Barnard. Fond de ciel : table §2.2, atlas VIIRS pour la valeur par défaut, SQM utilisateur prioritaire. Position et phase lunaire : séries ELP en JS, calcul client, `[À CALCULER]`. Tables de contraste : Clark / Blackwell, embarquées. Fraîcheur : catalogues statiques, VIIRS annuel, éphémérides calculées. Fallback : total pour le calcul, VIIRS mis en cache par site.
+Magnitudes, dimensions et types : OpenNGC, Messier, Sharpless, Barnard. Fond de ciel : table §2.2, Bortle déclaré ou SQM utilisateur, prioritaire. Position et phase lunaire : séries ELP en JS, calcul client, `[À CALCULER]`. Tables de contraste : Clark / Blackwell, embarquées. Fraîcheur : catalogues statiques, éphémérides calculées. Fallback : total.
+
+---
+
+## 6.4 Feature — Choisir sa cible parmi ce que le ciel offre
+
+**Feature** — La liste des objets du catalogue actuellement levés pour lesquels ce setup produit un verdict, filtrable par type, et la recherche du catalogue entier par nom. Persona : débutant grand champ — il ne connaît pas les désignations, donc il ne peut pas les taper.
+
+### Règle métier
+
+```
+POURQUOI UNE LISTE, ET PAS UN CHAMP DE SAISIE
+  Le contrat d'entrée de §6.2 et §6.3 est une cible. Tant qu'elle se saisit à la main,
+  l'application demande à l'utilisateur la réponse qu'il vient chercher. La liste
+  renverse le sens de la question : le ciel propose, les moteurs qualifient.
+
+CIBLES VISIBLES — deux motifs d'exclusion, et deux seulement
+  1. sous l'horizon à l'instant affiché    (hauteur ≤ 0°)
+  2. verdict incalculable faute de magnitude intégrée ou de dimensions au catalogue
+
+  La conversion J2000 → horizon emprunte la matrice unique de l'image (§3.1) : la liste
+  et la scène ne peuvent pas désigner deux ciels différents.
+
+  CE QUI N'EXCLUT PAS, ET C'EST DÉLIBÉRÉ
+    - le seuil de hauteur C-01 / C-02 : la liste dit ce qui est LEVÉ, le créneau de
+      §8.2 dit ce qui est OBSERVABLE. Fusionner les deux ferait disparaître de la vue
+      une cible qui sera bonne dans deux heures.
+    - le cadrage : un objet trop grand ou trop petit pour le capteur reste listé, avec
+      son verdict de §6.2. C'est `ciblesDansFenetre` (§6.1) qui répond à l'autre question.
+    - PHOTO_SEULE : c'est un verdict, pas un refus (§6.3). Il est porté comme les trois
+      autres.
+
+ORDRE — du plus brillant au plus faible, en magnitude intégrée
+  C'est l'ordre dans lequel un observateur pense au ciel. Ce n'est PAS un classement de
+  difficulté : la magnitude intégrée ment (§6.3), et c'est le verdict porté par chaque
+  ligne qui tranche, pas son rang.
+
+FILTRE PAR TYPE D'OBJET
+  Les types proposés sont ceux RÉELLEMENT présents dans la liste, jamais l'énumération
+  complète de §6.3 : offrir « nébuleuse obscure » quand aucune n'est levée est une
+  impasse. Le filtre s'applique AVANT tout plafond d'affichage — filtrer les 200
+  premières lignes ne dirait rien du ciel.
+
+RECHERCHE DU CATALOGUE — portée entière, jamais plafonnée
+  Cherche dans la désignation et dans chacun des noms communs, casse et accents ignorés.
+  Les préfixes passent devant les occurrences internes, puis du plus brillant au plus
+  faible ; une magnitude absente part en fin de tri plutôt que de valoir zéro (§6.3).
+  Un plafond borne le nombre de résultats RENDUS, jamais l'étendue parcourue : aucun
+  objet du catalogue n'est hors d'atteinte.
+  Une saisie vide ne rend rien. Dérouler 12 000 entrées avant la première frappe est le
+  défaut que la recherche corrige, pas son état par défaut.
+  La recherche ignore horizon et verdict : chercher dans le catalogue, c'est chercher
+  dans le catalogue entier, y compris sous l'horizon.
+
+CIBLE DU CATALOGUE OU CIBLE PERSONNALISÉE — deux régimes exclusifs
+  Une cible venue du catalogue ou de la liste porte ses valeurs en LECTURE SEULE :
+  magnitude, dimensions et angle de position ne se retouchent pas. Un champ éditable
+  par-dessus une donnée sourcée produit un verdict dont personne ne sait plus d'où il
+  vient.
+  Une cible personnalisée reste saisissable intégralement, pour tout objet absent du
+  catalogue embarqué.
+
+AMENER LA CIBLE AU CENTRE
+  Un geste unique pointe la scène sur la cible choisie. Sans lui, la liste nomme des
+  objets que l'utilisateur ne sait pas retrouver dans le champ — et §8.4 ne répond qu'à
+  la question du pointage sur le terrain, pas à celle du repérage à l'écran.
+```
+
+### Entrées / Sorties
+
+| Champ | Type | Unité | Plage valide | Note |
+|---|---|---|---|---|
+| `matrice_ciel` | mat3 | — | §3.1 | l'instant affiché, partagé avec la scène |
+| `sb_ciel`, `m_lim_oeil` | float | mag/as², mag | §2.2 | |
+| `d_mm` | float | mm | §5.1 | gain instrumental de §6.3 |
+| `saisie_recherche` | string | — | — | vide = aucun résultat |
+| `type_retenu` | enum ou nul | — | types présents | filtre |
+| `visibles` | array | — | sortie | objet, azimut, hauteur, verdict |
+| `types_presents` | array | — | sortie | sous-ensemble de §6.3 |
+| `origine_cible` | enum | — | CATALOGUE / PERSONNALISEE | pilote la lecture seule |
+
+### Critères d'acceptation
+
+```gherkin
+Étant donné un site, un instant et un setup valides
+Quand j'ouvre la liste des cibles visibles
+Alors chaque ligne porte son type et son verdict de détectabilité
+Et les objets sous l'horizon à cet instant en sont absents
+Et l'ordre est celui de la magnitude intégrée croissante
+
+Étant donné une cible listée dont la hauteur est inférieure au seuil C-01
+Quand je la lis
+Alors elle reste listée avec son verdict
+Et c'est son créneau de §8.2 qui dit à quelle heure elle devient observable
+
+Étant donné un objet du catalogue sans magnitude intégrée           # cas limite
+Quand la liste est composée
+Alors l'objet n'y figure pas
+Et aucun verdict n'est estimé pour lui
+
+Étant donné aucune nébuleuse obscure levée à cet instant            # cas limite
+Quand j'ouvre le filtre par type
+Alors ce type n'est pas proposé
+
+Étant donné la saisie « pleiades » sans accent ni majuscule
+Quand je cherche dans le catalogue
+Alors M45 est trouvée par son nom commun
+Et un objet dont le nom COMMENCE par la saisie passe devant un objet où elle est interne
+
+Étant donné une cible venue du catalogue
+Quand j'ouvre sa fiche
+Alors sa magnitude et ses dimensions sont en lecture seule
+Et seule une cible personnalisée reste saisissable
+
+Étant donné une cible choisie dans la liste
+Quand je demande à la voir
+Alors la scène se pointe sur elle sans changer l'instant affiché
+```
+
+### Dépendances données
+
+Catalogue d'objets du ciel profond embarqué (§12.2). Verdicts : §6.2, §6.3. Matrice du ciel : §3.1. Aucune source nouvelle, aucun réseau. Fallback : total.
 
 ---
 
@@ -1356,6 +1711,11 @@ E_obj  = 10^( −0,4 × (SB_obj  − ZP_sys) ) × (pitch_um / N)²      [e⁻/s/
   pitch_um pas des pixels, µm
   N        nombre f/N
   ZP_sys   point zéro système du boîtier, §2.3, base matériel (générique C-14 = 20,20)
+
+ATTÉNUATION PAR LA MASSE D'AIR — §7.6
+  `E_obj` ci-dessus est le flux hors atmosphère : la magnitude de catalogue l'est. Le
+  flux réellement collecté est atténué en fonction de la hauteur de la cible (§7.6).
+  `E_ciel`, lui, dérive d'une brillance mesurée au sol : il n'est jamais atténué.
 
 LE FLUX DE FOND DE CIEL PAR PIXEL NE DÉPEND PAS DU DIAMÈTRE DE L'INSTRUMENT.
 Il dépend du rapport d'ouverture et du pas des pixels. Deux setups de même f/N
@@ -1514,6 +1874,10 @@ RÉSOLUTION INVERSE
 LOI FONDAMENTALE, affichée en permanence
   SNR ∝ √T  →  DOUBLER LA QUALITÉ = QUADRUPLER LE TEMPS.
 
+  `E_obj` employé ici est le flux ATTÉNUÉ de §7.6. Comme T_requis ∝ 1 / E_obj² dans le
+  régime dominé par le ciel, la hauteur de la cible pèse au carré sur la durée : une
+  cible au seuil C-01 coûte près du double d'une cible au zénith.
+
 BUDGET MATÉRIEL
   volume_go = N_poses × taille_raw_mo / 1024
   n_nuits   = ceil( T_requis / duree_creneau_disponible )        §8.2
@@ -1608,7 +1972,7 @@ HIÉRARCHIE POUR LE GRAND CHAMP RAPIDE
 | Champ | Type | Unité | Plage valide | Note |
 |---|---|---|---|---|
 | `t_pose_s`, `iso`, `n_poses` | — | — | §7.2, §7.3 | |
-| `temp_capteur_c` | float | °C | −20 – 40 | saisie ou EXIF |
+| `temp_capteur_c` | float | °C | −20 – 40 | saisie |
 | `plan_calibration` | objet | — | sortie | 3 listes + consignes |
 | `surcout_temps_min` | float | min | sortie | ajouté au budget session |
 | `biblio_darks_valide` | bool | — | sortie | selon ISO, durée, température |
@@ -1638,7 +2002,9 @@ Alors l'app signale que les flats de la première cible ne sont plus valides
 
 ### Dépendances données
 
-Aucune source externe. Température capteur lue en EXIF si un fichier est fourni. Fallback : total.
+Aucune source externe. Température capteur SAISIE. Fallback : total.
+
+**La lecture EXIF est retirée du périmètre.** La rédaction initiale prévoyait de lire la température capteur dans les métadonnées d'un fichier fourni. Le décodeur RAW en WebAssembly a disparu avec la calibration (Annexe C, décision 9) : il ne reste donc qu'un sélecteur de fichier pour renseigner un champ que l'utilisateur saisit en trois secondes, et dont le seul usage est de comparer à ±3 °C (C-10). Le coût — un chemin d'import, un parseur de métadonnées, un cas d'erreur par format de boîtier — n'achète aucune précision que la saisie n'ait déjà.
 
 ---
 
@@ -1689,6 +2055,117 @@ Alors le conseil ne s'affiche plus et le filtre est intégré au calcul de E_cie
 ### Dépendances données
 
 Table de transmission par famille de filtres (bande passante en nm), quelques dizaines de lignes, embarquée. Aucune donnée commerciale. Fallback : total.
+
+---
+
+## 7.6 Feature — Atténuation atmosphérique par masse d'air
+
+**Feature** — Le flux de l'objet est atténué par l'épaisseur d'atmosphère traversée, en fonction de la hauteur de la cible. Persona : moteur interne, conséquence visible sur l'intégration totale. Sans elle, une cible basse coûte près du double du temps annoncé.
+
+### Règle métier
+
+```
+POURQUOI L'OBJET SEUL, ET PAS LE FOND DE CIEL — la raison est photométrique
+  Une magnitude de catalogue est une magnitude HORS ATMOSPHÈRE. Le flux qui atteint
+  réellement le capteur est atténué par la traversée. Il FAUT donc l'éteindre.
+  Une brillance de fond de ciel, elle, est mesurée AU SOL — SQM de l'utilisateur, ou
+  table Bortle §2.2, toutes deux relevées depuis le site. Elle est déjà atténuée : lui
+  appliquer l'extinction une seconde fois serait la compter deux fois.
+  → ce n'est donc pas une approximation choisie par facilité, c'est la seule
+    combinaison cohérente des deux sources.
+
+FORMULATION
+  X            = masse d'air de la cible, 1 / sin(alt)              §8.2
+  attenuation  = 10^( −0,4 × k × X )                                sans unité
+  E_obj_reel   = E_obj × attenuation                                [e⁻/s/px]
+
+  k = coefficient d'extinction en bande V, registre §2.1 (L-04).
+      Marqué ORDRE DE GRANDEUR : 0,15 à 0,30 selon la transparence du soir. Toute
+      sortie qui en dépend porte donc sa plage, jamais une valeur exacte (§2.1).
+
+CE QUE ÇA CHANGE SUR L'INTÉGRATION — l'effet est quadratique
+  Le régime nominal du grand champ est dominé par le fond de ciel, où
+  T_requis ∝ 1 / E_obj² (§7.3). L'atténuation du flux se paie donc au carré :
+
+     facteur sur T_requis = 10^( +0,8 × k × X )
+
+  | Hauteur de la cible | X | Perte à k = 0,172 | T_requis × |
+  |---|---|---|---|
+  | zénith | 1,00 | 0,17 mag | 1,37 |
+  | 60° | 1,15 | 0,20 mag | 1,45 |
+  | 30° — seuil C-01 | 2,00 | 0,34 mag | 1,88 |
+  | 20° — seuil C-02 | 2,92 | 0,50 mag | 2,52 |
+
+  À k = 0,25, valeur de plaine dans la tolérance annoncée, le facteur à 30° atteint 2,5.
+  Ignorer ce terme, c'est sous-estimer d'un facteur deux le temps d'une cible basse.
+
+CONSÉQUENCE SUR LE SCORING §8.3 — un proxy remplacé par un calcul
+  S_hauteur pondère la hauteur de culmination par une rampe linéaire. Cette rampe était
+  un substitut à un effet non modélisé. L'effet est désormais chiffré dans T_requis, donc
+  déjà porté par S_signal. Les deux termes ne doivent pas compter deux fois la même
+  physique : l'arbitrage est à trancher au ticket, pas à laisser en double silencieux.
+
+DOMAINE DE VALIDITÉ — la borne est dure
+  L'approximation plane 1 / sin(alt) dévie au-delà d'environ X = 4, soit sous 15° de
+  hauteur (§8.2). Sous cette borne, le calcul est REFUSÉ ou l'approximation remplacée
+  par une formule valide — jamais extrapolée en silence.
+  Les seuils C-01 (30°) et C-02 (20°) restent au-dessus de la borne : le cas nominal
+  n'est jamais concerné.
+
+CE QUE ÇA NE FAIT PAS
+  Le fond de ciel est pris à sa valeur DÉCLARÉE, indépendamment du pointage. Le ciel
+  réel est plus lumineux à basse hauteur qu'au zénith — davantage de trajet lumineux et
+  de diffusion — ce qui allongerait encore T_requis. L'ignorer laisse le résultat
+  optimiste : la correction va donc dans le bon sens, jamais dans le mauvais. C'est une
+  approximation ASSUMÉE, à trancher, pas une omission.
+```
+
+### Entrées / Sorties
+
+| Champ | Type | Unité | Plage valide | Note |
+|---|---|---|---|---|
+| `alt_cible_deg` | float | ° | 15 – 90 | hauteur d'évaluation, §8.2 |
+| `masse_air` | float | — | 1,0 – 4,0 | sortie, refusée au-delà |
+| `k_extinction` | float | mag/masse d'air | 0,15 – 0,30 | registre, ordre de grandeur |
+| `attenuation` | float | — | 0 – 1 | sortie |
+| `e_obj_reel` | float | e⁻/s/px | sortie | consommé par §7.3 |
+| `instant_evaluation` | datetime | — | — | **doit être affiché** |
+
+### Critères d'acceptation
+
+```gherkin
+Étant donné une cible au zénith et k = 0,172
+Quand l'intégration totale est calculée
+Alors T_requis est 1,37 fois celui qu'on obtiendrait sans atténuation
+Et la masse d'air employée est affichée avec la hauteur qui la produit
+
+Étant donné la même cible à 30° de hauteur
+Quand l'intégration est recalculée
+Alors le facteur sur T_requis vaut 1,88
+Et l'app énonce que la hauteur, pas seulement la cible, dicte le temps de pose
+
+Étant donné une cible à 10° de hauteur                              # cas limite
+Quand l'atténuation est demandée
+Alors le calcul est refusé, ou une formule valide hors approximation plane est employée
+Et aucune valeur n'est extrapolée en silence
+
+Étant donné que k est marqué ordre de grandeur au registre
+Quand l'intégration est affichée
+Alors elle porte sa plage sur la fourchette 0,15 à 0,30
+Et aucune durée n'est présentée comme une valeur exacte
+
+Étant donné le résultat déplié au niveau N3 de §10.2
+Quand je lis la chaîne
+Alors l'étape d'atténuation porte sa formule et renvoie à l'entrée L-04 du registre
+
+Étant donné une même cible évaluée depuis la fiche puis depuis le plan de séance
+Quand je compare les deux intégrations
+Alors elles emploient la même masse d'air pour le même instant d'évaluation
+```
+
+### Dépendances données
+
+Coefficient d'extinction : registre §2.1 (L-04), déjà consommé par le modèle lunaire de §8.1. Hauteur et masse d'air : §8.2, calcul client. Aucune source nouvelle, aucun réseau. Fallback : total.
 
 ---
 
@@ -2081,7 +2558,7 @@ Et n'invente pas un itinéraire au-delà de la contrainte déclarée
 
 ### Dépendances données
 
-HYG v3 embarqué, complet jusqu'à mag 9 (réutilise §9.2, coût marginal nul). Noms propres et désignations Bayer : HYG. Positions apparentes et angle du zénith : séries en JS, calcul client. Fraîcheur : statique. Fallback : total.
+HYG v4.1 embarqué, coupé à mag ≤ 9 (réutilise §9.2, coût marginal nul). Noms propres et désignations Bayer : HYG. Positions apparentes et angle du zénith : séries en JS, calcul client. Fraîcheur : statique. Fallback : total.
 
 ---
 
@@ -2255,7 +2732,7 @@ Et l'app signale l'absence de repère brillant, information utile en pointage ma
 
 ### Dépendances données
 
-HYG v3 (positions, magnitudes, B−V), complet jusqu'à mag ≈ 9, embarqué. Sous-ensemble Gaia DR3 en paquet différé pour les champs serrés (§12.2). Masque Voie lactée procédural embarqué. Fraîcheur : statique. **Fallback hors-ligne : total au MVP** — c'est l'argument décisif du masque procédural contre HiPS.
+HYG v4.1 (positions, magnitudes, B−V), coupure à mag ≤ 9, embarqué. Sous-ensemble Gaia DR3 : hors MVP (§12.2). Masque Voie lactée procédural embarqué. Fraîcheur : statique. **Fallback hors-ligne : total au MVP** — c'est l'argument décisif du masque procédural contre HiPS.
 
 ---
 
@@ -2450,6 +2927,89 @@ Et l'app affiche un nombre de batteries, pas une durée d'autonomie précise
 ### Dépendances données
 
 Taille RAW et autonomie CIPA par boîtier : base embarquée, valeurs `[À VÉRIFIER]`. Facteur de froid : C-16, ordre de grandeur. Température prévue : API météo (§12.5, en ligne seulement). Fallback : saisie manuelle de la température.
+
+---
+
+## 9.5 Feature — Aperçu incrusté dans le cadre matériel
+
+**Feature** — Les prévisualisations de §9.2 et §9.3 sont rendues À L'INTÉRIEUR du cadre de §3.5, sur la scène, et non dans un second canevas ailleurs. Persona : préparation de cadrage. C'est ce qui rend l'aperçu comparable au ciel qui l'entoure.
+
+### Règle métier
+
+```
+POURQUOI DANS LE CADRE, ET PAS À CÔTÉ
+  Un aperçu affiché dans un panneau séparé oblige l'utilisateur à comparer deux images
+  de projections, d'échelles et d'orientations différentes. Il en tire une impression,
+  pas une décision de cadrage. Incrusté, l'aperçu se lit contre les étoiles réelles qui
+  entourent le cadre : allonger la pose ovalise les étoiles là où l'utilisateur regarde
+  déjà, et les arcs de filé tombent exactement sur les étoiles de la scène.
+
+LE PROJECTEUR EST CELUI DE LA SCÈNE — conséquence de §3.3
+  L'aperçu emprunte la vue et la matrice de l'image courante. Aucun second code de
+  projection n'existe, donc aucune divergence entre le cadre affiché et son contenu
+  n'est possible. Le cadre borne la SÉLECTION des étoiles, jamais le canevas.
+
+ORDRE DES PASSES — l'aperçu est un fond, pas un calque de tête
+  fond → APERÇU INCRUSTÉ → frontières, figures, astérismes, plan galactique, étoiles,
+  corps, cadres, labels.
+  Les repères du planétarium passent donc PAR-DESSUS l'aperçu. Un aperçu déposé en
+  dernier masquerait le repérage au moment précis où l'utilisateur en a besoin.
+
+CADENCE — une image par changement de réglage, jamais soixante par seconde
+  L'aperçu est recalculé au changement de pointage, de champ, de mode, d'instant, de
+  matériel ou de réglage ; sinon l'image conservée est redéposée telle quelle. Le coût
+  d'un arc par étoile est incompatible avec la contrainte de 60 Hz de §3.1 : c'est la
+  seule raison de ce découplage, et non une économie de confort.
+
+DEUX MENTIONS OBLIGATOIRES, parce que l'incrustation change ce qui est vrai
+  1. VIGNETTAGE NON INCRUSTÉ. Il se centre sur le canevas de la scène, pas sur le cadre :
+     incrusté tel quel, il assombrirait les coins de la SCÈNE et non ceux de l'image.
+     Son atténuation en diaphragmes reste chiffrée au panneau (§9.2).
+  2. PROJECTION DE LA SCÈNE ≠ PROJECTION DE L'OBJECTIF. La scène est stéréographique
+     (§3.3) ; l'objectif déclaré produit du gnomonique ou de l'équidistant. Le contenu
+     du cadre est donc à la bonne place dans le ciel, mais déformé autrement que sur le
+     capteur. Un geste « voir comme l'objectif » recadre la scène sur le champ du cadre
+     et lève l'écart.
+```
+
+### Entrées / Sorties
+
+| Champ | Type | Unité | Plage valide | Note |
+|---|---|---|---|---|
+| `vue`, `matrice_ciel` | — | — | §3.1, §3.3 | CELLES DE LA SCÈNE |
+| `cadre` | polylignes | — | §3.5 | borne la sélection |
+| `duree_s` | float | s | §7.2 ou §9.3 | pose unitaire, ou durée accumulée |
+| `image_apercu` | image | — | sortie | hors écran, redéposée telle quelle |
+| `mention_vignettage` | string | — | sortie | obligatoire |
+| `mention_projection` | string ou nul | — | sortie | nul si les modes coïncident |
+
+### Critères d'acceptation
+
+```gherkin
+Étant donné un filé d'une heure et un cadre posé sur la scène
+Quand l'aperçu est incrusté
+Alors chaque arc part de la position réelle de son étoile sur la scène
+Et les frontières, figures et labels du planétarium sont visibles par-dessus l'aperçu
+
+Étant donné un aperçu incrusté et une animation du curseur temporel
+Quand la scène est rendue
+Alors l'aperçu n'est pas recalculé à chaque image
+Et la fréquence ne descend pas sous le plancher de §3.1
+
+Étant donné une scène en projection stéréographique et un objectif rectilinéaire
+Quand l'aperçu est incrusté
+Alors l'app énonce que la déformation du cadre n'est pas celle du capteur
+Et propose de recadrer la scène sur le champ du cadre
+
+Étant donné le vignettage chiffré à un diaphragme dans les coins    # cas limite
+Quand l'aperçu est incrusté
+Alors aucun assombrissement n'est peint sur la scène
+Et la valeur en diaphragmes reste affichée au panneau
+```
+
+### Dépendances données
+
+Agrège §3.3, §3.5, §9.1, §9.2, §9.3. Aucune source nouvelle. Fallback : total.
 
 ---
 
@@ -2753,6 +3313,18 @@ RÈGLES ABSOLUES
     distingue par la forme, l'icône ou la luminance.
   - Passage en mode nuit : transition progressive, jamais un basculement brutal.
   - Persistance : le mode reste actif au redémarrage et entre les vues.
+
+ARBITRAGE AVEC `prefers-reduced-motion` — les deux règles sont tenables
+  La préférence système demande qu'aucun mouvement ne s'impose ; la règle ci-dessus
+  interdit le basculement brutal et le flash. Elles ne s'opposent pas, parce que la
+  transition du mode nuit NE DÉPLACE RIEN : c'est un fondu de luminance.
+  → ce qui est coupé sous la préférence est la DURÉE du fondu, pas son existence :
+    assez court pour ne plus se lire comme une animation, jamais nul, car zéro
+    redeviendrait le flash proscrit.
+  → le cas qui justifie la règle est l'auto-activation au crépuscule : là, le
+    basculement n'est pas demandé au moment où il se produit.
+  Cette règle vaut pour toute l'interface, pas seulement le mode nuit : aucune
+  animation non sollicitée ne s'impose sous la préférence (§11.2).
 ```
 
 ### Entrées / Sorties
@@ -2789,6 +3361,11 @@ Et aucun flash n'est produit pendant le basculement
 Étant donné une dalle LCD déclarée
 Quand j'active le mode nuit
 Alors l'app indique UNE FOIS que l'extinction ne peut être totale sur cette technologie
+
+Étant donné la préférence système « mouvement réduit » active           # cas limite
+Quand le mode nuit s'active au crépuscule
+Alors le fondu est raccourci sans être supprimé
+Et aucun flash n'est produit
 ```
 
 ### Dépendances données
@@ -2841,6 +3418,99 @@ Aucune. Fallback : total.
 
 ---
 
+## 11.3 Feature — Coque : la scène au centre, les réglages sur les côtés
+
+**Feature** — Disposition d'ensemble de l'application : une scène centrale qui ne bouge jamais, le matériel à gauche, l'intention à droite, les gestes de terrain dans la barre haute. Persona : tous. C'est ce qui rend l'effet d'un réglage immédiatement visible.
+
+### Règle métier
+
+```
+PRINCIPE — l'application est un planétarium, elle doit se lire comme un planétarium
+  Une pile de sections dans une colonne unique oblige à faire défiler pour voir l'effet
+  d'un changement de focale sur un cadre. Le geste et sa conséquence doivent tenir dans
+  le même écran, sans défilement — sinon l'utilisateur ne relie pas les deux.
+
+QUATRE RÉGIONS, ET LA COQUE N'EN CONNAÎT AUCUN CONTENU
+  BARRE HAUTE   identité, niveau d'explication, gestes de terrain
+  GAUCHE        le matériel et ce qu'il donne (§5)
+  CENTRE        la scène. ELLE NE DÉFILE PAS, et sa taille ne dépend pas de la
+                longueur des lectures affichées ailleurs.
+  DROITE        la séance : où, quand, sous quel ciel, puis l'intention
+
+ORDRE DES GESTES DANS LA BARRE — c'est un contrat, pas une mise en page
+  1. mode nuit      : il se cherche dans le noir, il vient donc en premier
+  2. vérification   : l'état des paquets, du stockage et du réseau (§12.1, §12.3)
+  3. réglages       : ce qui sort du chemin principal
+  4. lectures       : dernier élément, donc le plus à droite, et SANS HAUTEUR tant
+                      qu'il est fermé — un panneau de lectures replié ne doit pas
+                      voler un pixel à la scène
+  Un menu fermé qui porte une alerte le signale sur lui-même : sinon l'information
+  n'existe que pour qui pense à ouvrir le menu.
+
+ONGLETS D'INTENTION — un seul jeu de réglages à l'écran à la fois
+  Explorer · Cible · Nuit · Filé. Un clic sur un objet de la scène ouvre l'onglet Cible
+  garni : le geste part de la scène et arrive dans le panneau, l'état de l'onglet est
+  donc partagé, pas local au panneau.
+  Le groupe « Séance » — lieu, date, ciel — reste visible SOUS TOUS LES ONGLETS : ces
+  champs commandent tout le reste, les masquer obligerait à y revenir sans cesse.
+
+LE PLAN DE SESSION ÉCHAPPE AUX ONGLETS
+  Il est rendu en permanence, masqué à l'écran hors de l'onglet Nuit, et reste la seule
+  région imprimable (§11.2). Sans cela, imprimer depuis un autre onglet sortirait une
+  page blanche.
+
+REPLI EN UNE COLONNE — sous une largeur seuil
+  Les deux panneaux latéraux redeviennent des accordéons repliables sous la scène. Ils
+  sont portés par l'élément natif dépliable, dont l'état est dans le document : aucune
+  détection de largeur en JavaScript, donc aucun écart entre la mise en page et l'état
+  réel des panneaux.
+```
+
+### Entrées / Sorties
+
+| Champ | Type | Unité | Plage valide | Note |
+|---|---|---|---|---|
+| `onglet_actif` | enum | — | EXPLORER / CIBLE / NUIT / FILE | état partagé avec la scène |
+| `niveau_utilisateur` | enum | — | DEBUTANT / CONFIRME | §10.1, aucun effet de calcul |
+| `menus_ouverts` | set | — | nuit / vérification / réglages / lectures | |
+| `alerte_menu` | bool | — | par menu | signalée sur le menu fermé |
+
+### Critères d'acceptation
+
+```gherkin
+Étant donné l'application ouverte au-dessus de la largeur seuil
+Quand je change la focale au panneau gauche
+Alors le cadre de la scène change sans aucun défilement
+Et la scène n'a pas changé de taille
+
+Étant donné des lectures qui s'allongent dans un menu ouvert
+Quand je les lis
+Alors le canevas de la scène conserve sa taille
+
+Étant donné un clic sur un objet du ciel profond dans la scène
+Quand la fiche s'ouvre
+Alors l'onglet Cible est activé et garni de cet objet
+
+Étant donné l'onglet Filé actif et un plan de session produit
+Quand je lance l'impression
+Alors le plan de session est imprimé, pas une page blanche
+
+Étant donné une largeur d'écran sous le seuil de repli              # cas limite
+Quand j'affiche l'application
+Alors la grille passe à une colonne et les panneaux deviennent des accordéons
+Et la scène reste au-dessus d'eux
+
+Étant donné une alerte de vérification et le menu correspondant fermé  # cas limite
+Quand je regarde la barre haute
+Alors le menu fermé porte le signalement
+```
+
+### Dépendances données
+
+Aucune. Fallback : total.
+
+---
+
 # 12 — Données et architecture offline
 
 ## 12.1 Feature — Application web installable
@@ -2851,22 +3521,39 @@ Aucune. Fallback : total.
 
 ```
 STACK MVP
-  Rendu        WebGL 2 — universellement disponible sur navigateur de bureau.
-               WebGPU post-MVP : gain réel sur le semis génératif §9.2, mais support
-               encore inégal [À VÉRIFIER selon le parc navigateur cible].
-  Coquille     Service Worker + Cache API → code, styles, polices, WASM
+  Rendu        CANVAS 2D. La rédaction initiale imposait WebGL 2 ; la contrainte de
+               §3.1 — « ajouter des étoiles ne dégrade pas mesurablement la fréquence »
+               — est tenue en 2D, parce que ce qui la tient n'est pas le GPU mais
+               l'indexation spatiale et l'arrêt par magnitude de §3.3 : le nombre
+               d'étoiles EXAMINÉES par image ne dépend pas de la taille du catalogue.
+               → WebGL 2 n'est donc PAS un prérequis, et rien ne le sonde : une
+                 capacité qui ne conditionne aucune fonction n'a pas à être mesurée
+                 ni affichée (§10.1). Le démarrage ne vérifie que ce qui porte une
+                 conduite à tenir — catalogues et stockage (§12.2, §12.3).
+               → WebGPU et WebGL 2 restent ouverts si un profil de rendu le justifie,
+                 mesure à l'appui. Aucun des deux n'est une dette.
+  Coquille     Service Worker + Cache API → code, styles, polices
   Données      IndexedDB → catalogues binaires, masques d'horizon, profils
-  Calcul lourd Web Workers → planification §8.3, résolution SNR §7.3, rendus §9
-  Rendu hors   OffscreenCanvas → prévisualisations §9.2 et §9.3 générées dans un
-    du thread    worker, sans jamais interrompre la boucle d'animation §3.1
+  Calcul lourd sur le thread de rendu tant qu'aucun blocage n'est MESURÉ ; en Web
+               Worker dès qu'il l'est (voir la règle ci-dessous)
+  Rendu hors   OffscreenCanvas pour les aperçus de §9.2 et §9.3, incrustés dans le
+    du canevas   cadre (§9.5) : une image par changement de réglage, redéposée telle
+                 quelle à chaque image de la boucle
   HTTPS obligatoire (prérequis Service Worker et stockage persistant)
 
-RÈGLE D'ARCHITECTURE NON NÉGOCIABLE
-  Le thread principal ne fait QUE du rendu.
-  §3.1 exige 60 Hz soutenus. Une planification de session §8.3 sur ce thread gèle
-  l'animation pendant plusieurs centaines de millisecondes — défaut immédiatement
-  perçu comme un bug de performance.
-  → tout calcul non lié à l'image courante part en Worker, sans exception.
+  Aucun WebAssembly : le décodeur RAW a disparu avec la calibration (Annexe C, 9).
+
+RÈGLE D'ARCHITECTURE — LA MESURE TRANCHE, PAS LE PRINCIPE
+  §3.1 exige 60 Hz soutenus, et §12.1 exige qu'une planification de séance ne fasse
+  pas tomber le rendu sous 50 Hz. Ce sont les critères ; le Worker est un moyen.
+  La rédaction initiale posait « tout calcul non lié à l'image courante part en
+  Worker, sans exception » — une règle d'implémentation déguisée en exigence, et le
+  découplage de cadence de §9.5 obtient le même résultat sans thread supplémentaire.
+  → EXIGENCE : aucune interaction ne fait tomber la fréquence sous le plancher, et
+    un calcul dépassant ce budget affiche une progression au lieu de figer l'écran.
+  → MOYEN : Worker dès qu'un profil de rendu montre un blocage au-delà du budget.
+    Le déporter avant la mesure ajoute un protocole de messages et une copie de
+    données pour un gain non constaté.
 
 INSTALLABILITÉ — deux fois utile
   1. usage en fenêtre dédiée, sans barre d'adresse, cohérent avec le mode nuit §11
@@ -2877,7 +3564,6 @@ INSTALLABILITÉ — deux fois utile
 
 | Champ | Type | Unité | Plage valide | Note |
 |---|---|---|---|---|
-| `webgl2_disponible` | bool | — | — | détecté au démarrage |
 | `sw_enregistre` | bool | — | — | |
 | `app_installee` | bool | — | — | influe sur §12.3 |
 | `mode_reseau` | enum | — | EN_LIGNE / HORS_LIGNE / DEGRADE | sortie |
@@ -2893,18 +3579,30 @@ Et l'app annonce sa disponibilité hors réseau, en précisant les fonctions qui
 
 Étant donné un navigateur sans WebGL 2                              # cas limite
 Quand l'application démarre
-Alors le planétarium §3 et les prévisualisations §9 sont désactivés avec la cause nommée
-Et les moteurs de calcul §6, §7, §8 restent pleinement utilisables
+Alors le planétarium §3 et les prévisualisations §9 restent disponibles :
+    aucune fonction ne dépend de WebGL 2
+Et le tiroir de vérification ne mentionne pas WebGL 2 : rien ne le sonde
 
 Étant donné une planification de session lancée pendant une animation à ×600
 Quand le calcul s'exécute
 Alors la fréquence d'images ne descend pas sous 50 Hz
 Et une progression est affichée sans figer le curseur temporel
+Et le moyen employé — thread de rendu ou Worker — est indifférent au critère
+
+Étant donné le catalogue complet et le planétarium animé
+Quand je mesure la fréquence d'images
+Alors elle reste au-dessus de 50 Hz sans WebGL 2
+Et ajouter des étoiles au catalogue ne la dégrade pas mesurablement (§3.1, §3.3)
 
 Étant donné une perte de réseau en cours de session de travail
 Quand je poursuis mon travail
 Alors mode_reseau passe à HORS_LIGNE
 Et seules les fonctions listées en §12.5 sont dégradées, les autres inchangées
+
+Étant donné l'application servie en HTTPS
+Quand le navigateur évalue l'installabilité
+Alors le manifeste, le service worker et les icônes exigées sont présents et servis
+Et l'installation en fenêtre dédiée aboutit, condition d'octroi du stockage de §12.3
 ```
 
 ### Dépendances données
@@ -2928,38 +3626,55 @@ ENCODAGE BINAIRE PAR ÉTOILE — jamais du CSV, jamais du JSON
                  ─────────
                  12 octets par étoile
 
-  HYG v3 complet jusqu'à mag ≈ 9 : 120 000 × 12 = 1,44 Mo
-    + table de noms creuse (quelques milliers d'entrées)  ≈ 0,2 Mo
-    → 1,7 Mo, contre ~30 Mo pour le CSV source : facteur 18 par l'encodage seul.
+  HYG v4.1, coupure stricte à mag ≤ 9 : 83 479 × 12 = 1,00 Mo, comptage MESURÉ
+    + désignations et noms propres, dans le paquet des tracés de repérage
+    → contre ~30 Mo pour le CSV source : le facteur 30 vient de l'encodage seul.
 ```
 
-| Jeu de données | Volume calculé | Base du calcul |
-|---|---|---|
-| HYG v3 (mag ≤ 9) | **1,7 Mo** | 120 000 × 12 o + noms |
-| OpenNGC (~14 000 objets) | **1,2 Mo** | 14 000 × 60 o + chaînes |
-| Sharpless (313) + Barnard (349) + Caldwell (109) | **< 0,1 Mo** | 771 objets |
-| Frontières IAU B1875 | **< 0,2 Mo** | ~13 000 sommets × 8 o |
-| Figures + astérismes | **< 0,02 Mo** | ~700 segments × 8 o |
-| Masque Voie lactée procédural | **≈ 0,5 Mo** | 2048 × 1024, niveaux de gris |
-| Base matériel (boîtiers, capteurs, filtres) | **≈ 0,2 Mo** | quelques centaines d'entrées |
-| Glossaire §10.1 | **≈ 0,1 Mo** | quelques centaines d'entrées |
-| Code applicatif + WASM | **3 – 5 Mo** | `[À VÉRIFIER]` après build |
-| **Paquet de base — total** | **≈ 7 – 9 Mo** | |
-| Paquet Gaia DR3 différé (mag ≤ 11) | **≈ 12 Mo** | ordre de 1e6 × 12 o, `[À VÉRIFIER]` |
+La colonne « mesuré » porte la taille du paquet réellement construit par `pnpm data:build`, relevée sur le manifeste. Elle prévaut sur l'estimation : c'est le volume que le navigateur télécharge.
+
+| Jeu de données | Volume calculé | Mesuré | Base du calcul |
+|---|---|---|---|
+| HYG v4.1 (mag ≤ 9) | 1,7 Mo | **0,96 Mo** | 83 479 × 12 o, comptage mesuré |
+| OpenNGC + addendum | 1,2 Mo | **0,43 Mo** | 12 518 × 28 o + bloc de chaînes |
+| Sharpless (278 après filtrage NGC/IC) + Barnard (343) | < 0,1 Mo | **0,03 Mo** | 621 objets Stellarium DSO v3.23, Caldwell hors périmètre |
+| Frontières IAU B1875 + figures + astérismes + étoiles nommées | < 0,25 Mo | **0,26 Mo** | un seul paquet, JSON en UTF-8 |
+| Masque Voie lactée procédural | ≈ 0,5 Mo | **0 Mo** | calculé à l'exécution, aucune donnée |
+| Base matériel (boîtiers, capteurs, filtres) | ≈ 0,2 Mo | **dans le code** | tables gelées du registre |
+| Glossaire §10.1 | ≈ 0,1 Mo | **dans le code** | clés typées, pas un fichier |
+| Code applicatif (aucun WASM) | 3 – 5 Mo | **0,56 Mo** | un fragment JS + une feuille CSS |
+| **Paquet de base — total** | ≈ 7 – 9 Mo | **≈ 2,4 Mo** | tout `dist/`, icônes comprises |
+| Paquet Gaia DR3 (mag ≤ 11) | ≈ 12 Mo | **hors MVP** | reporté, voir ci-dessous |
+
+Trois écarts à l'estimation initiale, tous dans le même sens : le masque de Voie lactée est procédural donc pesant zéro, la base matériel et le glossaire vivent dans le code plutôt qu'en données, et le décodeur RAW en WebAssembly a disparu avec la calibration (Annexe C, décision 9). Le budget de 10 Mo de §12.2 n'est donc pas la contrainte : c'est l'éviction de §12.3.
 
 **Le volume n'est pas une contrainte du choix web** : sept à neuf mégaoctets est l'ordre de grandeur d'une page d'actualité chargée d'images.
 
 ```
+LE PAQUET GAIA EST REPORTÉ HORS MVP
+  Le raisonnement ci-dessous reste valide : 12 Mo et une passe de dessin rendent le
+  zoom à 5° techniquement atteignable en web, et le volume n'est pas la contrainte.
+  Il est reporté pour une autre raison — le PLANCHER DE ZOOM N'EST PAS UNE PROMESSE
+  DU PRODUIT. Aucune décision de capture ne se prend à 5° de champ avec un matériel
+  dont le domaine est 3,79° à 5,69° de fenêtre de cadrage : le persona primaire vit
+  entre 15° et 130° de champ. Multiplier par six le volume téléchargé pour un zoom
+  que le cas d'usage n'atteint pas est le mauvais arbitrage.
+  → l'application plafonne à 15° de champ, le déclare, et complète par le semis
+    génératif de §9.2 en le déclarant lui aussi (§3.3). C'est le comportement livré.
+  → le paquet Gaia rejoint la liste post-MVP de §14, avec l'imagerie HiPS : les deux
+    achètent du réalisme visuel contre du volume, et aucun des deux ne change une
+    décision d'observation.
+
 CONSÉQUENCE SUR LE ZOOM — le plafond de 15° n'était pas nécessaire
   Comptage stellaire intégré : facteur ≈ 3 par magnitude dans la plage 6–12.
-     mag ≤ 9  : 120 000 (HYG, mesuré) → 2,91 étoiles/deg²
+     mag ≤ 9  : 83 479 (HYG v4.1, mesuré) → 2,02 étoiles/deg²
      mag ≤ 11 : ordre de 1e6          → 24,2 étoiles/deg²   [À VÉRIFIER]
   Un champ de 5° × 3,3° = 16,5 deg² contient ≈ 48 étoiles avec HYG seul (le ciel
   paraît vide) et ≈ 400 avec Gaia (rendu crédible).
   Coût GPU : 1e6 points en un seul tampon de sommets, une passe de dessin.
-  → 12 Mo et une passe de dessin. Le sous-ensemble Gaia est faisable au MVP en web,
-    et la conclusion tient sur toute la fourchette d'incertitude du comptage.
-    ZOOM UTILE : 5° de champ, catalogue réel jusqu'à mag 11.
+  → 12 Mo et une passe de dessin. Le sous-ensemble Gaia est TECHNIQUEMENT faisable en
+    web, et la conclusion tient sur toute la fourchette d'incertitude du comptage.
+    Ce n'est pas la technique qui l'a écarté du MVP, c'est l'usage : voir ci-dessus.
 ```
 
 ### Entrées / Sorties
@@ -2968,7 +3683,7 @@ CONSÉQUENCE SUR LE ZOOM — le plafond de 15° n'était pas nécessaire
 |---|---|---|---|---|
 | `paquets_donnees` | array | — | — | nom, version, volume, obligatoire |
 | `volume_total_mo` | float | Mo | sortie | |
-| `gaia_charge` | bool | — | — | paquet différé, 12 Mo |
+| `gaia_charge` | bool | — | — | hors MVP : toujours faux, plancher de zoom à 15° |
 | `progression_chargement` | float | % | sortie | |
 
 ### Critères d'acceptation
@@ -2977,12 +3692,12 @@ CONSÉQUENCE SUR LE ZOOM — le plafond de 15° n'était pas nécessaire
 Étant donné une première visite
 Quand le paquet obligatoire est téléchargé
 Alors son volume ne dépasse pas 10 Mo
-Et le planétarium est utilisable avant la fin du chargement du paquet Gaia différé
+Et chaque paquet est vérifié par sa somme de contrôle avant d'alimenter un verdict
 
-Étant donné le paquet Gaia non encore chargé et un zoom à 5° de champ
+Étant donné un zoom au plancher de champ du catalogue chargé
 Quand le rendu est produit
-Alors l'app propose le chargement du paquet en indiquant son volume
-Et affiche entre-temps le rendu HYG complété par le semis, en le déclarant
+Alors l'app affiche le rendu réel complété par le semis, en le déclarant
+Et nomme le catalogue qui abaisserait le plancher, sans le télécharger d'office
 
 Étant donné un catalogue décodé depuis son format binaire
 Quand je compare 100 positions à la source de référence
@@ -2996,7 +3711,7 @@ Et l'ancienne version reste utilisable si la migration échoue
 
 ### Dépendances données
 
-HYG v3, OpenNGC, Sharpless, Barnard, Caldwell, frontières Delporte (1930), figures Stellarium, sous-ensemble Gaia DR3 filtré par magnitude. Fraîcheur : statique, versionnée. Fallback : intégral — c'est l'objet de la feature.
+HYG v4.1, OpenNGC, Sharpless, Barnard, Caldwell, frontières Delporte (1930), figures Stellarium. Gaia DR3 : hors MVP. Fraîcheur : statique, versionnée. Fallback : intégral — c'est l'objet de la feature.
 
 ---
 
@@ -3179,7 +3894,6 @@ Aucune pour Soleil, Lune, planètes, étoiles. TLE CelesTrak pour les satellites
 | Flux, pose unitaire, N poses, calibration | §7 | **complet** | aucune |
 | Fenêtre nocturne, Lune, créneaux, plan | §8.1–8.3 | **complet** | aucune |
 | Masque d'horizon | §4, §8.1 | **complet si en cache** | site inconnu → masque plat marqué `[HYP]` |
-| Bortle par atlas VIIRS | §4 | **complet si en cache** | saisie manuelle du Bortle ou du SQM |
 | Météo, couverture nuageuse, seeing, température | §4, §9.4 | **tombe** | planification sans filtre météo, signalée |
 | Cheminement et carte de pointage | §8.4 | **complet** | aucune |
 | Prévisualisation fixe et filé | §9.2–9.3 | **complet** | Voie lactée procédurale, pas HiPS |
@@ -3252,6 +3966,7 @@ Les constantes du registre §2.1 n'étant pas ajustables, la qualité se vérifi
 |---|---|
 | Justesse des éphémérides | Comparaison à une éphéméride de référence sur un jeu de dates et de lieux, écart maximal 2 min de temps (§12.4) |
 | Justesse des formules optiques | Jeu de cas de référence à valeurs attendues, dont les trois cas de §6.3 |
+| Atténuation par masse d'air | Facteurs attendus sur T_requis : 1,37 au zénith, 1,88 à 30°, à k = 0,172 (§7.6) |
 | Cohérence des projections | Superposition MODE_PLANETARIUM / MODE_CADRE (§3.3) |
 | Intégrité des catalogues | Somme de contrôle plus échantillonnage de 100 positions (§12.2) |
 | Complétude du glossaire | Vérification en compilation : tout libellé d'interface a une entrée (§10.1) |
@@ -3315,7 +4030,7 @@ Le découpage suit les dépendances entre moteurs, pas la valeur perçue. Un lot
 
 ## Lot 4 — Rendu du ciel
 
-**Contenu** §3.1 pipeline à deux horloges · §3.2 curseur temporel · §3.3 moteur de rendu unifié · §3.4 constellations, frontières, astérismes · §3.5 superposition du cadre matériel · paquet Gaia différé
+**Contenu** §3.1 pipeline à deux horloges · §3.2 curseur temporel · §3.3 moteur de rendu unifié · §3.4 constellations, frontières, astérismes · §3.5 superposition du cadre matériel
 
 **Livrable** planétarium animé en continu, constellations en trois couches, cadre matériel superposé cliquable vers les moteurs du lot 2.
 
@@ -3329,11 +4044,22 @@ Le découpage suit les dépendances entre moteurs, pas la valeur perçue. Un lot
 
 **Dépend du lot 4** — réutilise intégralement son moteur de projection et son catalogue. Le développer avant imposerait de coder deux fois la projection, ce que §3.3 interdit explicitement.
 
+## Lot 6 — Coque planétarium
+
+**Contenu** §11.3 coque à quatre régions et onglets d'intention · §3.6 gestes de navigation de la scène · §3.7 plan galactique repéré · §6.4 cibles visibles et recherche du catalogue · §9.5 aperçu incrusté dans le cadre
+
+**Livrable** la scène occupe le centre en permanence ; un réglage et son effet tiennent dans le même écran ; l'utilisateur choisit sa cible dans ce que le ciel offre au lieu de la saisir, et voit l'aperçu de sa capture à l'endroit du ciel où il regarde.
+
+**Dépend des lots 0 à 5.** Ce lot n'ajoute aucun moteur : il rend atteignables ceux qui existent. Le placer avant le lot 5 aurait imposé d'incruster un aperçu que rien ne produisait encore.
+
 ## Post-MVP — par ordre de valeur décroissante
 
 | Sujet | Pourquoi différé |
 |---|---|
 | Imagerie de fond HiPS | Casse l'offline, forte valeur visuelle : à traiter comme option en ligne |
+| Paquet Gaia DR3 et zoom à 5° | Multiplie par six le volume téléchargé pour un champ où le persona primaire ne prend aucune décision de capture (§12.2) |
+| Multi-sites et comparaison de deux sites | Chiffrerait le levier « site plus sombre » de §10.2 par un différentiel calculé. Exige d'abord qu'un site survive au rechargement (§12.3), puis une gestion de collection (§4.1) |
+| Atlas de pollution lumineuse aux coordonnées | Écarté du MVP : exige le réseau et un cache par site pour remplacer une saisie exacte de deux secondes (§4.1) |
 | Satellites, ISS, comètes | TLE périssables, exigent le réseau (§12.4) |
 | Montures altazimutales et rotation de champ | Moteur distinct non spécifié |
 | Occultations et transits | Exigent la précision de la seconde d'arc |
@@ -3397,7 +4123,7 @@ Valeurs de travail : RN ≈ 1,5 e⁻ au-delà du seuil de double gain (≈ ISO 6
 | Plage utile de pose | 6 à 26 s | [t/2 ; t×2] |
 | Régime | NOMINAL | t_opt < t_max_suivi |
 
-**Verdict de domaine** : excellent sur les grands complexes du plan galactique nord, hors domaine sur les galaxies. Un objet de 6,5' y occupe 0,95 % du champ, soit 44 px — il faudrait un ordre de 4 200 mm de focale pour le cadrer proprement.
+**Verdict de domaine** : excellent sur les grands complexes du plan galactique nord, hors domaine sur les galaxies. Un objet de 6,5' y occupe 0,95 % du champ, soit 44 px — il faudrait 5 300 mm de focale pour le cadrer au remplissage visé de 42 %, et de 4 230 à 6 340 mm aux deux bornes de C-05.
 
 **Intégrations calculées** (SNR cible 10, pose 13,4 s) :
 
@@ -3453,6 +4179,9 @@ m_lim_instr  = m_lim_oeil + gain_mag
 ```
 E_ciel   = 10^( −0,4 × (SB_ciel − ZP_sys) ) × (pitch_um / N)²
 E_obj    = 10^( −0,4 × (SB_obj  − ZP_sys) ) × (pitch_um / N)²
+X        = 1 / sin( alt )                                valide au-dessus de ~15°
+atten    = 10^( −0,4 × k × X )                           extinction, §7.6
+E_obj_r  = E_obj × atten                                 flux réellement collecté
 t_opt    = C × RN² / E_ciel                              C = 10 (défaut) ou 3
 t_reco   = min( t_opt, t_max_suivi )
 SNR(T)   = E_obj × T / √( (E_obj + E_ciel) × T + (T / t_pose) × RN² )
@@ -3517,6 +4246,17 @@ sensibilite  = | ∂ln(sortie) / ∂ln(variable) |                   facteur dom
 | 8 | Application web | A imposé le remplacement de la bibliothèque d'éphémérides du socle par des séries analytiques en JavaScript. A aussi révélé que le volume de données n'est pas la contrainte du web — l'éviction du stockage l'est. |
 | 9 | Pas de calibration, données classiques | A fermé les huit constantes que la calibration devait établir, par convention sourcée au registre §2.1. A supprimé le décodeur RAW en WebAssembly. Confirmé par le calcul de platitude de l'optimum (§2.3). |
 | 10 | Pas de guide séparé | §10 transformée en couche pédagogique attachée aux sorties, avec facteur dominant calculé par sensibilité — structurellement incapable de dériver des moteurs. |
+| 11 | Le planétarium est l'écran principal, pas une vue parmi d'autres | Ajout de §11.3 (coque à quatre régions) et §3.6 (gestes). Une pile de sections en colonne unique cassait le lien entre un réglage et son effet : il fallait défiler pour voir le cadre bouger. |
+| 12 | Le ciel propose, l'utilisateur choisit | Ajout de §6.4. Tant que la cible se saisissait à la main, l'application demandait à l'utilisateur la réponse qu'il venait chercher. Le contrat d'entrée de §6.2 et §6.3 est inchangé ; c'est le sens de la question qui s'inverse. |
+| 13 | L'aperçu se lit dans le cadre, sur la scène | Ajout de §9.5. Deux canevas côte à côte donnent une impression, un aperçu incrusté donne une décision de cadrage. Impose le découplage de cadence : une image par réglage, pas soixante par seconde. |
+| 14 | Le plan galactique est un repère, pas une bande | Ajout de §3.7, distinct de la couche 3 de §9.2 : §3.7 pose un repère sur une carte, §9.2 module un contraste dans une image. Confondre les deux ferait d'un repère de pointage une promesse photométrique. |
+| 15 | Volumes de données mesurés plutôt qu'estimés | §12.2 porte désormais une colonne « mesuré » : 2,4 Mo contre 7 à 9 Mo estimés. Masque de Voie lactée procédural, base matériel et glossaire ne pèsent rien en données ; le décodeur WASM avait déjà disparu avec la décision 9. Le budget de données n'est donc pas la contrainte — l'éviction de §12.3 l'est, comme l'annonçait la décision 8. |
+| 16 | Canvas 2D retenu, WebGL 2 non prérequis | §12.1 réécrit. Ce qui tient le critère de §3.1 n'est pas le GPU mais l'indexation spatiale et l'arrêt par magnitude de §3.3 : le nombre d'étoiles examinées par image ne dépend pas de la taille du catalogue. La règle « tout calcul part en Worker, sans exception » devient une exigence de fréquence, et le Worker un moyen déclenché par la mesure. |
+| 17 | Paquet Gaia et zoom à 5° reportés | §3.3 et §12.2. Le plancher de zoom n'est pas une promesse du produit : le persona primaire vit entre 15° et 130° de champ. Douze mégaoctets pour un champ où aucune décision de capture ne se prend est le mauvais arbitrage. L'application plafonne à 15° et nomme la cause. |
+| 18 | Un seul site au MVP, atlas de pollution lumineuse écarté | §4.1. Le Bortle déclaré et le SQM mesuré sont exacts et hors ligne ; un atlas aux coordonnées franchirait la frontière de §1.2 pour une commodité de saisie. Le multi-sites part en post-MVP : il suppose d'abord qu'un site survive au rechargement. |
+| 19 | Lecture EXIF de la température capteur retirée | §7.4. Sans décodeur RAW (décision 9), il ne restait qu'un chemin d'import pour renseigner un champ saisi en trois secondes, et comparé à ±3 °C. |
+| 20 | L'extinction atmosphérique entre dans le moteur Pose | Ajout de §7.6. Une magnitude de catalogue est hors atmosphère, une brillance de ciel est mesurée au sol : atténuer l'objet seul est la seule combinaison cohérente des deux sources. L'effet est quadratique sur T_requis — près du double au seuil C-01 — et rend `S_hauteur` de §8.3 redondant avec `S_signal`, arbitrage ouvert. |
+| 21 | La Voie lactée se montre, elle ne se déduit pas | §3.7 étendu à la bande modulée par le fond de ciel et au repère du centre galactique. La hauteur de culmination de 14,6° depuis le site de référence vivait dans un tableau du PRD ; sur la scène, elle se lit. |
 
 ## Corrections apportées au socle initial en cours de rédaction
 
@@ -3528,6 +4268,8 @@ sensibilite  = | ∂ln(sortie) / ∂ln(variable) |                   facteur dom
 | Bibliothèque d'éphémérides Python | Remplacée par des séries analytiques portées en JavaScript | §12.4 |
 | Frontières IAU sans précession | Précession B1875 → époque obligatoire : 2,11° d'erreur en 2026 | §3.4 |
 | Constante de flux calibrable | Remplacée par un point zéro système livré par boîtier | §2.3 |
+| `focale_ideale_mm` avec un facteur 2 surnuméraire | Formule corrigée, et sortie rendue avec sa plage aux deux bornes de C-05 : le remplissage est subjectif, une focale unique au millimètre le nierait | §6.1 |
+| « HYG v3, 120 000 étoiles jusqu'à mag ≈ 9 » | Comptage mesuré à la construction du paquet : 83 479 étoiles à magnitude ≤ 9 sur HYG v4.1, soit 2,02 étoiles/deg² | §3.3, §12.2 |
 
 ---
 
