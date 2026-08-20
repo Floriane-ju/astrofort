@@ -115,6 +115,10 @@ export const DOMAINES = Object.freeze({
 
   // §9.1 — déclinaison de la zone visée
   dec_deg: domaine({ champ: 'la déclinaison', min: -90, max: 90, unite: '°', section: '9.1' }),
+
+  // §8.3 — poids de scoring C-15. Le domaine porte le poids BRUT, avant normalisation :
+  // seule la somme des cinq vaut 1, aucun poids pris isolément n'est contraint au-delà.
+  poids_scoring: domaine({ champ: 'un poids de scoring', min: 0, max: 1, unite: '—', section: '8.3' }),
 })
 
 export type DomaineId = keyof typeof DOMAINES

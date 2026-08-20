@@ -10,7 +10,7 @@
 import { useMemo } from 'react'
 import { fenetreNocturne, offsetMidiSolaireMin, type FenetreNocturne } from '../core/night.ts'
 import { fenetreUtile as calculeFenetreUtile, type FenetreUtile } from '../core/moon.ts'
-import { planSession, type PlanSession } from '../core/session.ts'
+import { planSession, type PlanSession, type PoidsScoring } from '../core/session.ts'
 import {
   masqueDepuisPoints,
   masquePlat,
@@ -99,10 +99,12 @@ export interface EntreeChaine {
   readonly etoiles: readonly Etoile[]
   /** §9.2 — la pose unitaire du filé, réglée dans le panneau du même nom. */
   readonly tPoseFileS: number
+  /** §8.3 — les poids C-15 tels qu'ils sont réglés ; le moteur les normalise. */
+  readonly poids: PoidsScoring
 }
 
 export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
-  const { lieu, materiel, niveau, catalogue, etoiles, tPoseFileS } = entree
+  const { lieu, materiel, niveau, catalogue, etoiles, tPoseFileS, poids } = entree
 
   /**
    * §4.1 — le relief relevé à la main l'emporte sur toute hypothèse. Sans relevé, le masque
@@ -237,10 +239,11 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
         snrCible: PRESET_SNR_PLAN,
         typeMonture: materiel.typeMonture,
         niveau,
+        poids,
       },
       catalogue,
     )
-  }, [calcul, catalogue, masque, niveau, materiel.typeMonture, site, fenetreUtile])
+  }, [calcul, catalogue, masque, niveau, materiel.typeMonture, site, fenetreUtile, poids])
 
   return {
     calcul,

@@ -23,9 +23,13 @@
 
 import { useState } from 'react'
 import { chercheCatalogue } from '../core/recherche-catalogue.ts'
+import { normalisePoids } from '../core/session.ts'
+import { DOMAINES } from '../registry/domains.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import { libelleObjet } from './libelles-objet.ts'
 import { ouvreCible } from './seance-etat.ts'
+import { CRITERES_SCORING, type CritereScoring, type SaisiePoids } from './app-saisie.ts'
+import { Etiquette } from './Terme.tsx'
 
 /**
  * Combien de résultats le `<datalist>` porte à la fois. Ce n'est pas une fenêtre sur le
@@ -76,8 +80,73 @@ export function OptionsCatalogue(props: OptionsCatalogueProps) {
   )
 }
 
+const POURCENT = 100
+
+/** Le curseur découpe le domaine du registre en centièmes : pas de borne réécrite ici. */
+const DOMAINE_POIDS = DOMAINES.poids_scoring
+const PAS_CURSEUR = (DOMAINE_POIDS.max - DOMAINE_POIDS.min) / POURCENT
+
+const LIBELLE_CRITERE: Readonly<Record<CritereScoring, string>> = Object.freeze({
+  cadrage: 'Cadrage',
+  hauteur: 'Hauteur de culmination',
+  signal: 'Signal accumulable',
+  fenetre: 'Fenêtre d’observation',
+  lune: 'Gêne lunaire',
+})
+
+/**
+ * §8.3 et §2.4 — les cinq poids C-15 se règlent ici, et nulle part ailleurs.
+ *
+ * Cinq curseurs indépendants, la somme normalisée à 1 par le moteur : redistribuer les quatre
+ * autres à chaque geste ferait bouger des valeurs que personne n'a touchées, et le résultat
+ * dépendrait de l'ordre des gestes. Le pourcentage affiché est le poids effectif, celui que
+ * le plan utilise vraiment.
+ */
+function ReglagePoids(props: SaisiePoids) {
+  const effectifs = normalisePoids(props.poids)
+
+  return (
+    <fieldset className="poids-scoring">
+      <legend>
+        <Etiquette cle="score_cible" />
+      </legend>
+      <p className="etat">
+        Le score n’ordonne pas la nuit — la chronologie suit les culminations. Il tranche les
+        créneaux qui se chevauchent et désigne la cible retirée quand le budget déborde.
+      </p>
+      {CRITERES_SCORING.map((critere) => (
+        <label key={critere}>
+          <span>
+            {LIBELLE_CRITERE[critere]}
+            <span className="poids-effectif">
+              {' '}
+              {(effectifs[critere] * POURCENT).toFixed(0)} %
+            </span>
+          </span>
+          <input
+            type="range"
+            min={DOMAINE_POIDS.min}
+            max={DOMAINE_POIDS.max}
+            step={PAS_CURSEUR}
+            value={props.poids[critere]}
+            onChange={(e) => props.surPoids(critere, Number(e.target.value))}
+          />
+        </label>
+      ))}
+      <p className="etat">
+        Rien n’est appris de vos choix passés : deux séances réglées de la même façon
+        produisent le même plan.
+      </p>
+      <button type="button" onClick={props.surDefaut}>
+        Revenir aux poids C-15
+      </button>
+    </fieldset>
+  )
+}
+
 export interface MenuReglagesProps {
   readonly catalogue: readonly ObjetCielProfond[]
+  readonly poids: SaisiePoids
 }
 
 export function MenuReglages(props: MenuReglagesProps) {
@@ -143,6 +212,8 @@ export function MenuReglages(props: MenuReglagesProps) {
             )}
           </>
         )}
+
+        <ReglagePoids {...props.poids} />
       </div>
     </details>
   )

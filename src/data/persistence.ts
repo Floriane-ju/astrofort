@@ -15,6 +15,7 @@
 import { db } from './db.ts'
 import type { PlanEnregistre, ProfilMateriel, SiteEnregistre } from './db.ts'
 import type { MasqueHorizon, PointMasque } from '../core/site.ts'
+import { normalisePoids, type PoidsScoring } from '../core/session.ts'
 import { type DomaineId, valide as valideDomaine } from '../registry/domains.ts'
 
 export interface EtatStockage {
@@ -75,6 +76,12 @@ export interface ExportUtilisateur {
   readonly sites: readonly SiteEnregistre[]
   readonly profils: readonly ProfilMateriel[]
   readonly plans: readonly PlanEnregistre[]
+  /**
+   * §8.3 — les poids de scoring réglés pour la séance, normalisés comme le plan les a
+   * utilisés. Absents des exports antérieurs à leur réglage : un fichier sans eux reste
+   * valide et repart des valeurs C-15.
+   */
+  readonly poids?: PoidsScoring
 }
 
 export const VERSION_EXPORT = 1
@@ -84,7 +91,9 @@ export const VERSION_EXPORT = 1
  * que l'utilisateur a produite. Les paquets de catalogues en sont exclus : ils se
  * retéléchargent.
  */
-export async function exporteDonneesUtilisateur(): Promise<ExportUtilisateur> {
+export async function exporteDonneesUtilisateur(
+  poids?: PoidsScoring,
+): Promise<ExportUtilisateur> {
   const base = await db()
   const [sites, profils, plans] = await Promise.all([
     base.getAll('sites'),
@@ -98,6 +107,9 @@ export async function exporteDonneesUtilisateur(): Promise<ExportUtilisateur> {
     sites,
     profils,
     plans,
+    // Normalisés à l'écriture : c'est la forme que §8.3 déclare, et celle qui se relit sans
+    // dépendre de l'échelle brute des curseurs.
+    ...(poids === undefined ? {} : { poids: normalisePoids(poids) }),
   }
 }
 
@@ -244,6 +256,21 @@ function valideEnregistrements(section: string, forme: Forme, elements: readonly
   }
 }
 
+/**
+ * Les cinq poids C-15, quand le fichier les porte. Un poids hors domaine ferait un score
+ * négatif ou NaN, donc un plan silencieusement arbitraire : il est refusé comme une saisie.
+ */
+const poidsScoring: Verificateur = (v) => {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return 'doit être un objet'
+  const champs = v as Record<string, unknown>
+  const poids = nombre('poids_scoring')
+  for (const critere of ['cadrage', 'hauteur', 'signal', 'fenetre', 'lune'] as const) {
+    const raison = poids(champs[critere])
+    if (raison !== null) return `« ${critere} » ${raison}`
+  }
+  return null
+}
+
 function valide(donnees: unknown): asserts donnees is ExportUtilisateur {
   if (typeof donnees !== 'object' || donnees === null) {
     throw new ExportInvalideError('le contenu n’est pas un objet JSON')
@@ -262,6 +289,10 @@ function valide(donnees: unknown): asserts donnees is ExportUtilisateur {
       throw new ExportInvalideError(`la section « ${champ} » est absente ou malformée`)
     }
   }
+  const raisonPoids = optionnel(poidsScoring)(candidat.poids)
+  if (raisonPoids !== null) {
+    throw new ExportInvalideError(`les poids de scoring : ${raisonPoids}`)
+  }
   // Tout est vérifié AVANT la transaction : un fichier abîmé n'écrit rien, pas même à moitié.
   valideEnregistrements('le site', FORME_SITE, candidat.sites as readonly unknown[])
   valideEnregistrements('le profil', FORME_PROFIL, candidat.profils as readonly unknown[])
@@ -272,7 +303,9 @@ function valide(donnees: unknown): asserts donnees is ExportUtilisateur {
  * Point d'entrée du réimport depuis un fichier. Tout échec — JSON illisible compris — sort
  * en `ExportInvalideError`, dont le texte est rédigé pour être affiché tel quel.
  */
-export async function importeFichierUtilisateur(texte: string): Promise<void> {
+export async function importeFichierUtilisateur(
+  texte: string,
+): Promise<PoidsScoring | null> {
   let donnees: unknown
   try {
     donnees = JSON.parse(texte)
@@ -281,11 +314,16 @@ export async function importeFichierUtilisateur(texte: string): Promise<void> {
       `le fichier n’est pas du JSON lisible (${erreur instanceof Error ? erreur.message : String(erreur)})`,
     )
   }
-  await importeDonneesUtilisateur(donnees)
+  return importeDonneesUtilisateur(donnees)
 }
 
-/** Réimport sans perte. Les entrées de même identifiant sont remplacées. */
-export async function importeDonneesUtilisateur(donnees: unknown): Promise<void> {
+/**
+ * Réimport sans perte. Les entrées de même identifiant sont remplacées.
+ *
+ * Les poids de scoring ne vont pas en base : ils appartiennent à la saisie de la séance, pas
+ * aux enregistrements. Ils sont rendus à l'appelant, qui les remet à l'écran (§8.3).
+ */
+export async function importeDonneesUtilisateur(donnees: unknown): Promise<PoidsScoring | null> {
   valide(donnees)
   const base = await db()
   const tx = base.transaction(['sites', 'profils', 'plans'], 'readwrite')
@@ -295,6 +333,7 @@ export async function importeDonneesUtilisateur(donnees: unknown): Promise<void>
     ...donnees.plans.map((plan) => tx.objectStore('plans').put(plan)),
     tx.done,
   ])
+  return donnees.poids ?? null
 }
 
 /**

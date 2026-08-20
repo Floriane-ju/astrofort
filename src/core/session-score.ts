@@ -47,12 +47,19 @@ export function scoreGlobal(detail: DetailScore, poids: PoidsScoring): Traced<nu
   return trace({
     value: valeur,
     formula: 'SCORE_CIBLE',
+    // Les poids entrent dans la trace : réglés, ils ne valent plus ceux du registre, et une
+    // décomposition qui n'afficherait que les C-15 mentirait sur le calcul qu'elle explique.
     inputs: {
       s_cadrage: detail.cadrage,
       s_hauteur: detail.hauteur,
       s_signal: detail.signal,
       s_fenetre: detail.fenetre,
       s_lune: detail.lune,
+      w_cadrage: poids.cadrage,
+      w_hauteur: poids.hauteur,
+      w_signal: poids.signal,
+      w_fenetre: poids.fenetre,
+      w_lune: poids.lune,
     },
     constants: [
       'POIDS_SCORING_CADRAGE',

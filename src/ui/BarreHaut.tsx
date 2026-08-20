@@ -15,6 +15,7 @@ import type { Site } from '../core/ephem.ts'
 import type { CapteurMode } from '../data/equipment.ts'
 import { MenuInfos } from './MenuInfos.tsx'
 import { MenuReglages } from './MenuReglages.tsx'
+import type { SaisiePoids } from './app-saisie.ts'
 import { Verification } from './Verification.tsx'
 import { ModeNuit, type EtatModeNuit } from './ModeNuit.tsx'
 import type { NiveauUtilisateur } from './Terme.tsx'
@@ -32,6 +33,8 @@ export interface BarreHautProps {
   readonly modeReseau: string
   readonly persistance: Persistance
   readonly catalogue: readonly ObjetCielProfond[]
+  /** §8.3 — les poids de scoring, réglés depuis le tiroir des réglages. */
+  readonly poids: SaisiePoids
   readonly site: Site
   readonly index: IndexCiel
   readonly profils: readonly ProfilCadre[]
@@ -73,7 +76,7 @@ export function BarreHaut(props: BarreHautProps) {
       />
       {/* T-0047 — le choix brut dans le catalogue, hors du chemin principal. Avant le menu
           des lectures, qui reste le dernier élément. */}
-      <MenuReglages catalogue={props.catalogue} />
+      <MenuReglages catalogue={props.catalogue} poids={props.poids} />
       {/* T-0038 — les lectures qui datent l'image : dernier élément de la barre, donc le
           plus à droite, et sans hauteur tant qu'il est fermé. */}
       <MenuInfos

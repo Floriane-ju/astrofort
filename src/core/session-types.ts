@@ -59,6 +59,28 @@ export function poidsParDefaut(): PoidsScoring {
   })
 }
 
+/**
+ * §8.3 — la somme des cinq poids vaut 1, quelle que soit la façon dont ils ont été réglés.
+ *
+ * Cinq curseurs indépendants plutôt qu'une redistribution des quatre autres à chaque geste :
+ * redistribuer ferait bouger des valeurs que l'utilisateur n'a pas touchées, et le résultat
+ * dépendrait de l'ordre des gestes — donc ne serait plus reproductible.
+ *
+ * Une somme nulle rendrait tous les scores NaN et l'arbitrage de créneau silencieusement
+ * aléatoire : elle retombe sur C-15, la référence.
+ */
+export function normalisePoids(brut: PoidsScoring): PoidsScoring {
+  const somme = brut.cadrage + brut.hauteur + brut.signal + brut.fenetre + brut.lune
+  if (!Number.isFinite(somme) || somme <= 0) return poidsParDefaut()
+  return Object.freeze({
+    cadrage: brut.cadrage / somme,
+    hauteur: brut.hauteur / somme,
+    signal: brut.signal / somme,
+    fenetre: brut.fenetre / somme,
+    lune: brut.lune / somme,
+  })
+}
+
 export interface ContexteSession {
   readonly site: Site
   readonly nuit: FenetreNocturne

@@ -20,7 +20,7 @@ import { useTrancheScene, type EtatScene } from './ui/scene-etat.ts'
 import { ouvreCible, useSeance } from './ui/seance-etat.ts'
 import { BarreHaut } from './ui/BarreHaut.tsx'
 import { RegionSeance } from './ui/RegionSeance.tsx'
-import { useSaisieLieu, useSaisieMateriel } from './ui/app-saisie.ts'
+import { useSaisieLieu, useSaisieMateriel, useSaisiePoids } from './ui/app-saisie.ts'
 import { useCatalogues, usePersistance } from './ui/app-donnees.ts'
 import { useChaineCalcul } from './ui/app-calcul.ts'
 import {
@@ -63,6 +63,7 @@ export function App() {
   const [niveau, setNiveau] = useState<NiveauUtilisateur>('DEBUTANT')
   const lieu = useSaisieLieu()
   const materiel = useSaisieMateriel()
+  const poids = useSaisiePoids()
   const catalogues = useCatalogues()
   // §12.5 — l'état affiché suit les bascules, il n'est pas figé au démarrage.
   const modeReseau = useSyncExternalStore(abonneModeReseau, modeReseauCourant, () => 'EN_LIGNE')
@@ -78,6 +79,7 @@ export function App() {
     catalogue: catalogues.objets,
     etoiles: catalogues.etoiles,
     tPoseFileS: file.tPoseS,
+    poids: poids.poids,
   })
   const { calcul } = chaine
   const [modeNuit, setModeNuit] = useModeNuit(calcul.ok ? calcul.nuit.debutNautique : null)
@@ -86,6 +88,7 @@ export function App() {
   const persistance = usePersistance(
     { ...chaine.site, masque: chaine.masque, pointsMasque: lieu.pointsMasque },
     lieu.surPointsMasque,
+    poids,
   )
 
   const gaia = catalogues.etat === null ? false : gaiaCharge(catalogues.etat.catalogues)
@@ -104,6 +107,7 @@ export function App() {
       modeReseau={modeReseau}
       persistance={persistance}
       catalogue={catalogues.objets}
+      poids={poids}
       site={chaine.site}
       index={chaine.index}
       profils={chaine.profilsCadre}

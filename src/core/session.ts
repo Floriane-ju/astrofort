@@ -28,6 +28,7 @@ import { evalueCandidate, preFiltre } from './session-candidates.ts'
 import { alloueCreneau, calculeBudget, retireJusquAuBudget } from './session-nuit.ts'
 import {
   AVERTISSEMENT_METEO,
+  normalisePoids,
   poidsParDefaut,
   type Candidate,
   type CauseEcart,
@@ -40,6 +41,7 @@ import {
 
 export {
   AVERTISSEMENT_METEO,
+  normalisePoids,
   poidsParDefaut,
   type BudgetNuit,
   type CauseEcart,
@@ -66,7 +68,8 @@ export function planSession(
   contexte: ContexteSession,
   catalogue: readonly ObjetCielProfond[],
 ): PlanSession {
-  const poids = contexte.poids ?? poidsParDefaut()
+  // Le plan travaille toujours sur des poids normalisés : ce que la saisie livre est brut.
+  const poids = normalisePoids(contexte.poids ?? poidsParDefaut())
   const debut = contexte.nuit.debutReference
   const fin = contexte.nuit.finReference
 

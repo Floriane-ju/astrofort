@@ -26,6 +26,7 @@ import {
   type SiteAExporter,
 } from '../data/persistence.ts'
 import type { PointMasque } from '../core/site.ts'
+import { CRITERES_SCORING, type SaisiePoids } from './app-saisie.ts'
 
 export interface Catalogues {
   readonly etat: EtatDemarrage | null
@@ -67,12 +68,13 @@ export interface Persistance {
 export function usePersistance(
   siteActif: SiteAExporter,
   surMasqueImporte: (points: readonly PointMasque[]) => void,
+  poids: SaisiePoids,
 ): Persistance {
   const [message, setMessage] = useState<string | null>(null)
 
   async function exporte(): Promise<void> {
     await enregistreSiteActif(siteActif)
-    const donnees = await exporteDonneesUtilisateur()
+    const donnees = await exporteDonneesUtilisateur(poids.poids)
     const blob = new Blob([JSON.stringify(donnees, null, 2)], { type: 'application/json' })
     const lien = document.createElement('a')
     lien.href = URL.createObjectURL(blob)
@@ -93,9 +95,14 @@ export function usePersistance(
     // Un fichier retouché ou illisible doit dire pourquoi il est refusé, pas disparaître
     // en rejet non géré : sans message, l'import a l'air de ne rien faire (§12.3).
     try {
-      await importeFichierUtilisateur(await fichier.text())
+      const poidsImportes = await importeFichierUtilisateur(await fichier.text())
       // Le masque restauré doit revenir à l'écran : il commande les créneaux (§8.1).
       surMasqueImporte(await litPointsMasqueActif())
+      // Les poids ne vivent pas en base : sans cette remise, un plan réimporté serait
+      // réordonné par les valeurs C-15 plutôt que par celles du fichier (§8.3).
+      if (poidsImportes !== null) {
+        for (const critere of CRITERES_SCORING) poids.surPoids(critere, poidsImportes[critere])
+      }
       setMessage('Import terminé : les sites, profils et plans ont été restaurés.')
     } catch (erreur) {
       setMessage(

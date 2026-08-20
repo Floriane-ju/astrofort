@@ -7,6 +7,7 @@
  */
 
 import { useState } from 'react'
+import { poidsParDefaut, type PoidsScoring } from '../core/session.ts'
 import type { PointMasque } from '../core/site.ts'
 import { BOITIER_REFERENCE, type CapteurMode, type SaisieBoitier } from '../data/equipment.ts'
 import type { QualiteMiseEnStation, TypeMonture } from '../core/tracking.ts'
@@ -151,5 +152,41 @@ export function useSaisieMateriel(): SaisieMateriel {
     surQualiteMes,
     typeMonture,
     surTypeMonture,
+  }
+}
+
+/** Les cinq critères du score C-15, dans l'ordre où ils se règlent (§8.3). */
+export const CRITERES_SCORING = Object.freeze([
+  'cadrage',
+  'hauteur',
+  'signal',
+  'fenetre',
+  'lune',
+] as const)
+
+export type CritereScoring = (typeof CRITERES_SCORING)[number]
+
+export interface SaisiePoids {
+  /** Poids bruts tels qu'ils sont réglés. La normalisation à 1 appartient au moteur (§8.3). */
+  readonly poids: PoidsScoring
+  readonly surPoids: (critere: CritereScoring, valeur: number) => void
+  /** Retour aux valeurs C-15 du registre, qui restent la référence (§2.1). */
+  readonly surDefaut: () => void
+}
+
+/**
+ * §8.3 et §2.4 — les poids de scoring se règlent, et rien ne les apprend.
+ *
+ * L'état vit ici, comme le reste de la saisie : il n'est ni mémorisé entre deux séances ni
+ * ajusté d'après les choix passés. Ce qui le protège d'une éviction, c'est l'export §12.3,
+ * pas une persistance silencieuse.
+ */
+export function useSaisiePoids(): SaisiePoids {
+  const [poids, setPoids] = useState<PoidsScoring>(poidsParDefaut)
+
+  return {
+    poids,
+    surPoids: (critere, valeur) => setPoids((p) => Object.freeze({ ...p, [critere]: valeur })),
+    surDefaut: () => setPoids(poidsParDefaut()),
   }
 }

@@ -730,3 +730,22 @@ select:disabled {
   justify-content: space-between;
   gap: 0.5rem;
 }
+
+/* T-0087 — les cinq poids C-15 dans le tiroir des réglages. Le poids effectif se lit au bout
+   de la ligne du critère : c'est lui que le plan utilise, pas la position brute du curseur. */
+.poids-scoring {
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem 0.75rem;
+}
+
+.poids-scoring > label > span:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.poids-effectif {
+  font-variant-numeric: tabular-nums;
+  color: var(--texte);
+}

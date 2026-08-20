@@ -2,7 +2,7 @@
 {
   "id": "T-0087",
   "titre": "Les poids de scoring se règlent, et le plan se recalcule",
-  "colonne": "pret",
+  "colonne": "fait",
   "priorite": "basse",
   "epic": "T-0083",
   "tags": [
@@ -10,7 +10,7 @@
     "planification"
   ],
   "cree": "2026-08-19",
-  "maj": "2026-08-19",
+  "maj": "2026-08-20",
   "plan": null
 }
 ---
@@ -29,10 +29,10 @@ contrepartie assumée de l'absence de télémétrie.
 
 ## Critères d'acceptation
 
-- [ ] Les cinq poids se règlent depuis l'interface, la somme restant normalisée à 1.
-- [ ] Le plan de séance se recalcule au changement, et la décomposition du score affichée
+- [x] Les cinq poids se règlent depuis l'interface, la somme restant normalisée à 1.
+- [x] Le plan de séance se recalcule au changement, et la décomposition du score affichée
       reflète les poids courants.
-- [ ] Un geste unique revient aux valeurs C-15 du registre, qui restent la référence.
-- [ ] Les poids réglés partent dans l'export de §12.3.
-- [ ] Aucun ajustement automatique, aucune mémoire de choix passés : le réglage est explicite
+- [x] Un geste unique revient aux valeurs C-15 du registre, qui restent la référence.
+- [x] Les poids réglés partent dans l'export de §12.3.
+- [x] Aucun ajustement automatique, aucune mémoire de choix passés : le réglage est explicite
       ou il n'existe pas (§2.1).

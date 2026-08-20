@@ -19,6 +19,7 @@ import {
   litPointsMasqueActif,
 } from '../src/data/persistence.ts'
 import { masqueDepuisPoints, NB_AZIMUTS, obstructionDeg } from '../src/core/site.ts'
+import { normalisePoids } from '../src/core/session.ts'
 
 const SITE: SiteEnregistre = {
   id: 'site-reference',
@@ -192,7 +193,54 @@ describe('validation du réimport §12.3', () => {
 
   it('accepte un export produit par l’application', async () => {
     const fichier = JSON.stringify(await exporteDonneesUtilisateur())
-    await expect(importeFichierUtilisateur(fichier)).resolves.toBeUndefined()
+    await expect(importeFichierUtilisateur(fichier)).resolves.toBeNull()
+  })
+})
+
+/**
+ * §8.3 — les poids de scoring ne se retéléchargent pas non plus : réglés puis perdus, le plan
+ * suivant serait réordonné par les valeurs C-15 sans que rien ne l'annonce.
+ */
+describe('poids de scoring §8.3 → §12.3', () => {
+  it('part dans l’export, normalisé comme le plan l’a utilisé', async () => {
+    const donnees = await exporteDonneesUtilisateur({
+      cadrage: 0.6,
+      hauteur: 0.6,
+      signal: 0.6,
+      fenetre: 0.6,
+      lune: 0.6,
+    })
+    expect(donnees.poids).toBeDefined()
+    const somme = Object.values(donnees.poids!).reduce((a, b) => a + b, 0)
+    expect(somme).toBeCloseTo(1, 12)
+  })
+
+  it('revient tel quel à l’import, sans passer par la base', async () => {
+    const poids = normalisePoids({ cadrage: 0.9, hauteur: 0.1, signal: 0.2, fenetre: 0.3, lune: 0.4 })
+    const fichier = JSON.stringify(await exporteDonneesUtilisateur(poids))
+    await expect(importeFichierUtilisateur(fichier)).resolves.toStrictEqual(poids)
+  })
+
+  it('reste absent des exports antérieurs, qui restent importables', async () => {
+    const donnees = await exporteDonneesUtilisateur()
+    expect(donnees.poids).toBeUndefined()
+    await expect(importeDonneesUtilisateur(donnees)).resolves.toBeNull()
+  })
+
+  it('refuse un poids hors du domaine du registre plutôt que de fausser le score', async () => {
+    const abime = exportAvec({})
+    await expect(
+      importeDonneesUtilisateur({
+        ...abime,
+        poids: { cadrage: 2, hauteur: 0.2, signal: 0.2, fenetre: 0.2, lune: 0.2 },
+      }),
+    ).rejects.toThrow(/cadrage/)
+  })
+
+  it('refuse un objet de poids incomplet : cinq critères ou aucun', async () => {
+    await expect(
+      importeDonneesUtilisateur({ ...exportAvec({}), poids: { cadrage: 0.2 } }),
+    ).rejects.toThrow(ExportInvalideError)
   })
 })
 

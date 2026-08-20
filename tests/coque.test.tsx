@@ -31,6 +31,7 @@ import {
 } from '../src/ui/scene-etat.ts'
 import { MenuInfos } from '../src/ui/MenuInfos.tsx'
 import { MenuReglages, OptionsCatalogue, objetDesigne } from '../src/ui/MenuReglages.tsx'
+import { poidsParDefaut } from '../src/core/session.ts'
 import { construitIndex } from '../src/core/index-ciel.ts'
 import { projecteur } from '../src/core/projection.ts'
 import { versSpherique } from '../src/core/mat3.ts'
@@ -65,6 +66,13 @@ afterEach(() => {
   reinitialiseSeance()
   reinitialiseScene()
 })
+
+/** Les réglages de poids n'ont pas d'état dans un rendu statique : commandes inertes. */
+const POIDS_INERTES = {
+  poids: poidsParDefaut(),
+  surPoids: () => undefined,
+  surDefaut: () => undefined,
+}
 
 describe('§11.2 — les trois régions', () => {
   it('place le matériel à gauche, la scène au centre, la séance à droite', () => {
@@ -438,7 +446,7 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
   })
 
   it('porte l’accès au catalogue, que l’onglet Cible n’a plus', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} />)
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} poids={POIDS_INERTES} />)
     expect(rendu).toContain('Chercher dans le catalogue')
 
     choisisOnglet('CIBLE')
@@ -450,8 +458,22 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
     expect(rendu).toContain('M31 — Andromède · galaxie · mag 3.4')
   })
 
+  it('T-0087 — porte les cinq poids C-15 et le retour aux valeurs du registre', () => {
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} poids={POIDS_INERTES} />)
+    expect(rendu.match(/type="range"/g)).toHaveLength(5)
+    expect(rendu).toContain('Revenir aux poids C-15')
+    // Le poids effectif s'affiche : c'est lui que le plan utilise, pas la position brute.
+    expect(rendu).toContain('25 %')
+  })
+
+  it('T-0087 — dit que le score arbitre les conflits, sans ordonner la nuit', () => {
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} poids={POIDS_INERTES} />)
+    expect(rendu).toMatch(/chronologie suit les culminations/)
+    expect(rendu).toMatch(/Rien n’est appris/)
+  })
+
   it('garde la cible de clic de §11.2 : le tiroir est un `.tiroir` comme les autres', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[]} />)
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[]} poids={POIDS_INERTES} />)
     expect(rendu).toMatch(/class="tiroir tiroir-reglages"/)
     const styles = readFileSync(
       join(import.meta.dirname, '..', 'src', 'ui', 'styles.css'),
@@ -487,7 +509,7 @@ describe('T-0053 — le tiroir cherche le catalogue au lieu de le dérouler', ()
   }
 
   it('porte un champ de saisie relié à un `datalist`, plus un `select` déroulant', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31, M45]} />)
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31, M45]} poids={POIDS_INERTES} />)
     expect(rendu).toContain('<datalist')
     expect(rendu).toMatch(/<input[^>]+list="/)
     expect(rendu).not.toContain('<select')
@@ -528,9 +550,12 @@ describe('T-0053 — le tiroir cherche le catalogue au lieu de le dérouler', ()
   })
 
   it('garde le message d’attente d’intégrité quand le catalogue n’est pas vérifié', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[]} />)
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[]} poids={POIDS_INERTES} />)
     expect(rendu).toContain('contrôle d’intégrité')
-    expect(rendu).not.toContain('<input')
+    // Le champ de recherche disparaît ; les poids de scoring restent, ils ne dépendent
+    // d'aucun paquet (T-0087).
+    expect(rendu).not.toContain('Chercher dans le catalogue')
+    expect(rendu).not.toMatch(/<input[^>]+list="/)
   })
 
   it('garde la cible de clic de §11.2 : un `input` a la hauteur d’usage ganté', () => {
