@@ -21,7 +21,7 @@ import type { TypeMonture } from './tracking.ts'
 import type { Site } from './ephem.ts'
 import { observateur } from './ephem.ts'
 import type { MasqueHorizon } from './site.ts'
-import { altitudeCulmination, masseAir, obstructionDeg } from './site.ts'
+import { altitudeCulmination, latitudeAccessibleDeg, masseAir, obstructionDeg } from './site.ts'
 import type { Traced } from './traced.ts'
 import { trace } from './traced.ts'
 
@@ -195,9 +195,7 @@ export function creneauCible(entree: EntreeCreneau): CreneauCible {
   }
 
   if (altCulmination.value <= seuil) {
-    // La cible deviendrait accessible depuis une latitude plus basse : le seuil est atteint
-    // dès que | latitude − δ | < 90° − seuil.
-    const latitudeAccessible = entree.decDeg + (ANGLE_DROIT_DEG - seuil)
+    const latitudeAccessible = latitudeAccessibleDeg(entree.decDeg, seuil)
     return {
       ...commun,
       causeExclusion: 'HAUTEUR',

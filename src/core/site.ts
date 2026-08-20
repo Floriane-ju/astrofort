@@ -105,6 +105,17 @@ export function altitudeCulmination(latitudeDeg: number, decDeg: number): Traced
   })
 }
 
+/**
+ * Latitude au-dessous de laquelle une déclinaison atteint enfin le seuil de hauteur donné.
+ *
+ * Le seuil est atteint dès que | latitude − δ | < 90° − seuil : la borne haute de cet
+ * intervalle est la seule qui intéresse un observateur de l'hémisphère nord, et c'est elle
+ * qu'annoncent §8.2 et §3.7 quand une cible australe reste hors de portée.
+ */
+export function latitudeAccessibleDeg(decDeg: number, seuilHauteurDeg: number): number {
+  return decDeg + (ANGLE_DROIT_DEG - seuilHauteurDeg)
+}
+
 /** Masse d'air. La formule cesse d'être valide sous environ 15° de hauteur. */
 export function masseAir(hauteurDeg: number): Traced<number | null> {
   if (hauteurDeg <= 0) {

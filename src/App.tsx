@@ -136,6 +136,7 @@ export function App() {
       constellations={catalogues.constellations}
       profils={chaine.profilsCadre}
       mLimOeil={calcul.ciel.mLimOeil.value}
+      sbCiel={calcul.ciel.sbCiel.value}
       gaiaCharge={gaia}
       modeObjectif={modeObjectif(materiel.typeObjectif)}
       modeNuit={modeNuit.actif}

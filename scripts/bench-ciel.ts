@@ -39,6 +39,7 @@ import { cielInstantane } from '../src/core/horloges.ts'
 import { magnitudeRendue, projecteur, type Projecteur, type Vue } from '../src/core/projection.ts'
 import type { Site } from '../src/core/ephem.ts'
 import { dessineCiel, type CouchesActives } from '../src/ui/dessine-ciel.ts'
+import { K } from '../src/registry/constants.ts'
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SITE: Site = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
@@ -242,6 +243,9 @@ function image(ctx: CanvasRenderingContext2D): { comptes: Comptes; dessinees: nu
     cadres: [],
     couches: COUCHES,
     magLimite,
+    // §3.7 — bande à plein contraste : c'est le cas le plus lourd, celui qu'un banc mesure.
+    sbCiel: K('SB_VOIE_LACTEE_PLEINE_MAG'),
+    latitudeDeg: SITE.latitudeDeg,
     modeNuit: false,
   })
   return { comptes, dessinees: sortie.etoilesDessinees }

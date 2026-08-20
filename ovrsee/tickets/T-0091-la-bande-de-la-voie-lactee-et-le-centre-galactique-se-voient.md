@@ -2,7 +2,7 @@
 {
   "id": "T-0091",
   "titre": "La bande de la Voie lactée et le centre galactique se voient sur la scène",
-  "colonne": "pret",
+  "colonne": "fait",
   "priorite": "moyenne",
   "tags": [
     "prd",
@@ -39,16 +39,48 @@ couche 3 de §9.2, qui module un contraste dans une image de capture.
 
 ## Critères d'acceptation
 
-- [ ] La bande de la Voie lactée est rendue sur la scène, son contraste modulé par le fond de
+- [x] La bande de la Voie lactée est rendue sur la scène, son contraste modulé par le fond de
       ciel du site, et s'effaçant à Bortle élevé.
-- [ ] La bande reste sous les repères, les étoiles et les labels, comme l'aperçu incrusté
+- [x] La bande reste sous les repères, les étoiles et les labels, comme l'aperçu incrusté
       de §9.5 — elle n'est jamais peinte par-dessus le repérage.
-- [ ] Le centre galactique est repéré et nommé sur la scène, avec sa hauteur courante.
-- [ ] Quand le centre galactique n'atteint jamais le seuil d'imagerie depuis le site, le
+- [x] Le centre galactique est repéré et nommé sur la scène, avec sa hauteur courante.
+- [x] Quand le centre galactique n'atteint jamais le seuil d'imagerie depuis le site, le
       repère le dit, avec la latitude en dessous de laquelle il deviendrait accessible (§8.2).
-- [ ] La bande et le repère suivent la couche Voie lactée existante : une seule bascule, pas
+- [x] La bande et le repère suivent la couche Voie lactée existante : une seule bascule, pas
       trois.
-- [ ] Le budget de labels de §3.4 est respecté : le repère du centre galactique s'arbitre
+- [x] Le budget de labels de §3.4 est respecté : le repère du centre galactique s'arbitre
       comme les autres, sans passe-droit.
-- [ ] Le mode nuit compose la bande en rouge monochrome, sans dépasser la luminance plafond
+- [x] Le mode nuit compose la bande en rouge monochrome, sans dépasser la luminance plafond
       (§11.1).
+
+## Réalisé
+
+**La bande** — treize tranches de latitude galactique de −30° à +30°, tracées au trait épais
+de la largeur de la tranche (`src/ui/dessine-ciel.ts`, `TRANCHES_BANDE`). Le trait et non le
+polygone rempli : une polyligne partiellement hors champ se rompt en segments, et un polygone
+rompu se referme n'importe où — le trait ne peint que ce qui reste. Opacité par tranche
+= `contrasteVoieLactee(sb_ciel)` × `densiteRelative(b)` × `OPACITE_BANDE_GALACTIQUE`. Contraste
+nul à Bortle 8 : la fonction ne peint rien, et la ligne du plan reste tracée.
+
+Peinte juste après le fond, AVANT le crochet `surLeFond` : la bande passe donc sous l'aperçu
+incrusté de §9.5 comme sous les repères. Peinte plus tard, elle laverait la prévisualisation
+qu'elle recouvre.
+
+**Le centre galactique** — `depuisGalactique(0, 0)`, jamais une coordonnée recopiée. Le repère
+porte sa hauteur COURANTE (elle dit où le chercher maintenant) et, sous le seuil d'imagerie,
+sa culmination et la latitude qui le rendrait atteignable — 14,6° et 31,1° N depuis le site de
+référence, les chiffres du tableau de §8.2, recalculés et non repris. Le tout dans UN label,
+pour que le budget de §3.4 l'arbitre d'un bloc : il passe devant le nom « Voie lactée » au
+tri stable à priorité égale, parce que les deux s'ancrent au même point quand la visée est sur
+le centre et que c'est le repère qui porte la conséquence.
+
+`latitudeAccessibleDeg` est extraite dans `src/core/site.ts` et consommée par `creneaux.ts`
+comme par la scène : la formule δ + (90° − seuil) n'existe qu'une fois.
+
+Une seule bascule : la couche `voieLactee` éteint ligne, bande et repère ensemble.
+
+Banc `pnpm bench:ciel` : 0,73 ms/image, 10 118 projections — la bande en ajoute ~1 570, sans
+allocation par étoile. Suite complète verte (514 tests), `pnpm typecheck` propre.
+
+Non vérifié : le rendu à l'écran. L'extension navigateur n'était pas connectée pendant la
+session.

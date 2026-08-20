@@ -25,7 +25,9 @@ import { construitIndex } from '../src/core/index-ciel.ts'
 import { cielInstantane } from '../src/core/horloges.ts'
 import { magnitudeLimite, projecteur, type Vue } from '../src/core/projection.ts'
 import type { Site } from '../src/core/ephem.ts'
-import { versSpherique } from '../src/core/mat3.ts'
+import { applique, versSpherique } from '../src/core/mat3.ts'
+import { depuisGalactique } from '../src/core/galactique.ts'
+import { altitudeCulmination } from '../src/core/site.ts'
 import {
   cibleSousLeCurseur,
   dessineCiel,
@@ -60,12 +62,24 @@ function contexteEspion() {
       appels.push({ nom, args })
     }
   const couleurs: string[] = []
+  /** Opacités effectivement utilisées pour un tracé : la bande de §3.7 s'y lit. */
+  const opacites: number[] = []
+  let opacite = 1
   const espion = {
     appels,
     couleurs,
+    opacites,
     font: '',
     textBaseline: '',
     lineWidth: 1,
+    lineCap: '',
+    lineJoin: '',
+    set globalAlpha(v: number) {
+      opacite = v
+    },
+    get globalAlpha() {
+      return opacite
+    },
     set fillStyle(v: string) {
       couleurs.push(v)
     },
@@ -83,7 +97,10 @@ function contexteEspion() {
     moveTo: enregistre('moveTo'),
     lineTo: enregistre('lineTo'),
     arc: enregistre('arc'),
-    stroke: enregistre('stroke'),
+    stroke: (...args: unknown[]) => {
+      opacites.push(opacite)
+      appels.push({ nom: 'stroke', args })
+    },
     fill: enregistre('fill'),
     fillText: enregistre('fillText'),
     setLineDash: enregistre('setLineDash'),
@@ -127,6 +144,9 @@ function rend(
     couches?: CouchesActives
     objets?: readonly ObjetCielProfond[]
     surLeFond?: (ctx: CanvasRenderingContext2D) => void
+    sbCiel?: number
+    latitudeDeg?: number
+    vise?: { azimutDeg: number; hauteurDeg: number }
   } = {},
 ) {
   const ctx = contexteEspion()
@@ -136,8 +156,8 @@ function rend(
     fovDeg: 60,
     largeurPx: LARGEUR,
     hauteurPx: HAUTEUR,
-    azimutDeg: 180,
-    hauteurDeg: 45,
+    azimutDeg: options.vise?.azimutDeg ?? 180,
+    hauteurDeg: options.vise?.hauteurDeg ?? 45,
     rotationDeg: 0,
   }
   const entree: EntreeDessin = {
@@ -163,6 +183,8 @@ function rend(
     ],
     couches: options.couches ?? COUCHES,
     magLimite: magnitudeLimite(vue.fovDeg).value,
+    sbCiel: options.sbCiel ?? K('SB_VOIE_LACTEE_PLEINE_MAG'),
+    latitudeDeg: options.latitudeDeg ?? SITE.latitudeDeg,
     modeNuit: options.modeNuit ?? false,
     surLeFond: options.surLeFond,
   }
@@ -188,6 +210,9 @@ describe('passe de rendu §3.3', () => {
   it('appelle surLeFond après le fond et avant le premier tracé', () => {
     let rang = -1
     const { ctx } = rend({
+      // Couche Voie lactée éteinte : sa bande fait partie du fond (§3.7) et s'intercale
+      // légitimement entre le remplissage et l'aperçu. Le voisinage exact se lit sans elle.
+      couches: { ...COUCHES, voieLactee: false },
       surLeFond: (c) => {
         rang = (c as unknown as ReturnType<typeof contexteEspion>).appels.length
       },
@@ -252,6 +277,106 @@ describe('passe de rendu §3.3', () => {
     expect(label.xPx).toBeLessThan(LARGEUR)
     expect(label.yPx).toBeGreaterThan(0)
     expect(label.yPx).toBeLessThan(HAUTEUR)
+  })
+
+  /**
+   * §3.7 — la bande dit ce que l'utilisateur verra depuis SON ciel. Le discriminant n'est pas
+   * le nombre de traits mais leur opacité : la bande est la seule chose peinte en translucide.
+   */
+  const tracesDeBande = (r: ReturnType<typeof rend>) =>
+    r.ctx.opacites.filter((o) => o > 0 && o < 1).length
+
+  it('module la bande par le fond de ciel : atténuée à Bortle 4, effacée à Bortle 8', () => {
+    const bonCiel = rend({ sbCiel: K('SB_VOIE_LACTEE_PLEINE_MAG') })
+    const cielMoyen = rend({ sbCiel: (K('SB_VOIE_LACTEE_PLEINE_MAG') + K('SB_VOIE_LACTEE_EFFACEE_MAG')) / 2 })
+    const cielPerdu = rend({ sbCiel: K('SB_VOIE_LACTEE_EFFACEE_MAG') })
+
+    expect(tracesDeBande(bonCiel)).toBeGreaterThan(0)
+    expect(tracesDeBande(cielPerdu)).toBe(0)
+    // Atténuée, pas absente : le même nombre de tranches, à une opacité plus faible.
+    expect(tracesDeBande(cielMoyen)).toBe(tracesDeBande(bonCiel))
+    expect(Math.max(...cielMoyen.ctx.opacites.filter((o) => o < 1))).toBeLessThan(
+      Math.max(...bonCiel.ctx.opacites.filter((o) => o < 1)),
+    )
+    // La ligne du plan, elle, est tracée dans les deux cas.
+    expect(cielPerdu.sortie.labels.some((l) => l.texte === 'Voie lactée')).toBe(true)
+  })
+
+  it('jamais opaque : les repères restent lisibles au travers de la bande', () => {
+    const { ctx } = rend({ sbCiel: K('SB_VOIE_LACTEE_PLEINE_MAG') })
+    const bande = ctx.opacites.filter((o) => o < 1)
+    // Plein contraste : la tranche du plan galactique atteint le plafond d'opacité, pas 1.
+    expect(Math.max(...bande)).toBeCloseTo(K('OPACITE_BANDE_GALACTIQUE'), 6)
+    // Et les repères, eux, restent peints à pleine opacité par-dessus.
+    expect(ctx.opacites.some((o) => o === 1)).toBe(true)
+  })
+
+  it('peint la bande avec le fond, avant l’aperçu incrusté de §9.5', () => {
+    let rang = -1
+    const { ctx } = rend({
+      surLeFond: (c) => {
+        rang = (c as unknown as ReturnType<typeof contexteEspion>).appels.length
+      },
+    })
+    const fond = ctx.appels.findIndex((a) => a.nom === 'fillRect')
+    const premierTrace = ctx.appels.findIndex((a) => a.nom === 'stroke')
+    expect(premierTrace).toBeGreaterThan(fond)
+    // La bande est passée entre le fond et l'aperçu : elle ne lave pas la prévisualisation.
+    expect(rang).toBeGreaterThan(premierTrace)
+  })
+
+  /** Repère du centre galactique : la vue est amenée dessus pour qu'il soit dans le champ. */
+  function viseCentreGalactique() {
+    const ciel = cielInstantane(SITE, DATE)
+    const horizontal = versSpherique(applique(ciel.matrice, depuisGalactique(0, 0)))
+    return {
+      vise: { azimutDeg: horizontal.longitudeDeg, hauteurDeg: horizontal.latitudeDeg },
+      hauteurDeg: horizontal.latitudeDeg,
+    }
+  }
+
+  it('repère et nomme le centre galactique, avec sa hauteur courante', () => {
+    const { vise, hauteurDeg } = viseCentreGalactique()
+    const { sortie } = rend({ vise })
+    const label = sortie.labels.find((l) => l.texte.startsWith('Centre galactique'))
+    expect(label, JSON.stringify(sortie.labels.map((l) => l.texte))).toBeDefined()
+    expect(label!.texte).toContain(`${hauteurDeg.toFixed(0)}°`)
+    expect(label!.couleur).toBe(palette(false).voieLactee)
+  })
+
+  it('porte la cause et la latitude quand le centre galactique reste hors d’atteinte', () => {
+    const { vise } = viseCentreGalactique()
+    const decDeg = versSpherique(depuisGalactique(0, 0)).latitudeDeg
+    const culmination = altitudeCulmination(SITE.latitudeDeg, decDeg).value
+    expect(culmination).toBeLessThan(K('SEUIL_HAUTEUR_IMAGERIE_DEG'))
+
+    const { sortie } = rend({ vise })
+    const texte = sortie.labels.find((l) => l.texte.startsWith('Centre galactique'))!.texte
+    expect(texte).toContain(culmination.toFixed(1))
+    // La latitude qui le rendrait accessible : δ + (90° − seuil), soit environ 31° N.
+    expect(texte).toContain((decDeg + 90 - K('SEUIL_HAUTEUR_IMAGERIE_DEG')).toFixed(1))
+  })
+
+  it('n’annonce aucune cause depuis une latitude où le centre galactique passe haut', () => {
+    const { vise } = viseCentreGalactique()
+    const decDeg = versSpherique(depuisGalactique(0, 0)).latitudeDeg
+    const { sortie } = rend({ vise, latitudeDeg: decDeg })
+    const texte = sortie.labels.find((l) => l.texte.startsWith('Centre galactique'))!.texte
+    expect(texte).not.toContain('culmine')
+  })
+
+  it('soumet le repère du centre galactique au budget de labels, sans passe-droit', () => {
+    const { vise } = viseCentreGalactique()
+    const { sortie } = rend({ vise })
+    expect(sortie.labels.length).toBeLessThanOrEqual(K('LABELS_MAX'))
+  })
+
+  it('éteint bande et repère avec la seule bascule de la couche Voie lactée', () => {
+    const { vise } = viseCentreGalactique()
+    const sans = rend({ vise, couches: { ...COUCHES, voieLactee: false } })
+    expect(tracesDeBande(sans)).toBe(0)
+    expect(sans.sortie.labels.some((l) => l.texte.startsWith('Centre galactique'))).toBe(false)
+    expect(sans.sortie.labels.some((l) => l.texte === 'Voie lactée')).toBe(false)
   })
 
   it('plafonne les labels et les empêche de se chevaucher', () => {

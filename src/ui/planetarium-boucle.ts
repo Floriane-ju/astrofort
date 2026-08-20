@@ -60,6 +60,8 @@ export interface EtatBoucle {
   readonly frontieres: CoucheFrontieres
   readonly couches: CouchesActives
   readonly magLimite: number
+  /** §3.7 — fond de ciel du site : il module le contraste de la bande de la Voie lactée. */
+  readonly sbCiel: number
   readonly vue: VueScene
   readonly modeTemps: string
   readonly facteur: number
@@ -157,6 +159,8 @@ export function useBoucleRendu(entree: {
         cadres,
         couches: courant.couches,
         magLimite: courant.magLimite,
+        sbCiel: courant.sbCiel,
+        latitudeDeg: courant.site.latitudeDeg,
         modeNuit: courant.modeNuit,
         surLeFond:
           apercu !== null && cadre !== undefined

@@ -17,11 +17,24 @@ import type { CoucheFrontieres, CoucheTraces } from '../core/constellations.ts'
 import type { IndexCiel, StatistiquesSelection } from '../core/index-ciel.ts'
 import { selectionne } from '../core/index-ciel.ts'
 import { composeLabels, etoileLabellisable, type CandidatLabel } from '../core/labels.ts'
-import { depuisGalactique } from '../core/galactique.ts'
-import { applique, transpose, versVecteur, type Mat3, type Vec3 } from '../core/mat3.ts'
-import { pointEcran, rayonEtoilePx, type Projecteur } from '../core/projection.ts'
+import { contrasteVoieLactee, densiteRelative, depuisGalactique } from '../core/galactique.ts'
+import {
+  applique,
+  transpose,
+  versSpherique,
+  versVecteur,
+  type Mat3,
+  type Vec3,
+} from '../core/mat3.ts'
+import {
+  pointEcran,
+  rayonEtoilePx,
+  type PointEcranMut,
+  type Projecteur,
+} from '../core/projection.ts'
 import { contourCadreJ2000, type Cadre } from '../core/cadre.ts'
 import type { PositionCorps } from '../core/ephem.ts'
+import { altitudeCulmination, latitudeAccessibleDeg } from '../core/site.ts'
 import { couleurTeinte, palette, teinte, TEINTES } from './couleurs.ts'
 
 export interface CouchesActives {
@@ -64,6 +77,13 @@ export interface EntreeDessin {
   readonly cadres: readonly Cadre[]
   readonly couches: CouchesActives
   readonly magLimite: number
+  /**
+   * §3.7 — fond de ciel du site : c'est lui qui module le contraste de la bande. La scène
+   * montre ce que L'UTILISATEUR verra, pas une carte de référence idéale.
+   */
+  readonly sbCiel: number
+  /** §3.7 — latitude du site : elle décide si le centre galactique est atteignable d'ici. */
+  readonly latitudeDeg: number
   readonly modeNuit: boolean
   /**
    * Peint entre le fond et tout le reste. C'est là que l'aperçu incrusté se dépose : sous les
@@ -91,6 +111,7 @@ const RAYON_MIN_ETOILE_PX = 0.7
 
 const NOM_VOIE_LACTEE = 'Voie lactée'
 const PAS_LONGITUDE_GALACTIQUE_DEG = 3
+const PAS_LATITUDE_BANDE_DEG = 5
 
 /**
  * T-0033 — le plan galactique `b = 0`, échantillonné en longitude comme l'horizon l'est en
@@ -101,6 +122,36 @@ const PLAN_GALACTIQUE: readonly Vec3[] = Array.from(
   { length: 360 / PAS_LONGITUDE_GALACTIQUE_DEG + 1 },
   (_, i) => depuisGalactique(i * PAS_LONGITUDE_GALACTIQUE_DEG, 0),
 )
+
+/**
+ * T-0091 — la bande, échantillonnée en tranches de latitude galactique.
+ *
+ * Une tranche = une polyligne à latitude constante, tracée au trait épais de la largeur de
+ * la tranche. Le trait, et pas le polygone rempli : une polyligne dont une partie sort du
+ * champ se rompt en segments, et un polygone rompu se referme n'importe où. Le trait, lui,
+ * ne peint que ce qui reste — la bande se coupe proprement au bord du champ.
+ *
+ * Fixe en J2000, comme le plan : les polylignes se calculent au chargement du module.
+ */
+const TRANCHES_BANDE: readonly { readonly densite: number; readonly ligne: readonly Vec3[] }[] =
+  Array.from(
+    { length: (2 * K('LATITUDE_BANDE_GALACTIQUE_MAX_DEG')) / PAS_LATITUDE_BANDE_DEG + 1 },
+    (_, i) => {
+      const bDeg = -K('LATITUDE_BANDE_GALACTIQUE_MAX_DEG') + i * PAS_LATITUDE_BANDE_DEG
+      return Object.freeze({
+        densite: densiteRelative(bDeg).value,
+        ligne: Object.freeze(
+          Array.from({ length: 360 / PAS_LONGITUDE_GALACTIQUE_DEG + 1 }, (_unused, j) =>
+            depuisGalactique(j * PAS_LONGITUDE_GALACTIQUE_DEG, bDeg),
+          ),
+        ),
+      })
+    },
+  )
+
+/** T-0091 — le centre galactique : l = 0°, b = 0°, soit δ ≈ −29°. Calculé, jamais recopié. */
+const CENTRE_GALACTIQUE: Vec3 = depuisGalactique(0, 0)
+const NOM_CENTRE_GALACTIQUE = 'Centre galactique'
 
 /** Compose le chemin sans le peindre : au tracé du ciel de le remplir, au cadre de le découper. */
 function cheminLignes(
@@ -224,6 +275,97 @@ function ancreVoieLactee(
   return meilleureDistance === Infinity ? null : { xPx: meilleurX, yPx: meilleurY }
 }
 
+/**
+ * §3.7 — la bande de la Voie lactée, telle qu'elle se verra DEPUIS CE SITE.
+ *
+ * Deux modulations, aucune décorative : la densité par latitude galactique donne son profil
+ * à la bande, le contraste tiré du fond de ciel décide si elle existe encore. À Bortle 8 le
+ * contraste s'annule et la fonction ne peint rien — c'est l'information juste, pas une
+ * économie de rendu.
+ *
+ * L'épaisseur du trait suit le zoom : une tranche de latitude couvre le même angle, donc
+ * d'autant plus de pixels que le champ est serré. L'échelle est prise au centre du champ —
+ * la projection l'étire vers les bords, et un repère de lecture n'en souffre pas.
+ */
+function traceBandeVoieLactee(entree: EntreeDessin, couleur: string): void {
+  const contraste = contrasteVoieLactee(entree.sbCiel)
+  if (contraste <= 0) return
+  const { ctx, projecteur } = entree
+  const opaciteInitiale = ctx.globalAlpha
+  ctx.strokeStyle = couleur
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+  ctx.lineWidth = (PAS_LATITUDE_BANDE_DEG * projecteur.vue.largeurPx) / projecteur.vue.fovDeg
+  for (const tranche of TRANCHES_BANDE) {
+    ctx.globalAlpha = contraste * tranche.densite * K('OPACITE_BANDE_GALACTIQUE')
+    traceLignes(ctx, projecteur, [tranche.ligne])
+  }
+  ctx.globalAlpha = opaciteInitiale
+  ctx.lineWidth = 1
+  // Rendus à leurs valeurs par défaut : les repères tracés ensuite partagent ce contexte,
+  // et un trait épais laissé arrondi arrondirait aussi les frontières et l'horizon.
+  ctx.lineJoin = 'miter'
+  ctx.lineCap = 'butt'
+}
+
+/**
+ * §3.7 — le repère du centre galactique et son verdict site-dépendant.
+ *
+ * La hauteur COURANTE dit où le chercher maintenant ; la hauteur de CULMINATION dit si le
+ * chercher a un sens depuis ce site. Les deux sont nécessaires : §8.2 a déjà calculé que le
+ * centre galactique culmine à 14,6° depuis le site de référence, et ce chiffre vit dans un
+ * tableau que personne n'ouvre. Sous le seuil d'imagerie, le repère porte donc la cause ET
+ * la latitude qui rendrait la cible atteignable.
+ *
+ * Le tout dans UN label : c'est le repère qui porte la conséquence, et il s'arbitre au
+ * budget de §3.4 d'un seul bloc, sans passe-droit.
+ */
+function repereCentreGalactique(
+  entree: EntreeDessin,
+  couleur: string,
+  p: PointEcranMut,
+): CandidatLabel | null {
+  const { ctx, projecteur } = entree
+  if (!projecteur.projetteEn(CENTRE_GALACTIQUE.x, CENTRE_GALACTIQUE.y, CENTRE_GALACTIQUE.z, p)) {
+    return null
+  }
+  const largeur = projecteur.vue.largeurPx
+  const hauteur = projecteur.vue.hauteurPx
+  if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) return null
+
+  ctx.strokeStyle = couleur
+  ctx.beginPath()
+  ctx.moveTo(p.xPx + RAYON_CORPS_PX, p.yPx)
+  ctx.arc(p.xPx, p.yPx, RAYON_CORPS_PX, 0, 2 * Math.PI)
+  ctx.moveTo(p.xPx - RAYON_CORPS_PX * 2, p.yPx)
+  ctx.lineTo(p.xPx + RAYON_CORPS_PX * 2, p.yPx)
+  ctx.moveTo(p.xPx, p.yPx - RAYON_CORPS_PX * 2)
+  ctx.lineTo(p.xPx, p.yPx + RAYON_CORPS_PX * 2)
+  ctx.stroke()
+
+  const hauteurCouranteDeg = versSpherique(applique(entree.matriceCiel, CENTRE_GALACTIQUE))
+    .latitudeDeg
+  const decDeg = versSpherique(CENTRE_GALACTIQUE).latitudeDeg
+  const culmination = altitudeCulmination(entree.latitudeDeg, decDeg).value
+  const seuil = K('SEUIL_HAUTEUR_IMAGERIE_DEG')
+  const texte =
+    culmination <= seuil
+      ? `${NOM_CENTRE_GALACTIQUE} ${hauteurCouranteDeg.toFixed(0)}° — culmine à ` +
+        `${culmination.toFixed(1)}°, hors imagerie sauf sous ` +
+        `${latitudeAccessibleDeg(decDeg, seuil).toFixed(1)}° N`
+      : `${NOM_CENTRE_GALACTIQUE} ${hauteurCouranteDeg.toFixed(0)}°`
+  return {
+    texte,
+    categorie: 'CONSTELLATION',
+    xPx: p.xPx + RAYON_CORPS_PX * 2 + HAUTEUR_LABEL_PX / 2,
+    yPx: p.yPx,
+    priorite: 0,
+    largeurPx: texte.length * LARGEUR_CARACTERE_PX,
+    hauteurPx: HAUTEUR_LABEL_PX,
+    couleur,
+  }
+}
+
 export function dessineCiel(entree: EntreeDessin): SortieDessin {
   const { ctx, projecteur, index } = entree
   const teintes = palette(entree.modeNuit)
@@ -232,6 +374,9 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
 
   ctx.fillStyle = teintes.fond
   ctx.fillRect(0, 0, largeur, hauteur)
+  // §3.7 — la bande appartient au fond : elle passe sous l'aperçu incrusté de §9.5 comme
+  // sous les repères. Peinte plus tard, elle laverait la prévisualisation qu'elle recouvre.
+  if (entree.couches.voieLactee) traceBandeVoieLactee(entree, teintes.voieLactee)
   entree.surLeFond?.(ctx)
   ctx.font = `${HAUTEUR_LABEL_PX}px system-ui, sans-serif`
   ctx.textBaseline = 'middle'
@@ -257,10 +402,12 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
     ctx.lineWidth = 1
   }
   if (entree.couches.horizon) traceHorizon(entree, teintes.horizon)
+  let labelCentreGalactique: CandidatLabel | null = null
   if (entree.couches.voieLactee) {
     ctx.strokeStyle = teintes.voieLactee
     ctx.lineWidth = 1
     traceLignes(ctx, projecteur, [PLAN_GALACTIQUE])
+    labelCentreGalactique = repereCentreGalactique(entree, teintes.voieLactee, pointEcran())
   }
 
   // --- Étoiles ------------------------------------------------------------
@@ -379,10 +526,14 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
     })
   }
 
-  // --- Nom de la Voie lactée ----------------------------------------------
-  // Posé avant les noms de constellations : à priorité égale, le tri stable de
-  // `composeLabels` le laisse passer devant eux plutôt que derrière.
+  // --- Noms de la couche Voie lactée --------------------------------------
+  // Posés avant les noms de constellations : à priorité égale, le tri stable de
+  // `composeLabels` les laisse passer devant eux plutôt que derrière. Et le repère du
+  // centre galactique passe devant le nom de la bande, pour la même raison : les deux
+  // s'ancrent au même endroit quand la visée est sur le centre, et c'est le repère qui
+  // porte la conséquence site-dépendante.
   if (entree.couches.voieLactee) {
+    if (labelCentreGalactique !== null) candidats.push(labelCentreGalactique)
     const ancre = ancreVoieLactee(projecteur, largeur, hauteur)
     if (ancre !== null) {
       candidats.push({

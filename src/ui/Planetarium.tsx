@@ -55,6 +55,11 @@ export interface PlanetariumProps {
    * réglage de rendu, qui décide ce que « voir comme l'objectif » veut dire ici.
    */
   readonly modeObjectif: ModeProjection
+  /**
+   * §3.7 — fond de ciel du site (§2.2). C'est lui qui décide du contraste de la bande de la
+   * Voie lactée : la scène montre le ciel de CE site, pas une carte de référence idéale.
+   */
+  readonly sbCiel: number
   /** §11.1 — aucune animation non sollicitée en mode nuit. */
   readonly modeNuit: boolean
   /** Absent : la scène ne peut pas incruster le filé, faute de matériel chiffrable. */
@@ -150,6 +155,7 @@ export function Planetarium(props: PlanetariumProps) {
     frontieres,
     couches: rendu.couches,
     magLimite: profondeur.magLimite.value,
+    sbCiel: props.sbCiel,
     vue: pointage,
     modeTemps: temps.modeTemps,
     facteur: reglage.facteur,

@@ -1334,6 +1334,31 @@ const GRAND_CHAMP = {
     ordreDeGrandeur: true,
     sections: ['9.2'],
   }),
+  LATITUDE_BANDE_GALACTIQUE_MAX_DEG: entree({
+    ref: 'C-34',
+    libelle: 'Latitude galactique au-delà de laquelle la bande n’est plus rendue',
+    valeur: 30,
+    unite: '°',
+    source:
+      '§3.7 — étendue du repère de lecture : à 30° de latitude galactique, ' +
+      'exp( −30 / 20 ) laisse un cinquième de la densité du plan, sous le seuil de ' +
+      'perception d’une bande',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
+    sections: ['3.7'],
+  }),
+  OPACITE_BANDE_GALACTIQUE: entree({
+    ref: 'C-34',
+    libelle: 'Opacité de la bande de la Voie lactée dans le plan galactique, à plein contraste',
+    valeur: 0.45,
+    unite: '—',
+    source:
+      '§3.7 — la bande est un repère de lecture, jamais un fond opaque : les repères, ' +
+      'les étoiles et les labels restent lisibles au travers',
+    tolerance: 'convention produit — pilote l’aspect, jamais un verdict',
+    ordreDeGrandeur: false,
+    sections: ['3.7'],
+  }),
   VIGNETTAGE_COINS_DIAPH: entree({
     ref: 'C-34',
     libelle: 'Assombrissement des coins du champ',
