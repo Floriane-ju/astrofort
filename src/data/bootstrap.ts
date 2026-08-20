@@ -1,9 +1,9 @@
 /**
  * §12.1, §12.2, §12.3 — Démarrage de l'application.
  *
- * Trois vérifications, dans cet ordre : capacités de rendu, intégrité des catalogues,
- * état du stockage. Aucune ne doit produire un écran blanc ni une erreur technique brute :
- * chaque échec a une cause nommée et une conduite à tenir.
+ * Deux vérifications, dans cet ordre : intégrité des catalogues, état du stockage. Aucune ne
+ * doit produire un écran blanc ni une erreur technique brute : chaque échec a une cause nommée
+ * et une conduite à tenir — une mesure sans conduite à tenir n'est pas une vérification.
  */
 
 import { ecritPaquet, litPaquet } from './db.ts'
@@ -20,28 +20,6 @@ import { modeReseauCourant, type ModeReseau } from './degradation.ts'
 import { etatStockage, type EtatStockage } from './persistence.ts'
 
 export const CHEMIN_MANIFESTE = '/data/manifest.json'
-
-export interface CapacitesRendu {
-  readonly webgl2: boolean
-  /** Renseigné quand WebGL 2 manque : les fonctions concernées et la cause. */
-  readonly cause?: string
-}
-
-const CAUSE_SANS_WEBGL2 =
-  'WebGL 2 n’est pas disponible sur ce navigateur : le planétarium (§3) et les ' +
-  'prévisualisations de champ et de filé (§9) sont désactivés. Les moteurs de ' +
-  'faisabilité, de pose et de planification (§6, §7, §8) restent pleinement utilisables.'
-
-export function detecteWebGL2(): CapacitesRendu {
-  if (typeof document === 'undefined') return { webgl2: false, cause: CAUSE_SANS_WEBGL2 }
-  try {
-    const canvas = document.createElement('canvas')
-    const contexte = canvas.getContext('webgl2')
-    return contexte === null ? { webgl2: false, cause: CAUSE_SANS_WEBGL2 } : { webgl2: true }
-  } catch {
-    return { webgl2: false, cause: CAUSE_SANS_WEBGL2 }
-  }
-}
 
 export interface EtatPaquet {
   readonly manifeste: ManifestePaquet
@@ -175,7 +153,6 @@ export function gaiaCharge(catalogues: EtatCatalogues): boolean {
 
 export interface EtatDemarrage {
   readonly modeReseau: ModeReseau
-  readonly rendu: CapacitesRendu
   readonly catalogues: EtatCatalogues
   readonly stockage: EtatStockage
 }
@@ -184,7 +161,6 @@ export async function demarre(): Promise<EtatDemarrage> {
   const [catalogues, stockage] = await Promise.all([verifieCatalogues(), etatStockage()])
   return {
     modeReseau: modeReseauCourant(),
-    rendu: detecteWebGL2(),
     catalogues,
     stockage,
   }

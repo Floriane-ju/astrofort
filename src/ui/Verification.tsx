@@ -37,8 +37,6 @@ export function Verification(props: VerificationProps) {
           {etat !== null && (
             <>
               <p className="etat">réseau : {props.modeReseau}</p>
-              <p className="etat">WebGL 2 : {etat.rendu.webgl2 ? 'disponible' : 'indisponible'}</p>
-              {etat.rendu.cause !== undefined && <p className="cause">{etat.rendu.cause}</p>}
               <p className="etat">
                 stockage persistant : {etat.stockage.persistant ? 'accordé' : 'non accordé'}
                 {etat.stockage.usageMo !== null &&

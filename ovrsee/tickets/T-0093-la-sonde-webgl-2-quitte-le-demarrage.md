@@ -2,7 +2,7 @@
 {
   "id": "T-0093",
   "titre": "La sonde WebGL 2 quitte le démarrage",
-  "colonne": "pret",
+  "colonne": "fait",
   "priorite": "moyenne",
   "tags": [
     "prd",
@@ -81,3 +81,11 @@ Aucun test ne la couvre : la suppression ne casse rien à réécrire.
 
 Vérification : `pnpm typecheck` → sortie vide (aucune erreur). `pnpm test` → 42 fichiers,
 500 tests passés.
+
+## Réappliqué — 20 août 2026
+
+Le commit de restauration des tickets avait remis la sonde dans le code (le PRD, lui, était
+déjà aligné). Les suppressions de `src/data/bootstrap.ts` et `src/ui/Verification.tsx` sont
+réappliquées à l'identique.
+
+Vérification : `pnpm typecheck` → sortie vide. `pnpm test` → 42 fichiers, 504 tests passés.
