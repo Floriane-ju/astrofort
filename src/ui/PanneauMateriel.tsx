@@ -18,9 +18,18 @@ import type { ProfilOptique } from '../core/optics.ts'
 import type { ProfilSuivi, QualiteMiseEnStation, TypeMonture } from '../core/tracking.ts'
 import type { ModeProjection } from '../core/projection.ts'
 import type { Traced } from '../core/traced.ts'
-import { BOITIER_REFERENCE, pointZeroSysteme, type CapteurMode } from '../data/equipment.ts'
+import {
+  BASE_BOITIERS,
+  ID_BOITIER_CUSTOM,
+  libelleZpSource,
+  type CapteurMode,
+  type IsoRetenu,
+  type PointZeroSysteme,
+  type SaisieBoitier,
+} from '../data/equipment.ts'
+import { DOMAINES, type DomaineId } from '../registry/domains.ts'
 import { TracedValue } from './TracedValue.tsx'
-import { Etiquette } from './Terme.tsx'
+import { Etiquette, useNiveau } from './Terme.tsx'
 
 /** §5.1 — le type d'objectif choisit la projection, il n'ajuste pas un rendu. */
 export type TypeObjectif = 'RECTILINEAIRE' | 'FISHEYE'
@@ -35,11 +44,23 @@ export interface LecturesMateriel {
   readonly optique: ProfilOptique
   readonly suivi: ProfilSuivi
   readonly poseNpf: Traced<number | null>
+  /** §7.1 — `zp_source` du boîtier retenu, affiché avec toute pose. */
+  readonly zeroSysteme: PointZeroSysteme
+  /** §7.2 — l'ISO retenu et la raison qui le justifie. */
+  readonly iso: IsoRetenu
+  /** §5.1 — grandeurs remplacées par un générique du registre, donc [ESTIMÉ]. */
+  readonly estimations: readonly string[]
   /** §5.1 — le recadrage resserre le cadre sans toucher à l'échantillonnage. */
   readonly noteRecadrage?: string
 }
 
 export interface PanneauMaterielProps {
+  /** §5.1 — le boîtier retenu, et ses grandeurs capteur quand il est saisi à la main. */
+  readonly boitier: SaisieBoitier
+  readonly surBoitier: (v: SaisieBoitier) => void
+  /** §7.2 — ISO de capture ; vide = celui que le seuil de double gain recommande. */
+  readonly iso: string
+  readonly surIso: (v: string) => void
   readonly focale: string
   readonly surFocale: (v: string) => void
   readonly ouverture: string
@@ -61,20 +82,175 @@ export interface PanneauMaterielProps {
   readonly erreur?: string
 }
 
+/**
+ * §5.1 — un champ du mode avancé : sa borne vient du registre, jamais du composant, et le
+ * laisser vide n'est pas une erreur — c'est déclarer la grandeur inconnue.
+ */
+function ChampCapteur({
+  domaine,
+  valeur,
+  surValeur,
+  requis,
+  nom,
+}: {
+  readonly domaine: DomaineId
+  readonly valeur: string
+  readonly surValeur: (v: string) => void
+  readonly requis?: boolean
+  /** Deux champs peuvent partager un domaine — largeur et hauteur de capteur. */
+  readonly nom?: string
+}) {
+  const d = DOMAINES[domaine]
+  return (
+    <label>
+      {nom ?? d.champ.replace(/^l[ea’]s? ?/u, '')} ({d.unite})
+      <input
+        value={valeur}
+        inputMode="decimal"
+        placeholder={requis === true ? `${d.min} à ${d.max}` : 'inconnu'}
+        onChange={(e) => surValeur(e.target.value)}
+      />
+    </label>
+  )
+}
+
+/** §5.1 — les six grandeurs du mode avancé, invisibles au débutant. */
+function ChampsAvances({
+  boitier,
+  surChamp,
+}: {
+  readonly boitier: SaisieBoitier
+  readonly surChamp: (champ: keyof SaisieBoitier) => (v: string) => void
+}) {
+  return (
+    <div className="champs">
+      <ChampCapteur
+        domaine="read_noise_e"
+        valeur={boitier.readNoiseE}
+        surValeur={surChamp('readNoiseE')}
+      />
+      <ChampCapteur
+        domaine="seuil_double_gain_iso"
+        valeur={boitier.seuilDoubleGainIso}
+        surValeur={surChamp('seuilDoubleGainIso')}
+      />
+      <ChampCapteur
+        domaine="full_well_e"
+        valeur={boitier.fullWellE}
+        surValeur={surChamp('fullWellE')}
+      />
+      <ChampCapteur domaine="zp_sys" valeur={boitier.zpSys} surValeur={surChamp('zpSys')} />
+      <ChampCapteur
+        domaine="taille_raw_mo"
+        valeur={boitier.tailleRawMo}
+        surValeur={surChamp('tailleRawMo')}
+      />
+      <ChampCapteur
+        domaine="autonomie_cipa"
+        valeur={boitier.autonomieCipa}
+        surValeur={surChamp('autonomieCipa')}
+      />
+    </div>
+  )
+}
+
 export function PanneauMateriel(props: PanneauMaterielProps) {
-  const zeroSysteme = pointZeroSysteme(BOITIER_REFERENCE)
   const lectures = props.lectures
+  const niveau = useNiveau()
+  const custom = props.boitier.boitierId === ID_BOITIER_CUSTOM
+  const surChamp = (champ: keyof SaisieBoitier) => (v: string) =>
+    props.surBoitier({ ...props.boitier, [champ]: v })
 
   return (
     <>
       <section>
+        <h2>Boîtier</h2>
+        <div className="champs">
+          <label>
+            Boîtier
+            <select value={props.boitier.boitierId} onChange={(e) => surChamp('boitierId')(e.target.value)}>
+              {BASE_BOITIERS.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.libelle}
+                </option>
+              ))}
+              <option value={ID_BOITIER_CUSTOM}>Autre boîtier — je saisis mon capteur</option>
+            </select>
+          </label>
+        </div>
+        {custom && (
+          <>
+            <p className="etat">
+              Dimensions et pitch sont exigés : sans eux, ni champ ni échantillonnage
+              n’existent. Le reste peut rester vide — le registre fournit son repli, et les
+              sorties qui en dépendent portent [ESTIMÉ] (§2.3).
+            </p>
+            <div className="champs">
+              <ChampCapteur
+                domaine="capteur_mm"
+                nom="largeur du capteur"
+                valeur={props.boitier.capteurLMm}
+                surValeur={surChamp('capteurLMm')}
+                requis
+              />
+              <ChampCapteur
+                domaine="capteur_mm"
+                nom="hauteur du capteur"
+                valeur={props.boitier.capteurHMm}
+                surValeur={surChamp('capteurHMm')}
+                requis
+              />
+              <ChampCapteur
+                domaine="pitch_um"
+                valeur={props.boitier.pitchUm}
+                surValeur={surChamp('pitchUm')}
+                requis
+              />
+            </div>
+            {niveau === 'DEBUTANT' ? (
+              <details>
+                <summary>Grandeurs du capteur — mode avancé</summary>
+                <ChampsAvances boitier={props.boitier} surChamp={surChamp} />
+              </details>
+            ) : (
+              <ChampsAvances boitier={props.boitier} surChamp={surChamp} />
+            )}
+          </>
+        )}
+        {/* §7.1 — zp_source est affiché avec toute pose, donc aussi à sa source. */}
+        {lectures !== undefined && (
+          <p className={lectures.zeroSysteme.estime ? 'cause' : 'etat'}>
+            {libelleZpSource(lectures.zeroSysteme)}
+          </p>
+        )}
+        {lectures?.estimations.map((note) => (
+          <p key={note} className="cause">
+            [ESTIMÉ] {note}
+          </p>
+        ))}
+        {/* §7.2 — l'ISO retenu se voit et se change ; le seuil de double gain le justifie. */}
+        <div className="champs">
+          <label>
+            <Etiquette cle="iso_recommande" />
+            <input
+              value={props.iso}
+              inputMode="numeric"
+              placeholder={
+                lectures === undefined ? 'recommandé' : `recommandé : ${lectures.iso.iso}`
+              }
+              onChange={(e) => props.surIso(e.target.value)}
+            />
+          </label>
+        </div>
+        {lectures !== undefined && (
+          <p className={lectures.iso.readNoiseE === null ? 'cause' : 'etat'}>
+            {lectures.iso.message}
+          </p>
+        )}
+      </section>
+
+      <section>
         <h2>Optique</h2>
-        {/* ponytail: un seul boîtier en base — la ligne devient un select le jour où
-            BASE_BOITIERS en porte plusieurs. */}
-        <p className="etat">
-          boîtier : {BOITIER_REFERENCE.libelle} · point zéro système {zeroSysteme.valeur} mag
-          {zeroSysteme.estime ? ' [ESTIMÉ]' : ''}
-        </p>
         <div className="champs">
           <label>
             <Etiquette cle="focale" />
@@ -90,7 +266,7 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
               value={props.capteurMode}
               onChange={(e) => props.surCapteurMode(e.target.value as CapteurMode)}
             >
-              <option value="FULL_FRAME">Plein format — {BOITIER_REFERENCE.libelle}</option>
+              <option value="FULL_FRAME">Capteur entier — {props.boitier.boitierId === ID_BOITIER_CUSTOM ? 'boîtier saisi' : (BASE_BOITIERS.find((b) => b.id === props.boitier.boitierId)?.libelle ?? '')}</option>
               <option value="APSC_CROP">Recadrage APS-C</option>
             </select>
           </label>

@@ -211,7 +211,9 @@ export const GLOSSAIRE = Object.freeze({
     explication:
       'Le pitch est la distance entre deux pixels voisins du capteur. Il fixe l’échantillonnage ' +
       'et entre dans la pose maximale sans suivi. Un recadrage de capteur ne le change jamais.',
-    consequence: 'Le pitch se lit dans la base matériel, il ne se règle pas au moment de la prise.',
+    consequence:
+      'Le pitch se lit dans la base matériel ; pour un boîtier absent, il se saisit une fois ' +
+      'avec les dimensions du capteur, et ne se règle jamais au moment de la prise.',
     sections: ['5.1'],
   }),
   echantillonnage: terme({
@@ -534,7 +536,9 @@ export const GLOSSAIRE = Object.freeze({
       'au-delà d’un seuil d’ISO. Comme la pose optimale varie comme le carré de ce bruit, ' +
       'franchir le seuil divise la pose par plusieurs. Monter au-delà ne gagne plus rien et ' +
       'sacrifie la dynamique.',
-    consequence: 'Régler l’ISO sur ce palier, une fois pour toutes, et ne plus y toucher.',
+    consequence:
+      'Régler l’ISO sur ce palier une fois pour toutes, sachant qu’en changer sans courbe de ' +
+      'bruit à cet ISO fait appliquer le repli du registre et porter [ESTIMÉ] à la pose.',
     sections: ['7.2'],
   }),
   snr_cible: terme({

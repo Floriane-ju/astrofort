@@ -10,6 +10,7 @@ import { dureeLisible } from '../core/exposure.ts'
 import { PRESETS_SNR } from '../registry/verdicts.ts'
 import { SOURCE_TABLE_CONTRASTE } from '../registry/contrast.ts'
 import { SOURCE_TABLE_FILTRES } from '../registry/filters.ts'
+import { libelleZpSource, type PointZeroSysteme } from '../data/equipment.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, Terme } from './Terme.tsx'
 import type { Conseils, Resultat } from './fiche-cible-calcul.ts'
@@ -19,6 +20,8 @@ export interface VerdictsProps {
   readonly snrCible: number
   readonly surSnr: (valeur: number) => void
   readonly isoLibelle: string
+  /** §7.1 — `zp_source` accompagne toute pose affichée. */
+  readonly zeroSysteme: PointZeroSysteme
   readonly conseils: Conseils | null
   readonly filtreDualBand: boolean
   readonly surFiltre: (valeur: boolean) => void
@@ -32,7 +35,7 @@ export function Verdicts(props: VerdictsProps) {
       <CeQueLeSetupCadre r={r} />
       <CadrageDeLaCible r={r} />
       <Detectabilite r={r} />
-      <PoseUnitaire r={r} isoLibelle={props.isoLibelle} />
+      <PoseUnitaire r={r} isoLibelle={props.isoLibelle} zeroSysteme={props.zeroSysteme} />
       <CombienDePhotos r={r} snrCible={props.snrCible} surSnr={props.surSnr} />
       <PlanDeCalibration r={r} />
       <PourquoiCeVerdict
@@ -112,10 +115,21 @@ function Detectabilite({ r }: { readonly r: Resultat }) {
 }
 
 /** §7.1 et §7.2 — combien de temps dure une photo, et pourquoi pas davantage. */
-function PoseUnitaire({ r, isoLibelle }: { readonly r: Resultat; readonly isoLibelle: string }) {
+function PoseUnitaire({
+  r,
+  isoLibelle,
+  zeroSysteme,
+}: {
+  readonly r: Resultat
+  readonly isoLibelle: string
+  readonly zeroSysteme: PointZeroSysteme
+}) {
   return (
     <section>
       <h2>Pose — §7.1 et §7.2</h2>
+      {/* §7.1 — zp_source doit être affiché partout où une pose l'est. */}
+      <p className={zeroSysteme.estime ? 'cause' : 'etat'}>{libelleZpSource(zeroSysteme)}</p>
+      {zeroSysteme.note !== undefined && <p className="cause">{zeroSysteme.note}</p>}
       <TracedValue terme="flux_ciel" trace={r.eCiel} unite="e⁻/s/px" />
       {r.eObj !== null && <TracedValue terme="flux_objet" trace={r.eObj} decimales={3} unite="e⁻/s/px" />}
       {r.pose === null && (

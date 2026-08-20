@@ -342,6 +342,16 @@ const CONVENTIONNELLES = {
     ordreDeGrandeur: false,
     sections: ['7.2'],
   }),
+  TAILLE_RAW_MO_GENERIQUE: entree({
+    ref: 'C-37',
+    libelle: 'Taille de fichier RAW par défaut, boîtier inconnu',
+    valeur: 25,
+    unite: 'Mo',
+    source: '§5.1 — repli quand le boîtier saisi ne donne pas sa taille de RAW',
+    tolerance: 'ordre de grandeur ; le budget de stockage porte [ESTIMÉ]',
+    ordreDeGrandeur: true,
+    sections: ['5.1', '7.3', '9.4'],
+  }),
   INTEGRATION_PLAFOND_H: entree({
     ref: 'C-03',
     libelle: 'Plafond d’intégration affichée',

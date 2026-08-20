@@ -11,6 +11,7 @@
  */
 
 import type { EntreeProfondeur } from '../core/galactique.ts'
+import type { PointZeroSysteme } from '../data/equipment.ts'
 import type { ModeProjection } from '../core/projection.ts'
 import type { Site } from '../core/ephem.ts'
 import { useScene } from './scene-etat.ts'
@@ -41,6 +42,8 @@ export interface PanneauFileProps {
   readonly tMaxSuiviS: number | null
   /** Autonomie CIPA du boîtier, absente de la base tant qu'elle n'est pas sourcée. */
   readonly autonomieCipa: number | null
+  /** §7.1 — `zp_source` s'affiche partout où une pose l'est, celle du filé comprise. */
+  readonly zeroSysteme: PointZeroSysteme
   /** §5.1 — la projection imposée par le type d'objectif, réglé au panneau matériel. */
   readonly modeObjectif: ModeProjection
 }
@@ -64,7 +67,12 @@ export function PanneauFile(props: PanneauFileProps) {
         actions={actions}
       />
       <PoseMaximale lectures={lectures} />
-      <ProfondeurDUnePose lectures={lectures} file={file} renduFile={renduFile} />
+      <ProfondeurDUnePose
+        lectures={lectures}
+        file={file}
+        renduFile={renduFile}
+        zeroSysteme={props.zeroSysteme}
+      />
       <ArcsDuFile lectures={lectures} file={file} />
       <SequenceDePrises lectures={lectures} file={file} />
     </>

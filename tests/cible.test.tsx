@@ -16,7 +16,12 @@ import { FicheCible, LIBELLE_TYPE_OBJET } from '../src/ui/FicheCible.tsx'
 import { ciblesVisibles } from '../src/core/visibles.ts'
 import { cielInstantane } from '../src/core/horloges.ts'
 import { profilOptique } from '../src/core/optics.ts'
-import { BOITIER_REFERENCE, capteurEffectif, pointZeroSysteme } from '../src/data/equipment.ts'
+import {
+  BOITIER_REFERENCE,
+  capteurEffectif,
+  isoRecommande,
+  pointZeroSysteme,
+} from '../src/data/equipment.ts'
 import { etatScene, majVue, reinitialiseScene } from '../src/ui/scene-etat.ts'
 import type { Site } from '../src/core/ephem.ts'
 import { TYPES_OBJET, type ObjetCielProfond } from '../src/data/deepsky.ts'
@@ -127,6 +132,7 @@ function ficheAvecCatalogue(
       ouvertureN={2.8}
       boitier={BOITIER_REFERENCE}
       zeroSysteme={pointZeroSysteme(BOITIER_REFERENCE)}
+      iso={isoRecommande(BOITIER_REFERENCE)}
       sbCiel={21}
       mLimOeil={6.1}
       tMaxS={2.1}

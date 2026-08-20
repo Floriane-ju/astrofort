@@ -24,18 +24,21 @@ import { construitIndex, type IndexCiel } from '../core/index-ciel.ts'
 import type { EntreeProfondeur } from '../core/galactique.ts'
 import { npf, profilSuivi, type ProfilSuivi } from '../core/tracking.ts'
 import { BortleHorsTableError } from '../registry/bortle.ts'
-import { SaisieRefuseeError } from '../registry/domains.ts'
+import { SaisieRefuseeError, valide } from '../registry/domains.ts'
 import { HorsDomaineSeriesError, type Site } from '../core/ephem.ts'
 import type { ProfilCadre } from '../core/cadre.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { Etoile } from '../data/catalog.ts'
 import {
-  BOITIER_REFERENCE,
   capteurEffectif,
   isoRecommande,
   pointZeroSysteme,
+  resoutBoitier,
+  type Boitier,
   type CapteurEffectif,
   type CapteurMode,
+  type IsoRetenu,
+  type PointZeroSysteme,
 } from '../data/equipment.ts'
 import { K } from '../registry/constants.ts'
 import type { Traced } from '../core/traced.ts'
@@ -49,13 +52,6 @@ import type { PanneauFileProps } from './PanneauFile.tsx'
 /** Objectif de qualité retenu pour le plan de la nuit : « correct » au sens de §7.3. */
 const PRESET_SNR_PLAN = 10
 
-/**
- * T-0056 — le point zéro et l'ISO du boîtier de référence ne dépendent que d'une constante
- * de module : les réévaluer à chaque rendu de l'application ne pouvait rien changer.
- */
-const ZERO_SYSTEME = pointZeroSysteme(BOITIER_REFERENCE)
-const ISO_RETENU = isoRecommande(BOITIER_REFERENCE)
-
 export type Calcul =
   | {
       readonly ok: true
@@ -68,6 +64,12 @@ export type Calcul =
       readonly poseNpf: Traced<number | null>
       readonly capteur: CapteurEffectif
       readonly ouvertureN: number
+      /** §5.1 — le boîtier retenu : celui de la base, ou celui que la saisie décrit. */
+      readonly boitier: Boitier
+      readonly zeroSysteme: PointZeroSysteme
+      readonly iso: IsoRetenu
+      /** Grandeurs remplacées par un générique du registre : la sortie porte [ESTIMÉ]. */
+      readonly estimations: readonly string[]
       readonly noteRecadrage?: string
     }
   | { readonly ok: false; readonly erreur: string }
@@ -124,6 +126,8 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
       lieu.bortle,
       lieu.sqm,
       lieu.dateIso,
+      materiel.boitier,
+      materiel.iso,
       materiel.focale,
       materiel.ouverture,
       materiel.capteurMode,
@@ -159,16 +163,16 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     return {
       tPoseS: tPoseFileS,
       dMm: calcul.optique.dMm.value,
-      zpSys: ZERO_SYSTEME.valeur,
+      zpSys: calcul.zeroSysteme.valeur,
       eCielPxS: fluxCiel({
         sbMagArcsec2: calcul.ciel.sbCiel.value,
-        zpSys: ZERO_SYSTEME.valeur,
+        zpSys: calcul.zeroSysteme.valeur,
         pitchUm: calcul.capteur.pitchUm,
         ouvertureN: calcul.ouvertureN,
-        zpEstime: ZERO_SYSTEME.estime,
+        zpEstime: calcul.zeroSysteme.estime,
       }).value,
-      readNoiseE: ISO_RETENU.readNoiseE ?? K('READ_NOISE_DEFAUT_E'),
-      zpEstime: ZERO_SYSTEME.estime,
+      readNoiseE: calcul.iso.readNoiseE ?? K('READ_NOISE_DEFAUT_E'),
+      zpEstime: calcul.zeroSysteme.estime,
     }
   }, [calcul, tPoseFileS])
 
@@ -211,11 +215,11 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
         capteurHMm: calcul.capteur.capteurHMm,
         pitchUm: calcul.capteur.pitchUm,
         ouvertureN: calcul.ouvertureN,
-        zpSys: ZERO_SYSTEME.valeur,
-        zpEstime: ZERO_SYSTEME.estime,
-        readNoiseE: ISO_RETENU.readNoiseE,
-        tailleRawMo: BOITIER_REFERENCE.tailleRawMo,
-        isoSession: ISO_RETENU.iso,
+        zpSys: calcul.zeroSysteme.valeur,
+        zpEstime: calcul.zeroSysteme.estime,
+        readNoiseE: calcul.iso.readNoiseE,
+        tailleRawMo: calcul.boitier.tailleRawMo,
+        isoSession: calcul.iso.iso,
         sbCielNoir: calcul.ciel.sbCiel.value,
         mLimOeil: calcul.ciel.mLimOeil.value,
         tMaxS: calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value,
@@ -250,9 +254,11 @@ function evalueMateriel(site: Site, lieu: SaisieLieu, materiel: SaisieMateriel):
     // Départ à midi UTC : la recherche du coucher part de là.
     const depart = new Date(`${lieu.dateIso}T12:00:00Z`)
     const offsetFuseauH = -new Date().getTimezoneOffset() / 60
-    const capteur = capteurEffectif(BOITIER_REFERENCE, materiel.capteurMode)
+    const { boitier, estimations } = resoutBoitier(materiel.boitier)
+    const capteur = capteurEffectif(boitier, materiel.capteurMode)
     const focaleMm = Number(materiel.focale)
     const ouvertureN = Number(materiel.ouverture)
+    const isoChoisi = materiel.iso.trim() === '' ? null : valide('iso_capture', Number(materiel.iso))
     return {
       ok: true,
       nuit: fenetreNocturne(site, depart),
@@ -274,6 +280,10 @@ function evalueMateriel(site: Site, lieu: SaisieLieu, materiel: SaisieMateriel):
       poseNpf: npf({ focaleMm, ouvertureN, pitchUm: capteur.pitchUm, decDeg: 0 }),
       capteur,
       ouvertureN,
+      boitier,
+      zeroSysteme: pointZeroSysteme(boitier),
+      iso: isoRecommande(boitier, isoChoisi),
+      estimations,
       ...(capteur.noteRecadrage === undefined ? {} : { noteRecadrage: capteur.noteRecadrage }),
     }
   } catch (erreur) {
@@ -291,6 +301,7 @@ function evalueMateriel(site: Site, lieu: SaisieLieu, materiel: SaisieMateriel):
 
 function profilsDeCadre(calcul: Calcul, materiel: SaisieMateriel): readonly ProfilCadre[] {
   if (!calcul.ok) return []
+  const boitier = calcul.boitier
   const focaleMm = Number(materiel.focale)
   const ouvertureN = Number(materiel.ouverture)
   const autre: CapteurMode = materiel.capteurMode === 'FULL_FRAME' ? 'APSC_CROP' : 'FULL_FRAME'
@@ -299,7 +310,7 @@ function profilsDeCadre(calcul: Calcul, materiel: SaisieMateriel): readonly Prof
     : [materiel.capteurMode]
   const tPoseS = calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value
   return modes.map((m) => {
-    const capteur = capteurEffectif(BOITIER_REFERENCE, m)
+    const capteur = capteurEffectif(boitier, m)
     const optique = profilOptique({ focaleMm, ouvertureN, ...capteur })
     return {
       libelle: `${focaleMm} mm f/${ouvertureN} — ${m === 'FULL_FRAME' ? 'plein format' : 'recadrage APS-C'}`,
@@ -322,8 +333,9 @@ function contexteFiche(
     capteurHMm: calcul.capteur.capteurHMm,
     pitchUm: calcul.capteur.pitchUm,
     ouvertureN: calcul.ouvertureN,
-    boitier: BOITIER_REFERENCE,
-    zeroSysteme: ZERO_SYSTEME,
+    boitier: calcul.boitier,
+    zeroSysteme: calcul.zeroSysteme,
+    iso: calcul.iso,
     sbCiel: calcul.ciel.sbCiel.value,
     mLimOeil: calcul.ciel.mLimOeil.value,
     // Sans suivi, c'est la NPF qui plafonne la pose (§9.1) — jamais rien.
@@ -351,10 +363,11 @@ function panneauFile(
     fovLDeg: calcul.optique.fovLDeg.value,
     fovHDeg: calcul.optique.fovHDeg.value,
     echApx: calcul.optique.echApx.value,
-    tailleRawMo: BOITIER_REFERENCE.tailleRawMo,
+    tailleRawMo: calcul.boitier.tailleRawMo,
     profondeur,
     tMaxSuiviS: calcul.suivi.tMaxSuiviS.value,
-    autonomieCipa: BOITIER_REFERENCE.autonomieCipa ?? null,
+    autonomieCipa: calcul.boitier.autonomieCipa ?? null,
+    zeroSysteme: calcul.zeroSysteme,
     modeObjectif: modeObjectif(materiel.typeObjectif),
   }
 }

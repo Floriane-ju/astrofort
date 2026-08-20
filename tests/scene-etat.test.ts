@@ -11,6 +11,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { K } from '../src/registry/constants.ts'
 import type { Site } from '../src/core/ephem.ts'
+import { pointZeroSysteme } from '../src/data/equipment.ts'
 import { PanneauFile } from '../src/ui/PanneauFile.tsx'
 import { PanneauExplorer } from '../src/ui/PanneauExplorer.tsx'
 import { modeObjectif } from '../src/ui/PanneauMateriel.tsx'
@@ -49,6 +50,7 @@ const MATERIEL = {
   },
   tMaxSuiviS: null,
   autonomieCipa: null,
+  zeroSysteme: pointZeroSysteme(null),
   modeObjectif: 'MODE_CADRE',
 } as const
 

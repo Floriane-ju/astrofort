@@ -115,6 +115,9 @@ export function App() {
               optique: calcul.optique,
               suivi: calcul.suivi,
               poseNpf: calcul.poseNpf,
+              zeroSysteme: calcul.zeroSysteme,
+              iso: calcul.iso,
+              estimations: calcul.estimations,
               ...(calcul.noteRecadrage === undefined
                 ? {}
                 : { noteRecadrage: calcul.noteRecadrage }),

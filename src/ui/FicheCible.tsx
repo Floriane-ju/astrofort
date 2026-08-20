@@ -16,7 +16,6 @@ import { useMemo, useState } from 'react'
 import { SaisieRefuseeError } from '../registry/domains.ts'
 import { PRESETS_SNR } from '../registry/verdicts.ts'
 import type { ObjetCielProfond, TypeObjet } from '../data/deepsky.ts'
-import { isoRecommande } from '../data/equipment.ts'
 import type { Site } from '../core/ephem.ts'
 import { ChampsCible } from './ChampsCible.tsx'
 import { Verdicts } from './Verdicts.tsx'
@@ -44,7 +43,7 @@ export function FicheCible(props: FicheCibleProps) {
   const [filtreType, setFiltreType] = useState<TypeObjet | null>(null)
 
   const saisie = useSaisieCible(props.objetSelectionne ?? null)
-  const iso = isoRecommande(props.boitier)
+  const iso = props.iso
 
   const calcul = useMemo<{ ok: true; r: Resultat } | { ok: false; erreur: string }>(() => {
     try {
@@ -89,6 +88,7 @@ export function FicheCible(props: FicheCibleProps) {
           snrCible={snrCible}
           surSnr={setSnrCible}
           isoLibelle={iso.message}
+          zeroSysteme={props.zeroSysteme}
           conseils={conseils}
           filtreDualBand={filtreDualBand}
           surFiltre={setFiltreDualBand}

@@ -41,6 +41,8 @@ export interface ContexteFiche {
   readonly ouvertureN: number
   readonly boitier: Boitier
   readonly zeroSysteme: PointZeroSysteme
+  /** §7.2 — l'ISO retenu, recommandé par le double gain ou choisi à la main. */
+  readonly iso: IsoRetenu
   readonly sbCiel: number
   readonly mLimOeil: number | null
   /** Plafond de pose : monture avec suivi (§5.2), ou pose NPF sans suivi (§9.1). */

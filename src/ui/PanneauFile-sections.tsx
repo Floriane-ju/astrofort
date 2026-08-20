@@ -8,6 +8,7 @@
 import { K } from '../registry/constants.ts'
 import { MENTION_SEMIS } from '../data/semis.ts'
 import { vignettageDiaph } from '../core/galactique.ts'
+import { libelleZpSource, type PointZeroSysteme } from '../data/equipment.ts'
 import type { CartePoseMax } from '../core/grand-champ.ts'
 import type { ModeProjection } from '../core/projection.ts'
 import type { ActionsScene } from './scene-etat.ts'
@@ -183,10 +184,12 @@ export function ProfondeurDUnePose({
   lectures,
   file,
   renduFile,
+  zeroSysteme,
 }: {
   readonly lectures: LecturesFile
   readonly file: ReglagesFile
   readonly renduFile: RenduFile | null
+  readonly zeroSysteme: PointZeroSysteme
 }) {
   const { carte, trainee, poseDepassee } = lectures
   return (
@@ -212,6 +215,8 @@ export function ProfondeurDUnePose({
         unite="mag"
       />
       <TracedValue terme="trainee" trace={trainee} decimales={1} unite="px" />
+      {/* §7.1 — une pose s'affiche toujours avec la source de son point zéro. */}
+      <p className={zeroSysteme.estime ? 'cause' : 'etat'}>{libelleZpSource(zeroSysteme)}</p>
       {/* Le vignettage n'a plus d'interrupteur : il se centre sur le canevas et non sur le
           cadre, donc il n'est jamais incrusté. Son chiffre, lui, reste une lecture du
           matériel — et il vaut pour l'image que le capteur enregistrera (§9.2). */}

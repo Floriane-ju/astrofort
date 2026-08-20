@@ -7,7 +7,7 @@
  */
 
 import { useState } from 'react'
-import type { CapteurMode } from '../data/equipment.ts'
+import { BOITIER_REFERENCE, type CapteurMode, type SaisieBoitier } from '../data/equipment.ts'
 import type { QualiteMiseEnStation, TypeMonture } from '../core/tracking.ts'
 import { etatScene, majVue } from './scene-etat.ts'
 import { modeObjectif, type TypeObjectif } from './PanneauMateriel.tsx'
@@ -61,7 +61,26 @@ export function useSaisieLieu(): SaisieLieu {
   }
 }
 
+/** §5.1 — mode `custom` : tous les champs vides, aucun n'est présumé (§2.3). */
+const BOITIER_VIDE = {
+  capteurLMm: '',
+  capteurHMm: '',
+  pitchUm: '',
+  readNoiseE: '',
+  seuilDoubleGainIso: '',
+  fullWellE: '',
+  zpSys: '',
+  tailleRawMo: '',
+  autonomieCipa: '',
+} as const
+
 export interface SaisieMateriel {
+  /** §5.1 — le boîtier retenu et, en mode `custom`, ses grandeurs capteur saisies. */
+  readonly boitier: SaisieBoitier
+  readonly surBoitier: (v: SaisieBoitier) => void
+  /** §7.2 — ISO de capture, vide tant que celui du double gain convient. */
+  readonly iso: string
+  readonly surIso: (v: string) => void
   readonly focale: string
   readonly surFocale: (v: string) => void
   readonly ouverture: string
@@ -81,6 +100,11 @@ export interface SaisieMateriel {
 }
 
 export function useSaisieMateriel(): SaisieMateriel {
+  const [boitier, surBoitier] = useState<SaisieBoitier>(() => ({
+    boitierId: BOITIER_REFERENCE.id,
+    ...BOITIER_VIDE,
+  }))
+  const [iso, surIso] = useState('')
   const [focale, surFocale] = useState(DEFAUT.focale)
   const [ouverture, surOuverture] = useState(DEFAUT.ouverture)
   const [capteurMode, surCapteurMode] = useState<CapteurMode>('FULL_FRAME')
@@ -100,6 +124,10 @@ export function useSaisieMateriel(): SaisieMateriel {
   }
 
   return {
+    boitier,
+    surBoitier,
+    iso,
+    surIso,
     focale,
     surFocale,
     ouverture,

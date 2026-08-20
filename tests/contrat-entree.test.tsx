@@ -11,6 +11,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
 import { GLOSSAIRE } from '../src/registry/glossaire.ts'
+import { BOITIER_REFERENCE, ID_BOITIER_CUSTOM } from '../src/data/equipment.ts'
 
 const ecran = renderToStaticMarkup(<App />)
 
@@ -50,6 +51,17 @@ describe('contrat d’entrée — écran par défaut, setup de l’Annexe A', ()
   it('ferme le ciel profond faute de suivi, en renvoyant au grand champ', () => {
     expect(ecran).toContain('[DONNÉE MANQUANTE]')
     expect(ecran).toMatch(/domaine ciel profond est fermé/)
+  })
+
+  it('offre le choix du boîtier, avec l’entrée custom de §5.1', () => {
+    expect(ecran).toContain(BOITIER_REFERENCE.libelle)
+    expect(ecran).toContain(`value="${ID_BOITIER_CUSTOM}"`)
+  })
+
+  it('affiche zp_source et l’ISO retenu là où une pose est affichée (§7.1, §7.2)', () => {
+    expect(ecran).toContain('zp_source')
+    expect(ecran).toContain(GLOSSAIRE.iso_recommande.libelle)
+    expect(ecran).toMatch(/ISO \d+/)
   })
 
   it('glose chaque terme technique au contact', () => {

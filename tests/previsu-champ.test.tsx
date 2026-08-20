@@ -28,6 +28,7 @@ import type { Site } from '../src/core/ephem.ts'
 import { versVecteur } from '../src/core/mat3.ts'
 import { projecteur, type Vue } from '../src/core/projection.ts'
 import { dessineChamp, type EntreeDessinChamp } from '../src/ui/dessine-champ.ts'
+import { pointZeroSysteme } from '../src/data/equipment.ts'
 import { PanneauFile } from '../src/ui/PanneauFile.tsx'
 import { K } from '../src/registry/constants.ts'
 
@@ -289,6 +290,7 @@ describe('§9 — le panneau du filé', () => {
         profondeur: { ...PROFONDEUR, zpEstime: true },
         tMaxSuiviS: null,
         autonomieCipa: null,
+        zeroSysteme: pointZeroSysteme(null),
         modeObjectif: 'MODE_CADRE',
       }),
     )

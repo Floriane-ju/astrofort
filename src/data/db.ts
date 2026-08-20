@@ -33,7 +33,23 @@ export interface ProfilMateriel {
   readonly focaleMm: number
   readonly ouvertureN: number
   readonly typeObjectif: 'RECTILINEAIRE' | 'FISHEYE'
+  /** Identifiant de la base matériel, ou `custom` quand le boîtier est saisi (§5.1). */
   readonly boitierId: string
+  /**
+   * Grandeurs du boîtier saisi à la main. Elles ne se retéléchargent pas : sans elles dans
+   * l'export, un profil `custom` réimporté décrirait le capteur d'un autre appareil (§12.3).
+   */
+  readonly capteurLMm?: number
+  readonly capteurHMm?: number
+  readonly pitchUm?: number
+  readonly readNoiseE?: number
+  readonly seuilDoubleGainIso?: number
+  readonly fullWellE?: number
+  readonly zpSys?: number
+  readonly tailleRawMo?: number
+  readonly autonomieCipa?: number
+  /** §7.2 — ISO de capture retenu, quand il n'est pas celui du seuil de double gain. */
+  readonly isoCapture?: number
   readonly capteurMode: 'FULL_FRAME' | 'APSC_CROP'
   readonly suiviActif: boolean
   readonly qualiteMes?: 'SOIGNEE' | 'APPROX' | 'INCONNUE'

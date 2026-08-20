@@ -71,6 +71,8 @@ export const DOMAINES = Object.freeze({
     section: '5.1',
   }),
 
+  iso_capture: domaine({ champ: 'l’ISO de capture', min: 100, max: 6400, unite: 'ISO', section: '7.2' }),
+
   // §6.3, §7.1 — détectabilité et flux
   m_int: domaine({ champ: 'la magnitude intégrée', min: -2, max: 20, unite: 'mag', section: '6.3' }),
   sb_ciel: domaine({

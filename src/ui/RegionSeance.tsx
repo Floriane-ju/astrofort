@@ -7,7 +7,7 @@
 
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { Etoile } from '../data/catalog.ts'
-import { BOITIER_REFERENCE } from '../data/equipment.ts'
+import { libelleZpSource } from '../data/equipment.ts'
 import { PanneauExplorer } from './PanneauExplorer.tsx'
 import { PanneauSeance } from './PanneauSeance.tsx'
 import { PanneauFile } from './PanneauFile.tsx'
@@ -80,7 +80,9 @@ export function RegionSeance(props: RegionSeanceProps) {
         enTete={{
           dateIso: lieu.dateIso,
           lieu: `${lieu.latitude}° / ${lieu.longitude}° — Bortle ${lieu.bortle}`,
-          materiel: `${materiel.focale} mm f/${materiel.ouverture} — ${BOITIER_REFERENCE.libelle}`,
+          materiel:
+            `${materiel.focale} mm f/${materiel.ouverture} — ${calcul.boitier.libelle} · ` +
+            `ISO ${calcul.iso.iso} · ${libelleZpSource(calcul.zeroSysteme)}`,
         }}
       />
     ) : null
