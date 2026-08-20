@@ -105,8 +105,18 @@ export interface PoseUnitaire {
   readonly message: string
   /** Perte de rapport signal sur bruit quand la monture bride la pose. */
   readonly perteSnrBridee?: number
+  /**
+   * Présente uniquement en mode permissif : pose obtenue, perte de SNR consentie et raison
+   * d'usage. Le mode raccourcit la pose d'un facteur trois — il doit être choisi, jamais subi.
+   */
+  readonly notePermissif?: string
   readonly readNoiseUtiliseE: number
   readonly readNoiseEstime: boolean
+}
+
+/** Perte de rapport signal sur bruit consentie pour un facteur C donné (§2.3). */
+function perteSnr(c: number): number {
+  return 1 - Math.sqrt(c / (c + 1))
 }
 
 /** Valeur d'obturateur usuelle la plus proche (§2.3). */
@@ -121,6 +131,8 @@ export function poseUnitaire(entree: EntreePose): PoseUnitaire {
   const rn = readNoiseEstime ? K('READ_NOISE_DEFAUT_E') : valide('read_noise_e', entree.readNoiseE!)
   const constanteC = entree.permissif === true ? 'FACTEUR_POSE_C_PERMISSIF' : 'FACTEUR_POSE_C_DEFAUT'
   const tOpt = (K(constanteC) * rn ** 2) / entree.eCiel
+  /** Ce que la pose vaudrait sans le mode permissif : le mode s'annonce avec son coût. */
+  const tOptDefaut = (K('FACTEUR_POSE_C_DEFAUT') * rn ** 2) / entree.eCiel
 
   const flags: Flag[] = []
   if (readNoiseEstime || entree.zpEstime === true) flags.push('ESTIME')
@@ -147,7 +159,7 @@ export function poseUnitaire(entree: EntreePose): PoseUnitaire {
 
   // C effectif atteint quand la monture bride : E_ciel × t / RN², d'où la perte de §2.3.
   const cEffectif = bride ? (entree.eCiel * tMax) / rn ** 2 : K(constanteC)
-  const perte = 1 - Math.sqrt(cEffectif / (cEffectif + 1))
+  const perte = perteSnr(cEffectif)
 
   const plage: readonly [number, number] = [Math.floor(tRecommande / 2), Math.floor(tRecommande * 2)]
 
@@ -174,9 +186,24 @@ export function poseUnitaire(entree: EntreePose): PoseUnitaire {
       ? 'La monture bride la pose avant la physique : le bruit de lecture dominera, pour une ' +
         `perte de rapport signal sur bruit d’environ ${(perte * 100).toFixed(0)} %. Soigner la ` +
         'mise en station est le levier ; à défaut, le grand champ (§9) reste entièrement ouvert.'
-      : 'Poser plus longtemps n’apporterait quasi rien et augmenterait le risque de perte : ' +
-        'rafale, avion, étoile brillante saturée.',
+      : entree.permissif === true
+        ? 'Pose volontairement raccourcie : l’allonger rapprocherait de l’optimum, au prix du ' +
+          'risque de perdre l’image — c’est l’arbitrage demandé, pas un optimum.'
+        : 'Poser plus longtemps n’apporterait quasi rien et augmenterait le risque de perte : ' +
+          'rafale, avion, étoile brillante saturée.',
     ...(bride ? { perteSnrBridee: perte } : {}),
+    ...(entree.permissif === true
+      ? {
+          notePermissif:
+            `Mode permissif : facteur C = ${K('FACTEUR_POSE_C_PERMISSIF')} au lieu de ` +
+            `${K('FACTEUR_POSE_C_DEFAUT')}, donc ${arrondiObturateur(tRecommande)} s de pose au ` +
+            `lieu de ${arrondiObturateur(tOptDefaut)} s, pour une perte de ` +
+            `rapport signal sur bruit de ${(perte * 100).toFixed(1)} % contre ` +
+            `${(perteSnr(K('FACTEUR_POSE_C_DEFAUT')) * 100).toFixed(1)} %. À réserver au ciel ` +
+            'pollué, au suivi imprécis et au vent : quand une pose sur deux part à la poubelle, ' +
+            'la pose courte rapporte plus que ces points de rapport signal sur bruit.',
+        }
+      : {}),
     readNoiseUtiliseE: rn,
     readNoiseEstime,
   }

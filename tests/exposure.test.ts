@@ -82,6 +82,43 @@ describe('pose unitaire §7.2', () => {
     expect(pose.message).toMatch(/grand champ/)
   })
 
+  it('divise la pose par le rapport des deux facteurs C en mode permissif', () => {
+    const defaut = poseUnitaire({ eCiel: E_CIEL, readNoiseE: 1.5, tMaxS: null })
+    const permissif = poseUnitaire({ eCiel: E_CIEL, readNoiseE: 1.5, tMaxS: null, permissif: true })
+    const rapport = K('FACTEUR_POSE_C_DEFAUT') / K('FACTEUR_POSE_C_PERMISSIF')
+    expect(defaut.tOptS.value / permissif.tOptS.value).toBeCloseTo(rapport, 6)
+    // La chaîne d'explication doit citer la constante réellement employée (§10.2).
+    expect(permissif.tOptS.constants.map((c) => c.id)).toContain('FACTEUR_POSE_C_PERMISSIF')
+    expect(defaut.tOptS.constants.map((c) => c.id)).toContain('FACTEUR_POSE_C_DEFAUT')
+  })
+
+  it('annonce le coût du mode permissif, et ne dit rien quand il est éteint', () => {
+    const permissif = poseUnitaire({ eCiel: E_CIEL, readNoiseE: 1.5, tMaxS: 75, permissif: true })
+    const perte = (c: number) => (1 - Math.sqrt(c / (c + 1))) * 100
+    expect(permissif.notePermissif).toContain(perte(K('FACTEUR_POSE_C_PERMISSIF')).toFixed(1))
+    expect(permissif.notePermissif).toContain(perte(K('FACTEUR_POSE_C_DEFAUT')).toFixed(1))
+    expect(permissif.notePermissif).toMatch(/vent/)
+    expect(permissif.notePermissif).toContain(`${permissif.tAfficheeS} s`)
+
+    // Éteint, aucune sortie ne bouge : le mode est un choix, pas un réglage silencieux.
+    const defaut = poseUnitaire({ eCiel: E_CIEL, readNoiseE: 1.5, tMaxS: 75 })
+    expect(defaut.notePermissif).toBeUndefined()
+    expect(defaut).toEqual(poseUnitaire({ eCiel: E_CIEL, readNoiseE: 1.5, tMaxS: 75, permissif: false }))
+  })
+
+  it('propage la pose courte : plus d’images, plus de volume, mêmes darks à refaire', () => {
+    const commun = { eObj: E_OBJ, eCiel: E_CIEL, readNoiseE: 1.5, snrCible: 50, tailleRawMo: 33 }
+    const defaut = poseUnitaire({ eCiel: E_CIEL, readNoiseE: 1.5, tMaxS: 75 })
+    const permissif = poseUnitaire({ eCiel: E_CIEL, readNoiseE: 1.5, tMaxS: 75, permissif: true })
+    const planDefaut = planIntegration({ ...commun, tPoseS: defaut.tRecommandeS.value })
+    const planPermissif = planIntegration({ ...commun, tPoseS: permissif.tRecommandeS.value })
+    // Le rapport des poses se retrouve dans le nombre d'images, et l'intégration requise monte
+    // parce que le bruit de lecture est payé une fois par image.
+    expect(planPermissif.nPoses.value).toBeGreaterThan(planDefaut.nPoses.value * 3)
+    expect(planPermissif.tRequisS.value).toBeGreaterThan(planDefaut.tRequisS.value)
+    expect(planPermissif.volumeGo.value).toBeGreaterThan(planDefaut.volumeGo.value)
+  })
+
   it('exige des poses PLUS LONGUES sous un ciel plus noir', () => {
     const bortle2 = fluxCiel({ sbMagArcsec2: 21.7, ...OPTIQUE_REF }).value
     expect(E_CIEL / bortle2).toBeCloseTo(1.99, 1)

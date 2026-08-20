@@ -37,6 +37,8 @@ export interface FicheCibleProps extends ContexteFiche {
 
 export function FicheCible(props: FicheCibleProps) {
   const [filtreDualBand, setFiltreDualBand] = useState(false)
+  /** §7.2 — mode permissif C-03 = 3, désactivé par défaut : il se choisit, il ne se subit pas. */
+  const [permissif, setPermissif] = useState(false)
   const [explicationDepliee, setExplicationDepliee] = useState(false)
   const [snrCible, setSnrCible] = useState(PRESETS_SNR[1]!.valeur)
   /** T-0050 — restriction de la liste à un type d'objet. `null` ne restreint rien. */
@@ -47,13 +49,13 @@ export function FicheCible(props: FicheCibleProps) {
 
   const calcul = useMemo<{ ok: true; r: Resultat } | { ok: false; erreur: string }>(() => {
     try {
-      return { ok: true, r: evalue(props, saisie.saisie, snrCible, iso) }
+      return { ok: true, r: evalue(props, saisie.saisie, snrCible, iso, permissif) }
     } catch (erreur) {
       if (erreur instanceof SaisieRefuseeError) return { ok: false, erreur: erreur.message }
       throw erreur
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props, saisie.saisie, snrCible, iso.iso])
+  }, [props, saisie.saisie, snrCible, iso.iso, permissif])
 
   const conseils = useMemo(
     () =>
@@ -90,6 +92,8 @@ export function FicheCible(props: FicheCibleProps) {
           isoLibelle={iso.message}
           zeroSysteme={props.zeroSysteme}
           conseils={conseils}
+          permissif={permissif}
+          surPermissif={setPermissif}
           filtreDualBand={filtreDualBand}
           surFiltre={setFiltreDualBand}
           surDeplie={setExplicationDepliee}

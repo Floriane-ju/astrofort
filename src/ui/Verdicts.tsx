@@ -23,6 +23,9 @@ export interface VerdictsProps {
   /** §7.1 — `zp_source` accompagne toute pose affichée. */
   readonly zeroSysteme: PointZeroSysteme
   readonly conseils: Conseils | null
+  /** §7.2 — mode permissif C-03 : demandé, jamais déduit. */
+  readonly permissif: boolean
+  readonly surPermissif: (valeur: boolean) => void
   readonly filtreDualBand: boolean
   readonly surFiltre: (valeur: boolean) => void
   readonly surDeplie: (valeur: boolean) => void
@@ -35,7 +38,13 @@ export function Verdicts(props: VerdictsProps) {
       <CeQueLeSetupCadre r={r} />
       <CadrageDeLaCible r={r} />
       <Detectabilite r={r} />
-      <PoseUnitaire r={r} isoLibelle={props.isoLibelle} zeroSysteme={props.zeroSysteme} />
+      <PoseUnitaire
+        r={r}
+        isoLibelle={props.isoLibelle}
+        zeroSysteme={props.zeroSysteme}
+        permissif={props.permissif}
+        surPermissif={props.surPermissif}
+      />
       <CombienDePhotos r={r} snrCible={props.snrCible} surSnr={props.surSnr} />
       <PlanDeCalibration r={r} />
       <PourquoiCeVerdict
@@ -119,10 +128,14 @@ function PoseUnitaire({
   r,
   isoLibelle,
   zeroSysteme,
+  permissif,
+  surPermissif,
 }: {
   readonly r: Resultat
   readonly isoLibelle: string
   readonly zeroSysteme: PointZeroSysteme
+  readonly permissif: boolean
+  readonly surPermissif: (valeur: boolean) => void
 }) {
   return (
     <section>
@@ -155,6 +168,18 @@ function PoseUnitaire({
             <p className="cause">
               [ESTIMÉ] Bruit de lecture inconnu : {r.pose.readNoiseUtiliseE} e⁻ appliqué et affiché.
             </p>
+          )}
+          {/* §7.2 — le mode permissif se demande, et s'annonce avec son coût chiffré. */}
+          <label className="interrupteur">
+            <input
+              type="checkbox"
+              checked={permissif}
+              onChange={(e) => surPermissif(e.target.checked)}
+            />
+            <Etiquette cle="mode_permissif" /> — ciel pollué, suivi imprécis, vent
+          </label>
+          {r.pose.notePermissif !== undefined && (
+            <p className="cause">{r.pose.notePermissif}</p>
           )}
         </>
       )}

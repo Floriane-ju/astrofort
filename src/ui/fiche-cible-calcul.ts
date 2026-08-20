@@ -85,11 +85,16 @@ export function nombreOuNull(texte: string): number | null {
   return texte.trim() === '' || !Number.isFinite(valeur) ? null : valeur
 }
 
+/**
+ * `permissif` est le mode C-03 = 3 de §7.2 : il n'est jamais déduit du contexte, il est
+ * demandé. Une pose divisée par trois se choisit, elle ne s'applique pas en silence.
+ */
 export function evalue(
   contexte: ContexteFiche,
   saisie: SaisieCible,
   snrCible: number,
   iso: IsoRetenu,
+  permissif = false,
 ): Resultat {
   const fovHDeg = contexte.optique.fovHDeg.value
   const domaine = verdictDomaine(fovHDeg, contexte.catalogue)
@@ -143,6 +148,7 @@ export function evalue(
     readNoiseE: iso.readNoiseE,
     tMaxS: contexte.tMaxS,
     zpEstime,
+    permissif,
   })
 
   const integration = planIntegration({

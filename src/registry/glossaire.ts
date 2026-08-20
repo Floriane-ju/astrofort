@@ -518,6 +518,18 @@ export const GLOSSAIRE = Object.freeze({
     consequence: 'Choisir la durée d’obturateur la plus pratique dans la plage ne coûte rien.',
     sections: ['2.3', '7.2'],
   }),
+  mode_permissif: terme({
+    libelle: 'Mode permissif',
+    glose: 'pose courte assumée',
+    explication:
+      'Le facteur de pose descend à sa variante permissive : la pose unitaire est divisée par ' +
+      'plus de trois, et la perte de rapport signal sur bruit triple. C’est l’arbitrage d’un ' +
+      'soir de vent, de ciel pollué ou de suivi imprécis, quand une pose sur deux part à la ' +
+      'poubelle. Les deux valeurs chiffrées sont affichées avec la pose obtenue.',
+    consequence:
+      'Hors de ces conditions, ce mode ne fait que dégrader le résultat : il reste désactivé.',
+    sections: ['2.3', '7.2'],
+  }),
   regime_pose: terme({
     libelle: 'Régime de pose',
     glose: 'physique ou monture limitante',
