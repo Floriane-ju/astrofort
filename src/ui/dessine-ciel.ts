@@ -16,7 +16,13 @@ import type { EtoileNommee } from '../data/constellations.ts'
 import type { CoucheFrontieres, CoucheTraces } from '../core/constellations.ts'
 import type { IndexCiel, StatistiquesSelection } from '../core/index-ciel.ts'
 import { selectionne } from '../core/index-ciel.ts'
-import { composeLabels, etoileLabellisable, type CandidatLabel } from '../core/labels.ts'
+import {
+  composeLabels,
+  etoileLabellisable,
+  labelSurvol,
+  type BoiteLabel,
+  type CandidatLabel,
+} from '../core/labels.ts'
 import { contrasteVoieLactee, densiteRelative, depuisGalactique } from '../core/galactique.ts'
 import {
   applique,
@@ -60,6 +66,19 @@ export interface CibleEcran {
   readonly corps?: PositionCorps
 }
 
+/**
+ * T-0085 — l'élément sous le curseur et le libellé que le clic lui donnerait.
+ *
+ * Le texte est résolu par l'appelant, avec `decritCible` : la scène ne compose pas un second
+ * vocabulaire, elle emprunte celui du clic. Le point est celui de l'élément, pas du curseur —
+ * le nom reste collé à ce qu'il nomme.
+ */
+export interface SurvolEcran {
+  readonly xPx: number
+  readonly yPx: number
+  readonly texte: string
+}
+
 export interface EntreeDessin {
   readonly ctx: CanvasRenderingContext2D
   readonly projecteur: Projecteur
@@ -90,6 +109,8 @@ export interface EntreeDessin {
    * repères, les étoiles et les noms, jamais par-dessus.
    */
   readonly surLeFond?: ((ctx: CanvasRenderingContext2D) => void) | undefined
+  /** §3.4 / T-0085 — absent : rien n'est survolé, la scène ne révèle aucun nom. */
+  readonly survol?: SurvolEcran | undefined
 }
 
 export interface SortieDessin {
@@ -97,6 +118,8 @@ export interface SortieDessin {
   readonly etoilesDessinees: number
   readonly cibles: readonly CibleEcran[]
   readonly labels: readonly CandidatLabel[]
+  /** T-0085 — le label transitoire du survol, hors budget de §3.4. */
+  readonly revele: BoiteLabel | null
 }
 
 /* T-0027 — noms des éléments trop petits à l'écran une fois le canevas 1920×1080 réduit à
@@ -600,7 +623,25 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
     ctx.fillText(label.texte, label.xPx, label.yPx)
   }
 
-  return { stats, etoilesDessinees, cibles, labels }
+  // T-0085 — le nom masqué par le seuil de zoom, révélé le temps du survol. Il est peint
+  // après les labels retenus et n'entre pas dans leur budget : `labelSurvol` le loge entre
+  // eux ou y renonce, il n'en efface aucun.
+  const revele =
+    entree.survol === undefined
+      ? null
+      : labelSurvol(labels, {
+          texte: entree.survol.texte,
+          xPx: entree.survol.xPx + RAYON_CLIC_PX + HAUTEUR_LABEL_PX / 2,
+          yPx: entree.survol.yPx,
+          largeurPx: entree.survol.texte.length * LARGEUR_CARACTERE_PX,
+          hauteurPx: HAUTEUR_LABEL_PX,
+        })
+  if (revele !== null) {
+    ctx.fillStyle = teintes.texte
+    ctx.fillText(revele.texte, revele.xPx, revele.yPx)
+  }
+
+  return { stats, etoilesDessinees, cibles, labels, revele }
 }
 
 /** Cible la plus proche du point cliqué, dans un rayon de quelques pixels. */

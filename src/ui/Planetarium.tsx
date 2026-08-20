@@ -30,6 +30,7 @@ import { majVue, resolutionRendu, useScene } from './scene-etat.ts'
 import { useSeance } from './seance-etat.ts'
 import type { Cadre, ProfilCadre } from '../core/cadre.ts'
 import type { Site } from '../core/ephem.ts'
+import type { SurvolEcran } from './dessine-ciel.ts'
 import { useBoucleRendu, type EtatBoucle } from './planetarium-boucle.ts'
 import { useIncrustationFile } from './planetarium-incrustation.ts'
 import { useGestesZoom, usePointageSouris } from './planetarium-gestes.ts'
@@ -90,6 +91,10 @@ function useResolutionSuitLaBoite(canevas: React.RefObject<HTMLCanvasElement | n
 
 export function Planetarium(props: PlanetariumProps) {
   const canevas = useRef<HTMLCanvasElement>(null)
+  // T-0085 — le survol vit hors de React : il change à chaque mouvement de souris, et la
+  // boucle est seule à le lire. Le passer par l'état rendrait la scène soixante fois par
+  // seconde pour un label transitoire.
+  const survol = useRef<SurvolEcran | null>(null)
 
   // Pointage, temps et couches sont ceux de la scène, réglés depuis le panneau droit.
   const { vue: pointage, temps, rendu, msAffiche, instant, actions } = useScene()
@@ -166,12 +171,13 @@ export function Planetarium(props: PlanetariumProps) {
     anime: temps.modeTemps === 'DEFILEMENT' && !props.modeNuit,
   }
 
-  const cibles = useBoucleRendu({ canevas, etat: etatBoucle, instant, incrustation })
+  const cibles = useBoucleRendu({ canevas, etat: etatBoucle, instant, incrustation, survol })
   const souris = usePointageSouris({
     largeurPx,
     fovDeg,
     actions,
     cibles,
+    survol,
     surSelectionObjet: props.surSelectionObjet,
   })
   useGestesZoom(canevas, props.gaiaCharge)
@@ -186,6 +192,7 @@ export function Planetarium(props: PlanetariumProps) {
         onPointerDown={souris.onPointerDown}
         onPointerMove={souris.onPointerMove}
         onPointerUp={souris.onPointerUp}
+        onPointerLeave={souris.onPointerLeave}
       />
     </section>
   )

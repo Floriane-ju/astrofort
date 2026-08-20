@@ -33,6 +33,7 @@ import {
   dessineCiel,
   type CouchesActives,
   type EntreeDessin,
+  type SurvolEcran,
 } from '../src/ui/dessine-ciel.ts'
 import { palette } from '../src/ui/couleurs.ts'
 import { K } from '../src/registry/constants.ts'
@@ -147,6 +148,7 @@ function rend(
     sbCiel?: number
     latitudeDeg?: number
     vise?: { azimutDeg: number; hauteurDeg: number }
+    survol?: SurvolEcran
   } = {},
 ) {
   const ctx = contexteEspion()
@@ -186,6 +188,7 @@ function rend(
     sbCiel: options.sbCiel ?? K('SB_VOIE_LACTEE_PLEINE_MAG'),
     latitudeDeg: options.latitudeDeg ?? SITE.latitudeDeg,
     modeNuit: options.modeNuit ?? false,
+    survol: options.survol,
     surLeFond: options.surLeFond,
   }
   return { ctx, sortie: dessineCiel(entree), entree }
@@ -447,5 +450,44 @@ describe('pointage à la souris §3.4', () => {
   it('ne retient rien loin de tout élément dessiné', () => {
     const { sortie } = rend()
     expect(cibleSousLeCurseur(sortie.cibles, -500, -500)).toBeNull()
+  })
+})
+
+/**
+ * T-0085 — le nom que le seuil de zoom a masqué, révélé le temps du survol. Le libellé vient
+ * de l'appelant (`decritCible`) : la passe ne compose pas un second vocabulaire, elle place.
+ */
+describe('label du survol T-0085', () => {
+  const SURVOL: SurvolEcran = { xPx: 480, yPx: 270, texte: 'M31 — Galaxie d’Andromède' }
+
+  it('révèle le nom survolé sans entrer dans le budget de §3.4', () => {
+    const sans = rend()
+    const avec = rend({ survol: SURVOL })
+    expect(sans.sortie.revele).toBeNull()
+    expect(avec.sortie.revele).not.toBeNull()
+    // Hors budget : le nom révélé ne chasse aucun label retenu et n'en ajoute aucun.
+    expect(avec.sortie.labels.map((l) => l.texte)).toEqual(sans.sortie.labels.map((l) => l.texte))
+    expect(
+      avec.ctx.appels.some((a) => a.nom === 'fillText' && a.args[0] === SURVOL.texte),
+    ).toBe(true)
+  })
+
+  it('ne recouvre aucun label retenu', () => {
+    const { sortie } = rend({ survol: SURVOL })
+    const revele = sortie.revele!
+    for (const label of sortie.labels) {
+      const chevauche =
+        Math.abs(label.xPx - revele.xPx) * 2 < label.largeurPx + revele.largeurPx &&
+        Math.abs(label.yPx - revele.yPx) * 2 < label.hauteurPx + revele.hauteurPx
+      expect(chevauche, `${label.texte} recouvert par ${revele.texte}`).toBe(false)
+    }
+  })
+
+  it('ne double pas un nom que la scène affiche déjà', () => {
+    const premier = rend().sortie.labels[0]!
+    const { sortie } = rend({
+      survol: { xPx: premier.xPx, yPx: premier.yPx, texte: `${premier.texte} — au complet` },
+    })
+    expect(sortie.revele).toBeNull()
   })
 })

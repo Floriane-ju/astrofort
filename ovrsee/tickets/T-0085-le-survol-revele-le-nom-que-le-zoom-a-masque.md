@@ -2,7 +2,7 @@
 {
   "id": "T-0085",
   "titre": "Le survol révèle le nom que le zoom a masqué",
-  "colonne": "pret",
+  "colonne": "fait",
   "priorite": "moyenne",
   "epic": "T-0083",
   "tags": [
@@ -11,7 +11,7 @@
     "labels"
   ],
   "cree": "2026-08-19",
-  "maj": "2026-08-19",
+  "maj": "2026-08-20",
   "plan": null
 }
 ---
@@ -35,12 +35,12 @@ une aide à la lecture, et le clic reste le chemin complet.
 
 ## Critères d'acceptation
 
-- [ ] Survoler un élément de la scène dont le label n'est pas affiché au champ courant révèle
+- [x] Survoler un élément de la scène dont le label n'est pas affiché au champ courant révèle
       son nom, sans changer l'onglet ni l'état de la scène.
-- [ ] Le label révélé emprunte le même libellé que le clic : aucune désignation n'est
+- [x] Le label révélé emprunte le même libellé que le clic : aucune désignation n'est
       inventée, une donnée absente se dit absente.
-- [ ] Le label révélé respecte l'anti-chevauchement de §3.4 et n'entre pas dans le plafond
+- [x] Le label révélé respecte l'anti-chevauchement de §3.4 et n'entre pas dans le plafond
       de 25 : c'est un label transitoire, pas un label de plus.
-- [ ] Aucune information n'est accessible AU SEUL survol : tout ce que le survol montre reste
+- [x] Aucune information n'est accessible AU SEUL survol : tout ce que le survol montre reste
       atteignable au clic (§11.2).
-- [ ] Un élément dont le label est déjà affiché ne produit pas de doublon au survol.
+- [x] Un élément dont le label est déjà affiché ne produit pas de doublon au survol.

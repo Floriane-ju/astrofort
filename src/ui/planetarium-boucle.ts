@@ -25,7 +25,7 @@ import type { Site } from '../core/ephem.ts'
 import { afficheInstant, type VueScene } from './scene-etat.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
 import { incrusteDansLeCadre } from './scene-overlay.ts'
-import { dessineCiel, type CibleEcran } from './dessine-ciel.ts'
+import { dessineCiel, type CibleEcran, type SurvolEcran } from './dessine-ciel.ts'
 
 /** Noms français des corps mobiles de §3.1. */
 const NOMS_CORPS: Readonly<Record<string, string>> = {
@@ -77,8 +77,10 @@ export function useBoucleRendu(entree: {
   readonly etat: RefObject<EtatBoucle>
   readonly instant: { ms: number }
   readonly incrustation: RefObject<CanvasImageSource | null>
+  /** T-0085 — l'élément désigné par le curseur, relu par image plutôt qu'à chaque rendu React. */
+  readonly survol: RefObject<SurvolEcran | null>
 }): RefObject<readonly CibleEcran[]> {
-  const { canevas, etat, instant, incrustation } = entree
+  const { canevas, etat, instant, incrustation, survol } = entree
   const cibles = useRef<readonly CibleEcran[]>([])
   const ephemerides = useRef<EtatEphemerides | null>(null)
 
@@ -162,6 +164,7 @@ export function useBoucleRendu(entree: {
         sbCiel: courant.sbCiel,
         latitudeDeg: courant.site.latitudeDeg,
         modeNuit: courant.modeNuit,
+        survol: survol.current ?? undefined,
         surLeFond:
           apercu !== null && cadre !== undefined
             ? (ctx) => {
@@ -191,7 +194,7 @@ export function useBoucleRendu(entree: {
       actif = false
       cancelAnimationFrame(id)
     }
-  }, [canevas, etat, instant, incrustation])
+  }, [canevas, etat, instant, incrustation, survol])
 
   return cibles
 }

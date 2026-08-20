@@ -11,7 +11,7 @@ import { useEffect, useRef, type RefObject } from 'react'
 import { bornesZoom } from '../core/projection.ts'
 import { majLectures, majVue, type ActionsScene } from './scene-etat.ts'
 import { decritCible } from './planetarium-selection.ts'
-import { cibleSousLeCurseur, type CibleEcran } from './dessine-ciel.ts'
+import { cibleSousLeCurseur, type CibleEcran, type SurvolEcran } from './dessine-ciel.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 
 /** Un cran de molette. Le pincement, lui, est continu : son amplitude se lit dans `deltaY`. */
@@ -97,10 +97,22 @@ export function usePointageSouris(entree: {
   readonly fovDeg: number
   readonly actions: ActionsScene
   readonly cibles: RefObject<readonly CibleEcran[]>
+  /**
+   * T-0085 — ce que le curseur désigne, écrit hors de React : la boucle de rendu le lit par
+   * image. Passer par un état réactif rendrait React à chaque mouvement de souris.
+   */
+  readonly survol: RefObject<SurvolEcran | null>
   readonly surSelectionObjet: (objet: ObjetCielProfond) => void
 }) {
   const glisse = useRef<{ x: number; y: number } | null>(null)
-  const { largeurPx, fovDeg, actions, cibles, surSelectionObjet } = entree
+  const { largeurPx, fovDeg, actions, cibles, survol, surSelectionObjet } = entree
+
+  /** Coordonnées du pointeur dans la définition de rendu, où vivent les cibles. */
+  function pointCanevas(e: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const echelle = largeurPx / rect.width
+    return { x: (e.clientX - rect.left) * echelle, y: (e.clientY - rect.top) * echelle }
+  }
 
   return {
     onPointerDown(e: React.PointerEvent<HTMLCanvasElement>): void {
@@ -110,7 +122,19 @@ export function usePointageSouris(entree: {
 
     onPointerMove(e: React.PointerEvent<HTMLCanvasElement>): void {
       const depart = glisse.current
-      if (depart === null) return
+      if (depart === null) {
+        // T-0085 — hors glisser, le curseur révèle le nom que le seuil de zoom a masqué. Le
+        // libellé est celui du clic : `decritCible` reste la seule source, et le survol ne
+        // touche ni à l'onglet ni à l'état de la scène.
+        const point = pointCanevas(e)
+        const cible = cibleSousLeCurseur(cibles.current, point.x, point.y)
+        survol.current =
+          cible === null
+            ? null
+            : { xPx: cible.xPx, yPx: cible.yPx, texte: decritCible(cible).titre }
+        return
+      }
+      survol.current = null
       const rect = e.currentTarget.getBoundingClientRect()
       const echelle = largeurPx / rect.width
       const dx = (e.clientX - depart.x) * echelle
@@ -123,18 +147,17 @@ export function usePointageSouris(entree: {
       glisse.current = { x: e.clientX, y: e.clientY }
     },
 
+    onPointerLeave(): void {
+      survol.current = null
+    },
+
     onPointerUp(e: React.PointerEvent<HTMLCanvasElement>): void {
       const depart = glisse.current
       glisse.current = null
       if (depart === null) return
       if (Math.hypot(e.clientX - depart.x, e.clientY - depart.y) > 0) return
-      const rect = e.currentTarget.getBoundingClientRect()
-      const echelle = largeurPx / rect.width
-      const cible = cibleSousLeCurseur(
-        cibles.current,
-        (e.clientX - rect.left) * echelle,
-        (e.clientY - rect.top) * echelle,
-      )
+      const point = pointCanevas(e)
+      const cible = cibleSousLeCurseur(cibles.current, point.x, point.y)
       const decrite = cible === null ? null : decritCible(cible)
       majLectures({ selection: decrite })
       // §3.4 — un objet du ciel profond ouvre sa fiche : le geste ne s'arrête pas sur un nom.

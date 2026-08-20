@@ -24,7 +24,12 @@ import {
 import { decodeConstellations } from '../src/data/constellations.ts'
 import { matricePrecession } from '../src/core/horloges.ts'
 import { applique, separationDeg, versVecteur } from '../src/core/mat3.ts'
-import { categoriesActives, composeLabels, etoileLabellisable } from '../src/core/labels.ts'
+import {
+  categoriesActives,
+  composeLabels,
+  etoileLabellisable,
+  labelSurvol,
+} from '../src/core/labels.ts'
 import { K } from '../src/registry/constants.ts'
 
 const PAQUET = decodeConstellations(
@@ -189,6 +194,59 @@ describe('labels §3.4', () => {
     ]
     const retenus = composeLabels(candidats, 20)
     expect(retenus.map((l) => l.texte)).toEqual(['brillante', 'ailleurs'])
+  })
+
+  it('révèle au survol un nom que le zoom a masqué, hors du budget de §3.4', () => {
+    const retenus = composeLabels([candidat('Orion', 'CONSTELLATION', 10, 10, 0)], 60)
+    const revele = labelSurvol(retenus, {
+      texte: 'M42 — Grande nébuleuse d’Orion',
+      xPx: 400,
+      yPx: 300,
+      largeurPx: 40,
+      hauteurPx: 12,
+    })
+    // La catégorie OBJET est inactive à 60° : c'est justement ce nom-là que le survol montre.
+    expect(retenus.map((l) => l.texte)).toEqual(['Orion'])
+    expect(revele).toEqual({ texte: 'M42 — Grande nébuleuse d’Orion', xPx: 400, yPx: 300, largeurPx: 40, hauteurPx: 12 })
+  })
+
+  it('ne double pas un nom que la scène affiche déjà', () => {
+    const retenus = composeLabels([candidat('Véga', 'ETOILE', 100, 100, 0)], 20)
+    expect(labelSurvol(retenus, {
+      texte: 'Véga — α Lyr',
+      xPx: 100,
+      yPx: 100,
+      largeurPx: 40,
+      hauteurPx: 12,
+    })).toBeNull()
+  })
+
+  it('décale le label du survol plutôt que de recouvrir un label retenu', () => {
+    const retenus = composeLabels([candidat('brillante', 'ETOILE', 100, 100, 0)], 20)
+    const revele = labelSurvol(retenus, {
+      texte: 'M31',
+      xPx: 100,
+      yPx: 100,
+      largeurPx: 40,
+      hauteurPx: 12,
+    })
+    expect(revele).not.toBeNull()
+    expect(Math.abs(revele!.yPx - 100)).toBeGreaterThanOrEqual(12)
+  })
+
+  it('renonce quand tout le voisinage est occupé, plutôt que de masquer un nom retenu', () => {
+    const empiles = [-2, -1, 0, 1, 2].map((k, i) =>
+      candidat(`retenu${i}`, 'ETOILE', 100, 100 + k * 12, i),
+    )
+    const retenus = composeLabels(empiles, 20)
+    expect(retenus.length).toBe(empiles.length)
+    expect(labelSurvol(retenus, {
+      texte: 'M31',
+      xPx: 100,
+      yPx: 100,
+      largeurPx: 40,
+      hauteurPx: 12,
+    })).toBeNull()
   })
 
   it('écarte les catégories que le zoom n’autorise pas', () => {
