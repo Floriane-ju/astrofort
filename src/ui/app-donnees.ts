@@ -19,9 +19,13 @@ import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { Etoile } from '../data/catalog.ts'
 import {
   demandePersistance,
+  enregistreSiteActif,
   exporteDonneesUtilisateur,
   importeFichierUtilisateur,
+  litPointsMasqueActif,
+  type SiteAExporter,
 } from '../data/persistence.ts'
+import type { PointMasque } from '../core/site.ts'
 
 export interface Catalogues {
   readonly etat: EtatDemarrage | null
@@ -56,10 +60,18 @@ export interface Persistance {
   readonly surImport: (fichier: File) => void
 }
 
-export function usePersistance(): Persistance {
+/**
+ * Le site n'est enregistré qu'au moment de l'export, pas à chaque frappe : c'est là que
+ * l'utilisateur demande à protéger sa saisie, et l'échec y a un endroit pour s'afficher.
+ */
+export function usePersistance(
+  siteActif: SiteAExporter,
+  surMasqueImporte: (points: readonly PointMasque[]) => void,
+): Persistance {
   const [message, setMessage] = useState<string | null>(null)
 
   async function exporte(): Promise<void> {
+    await enregistreSiteActif(siteActif)
     const donnees = await exporteDonneesUtilisateur()
     const blob = new Blob([JSON.stringify(donnees, null, 2)], { type: 'application/json' })
     const lien = document.createElement('a')
@@ -82,6 +94,8 @@ export function usePersistance(): Persistance {
     // en rejet non géré : sans message, l'import a l'air de ne rien faire (§12.3).
     try {
       await importeFichierUtilisateur(await fichier.text())
+      // Le masque restauré doit revenir à l'écran : il commande les créneaux (§8.1).
+      surMasqueImporte(await litPointsMasqueActif())
       setMessage('Import terminé : les sites, profils et plans ont été restaurés.')
     } catch (erreur) {
       setMessage(

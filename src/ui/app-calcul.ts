@@ -12,6 +12,7 @@ import { fenetreNocturne, offsetMidiSolaireMin, type FenetreNocturne } from '../
 import { fenetreUtile as calculeFenetreUtile, type FenetreUtile } from '../core/moon.ts'
 import { planSession, type PlanSession } from '../core/session.ts'
 import {
+  masqueDepuisPoints,
   masquePlat,
   seuilsDeclinaison,
   type MasqueHorizon,
@@ -104,10 +105,20 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
   const { lieu, materiel, niveau, catalogue, etoiles, tPoseFileS } = entree
 
   /**
-   * §4.1 — aucune source de relief n'est disponible hors réseau ni au premier démarrage :
-   * le masque plat [HYP] est le repli documenté de la matrice de dégradation §12.5.
+   * §4.1 — le relief relevé à la main l'emporte sur toute hypothèse. Sans relevé, le masque
+   * plat [HYP] reste le repli documenté de la matrice de dégradation §12.5 : aucune source de
+   * relief n'est disponible hors réseau ni au premier démarrage.
+   *
+   * Une saisie hors domaine ne fait pas tomber la chaîne : elle est refusée à la saisie, dans
+   * le panneau, et le masque garde son état précédent.
    */
-  const masque: MasqueHorizon = useMemo(() => masquePlat(), [])
+  const masque: MasqueHorizon = useMemo(() => {
+    try {
+      return masqueDepuisPoints(lieu.pointsMasque)
+    } catch {
+      return masquePlat()
+    }
+  }, [lieu.pointsMasque])
 
   const site = useMemo(
     () => ({

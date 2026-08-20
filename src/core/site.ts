@@ -90,6 +90,55 @@ export function masqueDepuisRelief(altitudesDeg: readonly number[]): MasqueHoriz
   })
 }
 
+/** Un couple saisi à la main : dans cet azimut, le relief monte jusqu'à cette hauteur (§4.1). */
+export interface PointMasque {
+  readonly azimutDeg: number
+  readonly altitudeDeg: number
+}
+
+/**
+ * Masque édité à la main, azimut par azimut (§4.1 — « édition manuelle par-dessus »).
+ *
+ * Personne ne saisit 360 valeurs : on relève quelques crêtes, et les azimuts intermédiaires
+ * s'interpolent linéairement d'un point au suivant, en refermant le cercle entre le dernier
+ * et le premier. Deux relevés dans le même azimut gardent le plus haut : c'est le relief qui
+ * cache, pas la moyenne des deux.
+ */
+export function masqueDepuisPoints(points: readonly PointMasque[]): MasqueHorizon {
+  if (points.length === 0) return masquePlat()
+
+  const parAzimut = new Map<number, number>()
+  for (const point of points) {
+    const azimut = valide('azimut_masque_deg', point.azimutDeg)
+    const altitude = valide('masque_horizon_deg', point.altitudeDeg)
+    const index = Math.round(azimut) % NB_AZIMUTS
+    parAzimut.set(index, Math.max(parAzimut.get(index) ?? 0, altitude))
+  }
+  const releves = [...parAzimut.entries()]
+    .map(([azimut, altitude]) => ({ azimut, altitude }))
+    .sort((a, b) => a.azimut - b.azimut)
+
+  const altitudesDeg = Array.from({ length: NB_AZIMUTS }, (_, azimut) => {
+    const rangApres = releves.findIndex((r) => r.azimut >= azimut)
+    const apres = releves[rangApres === -1 ? 0 : rangApres]
+    const avant = releves[((rangApres === -1 ? 0 : rangApres) - 1 + releves.length) % releves.length]
+    if (apres === undefined || avant === undefined) return 0
+    if (apres.azimut === azimut) return apres.altitude
+    // Un relevé unique couvre tout le tour : la portée vaut alors le cercle entier.
+    const portee = (apres.azimut - avant.azimut + NB_AZIMUTS) % NB_AZIMUTS || NB_AZIMUTS
+    const ecart = (azimut - avant.azimut + NB_AZIMUTS) % NB_AZIMUTS
+    return avant.altitude + ((apres.altitude - avant.altitude) * ecart) / portee
+  })
+
+  return Object.freeze({
+    altitudesDeg: Object.freeze(altitudesDeg),
+    estHypothese: false,
+    note:
+      `Masque saisi à la main : ${releves.length} azimut${releves.length > 1 ? 's' : ''} relevé` +
+      `${releves.length > 1 ? 's' : ''}, interpolés sur les ${NB_AZIMUTS} azimuts.`,
+  })
+}
+
 /** Obstruction à un azimut quelconque : l'azimut se referme sur lui-même. */
 export function obstructionDeg(masque: MasqueHorizon, azimutDeg: number): number {
   const index = ((Math.round(azimutDeg) % NB_AZIMUTS) + NB_AZIMUTS) % NB_AZIMUTS

@@ -712,3 +712,21 @@ select:disabled {
   border-style: dashed;
   cursor: default;
 }
+
+/* §4.1 — les relevés du masque d'horizon : une ligne par crête, effaçable au contact. */
+.masque-releves {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.masque-releves li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}

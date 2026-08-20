@@ -9,7 +9,13 @@
 import { describe, expect, it } from 'vitest'
 import { creneauCible } from '../src/core/creneaux.ts'
 import { fenetreNocturne } from '../src/core/night.ts'
-import { masqueDepuisRelief, masquePlat, NB_AZIMUTS } from '../src/core/site.ts'
+import {
+  masqueDepuisPoints,
+  masqueDepuisRelief,
+  masquePlat,
+  NB_AZIMUTS,
+  obstructionDeg,
+} from '../src/core/site.ts'
 
 const SITE_REFERENCE = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
 const NUIT = fenetreNocturne(SITE_REFERENCE, new Date('2026-08-14T12:00:00Z'))
@@ -67,6 +73,39 @@ describe('hauteur et créneau §8.2', () => {
     expect(creneau.causeExclusion).toBe('RELIEF')
     expect(creneau.message).toMatch(/relief/)
     expect(creneau.message).toMatch(/pas sa hauteur/)
+  })
+
+  it('§8.1 — un relief saisi à 22° dans l’azimut 165 écarte une cible culminant à 19°', () => {
+    // La déclinaison se déduit de la latitude pour que la culmination tombe à 19° pile :
+    // recopier une déclinaison ferait dépendre le test d'un site qu'il ne déclare pas.
+    const culminationVoulueDeg = 19
+    const decDeg = SITE_REFERENCE.latitudeDeg - (90 - culminationVoulueDeg)
+    // Le relief relevé à la main : une crête à 22° du sud-sud-est au sud-sud-ouest.
+    const masque = masqueDepuisPoints([
+      { azimutDeg: 149, altitudeDeg: 0 },
+      { azimutDeg: 150, altitudeDeg: 22 },
+      { azimutDeg: 210, altitudeDeg: 22 },
+      { azimutDeg: 211, altitudeDeg: 0 },
+    ])
+    expect(obstructionDeg(masque, 165)).toBe(22)
+
+    const creneau = creneauCible({
+      site: SITE_REFERENCE,
+      adH: 22,
+      decDeg,
+      fenetre: FENETRE,
+      masque,
+      // Seuil abaissé sous la culmination : sans cela, la hauteur trancherait avant le relief.
+      seuilHauteurDeg: 15,
+      typeMonture: 'TRACKER',
+    })
+
+    expect(creneau.altCulminationDeg.value).toBeCloseTo(culminationVoulueDeg, 6)
+    expect(creneau.causeExclusion).toBe('RELIEF')
+    expect(creneau.causeExclusion).not.toBe('HAUTEUR')
+    expect(creneau.dureeTotaleMin.value).toBe(0)
+    // §10.2 — l'explication nomme l'azimut bloquant et son altitude d'obstruction.
+    expect(creneau.message).toMatch(/22° dans l’azimut \d+°/)
   })
 
   it('déclare une cible qui ne se lève jamais depuis ce site', () => {

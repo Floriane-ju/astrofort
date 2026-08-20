@@ -34,6 +34,14 @@ export const DOMAINES = Object.freeze({
     unite: '°',
     section: '4.1',
   }),
+  // L'azimut se referme sur lui-même : 360° est accepté et vaut 0°, pas une saisie fautive.
+  azimut_masque_deg: domaine({
+    champ: 'l’azimut du masque',
+    min: 0,
+    max: 360,
+    unite: '°',
+    section: '4.1',
+  }),
 
   // §5.1 — profil optique et capteur
   focale_mm: domaine({ champ: 'la focale', min: 8, max: 4000, unite: 'mm', section: '5.1' }),

@@ -14,6 +14,7 @@
 
 import { db } from './db.ts'
 import type { PlanEnregistre, ProfilMateriel, SiteEnregistre } from './db.ts'
+import type { MasqueHorizon, PointMasque } from '../core/site.ts'
 import { type DomaineId, valide as valideDomaine } from '../registry/domains.ts'
 
 export interface EtatStockage {
@@ -160,6 +161,20 @@ const masqueHorizon: Verificateur = (v) => {
   return null
 }
 
+/** Les relevés saisis : un couple azimut → hauteur d'obstruction chacun (§4.1). */
+const masquePoints: Verificateur = (v) => {
+  if (!Array.isArray(v)) return 'doit être un tableau de relevés'
+  const azimut = nombre('azimut_masque_deg')
+  const hauteur = nombre('masque_horizon_deg')
+  for (const [rang, releve] of v.entries()) {
+    if (typeof releve !== 'object' || releve === null) return `relevé n°${rang + 1} : n’est pas un couple`
+    const couple = releve as Record<string, unknown>
+    const raison = azimut(couple.azimutDeg) ?? hauteur(couple.altitudeDeg)
+    if (raison !== null) return `relevé n°${rang + 1} : ${raison}`
+  }
+  return null
+}
+
 type Forme = Readonly<Record<string, Verificateur>>
 
 const FORME_SITE: Forme = {
@@ -173,6 +188,7 @@ const FORME_SITE: Forme = {
   bortleDeclare: optionnel(nombre('bortle_declare')),
   masqueHorizon: optionnel(masqueHorizon),
   masqueEstHypothese: optionnel(booleen),
+  masquePoints: optionnel(masquePoints),
 }
 
 const FORME_PROFIL: Forme = {
@@ -279,4 +295,48 @@ export async function importeDonneesUtilisateur(donnees: unknown): Promise<void>
     ...donnees.plans.map((plan) => tx.objectStore('plans').put(plan)),
     tx.done,
   ])
+}
+
+/**
+ * §4.1 — un seul site au MVP : son enregistrement porte toujours le même identifiant.
+ */
+export const ID_SITE_ACTIF = 'site-actif'
+
+export interface SiteAExporter {
+  readonly latitudeDeg: number
+  readonly longitudeDeg: number
+  readonly altitudeM: number
+  readonly masque: MasqueHorizon
+  readonly pointsMasque: readonly PointMasque[]
+}
+
+/**
+ * Écrit le site de la séance avant un export : sans cela, le masque relevé à la main vivrait
+ * en mémoire et disparaîtrait avec l'onglet, alors que c'est exactement le genre de donnée
+ * que §12.3 doit protéger — elle ne se retélécharge pas.
+ *
+ * Les coordonnées non chiffrables sont refusées : un `NaN` persisté ressort à chaque
+ * démarrage, et un export qui ne se réimporte pas ne protège rien.
+ */
+export async function enregistreSiteActif(site: SiteAExporter): Promise<void> {
+  const coordonnees = [site.latitudeDeg, site.longitudeDeg, site.altitudeM]
+  if (!coordonnees.every((n) => Number.isFinite(n))) return
+  const enregistrement: SiteEnregistre = {
+    id: ID_SITE_ACTIF,
+    nom: 'Site de la séance',
+    latitudeDeg: site.latitudeDeg,
+    longitudeDeg: site.longitudeDeg,
+    altitudeM: site.altitudeM,
+    fuseau: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    masqueHorizon: [...site.masque.altitudesDeg],
+    masqueEstHypothese: site.masque.estHypothese,
+    masquePoints: [...site.pointsMasque],
+  }
+  await (await db()).put('sites', enregistrement)
+}
+
+/** Les relevés du site actif, tels qu'un import vient de les restaurer. */
+export async function litPointsMasqueActif(): Promise<readonly PointMasque[]> {
+  const site = await (await db()).get('sites', ID_SITE_ACTIF)
+  return site?.masquePoints ?? []
 }

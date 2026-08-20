@@ -10,11 +10,15 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { db, type PlanEnregistre, type ProfilMateriel, type SiteEnregistre } from '../src/data/db.ts'
 import {
   ExportInvalideError,
+  ID_SITE_ACTIF,
   VERSION_EXPORT,
+  enregistreSiteActif,
   exporteDonneesUtilisateur,
   importeDonneesUtilisateur,
   importeFichierUtilisateur,
+  litPointsMasqueActif,
 } from '../src/data/persistence.ts'
+import { masqueDepuisPoints, NB_AZIMUTS, obstructionDeg } from '../src/core/site.ts'
 
 const SITE: SiteEnregistre = {
   id: 'site-reference',
@@ -189,5 +193,64 @@ describe('validation du réimport §12.3', () => {
   it('accepte un export produit par l’application', async () => {
     const fichier = JSON.stringify(await exporteDonneesUtilisateur())
     await expect(importeFichierUtilisateur(fichier)).resolves.toBeUndefined()
+  })
+})
+
+describe('masque d’horizon relevé à la main §4.1 → §12.3', () => {
+  const RELEVES = [
+    { azimutDeg: 150, altitudeDeg: 22 },
+    { azimutDeg: 210, altitudeDeg: 22 },
+  ]
+
+  it('part dans l’export et revient à l’import, relevés compris', async () => {
+    const masque = masqueDepuisPoints(RELEVES)
+    await enregistreSiteActif({
+      latitudeDeg: 46.391,
+      longitudeDeg: 6.697,
+      altitudeM: 500,
+      masque,
+      pointsMasque: RELEVES,
+    })
+
+    const fichier = JSON.stringify(await exporteDonneesUtilisateur())
+    const base = await db()
+    const vidage = base.transaction('sites', 'readwrite')
+    await Promise.all([vidage.objectStore('sites').clear(), vidage.done])
+    expect(await litPointsMasqueActif()).toHaveLength(0)
+
+    await importeFichierUtilisateur(fichier)
+
+    const restaure = (await base.getAll('sites')).find((s) => s.id === ID_SITE_ACTIF)
+    expect(restaure?.masqueHorizon).toHaveLength(NB_AZIMUTS)
+    expect(restaure?.masqueEstHypothese).toBe(false)
+    expect(await litPointsMasqueActif()).toEqual(RELEVES)
+    // Le profil restauré redonne le même relief qu'avant l'export.
+    expect(restaure?.masqueHorizon?.[165]).toBe(obstructionDeg(masque, 165))
+  })
+
+  it('refuse un relevé hors domaine plutôt que de l’importer', async () => {
+    await expect(
+      importeDonneesUtilisateur({
+        format: 'astrofort-export',
+        version: VERSION_EXPORT,
+        exporteLe: new Date().toISOString(),
+        sites: [{ ...SITE, masquePoints: [{ azimutDeg: 12, altitudeDeg: 95 }] }],
+        profils: [],
+        plans: [],
+      }),
+    ).rejects.toThrow(ExportInvalideError)
+  })
+
+  it('n’enregistre pas un site dont les coordonnées ne sont pas chiffrables', async () => {
+    const base = await db()
+    await base.delete('sites', ID_SITE_ACTIF)
+    await enregistreSiteActif({
+      latitudeDeg: Number('abc'),
+      longitudeDeg: 6.697,
+      altitudeM: 500,
+      masque: masqueDepuisPoints(RELEVES),
+      pointsMasque: RELEVES,
+    })
+    expect(await base.get('sites', ID_SITE_ACTIF)).toBeUndefined()
   })
 })

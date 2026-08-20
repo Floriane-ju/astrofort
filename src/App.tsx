@@ -64,7 +64,6 @@ export function App() {
   const lieu = useSaisieLieu()
   const materiel = useSaisieMateriel()
   const catalogues = useCatalogues()
-  const persistance = usePersistance()
   // §12.5 — l'état affiché suit les bascules, il n'est pas figé au démarrage.
   const modeReseau = useSyncExternalStore(abonneModeReseau, modeReseauCourant, () => 'EN_LIGNE')
 
@@ -82,6 +81,12 @@ export function App() {
   })
   const { calcul } = chaine
   const [modeNuit, setModeNuit] = useModeNuit(calcul.ok ? calcul.nuit.debutNautique : null)
+
+  // §12.3 — l'export emporte le site tel qu'il est saisi, masque d'horizon relevé compris.
+  const persistance = usePersistance(
+    { ...chaine.site, masque: chaine.masque, pointsMasque: lieu.pointsMasque },
+    lieu.surPointsMasque,
+  )
 
   const gaia = catalogues.etat === null ? false : gaiaCharge(catalogues.etat.catalogues)
   const mLimOeil = calcul.ok ? calcul.ciel.mLimOeil.value : null

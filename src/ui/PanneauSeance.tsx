@@ -15,11 +15,12 @@
  */
 
 import type { ReactNode } from 'react'
-import type { MasqueHorizon, SeuilsSite } from '../core/site.ts'
+import type { MasqueHorizon, PointMasque, SeuilsSite } from '../core/site.ts'
 import { SOURCE_TABLE_BORTLE } from '../registry/bortle.ts'
 import { ONGLETS, choisisOnglet, useSeance, type Onglet } from './seance-etat.ts'
 import { TracedValue } from './TracedValue.tsx'
-import { Etiquette, Terme } from './Terme.tsx'
+import { MasqueHorizonSaisie } from './MasqueHorizon.tsx'
+import { Etiquette } from './Terme.tsx'
 
 export interface PanneauSeanceProps {
   readonly latitude: string
@@ -35,6 +36,9 @@ export interface PanneauSeanceProps {
   readonly sqm: string
   readonly surSqm: (v: string) => void
   readonly masque: MasqueHorizon
+  /** §4.1 — les relevés de relief saisis à la main, et leur commande d'édition. */
+  readonly pointsMasque: readonly PointMasque[]
+  readonly surPointsMasque: (v: readonly PointMasque[]) => void
   /** Seuils de déclinaison du site — propriété de la latitude, absents si la saisie est refusée. */
   readonly seuils?: SeuilsSite
   /** Contenu de chaque onglet, assemblé par l'application : un seul est monté à la fois. */
@@ -85,18 +89,11 @@ export function PanneauSeance(props: PanneauSeanceProps) {
           </label>
         </div>
 
-        <Terme
-          cle="masque_horizon"
-          contexte={`horizon plat à 0° sur les ${props.masque.altitudesDeg.length} azimuts ${
-            props.masque.estHypothese ? '— [HYP]' : ''
-          }`}
+        <MasqueHorizonSaisie
+          points={props.pointsMasque}
+          surPoints={props.surPointsMasque}
+          masque={props.masque}
         />
-        {props.masque.note !== undefined && (
-          <p className="cause">
-            {props.masque.flags?.map((f) => `[${f}] `).join('')}
-            {props.masque.note}
-          </p>
-        )}
 
         {/* Les seuils de déclinaison sont une propriété de la latitude, pas de l'optique. */}
         {props.seuils !== undefined && (

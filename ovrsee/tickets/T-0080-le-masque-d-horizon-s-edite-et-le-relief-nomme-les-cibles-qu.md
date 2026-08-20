@@ -2,7 +2,7 @@
 {
   "id": "T-0080",
   "titre": "Le masque d'horizon s'édite, et le relief nomme les cibles qu'il bloque",
-  "colonne": "pret",
+  "colonne": "fait",
   "priorite": "haute",
   "epic": "T-0079",
   "tags": [
@@ -11,7 +11,7 @@
     "planification"
   ],
   "cree": "2026-08-19",
-  "maj": "2026-08-19",
+  "maj": "2026-08-20",
   "plan": null
 }
 ---
@@ -35,13 +35,13 @@ justes, et c'est le chemin que §4.1 décrit comme « édition manuelle par-dess
 
 ## Critères d'acceptation
 
-- [ ] Le panneau Séance permet de saisir des couples azimut → altitude d'obstruction, et de
+- [x] Le panneau Séance permet de saisir des couples azimut → altitude d'obstruction, et de
       les effacer.
-- [ ] Le masque saisi est interpolé sur les 360 azimuts, et refuse une altitude hors du
+- [x] Le masque saisi est interpolé sur les 360 azimuts, et refuse une altitude hors du
       domaine `masque_horizon_deg` du registre en nommant le champ.
-- [ ] Une cible dont la culmination passe sous l'obstruction de son azimut est écartée avec
+- [x] Une cible dont la culmination passe sous l'obstruction de son azimut est écartée avec
       la cause `RELIEF`, et l'explication nomme l'azimut et l'altitude d'obstruction (§10.2).
-- [ ] Un site sans masque saisi conserve le masque plat marqué `[HYP]`, affiché comme tel.
-- [ ] Le masque saisi part dans l'export de §12.3 et revient à l'import.
-- [ ] Un test couvre le cas de §8.1 : relief à 22° dans l'azimut 165, cible culminant à 19°
+- [x] Un site sans masque saisi conserve le masque plat marqué `[HYP]`, affiché comme tel.
+- [x] Le masque saisi part dans l'export de §12.3 et revient à l'import.
+- [x] Un test couvre le cas de §8.1 : relief à 22° dans l'azimut 165, cible culminant à 19°
       → non observable, cause `RELIEF`, pas `HAUTEUR`.
