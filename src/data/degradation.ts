@@ -63,12 +63,6 @@ export const MATRICE_DEGRADATION: readonly LigneDegradation[] = Object.freeze([
     degradation: 'site inconnu → masque plat marqué [HYP]',
   },
   {
-    fonction: 'Bortle par atlas VIIRS',
-    sections: '§4',
-    horsReseau: 'COMPLET_SI_EN_CACHE',
-    degradation: 'saisie manuelle du Bortle ou du SQM',
-  },
-  {
     fonction: 'Météo, couverture nuageuse, seeing, température',
     sections: '§4, §9.4',
     horsReseau: 'TOMBE',

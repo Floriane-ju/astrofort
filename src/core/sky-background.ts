@@ -1,10 +1,12 @@
 /**
  * §2.2, §4.1 — établissement du fond de ciel d'un site.
  *
- * Trois sources, par ordre de priorité décroissante :
+ * Deux sources, par ordre de priorité décroissante :
  *   1. sqm_mesure      saisi par l'utilisateur → prévaut toujours
- *   2. viirs           atlas de pollution lumineuse aux coordonnées → Bortle estimé
- *   3. bortle_declare  saisi à la main, échelle 1 à 9
+ *   2. bortle_declare  saisi à la main, échelle 1 à 9
+ *
+ * L'atlas de pollution lumineuse aux coordonnées est écarté par le PRD 1.2 (Annexe C,
+ * décision 18) : il exigerait le réseau là où §4.1 veut une saisie exacte et hors ligne.
  */
 
 import {
@@ -15,13 +17,11 @@ import {
 import type { Traced } from './traced.ts'
 import { trace } from './traced.ts'
 
-export type SourceSb = 'TABLE_BORTLE' | 'SQM_MESURE' | 'VIIRS'
+export type SourceSb = 'TABLE_BORTLE' | 'SQM_MESURE'
 
 export interface EntreeFondDeCiel {
   /** Mesure au sky quality meter, mag/arcsec². Prioritaire sur tout le reste. */
   readonly sqmMesure?: number | undefined
-  /** Bortle estimé aux coordonnées par l'atlas VIIRS. */
-  readonly bortleViirs?: number | undefined
   /** Bortle saisi à la main. */
   readonly bortleDeclare?: number | undefined
   /** L'utilisateur a confirmé un SQM plus sombre que le fond de ciel naturel. */
@@ -43,17 +43,17 @@ export interface FondDeCiel {
 export class FondDeCielIndeterminableError extends Error {
   constructor() {
     super(
-      'Aucune source de fond de ciel : renseigner un SQM mesuré, un Bortle estimé par ' +
-        'VIIRS ou un Bortle déclaré (§4.1).',
+      'Aucune source de fond de ciel : renseigner un SQM mesuré ou un Bortle déclaré ' +
+        '(§4.1).',
     )
     this.name = 'FondDeCielIndeterminableError'
   }
 }
 
-function depuisBortle(bortle: number, source: SourceSb): FondDeCiel {
+function depuisBortle(bortle: number): FondDeCiel {
   const ligne = interpoleBortle(bortle)
   return {
-    sourceSb: source,
+    sourceSb: 'TABLE_BORTLE',
     sbCiel: trace({
       value: ligne.sb,
       formula: 'INTERPOLATION_BORTLE',
@@ -72,7 +72,7 @@ function depuisBortle(bortle: number, source: SourceSb): FondDeCiel {
  * est fourni : la saisie est refusée plutôt qu'extrapolée.
  */
 export function fondDeCiel(entree: EntreeFondDeCiel): FondDeCiel {
-  const { sqmMesure, bortleViirs, bortleDeclare, sqmConfirme } = entree
+  const { sqmMesure, bortleDeclare, sqmConfirme } = entree
 
   if (sqmMesure !== undefined) {
     const mLim = mLimOeilDepuisSb(sqmMesure)
@@ -112,8 +112,7 @@ export function fondDeCiel(entree: EntreeFondDeCiel): FondDeCiel {
     return result
   }
 
-  if (bortleViirs !== undefined) return depuisBortle(bortleViirs, 'VIIRS')
-  if (bortleDeclare !== undefined) return depuisBortle(bortleDeclare, 'TABLE_BORTLE')
+  if (bortleDeclare !== undefined) return depuisBortle(bortleDeclare)
 
   throw new FondDeCielIndeterminableError()
 }

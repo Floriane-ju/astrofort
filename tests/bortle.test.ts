@@ -46,10 +46,6 @@ describe('fond de ciel §2.2, §4.1', () => {
     expect(fondDeCiel({ sqmMesure: 23.0, sqmConfirme: true }).confirmationRequise).toBeUndefined()
   })
 
-  it('classe VIIRS avant le Bortle saisi à la main', () => {
-    expect(fondDeCiel({ bortleViirs: 5, bortleDeclare: 8 }).sourceSb).toBe('VIIRS')
-  })
-
   it('refuse de deviner sans aucune source', () => {
     expect(() => fondDeCiel({})).toThrow(FondDeCielIndeterminableError)
   })

@@ -2,7 +2,7 @@
 {
   "id": "T-0092",
   "titre": "L'atlas de pollution lumineuse quitte le code avec la feature",
-  "colonne": "pret",
+  "colonne": "fait",
   "priorite": "moyenne",
   "tags": [
     "prd",
@@ -34,11 +34,11 @@ du code mort au sens de T-0063.
 
 ## Critères d'acceptation
 
-- [ ] `SourceSb` ne porte plus que `TABLE_BORTLE` et `SQM_MESURE`, comme le tableau
+- [x] `SourceSb` ne porte plus que `TABLE_BORTLE` et `SQM_MESURE`, comme le tableau
       Entrées / Sorties de §2.2 et §4.1.
-- [ ] `bortleViirs` et sa branche de priorité disparaissent de `fondDeCiel`.
-- [ ] Le message d'indéterminabilité ne cite que les deux sources réellement saisissables.
-- [ ] La matrice de dégradation §12.5 ne porte plus la ligne de l'atlas.
-- [ ] Le test « classe VIIRS avant le Bortle saisi à la main » est retiré, et la priorité
+- [x] `bortleViirs` et sa branche de priorité disparaissent de `fondDeCiel`.
+- [x] Le message d'indéterminabilité ne cite que les deux sources réellement saisissables.
+- [x] La matrice de dégradation §12.5 ne porte plus la ligne de l'atlas.
+- [x] Le test « classe VIIRS avant le Bortle saisi à la main » est retiré, et la priorité
       SQM > Bortle déclaré reste couverte.
-- [ ] `pnpm typecheck && pnpm test` verts.
+- [x] `pnpm typecheck && pnpm test` verts.
