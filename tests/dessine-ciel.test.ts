@@ -13,7 +13,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import type { Etoile } from '../src/data/catalog.ts'
+import { decodeEtoiles, encodeEtoiles, type Etoile } from '../src/data/catalog.ts'
 import type { ObjetCielProfond } from '../src/data/deepsky.ts'
 import { decodeConstellations } from '../src/data/constellations.ts'
 import {
@@ -41,6 +41,8 @@ import {
   type EntreeDessin,
   type SurvolEcran,
 } from '../src/ui/dessine-ciel.ts'
+import { decritCible } from '../src/ui/planetarium-selection.ts'
+import { etoileLabellisable } from '../src/core/labels.ts'
 import { palette, paletteRealiste } from '../src/ui/couleurs.ts'
 import type { LuneEcran } from '../src/ui/dessine-fond-ciel.ts'
 import { sousLeSol } from '../src/core/sol.ts'
@@ -159,6 +161,7 @@ function rend(
   options: {
     modeNuit?: boolean
     couches?: CouchesActives
+    etoiles?: readonly Etoile[]
     objets?: readonly ObjetCielProfond[]
     surLeFond?: (ctx: CanvasRenderingContext2D) => void
     sbCiel?: number
@@ -173,6 +176,7 @@ function rend(
   } = {},
 ) {
   const ctx = contexteEspion()
+  const etoiles = options.etoiles ?? etoilesDeTest()
   const ciel = cielInstantane(SITE, DATE)
   const vue: Vue = {
     mode: 'MODE_PLANETARIUM',
@@ -190,8 +194,8 @@ function rend(
     masque: options.masque ?? masquePlat(),
     vueRealiste: options.vueRealiste ?? false,
     ...(options.lune === undefined ? {} : { lune: options.lune }),
-    index: construitIndex(etoilesDeTest()),
-    etoiles: etoilesDeTest(),
+    index: construitIndex(etoiles),
+    etoiles,
     objets: options.objets ?? [],
     figures: coucheFigures(PAQUET.figures),
     asterismes: coucheAsterismes(PAQUET.asterismes),
@@ -573,6 +577,127 @@ describe('label du survol T-0085', () => {
       survol: { xPx: premier.xPx, yPx: premier.yPx, texte: `${premier.texte} — au complet` },
     })
     expect(sortie.revele).toBeNull()
+  })
+})
+
+/**
+ * T-0107 / T-0108 — une étoile nommée n'est pas AUSSI une cible anonyme, et le survol ne
+ * révèle qu'un nom masqué.
+ *
+ * Les deux passes de la scène décrivent le même astre depuis deux paquets qui n'ont pas la
+ * même précision : `constellations-1.bin` garde la position en double précision, `hyg-1.bin`
+ * l'arrondit en Float32. Le harnais reproduit l'écart tel quel — les positions des étoiles
+ * nommées traversent l'encodage réel du paquet des étoiles — plutôt que de le simuler par un
+ * décalage recopié.
+ */
+describe('cibles dédoublonnées T-0107', () => {
+  /** Les étoiles nommées du paquet, vues par le paquet des étoiles : donc arrondies. */
+  const ETOILES_ARRONDIES: readonly Etoile[] = decodeEtoiles(
+    encodeEtoiles(
+      PAQUET.etoilesNommees
+        .filter((e) => etoileLabellisable(e.magV))
+        .map((e) => ({
+          adDeg: e.adDeg,
+          decDeg: e.decDeg,
+          magV: e.magV,
+          // L'indice de couleur ne joue aucun rôle ici : seule la position est en cause.
+          bv: 0,
+        })),
+    ),
+  )
+
+  // Le champ vient du registre : sous ce seuil, §3.4 admet les labels d'étoiles, et c'est là
+  // que l'invariant « déjà nommée à l'écran ⇒ le survol ne peint rien » a un sens.
+  const FOV = K('FOV_LABELS_CONSTELLATIONS_DEG')
+  const rendNommees = (survol?: SurvolEcran) =>
+    rend(
+      survol === undefined
+        ? { etoiles: ETOILES_ARRONDIES, fovDeg: FOV }
+        : { etoiles: ETOILES_ARRONDIES, fovDeg: FOV, survol },
+    )
+
+  it('ne garde qu’une cible par étoile nommée', () => {
+    const { sortie } = rendNommees()
+    const nommees = sortie.cibles.filter((c) => c.etoileNommee !== undefined)
+    expect(nommees.length).toBeGreaterThan(0)
+    for (const anonyme of sortie.cibles.filter(
+      (c) => c.type === 'ETOILE' && c.etoileNommee === undefined,
+    )) {
+      const jumelle = nommees.find(
+        (n) => Math.abs(n.xPx - anonyme.xPx) < 1 && Math.abs(n.yPx - anonyme.yPx) < 1,
+      )
+      expect(jumelle?.nom, 'doublon anonyme sur une étoile nommée').toBeUndefined()
+    }
+  })
+
+  it('résout toujours l’étoile nommée, quel que soit le côté d’approche', () => {
+    const { sortie } = rendNommees()
+    const nommees = sortie.cibles.filter((c) => c.etoileNommee !== undefined)
+    // Le pointeur vise au pixel : l'approche se fait par le centre et les quatre côtés.
+    const ECARTS = [0, -0.5, 0.5]
+    for (const attendue of nommees) {
+      for (const dx of ECARTS) {
+        for (const dy of ECARTS) {
+          const cible = cibleSousLeCurseur(sortie.cibles, attendue.xPx + dx, attendue.yPx + dy)
+          expect(cible, `rien sous ${attendue.nom}`).not.toBeNull()
+          // C'est bien une étoile identifiée qui répond — un voisin nommé fait l'affaire,
+          // l'entrée anonyme non.
+          const titre = decritCible(cible!).titre
+          expect(cible!.etoileNommee, `${attendue.nom} → « ${titre} »`).toBeDefined()
+          // Et son titre commence par le nom peint : c'est ce que `labelSurvol` exploite
+          // pour ne pas nommer deux fois le même astre.
+          expect(titre.startsWith(cible!.nom)).toBe(true)
+        }
+      }
+    }
+  })
+
+  it('ne peint rien au survol d’une étoile dont le label est déjà retenu', () => {
+    const { sortie } = rendNommees()
+    const labellisees = sortie.labels.filter((l) => l.categorie === 'ETOILE')
+    expect(labellisees.length).toBeGreaterThan(0)
+    for (const label of labellisees) {
+      const etoile = sortie.cibles.find(
+        (c) => c.etoileNommee !== undefined && c.nom === label.texte,
+      )!
+      // Le curseur ne tombe jamais au centre exact de l'astre : viser les quatre coins du
+      // pixel, sans quoi la cible nommée gagne par une distance nulle et le cas ne prouve
+      // rien. Le survol se compose ensuite comme dans `planetarium-gestes.ts` — la cible
+      // vient du curseur, pas de la liste : c'est la chaîne complète qui est vérifiée.
+      for (const dx of [-0.5, 0.5]) {
+        for (const dy of [-0.5, 0.5]) {
+          const cible = cibleSousLeCurseur(sortie.cibles, etoile.xPx + dx, etoile.yPx + dy)!
+          const survol: SurvolEcran = {
+            xPx: cible.xPx,
+            yPx: cible.yPx,
+            texte: decritCible(cible).titre,
+          }
+          expect(rendNommees(survol).sortie.revele, `${label.texte} → ${survol.texte}`).toBeNull()
+        }
+      }
+    }
+  })
+
+  it('révèle encore le repli d’une étoile brillante sans désignation', () => {
+    // Le champ synthétique du harnais n'a aucune contrepartie dans le paquet nommé : ses
+    // étoiles brillantes sont celles que la branche de repli existe pour servir. Sans ce cas,
+    // T-0107 se « corrigerait » en supprimant la branche, et cinq étoiles du ciel réel
+    // deviendraient injoignables.
+    const { sortie } = rend()
+    const anonymes = sortie.cibles.filter(
+      (c) => c.type === 'ETOILE' && c.etoileNommee === undefined,
+    )
+    expect(anonymes.length).toBeGreaterThan(0)
+    const premiere = anonymes[0]!
+    const decrite = decritCible(premiere)
+    // Aucun nom à porter, et une fiche qui dit ce que le paquet contient — rien de plus.
+    expect(premiere.nom).toBe('')
+    expect(decrite.lignes.join(' ')).toContain(premiere.etoile!.magV.toFixed(2))
+    const reveles = anonymes.slice(0, 5).filter((c) => {
+      const survol: SurvolEcran = { xPx: c.xPx, yPx: c.yPx, texte: decritCible(c).titre }
+      return rend({ survol }).sortie.revele !== null
+    })
+    expect(reveles.length).toBeGreaterThan(0)
   })
 })
 

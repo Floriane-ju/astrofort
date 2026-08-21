@@ -152,6 +152,9 @@ const HAUTEUR_LABEL_PX = 18
 const LARGEUR_CARACTERE_PX = 10
 const RAYON_CLIC_PX = 10
 const MARQUEUR_OBJET_PX = 4
+/* T-0107 — pas de la clé de pixel entier. Toute largeur de canevas réaliste lui est très
+   inférieure, ce qui rend `y * PAS + x` injectif, y compris pour le voisinage à x = −1. */
+const PAS_CLE_PIXEL = 65536
 const RAYON_CORPS_PX = 5
 /** Sous ce rayon, l'antialiasing efface le disque : la plus faible étoile reste un point. */
 const RAYON_MIN_ETOILE_PX = 0.7
@@ -503,6 +506,24 @@ function repereCentreGalactique(
   }
 }
 
+/**
+ * T-0107 — un pixel du voisinage immédiat porte-t-il déjà une étoile nommée ?
+ *
+ * Le voisinage 3×3 et non le seul pixel : les deux passes projettent la même étoile depuis
+ * deux paquets qui n'ont pas la même précision, et leurs arrondis peuvent tomber de part et
+ * d'autre d'une frontière de pixel.
+ */
+function pixelDejaNomme(pixels: ReadonlySet<number>, xPx: number, yPx: number): boolean {
+  const x = Math.round(xPx)
+  const y = Math.round(yPx)
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (pixels.has((y + dy) * PAS_CLE_PIXEL + (x + dx))) return true
+    }
+  }
+  return false
+}
+
 export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   const brut = entreeBrute.projecteur
   // §4.1 — la couche Sol tient par deux gestes complémentaires. Le sol est PEINT, opaque, sur
@@ -621,12 +642,14 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   }
 
   // --- Étoiles nommées : labels et identification au clic -----------------
+  const pixelsNommes = new Set<number>()
   for (const nommee of entree.etoilesNommees) {
     if (!etoileLabellisable(nommee.magV)) continue
     const v = versVecteur(nommee.adDeg, nommee.decDeg)
     if (!projecteur.projetteEn(v.x, v.y, v.z, p)) continue
     if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
     const texte = nommee.nomPropre === '' ? nommee.designation : nommee.nomPropre
+    pixelsNommes.add(Math.round(p.yPx) * PAS_CLE_PIXEL + Math.round(p.xPx))
     cibles.push({
       type: 'ETOILE',
       xPx: p.xPx,
@@ -791,7 +814,22 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     ctx.fillText(revele.texte, revele.xPx, revele.yPx)
   }
 
-  return { stats, etoilesDessinees, cibles, labels, revele }
+  // T-0107 — une étoile nommée n'est pas AUSSI une cible anonyme. Les deux passes ci-dessus
+  // décrivent le même astre : celle du catalogue le lit dans `hyg-1.bin`, où la position est
+  // arrondie en Float32 ; celle des étoiles nommées le lit dans `constellations-1.bin`, qui la
+  // garde en double précision. L'écart — 0,04″ sur β Oph, moins d'un millième de pixel —
+  // suffisait à faire gagner l'entrée anonyme une fois sur deux au jeu de la plus proche, et le
+  // survol répondait « sans désignation » sous le nom déjà peint. Deux cibles sur le même pixel
+  // sont indiscernables au pointeur : c'est l'identifiée qui répond. La branche de repli sert
+  // encore les étoiles brillantes que le paquet nommé ne porte pas.
+  const ciblesUniques = cibles.filter(
+    (c) =>
+      c.type !== 'ETOILE' ||
+      c.etoileNommee !== undefined ||
+      !pixelDejaNomme(pixelsNommes, c.xPx, c.yPx),
+  )
+
+  return { stats, etoilesDessinees, cibles: ciblesUniques, labels, revele }
 }
 
 /** Cible la plus proche du point cliqué, dans un rayon de quelques pixels. */
