@@ -24,7 +24,6 @@ import {
   type PositionPole,
 } from '../core/file-etoiles.ts'
 import {
-  contrasteVoieLactee,
   depuisGalactique,
   magnitudeLimitePrevisu,
   opaciteEtoile,
@@ -36,7 +35,9 @@ import { selectionne } from '../core/index-ciel.ts'
 import type { EtendueCadre } from '../core/cadre.ts'
 import { rayonEtoilePx, type PointEcran, type Projecteur } from '../core/projection.ts'
 import { separationDeg, type Vec3 } from '../core/mat3.ts'
-import { couleurTeinte, paletteScene, teinte } from './couleurs.ts'
+import { bandeRealiste, couleurTeinte, fondRealiste, paletteScene, teinte } from './couleurs.ts'
+import { brillanceVoieLacteeNl } from '../core/fond-ciel-rendu.ts'
+import { nanolamberts } from '../core/moon.ts'
 
 const S_PAR_MIN = 60
 const MIN_PAR_H = 60
@@ -45,8 +46,8 @@ const RAYON_MIN_ETOILE_PX = 0.7
 /** Pas du maillage de la bande galactique, en degrés. */
 const PAS_BANDE_L_DEG = 6
 const PAS_BANDE_B_DEG = 2
-/** Latitude galactique au-delà de laquelle la bande ne se distingue plus du fond. */
-const BANDE_B_MAX_DEG = 60
+/** Du plan galactique au pôle : seule borne de l'échantillonnage en latitude. */
+const QUART_TOUR_DEG = 90
 const TOUR_RAD = 2 * Math.PI
 const MARQUEUR_POLE_PX = 14
 /**
@@ -114,27 +115,34 @@ export interface SortieDessinChamp {
   readonly pole: PositionPole
 }
 
-/** Couche 3 — masque procédural de la Voie lactée, en coordonnées galactiques. */
+/**
+ * Couche 3 — la Voie lactée, en coordonnées galactiques (T-0104).
+ *
+ * Même moteur que le planétarium : la bande est un CONTRIBUTEUR DE BRILLANCE, et chaque tranche
+ * se compose en part de la brillance totale avec la couleur de cette totale. Deux rendus du même
+ * objet avec deux paramétrages différents finissaient par se contredire à l'écran — l'aperçu
+ * incrusté se superpose au planétarium (§9.5), et deux bandes de teintes différentes au même
+ * endroit se liraient comme un défaut de rendu.
+ *
+ * Ce qui reste propre à cet aperçu : les polygones remplis, et le flou. Le champ est étroit, une
+ * bande n'en sort pas par un côté pour y rentrer par un autre — le problème qui impose le trait
+ * au planétarium ne se pose pas ici. Le flou, lui, reste nécessaire : le pas de latitude est
+ * grossier devant la taille de l'aperçu, et l'escalier s'y verrait.
+ */
 function dessineVoieLactee(entree: EntreeDessinChamp): void {
   const { ctx, projecteur } = entree
-  const contraste = contrasteVoieLactee(entree.sbCiel)
-  if (contraste <= 0) return
-  const echelle = K('ECHELLE_LATITUDE_GALACTIQUE_DEG')
-  // Le masque est peint en bandes de latitude galactique, donc en marches d'escalier. Un
-  // flou de quelques dizaines de pixels les fond : la Voie lactée n'a pas de bord franc, et
-  // une bande en escalier se lirait comme un artefact de rendu plutôt que comme le ciel.
+  const brillanceCiel = nanolamberts(entree.sbCiel)
+  // Couleur du fond seul : la tranche qui la reproduit n'ajoute rien de visible, à un 255e
+  // près. C'est la borne de peinture, et elle se déduit — elle ne se règle pas.
+  const fondSeul = fondRealiste(entree.sbCiel)
   ctx.filter = `blur(${FLOU_BANDE_PX}px)`
 
-  // L'opacité est ramenée à zéro à la latitude de coupure : sans cette soustraction, la
-  // bande s'arrêterait sur une frontière droite bien visible en travers du ciel.
-  const plancher = Math.exp(-BANDE_B_MAX_DEG / echelle)
-  for (let b = -BANDE_B_MAX_DEG; b < BANDE_B_MAX_DEG; b += PAS_BANDE_B_DEG) {
-    const milieu = Math.abs(b + PAS_BANDE_B_DEG / 2)
-    const alpha = contraste * (Math.exp(-milieu / echelle) - plancher)
-    if (alpha <= 0) continue
-    ctx.fillStyle = entree.modeNuit
-      ? `rgb(120 0 0 / ${alpha})`
-      : `rgb(150 160 190 / ${alpha})`
+  for (let b = -QUART_TOUR_DEG; b < QUART_TOUR_DEG; b += PAS_BANDE_B_DEG) {
+    const milieu = b + PAS_BANDE_B_DEG / 2
+    const rendu = bandeRealiste(brillanceCiel, brillanceVoieLacteeNl(milieu), entree.modeNuit)
+    if (rendu.couleur === fondSeul) continue
+    const rvb = rendu.couleur.slice(rendu.couleur.indexOf('(') + 1, rendu.couleur.indexOf(')'))
+    ctx.fillStyle = `rgb(${rvb} / ${rendu.part})`
     // Une bande de latitude se remplit d'un seul tenant, jamais en carreaux juxtaposés :
     // deux surfaces translucides voisines laissent une couture claire sur leur arête
     // commune, et la bande se lirait alors comme une grille.

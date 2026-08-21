@@ -11,6 +11,7 @@
  * plusieurs milliers.
  */
 
+import { K } from '../registry/constants.ts'
 import { composantesFond } from '../core/fond-ciel-rendu.ts'
 
 const ANCRES: readonly (readonly [number, number, number, number])[] = [
@@ -200,6 +201,74 @@ export function rapportContraste(claire: number, sombre: number): number {
 
 /** Luminance du fond de référence : celui sur lequel la palette de jour a été choisie. */
 export const LUMINANCE_FOND_REFERENCE = luminanceRelative(composantesDeCss(PALETTE_JOUR.fond))
+
+/**
+ * T-0102 — chromaticité de la lumière stellaire intégrée, normalisée pour que sa luminance WCAG
+ * égale celle du fond de ciel.
+ *
+ * Sans cette normalisation, bande et fond à brillance de surface ÉGALE ne rendraient pas la même
+ * luminance : `K_EXPOSITION_FOND_CIEL` — seule constante libre du modèle de fond — cesserait de
+ * s'appliquer aux deux, et le contraste de la bande deviendrait un artefact du choix de teinte.
+ * C'est le rapport R/V/B qui porte l'information physique (B−V ≈ +0,9), pas son échelle.
+ */
+const CHROMA_BANDE: Composantes = (() => {
+  const brut: Composantes = [
+    K('CHROMA_VOIE_LACTEE_R'),
+    K('CHROMA_VOIE_LACTEE_V'),
+    K('CHROMA_VOIE_LACTEE_B'),
+  ]
+  const cible = luminanceRelative([
+    K('CHROMA_FOND_CIEL_R'),
+    K('CHROMA_FOND_CIEL_V'),
+    K('CHROMA_FOND_CIEL_B'),
+  ])
+  const facteur = cible / luminanceRelative(brut)
+  return [brut[0] * facteur, brut[1] * facteur, brut[2] * facteur]
+})()
+
+/**
+ * T-0102 — le mode nuit ne cherche pas la fidélité photométrique mais la préservation de
+ * l'adaptation à l'obscurité (§11.1) : la bande y passe au rouge pur, sans normalisation. Une
+ * chromaticité (1, 0, 0) ne PEUT pas atteindre la luminance du fond — le rouge n'apporte que
+ * 0,2126 de la luminance — et la forcer saturerait le canal au lieu d'éclairer.
+ */
+const CHROMA_BANDE_NUIT: Composantes = [1, 0, 0]
+
+/**
+ * T-0102 — la Voie lactée composée sur le fond de ciel : sa part de la brillance totale, et la
+ * couleur de cette totale.
+ *
+ * Même patron que `dessineHaloLune` (T-0100) : la part sert d'opacité, la somme sert de couleur.
+ * Les deux sont couplées, et c'est ce couplage qui fait le rendu juste — là où la bande domine,
+ * la couleur composée est exactement celle du modèle ; là où elle s'efface, sa part multiplie
+ * une couleur devenue indiscernable du fond, donc ne se voit pas. Aucun seuil n'est introduit.
+ */
+export function bandeRealiste(
+  brillanceCielNl: number,
+  brillanceBandeNl: number,
+  modeNuit: boolean,
+): { readonly couleur: string; readonly part: number } {
+  const chroma = modeNuit ? CHROMA_BANDE_NUIT : CHROMA_BANDE
+  const yCiel = K('K_EXPOSITION_FOND_CIEL') * brillanceCielNl
+  const yBande = K('K_EXPOSITION_FOND_CIEL') * brillanceBandeNl
+  // Le fond garde sa chromaticité propre : le mode nuit peint un canevas noir (§11.1), donc
+  // seule la bande y apporte de la lumière.
+  const fond: Composantes = modeNuit
+    ? [0, 0, 0]
+    : [
+        yCiel * K('CHROMA_FOND_CIEL_R'),
+        yCiel * K('CHROMA_FOND_CIEL_V'),
+        yCiel * K('CHROMA_FOND_CIEL_B'),
+      ]
+  return {
+    couleur: css([
+      fond[0] + yBande * chroma[0],
+      fond[1] + yBande * chroma[1],
+      fond[2] + yBande * chroma[2],
+    ]),
+    part: brillanceBandeNl / (brillanceCielNl + brillanceBandeNl),
+  }
+}
 
 /** Couleur du fond de ciel pour cette brillance de surface, en vue réaliste. */
 export function fondRealiste(sbCiel: number): string {

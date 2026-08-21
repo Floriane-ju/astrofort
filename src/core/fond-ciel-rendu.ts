@@ -103,6 +103,29 @@ export function sbDepuisNanolamberts(brillanceNl: number): number {
   )
 }
 
+/**
+ * §3.7 — brillance de surface de la Voie lactée à cette latitude galactique, en nanolamberts.
+ *
+ * La bande est un contributeur de lumière comme le halo lunaire, pas un calque : c'est ce qui
+ * lui permet de s'effacer quand le site est pollué SANS seuil ni opacité de convention. Sa part
+ * dans la brillance totale décide de son opacité, et la couleur de la somme décide de sa teinte
+ * — les deux couplés, comme dans `dessineHaloLune` (T-0100).
+ *
+ * Le profil en latitude réemploie l'échelle de la densité stellaire : la lumière intégrée et le
+ * comptage d'étoiles décroissent du même plan, et dupliquer l'échelle en donnerait deux versions
+ * à désaccorder.
+ *
+ * Elle n'entre PAS dans `brillanceFondNl` : verser la bande au fond de ciel ferait baisser la
+ * magnitude limite à l'intérieur de la Voie lactée, donc afficher MOINS d'étoiles là où le ciel
+ * en montre le plus.
+ */
+export function brillanceVoieLacteeNl(latitudeGalactiqueDeg: number): number {
+  const attenuationMag =
+    K('POGSON') *
+    Math.log10(Math.exp(Math.abs(latitudeGalactiqueDeg) / K('ECHELLE_LATITUDE_GALACTIQUE_DEG')))
+  return nanolamberts(K('SB_VOIE_LACTEE_PLAN_MAG') + attenuationMag)
+}
+
 export interface EntreeFondRendu {
   /** Fond de ciel du site au zénith, Lune exclue (§2.2). */
   readonly sbSiteMag: number

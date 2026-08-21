@@ -1448,49 +1448,51 @@ const GRAND_CHAMP = {
     ordreDeGrandeur: false,
     sections: ['9.2'],
   }),
-  SB_VOIE_LACTEE_PLEINE_MAG: entree({
-    ref: 'C-34',
-    libelle: 'Fond de ciel au-dessus duquel la Voie lactée se rend à plein contraste',
-    valeur: 21.5,
+  SB_VOIE_LACTEE_PLAN_MAG: entree({
+    ref: 'C-44',
+    libelle: 'Brillance de surface de la Voie lactée dans le plan galactique',
+    valeur: 21.0,
     unite: 'mag/as²',
-    source: '§9.2 — « à Bortle 4–5 la bande est visible mais atténuée »',
-    tolerance: 'ordre de grandeur',
-    ordreDeGrandeur: true,
-    sections: ['9.2'],
-  }),
-  SB_VOIE_LACTEE_EFFACEE_MAG: entree({
-    ref: 'C-34',
-    libelle: 'Fond de ciel sous lequel la Voie lactée disparaît du rendu',
-    valeur: 19.0,
-    unite: 'mag/as²',
-    source: '§9.2 — « à Bortle 8 elle disparaît » : l’app montre ce que l’utilisateur verra',
-    tolerance: 'ordre de grandeur',
-    ordreDeGrandeur: true,
-    sections: ['9.2'],
-  }),
-  LATITUDE_BANDE_GALACTIQUE_MAX_DEG: entree({
-    ref: 'C-34',
-    libelle: 'Latitude galactique au-delà de laquelle la bande n’est plus rendue',
-    valeur: 30,
-    unite: '°',
     source:
-      '§3.7 — étendue du repère de lecture : à 30° de latitude galactique, ' +
-      'exp( −30 / 20 ) laisse un cinquième de la densité du plan, sous le seuil de ' +
-      'perception d’une bande',
+      'extension de rendu — brillance des parties brillantes de la bande en bande V. ' +
+      'Ordre de grandeur : le bulbe du Sagittaire est plus brillant (≈ 20,5) et sa ' +
+      'non-uniformité en longitude n’est pas modélisée (T-0105).',
+    tolerance: 'ordre de grandeur — à confirmer sur source photométrique, jamais à caler sur le rendu',
+    ordreDeGrandeur: true,
+    sections: ['3.7'],
+  }),
+  CHROMA_VOIE_LACTEE_R: entree({
+    ref: 'C-45',
+    libelle: 'Chromaticité de la lumière stellaire intégrée — canal rouge',
+    valeur: 1.0,
+    unite: '—',
+    source:
+      'extension de rendu — la lumière stellaire galactique intégrée a B−V ≈ +0,9 ' +
+      '(géantes K, plus le rougissement par la poussière) : elle est blanc-chaud, jamais ' +
+      'magenta. Rapports bruts en lumière linéaire ; la normalisation qui rend la bande ' +
+      'photométriquement comparable au fond est calculée, pas écrite ici.',
     tolerance: 'ordre de grandeur',
     ordreDeGrandeur: true,
     sections: ['3.7'],
   }),
-  OPACITE_BANDE_GALACTIQUE: entree({
-    ref: 'C-34',
-    libelle: 'Opacité de la bande de la Voie lactée dans le plan galactique, à plein contraste',
-    valeur: 0.45,
+  CHROMA_VOIE_LACTEE_V: entree({
+    ref: 'C-46',
+    libelle: 'Chromaticité de la lumière stellaire intégrée — canal vert',
+    valeur: 0.86,
     unite: '—',
-    source:
-      '§3.7 — la bande est un repère de lecture, jamais un fond opaque : les repères, ' +
-      'les étoiles et les labels restent lisibles au travers',
-    tolerance: 'convention produit — pilote l’aspect, jamais un verdict',
-    ordreDeGrandeur: false,
+    source: 'extension de rendu — voir CHROMA_VOIE_LACTEE_R',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
+    sections: ['3.7'],
+  }),
+  CHROMA_VOIE_LACTEE_B: entree({
+    ref: 'C-47',
+    libelle: 'Chromaticité de la lumière stellaire intégrée — canal bleu',
+    valeur: 0.66,
+    unite: '—',
+    source: 'extension de rendu — voir CHROMA_VOIE_LACTEE_R',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
     sections: ['3.7'],
   }),
   PORTEE_PROJECTION_DIAGONALES: entree({

@@ -14,7 +14,6 @@ import { describe, expect, it } from 'vitest'
 import type { Etoile } from '../src/data/catalog.ts'
 import { MENTION_SEMIS, semisGeneratif } from '../src/data/semis.ts'
 import {
-  contrasteVoieLactee,
   densiteRelative,
   latitudeGalactiqueDeg,
   magnitudeLimitePrevisu,
@@ -228,11 +227,21 @@ describe('§9.2 — les trois couches', () => {
   })
 
   it('efface la Voie lactée quand le fond de ciel est celui d’une ville', () => {
-    expect(contrasteVoieLactee(21.5)).toBeCloseTo(1, 6)
-    expect(contrasteVoieLactee(18.4)).toBe(0)
-    const { ctx } = rend({ sbCiel: 18.4, vignettage: false })
-    // Aucune surface de bande n'est peinte : seul le fond du canevas l'est.
-    expect(ctx.appels.filter((a) => a.nom === 'closePath').length).toBe(0)
+    // T-0104 — la bande n'est plus éteinte par un seuil : sa PART de la brillance totale
+    // s'effondre. « Effacée » se constate donc sur l'opacité des surfaces peintes, pas sur
+    // leur absence — et c'est exactement ce que l'œil voit d'un ciel de ville.
+    const parts = (sbCiel: number): number[] =>
+      rend({ sbCiel, vignettage: false })
+        .ctx.couleurs.map((c) => /^rgb\([\d ]+ \/ ([\d.]+)\)$/.exec(c))
+        .filter((m) => m !== null)
+        .map((m) => Number(m![1]))
+
+    const ville = parts(18.4)
+    const montagne = parts(21.5)
+    expect(montagne.length).toBeGreaterThan(0)
+    expect(Math.max(...montagne)).toBeGreaterThan(0.5)
+    // En ville, la bande est encore composée, mais elle ne déplace plus le fond.
+    expect(Math.max(...ville)).toBeLessThan(0.1)
   })
 })
 

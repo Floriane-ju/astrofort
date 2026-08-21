@@ -45,6 +45,7 @@ import { palette, paletteRealiste } from '../src/ui/couleurs.ts'
 import type { LuneEcran } from '../src/ui/dessine-fond-ciel.ts'
 import { sousLeSol } from '../src/core/sol.ts'
 import { K } from '../src/registry/constants.ts'
+import { SB_PLAFOND_TABLE, SB_PLANCHER_NATUREL } from '../src/registry/bortle.ts'
 
 const SITE: Site = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
 const DATE = new Date('2026-08-15T22:00:00Z')
@@ -215,7 +216,7 @@ function rend(
     ],
     couches: options.couches ?? COUCHES,
     magLimite: magnitudeLimite(vue.fovDeg).value,
-    sbCiel: options.sbCiel ?? K('SB_VOIE_LACTEE_PLEINE_MAG'),
+    sbCiel: options.sbCiel ?? SB_PLANCHER_NATUREL,
     latitudeDeg: options.latitudeDeg ?? SITE.latitudeDeg,
     modeNuit: options.modeNuit ?? false,
     survol: options.survol,
@@ -315,32 +316,34 @@ describe('passe de rendu §3.3', () => {
 
   /**
    * §3.7 — la bande dit ce que l'utilisateur verra depuis SON ciel. Le discriminant n'est pas
-   * le nombre de traits mais leur opacité : la bande est la seule chose peinte en translucide.
+   * le nombre de traits mais leur opacité : la bande est la seule chose peinte en translucide,
+   * et son opacité EST sa part de la brillance totale (T-0103).
    */
-  const tracesDeBande = (r: ReturnType<typeof rend>) =>
-    r.ctx.opacites.filter((o) => o > 0 && o < 1).length
+  const opacitesDeBande = (r: ReturnType<typeof rend>) =>
+    r.ctx.opacites.filter((o) => o > 0 && o < 1)
 
-  it('module la bande par le fond de ciel : atténuée à Bortle 4, effacée à Bortle 8', () => {
-    const bonCiel = rend({ sbCiel: K('SB_VOIE_LACTEE_PLEINE_MAG') })
-    const cielMoyen = rend({ sbCiel: (K('SB_VOIE_LACTEE_PLEINE_MAG') + K('SB_VOIE_LACTEE_EFFACEE_MAG')) / 2 })
-    const cielPerdu = rend({ sbCiel: K('SB_VOIE_LACTEE_EFFACEE_MAG') })
+  it('module la bande par le fond de ciel : franche sur un ciel noir, effacée en ville', () => {
+    const bonCiel = rend({ sbCiel: SB_PLANCHER_NATUREL })
+    const cielMoyen = rend({ sbCiel: (SB_PLANCHER_NATUREL + SB_PLAFOND_TABLE) / 2 })
+    const cielPerdu = rend({ sbCiel: SB_PLAFOND_TABLE })
 
-    expect(tracesDeBande(bonCiel)).toBeGreaterThan(0)
-    expect(tracesDeBande(cielPerdu)).toBe(0)
-    // Atténuée, pas absente : le même nombre de tranches, à une opacité plus faible.
-    expect(tracesDeBande(cielMoyen)).toBe(tracesDeBande(bonCiel))
-    expect(Math.max(...cielMoyen.ctx.opacites.filter((o) => o < 1))).toBeLessThan(
-      Math.max(...bonCiel.ctx.opacites.filter((o) => o < 1)),
-    )
-    // La ligne du plan, elle, est tracée dans les deux cas.
+    // La part de la bande dans la brillance totale décroît quand le ciel s'éclaircit : c'est
+    // la physique du modèle, pas une rampe calée sur deux seuils.
+    const part = (r: ReturnType<typeof rend>) => Math.max(...opacitesDeBande(r))
+    expect(part(bonCiel)).toBeGreaterThan(part(cielMoyen))
+    expect(part(cielMoyen)).toBeGreaterThan(part(cielPerdu))
+    // Effacée ne veut pas dire non peinte : en ville la bande est encore composée, mais sa
+    // part est si faible qu'elle ne déplace plus le fond. C'est ce que l'œil constate.
+    expect(part(cielPerdu)).toBeLessThan(0.1)
+    expect(part(bonCiel)).toBeGreaterThan(0.5)
+    // La ligne du plan, elle, est tracée dans tous les cas.
     expect(cielPerdu.sortie.labels.some((l) => l.texte === 'Voie lactée')).toBe(true)
   })
 
   it('jamais opaque : les repères restent lisibles au travers de la bande', () => {
-    const { ctx } = rend({ sbCiel: K('SB_VOIE_LACTEE_PLEINE_MAG') })
-    const bande = ctx.opacites.filter((o) => o < 1)
-    // Plein contraste : la tranche du plan galactique atteint le plafond d'opacité, pas 1.
-    expect(Math.max(...bande)).toBeCloseTo(K('OPACITE_BANDE_GALACTIQUE'), 6)
+    const { ctx } = rend({ sbCiel: SB_PLANCHER_NATUREL })
+    // Aucune tranche n'est peinte en opaque, même sur le ciel le plus noir de la table.
+    expect(Math.max(...opacitesDeBande({ ctx } as ReturnType<typeof rend>))).toBeLessThan(1)
     // Et les repères, eux, restent peints à pleine opacité par-dessus.
     expect(ctx.opacites.some((o) => o === 1)).toBe(true)
   })
@@ -408,7 +411,7 @@ describe('passe de rendu §3.3', () => {
   it('éteint bande et repère avec la seule bascule de la couche Voie lactée', () => {
     const { vise } = viseCentreGalactique()
     const sans = rend({ vise, couches: { ...COUCHES, voieLactee: false } })
-    expect(tracesDeBande(sans)).toBe(0)
+    expect(opacitesDeBande(sans)).toHaveLength(0)
     expect(sans.sortie.labels.some((l) => l.texte.startsWith('Centre galactique'))).toBe(false)
     expect(sans.sortie.labels.some((l) => l.texte === 'Voie lactée')).toBe(false)
   })

@@ -973,10 +973,13 @@ export const GLOSSAIRE = Object.freeze({
     libelle: 'Voie lactée',
     glose: 'bande modulée par le ciel',
     explication:
-      'La bande est rendue par un masque procédural en coordonnées galactiques, hors ligne. ' +
-      'Son contraste est piloté par le fond de ciel du site : atténuée en Bortle 4 ou 5, elle ' +
-      'disparaît en Bortle 8. L’application montre ce que vous verrez depuis ce lieu, pas une ' +
-      'carte de référence idéale.',
+      'La bande est peinte comme une lumière qui s’AJOUTE au fond de ciel, hors ligne : sa ' +
+      'brillance de surface s’additionne à celle du site, exactement comme le halo de la Lune. ' +
+      'Elle s’efface donc d’elle-même quand le site est pollué — non parce qu’un seuil ' +
+      'l’éteint, mais parce que sa lumière devient négligeable devant celle du ciel. ' +
+      'L’application montre ce que vous verrez depuis ce lieu, pas une carte de référence. Sa ' +
+      'brillance ne dépend que de la latitude galactique : le bulbe du Sagittaire est en vrai ' +
+      'plus lumineux que le reste, et la Grande Faille n’est pas figurée.',
     consequence:
       'Si la bande disparaît du rendu, elle ne sortira pas non plus sur les images depuis ce site.',
     sections: ['9.2'],

@@ -23,7 +23,7 @@ import {
   type BoiteLabel,
   type CandidatLabel,
 } from '../core/labels.ts'
-import { contrasteVoieLactee, densiteRelative, depuisGalactique } from '../core/galactique.ts'
+import { depuisGalactique } from '../core/galactique.ts'
 import {
   applique,
   transpose,
@@ -47,7 +47,9 @@ import {
 } from '../core/site.ts'
 import { projecteurSansSol } from '../core/sol.ts'
 import { dessineSol } from './dessine-sol.ts'
-import { couleurTeinte, paletteScene, teinte, TEINTES } from './couleurs.ts'
+import { bandeRealiste, couleurTeinte, fondRealiste, paletteScene, teinte, TEINTES } from './couleurs.ts'
+import { brillanceVoieLacteeNl } from '../core/fond-ciel-rendu.ts'
+import { nanolamberts } from '../core/moon.ts'
 import { dessineHaloHorizon, dessineHaloLune, type LuneEcran } from './dessine-fond-ciel.ts'
 
 export interface CouchesActives {
@@ -158,7 +160,15 @@ const NOM_VOIE_LACTEE = 'Voie lactée'
 /** Échantillonnage en azimut du cercle d'horizon. */
 const PAS_AZIMUT_HORIZON_DEG = 3
 const PAS_LONGITUDE_GALACTIQUE_DEG = 3
-const PAS_LATITUDE_BANDE_DEG = 5
+/** Du plan galactique au pôle : seule borne de l'échantillonnage en latitude. */
+const QUART_TOUR_DEG = 90
+/**
+ * T-0103 — pas des tranches de la bande. À 2°, la marche de couleur entre deux tranches
+ * voisines vaut 1/255 sur toute la table Bortle : elle est SOUS la quantification de l'écran,
+ * donc invisible sans le moindre flou. C'est mesuré, pas supposé — et c'est pourquoi cette
+ * couche ne floute rien, là où l'aperçu de champ doit le faire (`dessine-champ.ts`).
+ */
+const PAS_LATITUDE_BANDE_DEG = 2
 
 /**
  * T-0033 — le plan galactique `b = 0`, échantillonné en longitude comme l'horizon l'est en
@@ -171,30 +181,33 @@ const PLAN_GALACTIQUE: readonly Vec3[] = Array.from(
 )
 
 /**
- * T-0091 — la bande, échantillonnée en tranches de latitude galactique.
+ * T-0091, T-0103 — la bande, échantillonnée en tranches de latitude galactique.
  *
  * Une tranche = une polyligne à latitude constante, tracée au trait épais de la largeur de
  * la tranche. Le trait, et pas le polygone rempli : une polyligne dont une partie sort du
  * champ se rompt en segments, et un polygone rompu se referme n'importe où. Le trait, lui,
  * ne peint que ce qui reste — la bande se coupe proprement au bord du champ.
  *
- * Fixe en J2000, comme le plan : les polylignes se calculent au chargement du module.
+ * L'échelle va d'un pôle galactique à l'autre : c'est la seule borne géométrique, et elle
+ * remplace la latitude de coupure qu'il fallait auparavant choisir. Ce qui décide de ce qui
+ * est peint est la brillance de la tranche, évaluée par image — pas une étendue figée ici.
+ *
+ * Fixe en J2000 : les polylignes se calculent au chargement du module.
  */
-const TRANCHES_BANDE: readonly { readonly densite: number; readonly ligne: readonly Vec3[] }[] =
-  Array.from(
-    { length: (2 * K('LATITUDE_BANDE_GALACTIQUE_MAX_DEG')) / PAS_LATITUDE_BANDE_DEG + 1 },
-    (_, i) => {
-      const bDeg = -K('LATITUDE_BANDE_GALACTIQUE_MAX_DEG') + i * PAS_LATITUDE_BANDE_DEG
-      return Object.freeze({
-        densite: densiteRelative(bDeg).value,
-        ligne: Object.freeze(
-          Array.from({ length: 360 / PAS_LONGITUDE_GALACTIQUE_DEG + 1 }, (_unused, j) =>
-            depuisGalactique(j * PAS_LONGITUDE_GALACTIQUE_DEG, bDeg),
-          ),
+const TRANCHES_BANDE: readonly { readonly bDeg: number; readonly ligne: readonly Vec3[] }[] =
+  Array.from({ length: (2 * QUART_TOUR_DEG) / PAS_LATITUDE_BANDE_DEG }, (_, i) => {
+    // Centre de la tranche : c'est lui qui porte sa brillance, comme `hauteurRepresentative`
+    // le fait pour un palier de halo.
+    const bDeg = -QUART_TOUR_DEG + (i + 0.5) * PAS_LATITUDE_BANDE_DEG
+    return Object.freeze({
+      bDeg,
+      ligne: Object.freeze(
+        Array.from({ length: 360 / PAS_LONGITUDE_GALACTIQUE_DEG + 1 }, (_unused, j) =>
+          depuisGalactique(j * PAS_LONGITUDE_GALACTIQUE_DEG, bDeg),
         ),
-      })
-    },
-  )
+      ),
+    })
+  })
 
 /** T-0091 — le centre galactique : l = 0°, b = 0°, soit δ ≈ −29°. Calculé, jamais recopié. */
 const CENTRE_GALACTIQUE: Vec3 = depuisGalactique(0, 0)
@@ -328,28 +341,48 @@ function ancreVoieLactee(
 }
 
 /**
- * §3.7 — la bande de la Voie lactée, telle qu'elle se verra DEPUIS CE SITE.
+ * §3.7 — la bande de la Voie lactée, telle qu'elle se verra DEPUIS CE SITE (T-0103).
  *
- * Deux modulations, aucune décorative : la densité par latitude galactique donne son profil
- * à la bande, le contraste tiré du fond de ciel décide si elle existe encore. À Bortle 8 le
- * contraste s'annule et la fonction ne peint rien — c'est l'information juste, pas une
- * économie de rendu.
+ * La bande est un CONTRIBUTEUR DE BRILLANCE, pas un calque teinté. Chaque tranche se compose
+ * comme le halo lunaire de T-0100 : sa part de la brillance totale sert d'opacité, et la
+ * couleur de cette totale sert de teinte. Les deux sont couplées, et c'est ce couplage qui
+ * fait le rendu juste — là où la bande domine, la couleur peinte est exactement celle du
+ * modèle ; là où elle s'efface, sa part multiplie une couleur devenue indiscernable du fond,
+ * donc ne se voit pas.
+ *
+ * Rien n'est seuillé. La bande s'atténue vers les pôles galactiques et disparaît quand le site
+ * est pollué parce que la physique le dit, pas parce qu'une opacité de convention et une
+ * latitude de coupure ont été choisies — c'étaient les deux constantes qui donnaient à cette
+ * couche ses stries à bord franc en travers du ciel.
  *
  * L'épaisseur du trait suit le zoom : une tranche de latitude couvre le même angle, donc
  * d'autant plus de pixels que le champ est serré. L'échelle est prise au centre du champ —
  * la projection l'étire vers les bords, et un repère de lecture n'en souffre pas.
+ *
+ * ponytail: la brillance du site est prise au zénith pour toute la bande, alors que le halo
+ * d'horizon éclaircit le bas du ciel. La tranche serait donc un peu trop contrastée près de
+ * l'horizon — là où le sol la recouvre et où personne n'image. Le jour où il faudra la
+ * composer par direction, c'est un champ 2D à peindre, pas un trait à moduler.
  */
-function traceBandeVoieLactee(entree: EntreeDessin, couleur: string): void {
-  const contraste = contrasteVoieLactee(entree.sbCiel)
-  if (contraste <= 0) return
+function traceBandeVoieLactee(entree: EntreeDessin): void {
   const { ctx, projecteur } = entree
+  const brillanceCiel = nanolamberts(entree.sbCiel)
+  // Couleur du fond seul : la tranche qui la reproduit n'ajoute rien de visible, à un
+  // 255e près. C'est la borne de peinture, et elle se déduit — elle ne se règle pas.
+  const fondSeul = fondRealiste(entree.sbCiel)
   const opaciteInitiale = ctx.globalAlpha
-  ctx.strokeStyle = couleur
   ctx.lineJoin = 'round'
   ctx.lineCap = 'round'
   ctx.lineWidth = (PAS_LATITUDE_BANDE_DEG * projecteur.vue.largeurPx) / projecteur.vue.fovDeg
   for (const tranche of TRANCHES_BANDE) {
-    ctx.globalAlpha = contraste * tranche.densite * K('OPACITE_BANDE_GALACTIQUE')
+    const rendu = bandeRealiste(
+      brillanceCiel,
+      brillanceVoieLacteeNl(tranche.bDeg),
+      entree.modeNuit,
+    )
+    if (rendu.couleur === fondSeul) continue
+    ctx.globalAlpha = rendu.part
+    ctx.strokeStyle = rendu.couleur
     traceLignes(ctx, projecteur, [tranche.ligne])
   }
   ctx.globalAlpha = opaciteInitiale
@@ -452,7 +485,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   // Elle est tracée au projecteur BRUT, puis recouverte par le sol : filtrée, un trait de
   // cinq degrés de large s'interromprait un pas d'azimut trop tôt et laisserait une encoche
   // au-dessus de l'horizon.
-  if (entree.couches.voieLactee) traceBandeVoieLactee(entreeBrute, teintes.voieLactee)
+  if (entree.couches.voieLactee) traceBandeVoieLactee(entreeBrute)
   // §4.1 — le sol, peint sur le fond et sur la bande, sous tout le reste.
   if (entree.couches.sol) {
     dessineSol(ctx, brut, entree.matriceCiel, entree.masque, teintes.sol, teintes.horizon)

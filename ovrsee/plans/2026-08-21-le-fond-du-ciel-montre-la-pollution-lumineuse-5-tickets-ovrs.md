@@ -1,9 +1,9 @@
 ---
 {
-  "status": "open",
+  "status": "closed",
   "title": "Le fond du ciel montre la pollution lumineuse — 5 tickets ovrsee",
   "opened": "2026-08-21",
-  "closed": null,
+  "closed": "2026-08-21",
   "commits": [
     {
       "sha": "dd0680c",

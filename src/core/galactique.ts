@@ -67,17 +67,6 @@ export function densiteRelative(bDeg: number): Traced<number> {
   })
 }
 
-/**
- * §9.2 — contraste de la bande, de 0 (effacée) à 1 (pleine). À Bortle 4–5 la Voie lactée est
- * visible mais atténuée, à Bortle 8 elle disparaît : c'est cette dégradation-là que la
- * prévisualisation doit montrer, faute de quoi elle promet un ciel que le site ne donne pas.
- */
-export function contrasteVoieLactee(sbCielMagArcsec2: number): number {
-  const efface = K('SB_VOIE_LACTEE_EFFACEE_MAG')
-  const pleine = K('SB_VOIE_LACTEE_PLEINE_MAG')
-  return Math.max(0, Math.min(1, (sbCielMagArcsec2 - efface) / (pleine - efface)))
-}
-
 /** §9.2 — assombrissement des coins, en diaphragmes, pour un rayon relatif au coin du cadre. */
 export function vignettageDiaph(rayonRelatif: number): Traced<number> {
   const borne = Math.max(0, Math.min(1, rayonRelatif))

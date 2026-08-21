@@ -40,7 +40,7 @@ import { magnitudeRendue, projecteur, type Projecteur, type Vue } from '../src/c
 import type { Site } from '../src/core/ephem.ts'
 import { masquePlat } from '../src/core/site.ts'
 import { dessineCiel, type CouchesActives } from '../src/ui/dessine-ciel.ts'
-import { K } from '../src/registry/constants.ts'
+import { SB_PLANCHER_NATUREL } from '../src/registry/bortle.ts'
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SITE: Site = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
@@ -249,8 +249,11 @@ function image(ctx: CanvasRenderingContext2D): { comptes: Comptes; dessinees: nu
     cadres: [],
     couches: COUCHES,
     magLimite,
-    // §3.7 — bande à plein contraste : c'est le cas le plus lourd, celui qu'un banc mesure.
-    sbCiel: K('SB_VOIE_LACTEE_PLEINE_MAG'),
+    // §3.7 — le ciel le plus noir de la table : c'est lui qui donne la magnitude limite la
+    // plus profonde, donc le plus d'étoiles à sélectionner et à tracer. Le cas le plus lourd
+    // POUR LA BANDE est l'inverse — un ciel de ville y fait peindre toutes les tranches, à une
+    // opacité invisible — mais la bande coûte deux ordres de grandeur de moins que les étoiles.
+    sbCiel: SB_PLANCHER_NATUREL,
     latitudeDeg: SITE.latitudeDeg,
     modeNuit: false,
   })
