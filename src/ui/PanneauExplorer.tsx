@@ -125,10 +125,13 @@ export function PanneauExplorer(props: PanneauExplorerProps) {
           {vueRealiste && (
             <p className="cause">
               Le fond peint additionne, en nanolamberts, la brillance du site, son halo
-              d’horizon (van&nbsp;Rhijn 1921) et celle de la Lune (Krisciunas &amp; Schaefer
-              1991). Hors périmètre, et dit plutôt que supposé : le sol ne s’éclaircit pas, et
-              le halo du site reste symétrique en azimut — le dôme lumineux d’une ville est
-              plus clair de son côté, mais l’atlas qui le donnerait exige le réseau (§4.1).
+              d’horizon (van&nbsp;Rhijn 1921), la lueur du crépuscule (Patat, Ugolnikov &amp;
+              Postylyakov 2006, mesurée de 5° à 15° de dépression solaire) et celle de la Lune
+              (Krisciunas &amp; Schaefer 1991). Hors périmètre, et dit plutôt que supposé : le
+              sol ne s’éclaircit pas ; le halo du site reste symétrique en azimut — le dôme
+              lumineux d’une ville est plus clair de son côté, mais l’atlas qui le donnerait
+              exige le réseau (§4.1) ; et la teinte du crépuscule ne vire pas vers l’azimut du
+              Soleil, alors que le vrai ciel y est plus clair et plus jaune.
             </p>
           )}
         </div>

@@ -18,6 +18,7 @@
  */
 
 import { useEffect, useMemo, useRef } from 'react'
+import { Body } from 'astronomy-engine'
 import type { Etoile } from '../data/catalog.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { PaquetConstellations } from '../data/constellations.ts'
@@ -26,14 +27,14 @@ import { reglageVitesse } from '../core/curseur-temps.ts'
 import type { IndexCiel } from '../core/index-ciel.ts'
 import { cielInstantane } from '../core/horloges.ts'
 import { etatLune } from '../core/moon.ts'
-import { sbEffectifRendu } from '../core/fond-ciel-rendu.ts'
+import { sbEffectifRendu, sbZenithAvecCrepuscule } from '../core/fond-ciel-rendu.ts'
 import { separationDeg, versVecteur } from '../core/mat3.ts'
 import type { LuneEcran } from './dessine-fond-ciel.ts'
 import { etatProfondeur, type ModeProjection } from '../core/projection.ts'
 import { majVue, resolutionRendu, useScene } from './scene-etat.ts'
 import { useSeance } from './seance-etat.ts'
 import type { Cadre, ProfilCadre } from '../core/cadre.ts'
-import type { Site } from '../core/ephem.ts'
+import { positionCorps, type Site } from '../core/ephem.ts'
 import type { MasqueHorizon } from '../core/site.ts'
 import type { SurvolEcran } from './dessine-ciel.ts'
 import { useBoucleRendu, type EtatBoucle } from './planetarium-boucle.ts'
@@ -152,6 +153,26 @@ export function Planetarium(props: PlanetariumProps) {
   }, [props.site, dateAffichee])
 
   /**
+   * T-0099 — dépression du Soleil sous l'horizon à l'instant affiché, en degrés. C'est elle,
+   * et non l'heure légale, qui décide de la clarté du fond : le curseur de temps traverse le
+   * crépuscule à chaque séance.
+   *
+   * La hauteur est celle corrigée de la réfraction, comme partout ailleurs dans l'app. La
+   * table de Patat 2006 est ajustée sur une dépression géométrique, mais elle commence à 5°
+   * sous l'horizon — là où la réfraction ne corrige plus rien.
+   *
+   * §12.5 — un instant hors du domaine des séries n'éteint pas la scène : le crépuscule sort
+   * du calcul, le reste continue. Même règle que la Lune juste au-dessus.
+   */
+  const depressionSolaireDeg = useMemo((): number | null => {
+    try {
+      return -positionCorps(Body.Sun, dateAffichee, props.site).hauteurDeg
+    } catch {
+      return null
+    }
+  }, [props.site, dateAffichee])
+
+  /**
    * T-0098, T-0100 — le fond de ciel EFFECTIF dans la direction visée : celui du site, majoré
    * du halo d'horizon et de la Lune. C'est lui qui plafonne la magnitude limite en vue
    * réaliste, sans quoi une pleine Lune montrerait autant d'étoiles qu'une nuit noire.
@@ -161,6 +182,7 @@ export function Planetarium(props: PlanetariumProps) {
       sbEffectifRendu({
         sbSiteMag: props.sbCiel,
         hauteurDeg: pointage.hauteurDeg,
+        ...(depressionSolaireDeg === null ? {} : { depressionSolaireDeg }),
         ...(lune === null || lune.altitudeDeg <= 0
           ? {}
           : {
@@ -175,7 +197,20 @@ export function Planetarium(props: PlanetariumProps) {
               },
             }),
       }),
-    [props.sbCiel, pointage.azimutDeg, pointage.hauteurDeg, lune],
+    [props.sbCiel, pointage.azimutDeg, pointage.hauteurDeg, lune, depressionSolaireDeg],
+  )
+
+  /**
+   * T-0099 — fond de ciel du site au zénith, crépuscule compris. La scène en part pour TOUTES
+   * ses couches : teinte du fond, paliers de halo, contraste de la bande. Vue réaliste
+   * décochée, c'est le fond du site nu — la scène est alors celle d'avant T-0097, au pixel près.
+   */
+  const sbCielScene = useMemo(
+    () =>
+      rendu.vueRealiste && depressionSolaireDeg !== null
+        ? sbZenithAvecCrepuscule(props.sbCiel, depressionSolaireDeg)
+        : props.sbCiel,
+    [props.sbCiel, rendu.vueRealiste, depressionSolaireDeg],
   )
 
   const profondeur = useMemo(
@@ -235,7 +270,7 @@ export function Planetarium(props: PlanetariumProps) {
     frontieres,
     couches: rendu.couches,
     magLimite: profondeur.magLimite.value,
-    sbCiel: props.sbCiel,
+    sbCiel: sbCielScene,
     vueRealiste: rendu.vueRealiste,
     lune,
     vue: pointage,

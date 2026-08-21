@@ -1,5 +1,5 @@
 /**
- * §3.3 — brillance du fond de ciel telle qu'elle se peint (T-0096, T-0097, T-0098, T-0100).
+ * §3.3 — brillance du fond de ciel telle qu'elle se peint (T-0096 à T-0100).
  *
  * §3.3 ne dit du fond de ciel qu'une chose : il « plafonne mag_limite en vue réaliste ». La
  * COULEUR du fond n'y est pas spécifiée. Ce module est donc une extension de rendu assumée,
@@ -9,7 +9,7 @@
  * magnitudes. C'est déjà celle de ΔSB_lune (§8.1), et le module la réemploie au lieu de la
  * réécrire : `brillanceLuneNl` et `extinctionV` viennent de `moon.ts`.
  *
- *   B_total(direction) = B_site × facteurHaloHorizon(h) + B_lune(ρ, h_lune, α)
+ *   B_total(direction) = (B_site + B_crepuscule(φ)) × facteurHaloHorizon(h) + B_lune(ρ, h_lune, α)
  *   Y_ecran            = K_exposition × B_total
  *
  * L'exposition est la SEULE constante libre du modèle : le rapport de luminance entre deux
@@ -23,6 +23,7 @@
  */
 
 import { K } from '../registry/constants.ts'
+import { SB_NUIT_SITE_REFERENCE_MAG, sbCrepusculeZenith } from '../registry/crepuscule.ts'
 import {
   brillanceLuneNl,
   extinctionV,
@@ -144,6 +145,33 @@ export function brillanceVoieLacteeNl(
   return nanolamberts(sbPlan + attenuationMag)
 }
 
+/**
+ * T-0099 — contribution du crépuscule à la brillance du ciel, en nanolamberts.
+ *
+ * C'est le plus gros écart de la vue réaliste : à Soleil −6° le vrai ciel est bleu franc et ne
+ * montre qu'une poignée d'étoiles, là où l'app rendait le fond de la pleine nuit. La table de
+ * `registry/crepuscule.ts` mesure un TOTAL — lueur crépusculaire diffusée plus lueur nocturne
+ * de Paranal ; le crépuscule seul est la différence, et elle s'ajoute au site en nanolamberts
+ * comme les autres contributeurs (§8.1).
+ *
+ * Elle tombe à zéro d'elle-même à 15,9° de dépression, où l'ajustement rejoint le fond
+ * nocturne de son propre site : aucun raccord n'est posé à la main, donc aucun saut à la
+ * frontière de la nuit astronomique — qui est franchie 2° plus tard, contribution déjà nulle.
+ *
+ * ponytail: la lueur crépusculaire hérite du facteur de halo d'horizon du site (voir
+ * `brillanceFondNl`), alors que le ciel du crépuscule s'éclaircit vers l'horizon plus vite que
+ * van Rhijn ne le dit, et surtout plus vite du côté du Soleil. La vraie géométrie dépend de
+ * l'azimut solaire, que T-0096 met hors périmètre au même titre que le dôme lumineux d'une
+ * ville. Le sens est bon, l'amplitude est prudente : limite déclarée, pas oubliée.
+ */
+export function brillanceCrepusculeNl(depressionSolaireDeg: number): number {
+  // `null` : la dépression a dépassé la fin du crépuscule, ou n'est pas un nombre. Le seuil
+  // vit au registre avec la table qui le produit, il n'est pas retesté ici.
+  const sb = sbCrepusculeZenith(depressionSolaireDeg)
+  if (sb === null) return 0
+  return Math.max(0, nanolamberts(sb.value) - nanolamberts(SB_NUIT_SITE_REFERENCE_MAG))
+}
+
 export interface EntreeFondRendu {
   /** Fond de ciel du site au zénith, Lune exclue (§2.2). */
   readonly sbSiteMag: number
@@ -151,12 +179,23 @@ export interface EntreeFondRendu {
   readonly hauteurDeg: number
   /** Géométrie lunaire de cette direction. Absente : la Lune n'entre pas dans le calcul. */
   readonly lune?: GeometrieLune | undefined
+  /**
+   * T-0099 — dépression du Soleil sous l'horizon, en degrés (positive une fois couché).
+   * Absente : le crépuscule n'entre pas dans le calcul, comme un instant hors du domaine des
+   * séries n'éteint pas la scène (§12.5).
+   */
+  readonly depressionSolaireDeg?: number | undefined
 }
 
 /** Brillance totale du ciel dans cette direction, en nanolamberts. */
 export function brillanceFondNl(entree: EntreeFondRendu): number {
-  const bSite = nanolamberts(entree.sbSiteMag) * facteurHaloHorizon(entree.hauteurDeg)
-  return bSite + (entree.lune === undefined ? 0 : brillanceLuneNl(entree.lune))
+  const bCrepuscule =
+    entree.depressionSolaireDeg === undefined
+      ? 0
+      : brillanceCrepusculeNl(entree.depressionSolaireDeg)
+  const bCiel =
+    (nanolamberts(entree.sbSiteMag) + bCrepuscule) * facteurHaloHorizon(entree.hauteurDeg)
+  return bCiel + (entree.lune === undefined ? 0 : brillanceLuneNl(entree.lune))
 }
 
 /**
@@ -167,4 +206,17 @@ export function brillanceFondNl(entree: EntreeFondRendu): number {
  */
 export function sbEffectifRendu(entree: EntreeFondRendu): number {
   return sbDepuisNanolamberts(brillanceFondNl(entree))
+}
+
+/**
+ * T-0099 — fond de ciel du site AU ZÉNITH, crépuscule compris : c'est la valeur dont la scène
+ * a besoin, parce que ses couches — teinte du fond, paliers de halo, contraste de la bande —
+ * partent toutes du zénith et appliquent le halo d'horizon elles-mêmes.
+ *
+ * Au zénith `facteurHaloHorizon` vaut exactement 1 : cette fonction ne fait donc rien de plus
+ * que `sbEffectifRendu`, elle nomme juste la direction pour que le 90° ne se réécrive pas dans
+ * l'UI (§2.1).
+ */
+export function sbZenithAvecCrepuscule(sbSiteMag: number, depressionSolaireDeg: number): number {
+  return sbEffectifRendu({ sbSiteMag, hauteurDeg: ANGLE_DROIT_DEG, depressionSolaireDeg })
 }
