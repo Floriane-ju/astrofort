@@ -60,6 +60,46 @@ body {
   box-sizing: border-box;
 }
 
+/* T-0070 — ce que le navigateur peint quand la feuille se tait.
+
+   L'en-tête ci-dessus ne vaut que pour les couleurs ÉCRITES ici. L'anneau de focus, la
+   sélection, le caret, la couleur d'accent et les ascenseurs sont peints par le navigateur
+   avec les siennes — bleues — et `color-scheme: dark` ne fait que les assombrir. N'étant
+   écrites nulle part, elles échappent au basculement de palette ET au test qui le vérifie.
+   Les déclarer les rend rouges en mode nuit, et inspectables. */
+:root {
+  accent-color: var(--alerte);
+  caret-color: var(--texte);
+  scrollbar-color: var(--bordure) var(--fond);
+}
+
+::selection {
+  background: var(--alerte);
+  color: var(--fond);
+}
+
+/* WCAG 2.4.11 et 2.4.13 — l'anneau est une FORME avant d'être une couleur.
+
+   Au plancher de luminance de 2 % (§11.1), aucun couple de la palette n'atteint 3:1 : tout
+   tend vers le noir, le rapport de contraste s'effondre pour l'interface entière. Ce qui
+   rend alors le focus perceptible n'est pas son contraste mais son apparition — un trait
+   continu là où il n'y avait rien, tracé dans le jeton le plus lumineux du mode. À
+   luminance nominale, ce même jeton dépasse 3:1 sur toutes les surfaces.
+
+   `outline-offset` détache l'anneau : sans lui, un champ déjà bordé le verrait se confondre
+   avec sa propre bordure. */
+:focus-visible {
+  outline: 2px solid var(--alerte);
+  outline-offset: 2px;
+}
+
+/* La colonne centrale rogne ce qui déborde et le canevas la remplit : un anneau posé à
+   l'extérieur y serait coupé. Celui-ci rentre. */
+.planetarium:focus-visible {
+  outline-offset: -4px;
+}
+
+
 body {
   margin: 0;
   background: var(--fond);
@@ -376,7 +416,6 @@ input[type='checkbox'] {
 
 input[type='range'] {
   min-height: var(--cible-clic);
-  accent-color: var(--alerte);
 }
 
 table {
