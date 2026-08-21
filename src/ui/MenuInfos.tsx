@@ -23,8 +23,7 @@ import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { Site } from '../core/ephem.ts'
 import type { IndexCiel } from '../core/index-ciel.ts'
 import { avertissementEpoque, cielInstantane } from '../core/horloges.ts'
-import { etatProfondeur, projecteur } from '../core/projection.ts'
-import { versSpherique } from '../core/mat3.ts'
+import { etatProfondeur } from '../core/projection.ts'
 import {
   REFUS_SANS_PROFIL,
   angleGrandAxeDansCadre,
@@ -35,7 +34,8 @@ import {
   type ProfilCadre,
 } from '../core/cadre.ts'
 import { ficheCadrage } from '../core/framing.ts'
-import { majVue, useScene, vuePlanetarium } from './scene-etat.ts'
+import { majVue, useScene } from './scene-etat.ts'
+import { ligneVisee } from './scene-lecture.ts'
 import { useSeance } from './seance-etat.ts'
 import { Terme } from './Terme.tsx'
 
@@ -53,7 +53,7 @@ export interface MenuInfosProps {
 
 export function MenuInfos(props: MenuInfosProps) {
   const { vue: pointage, rendu, lectures, msAffiche } = useScene()
-  const { azimutDeg, hauteurDeg, rotationCadreDeg, fovDeg, largeurPx, hauteurPx } = pointage
+  const { azimutDeg, hauteurDeg, rotationCadreDeg, fovDeg } = pointage
   const { couches, vueRealiste } = rendu
   const { diagnostic, selection, fileEnAttente } = lectures
   const { file } = useSeance()
@@ -64,12 +64,10 @@ export function MenuInfos(props: MenuInfosProps) {
     () => etatProfondeur(fovDeg, props.index.profondeurMag, props.mLimOeil, vueRealiste),
     [fovDeg, props.index.profondeurMag, props.mLimOeil, vueRealiste],
   )
-  const viseeJ2000 = useMemo(
-    () =>
-      versSpherique(
-        projecteur(vuePlanetarium(pointage), ciel.matrice).inverse(largeurPx / 2, hauteurPx / 2),
-      ),
-    [pointage, largeurPx, hauteurPx, ciel],
+  // T-0068 — la même phrase que la description du canevas, composée une seule fois.
+  const visee = useMemo(
+    () => ligneVisee(pointage, ciel.matrice, dateAffichee),
+    [pointage, ciel, dateAffichee],
   )
 
   const cadrePrincipal: Cadre | null =
@@ -156,10 +154,8 @@ export function MenuInfos(props: MenuInfosProps) {
 
       <div className="tiroir-contenu">
         <p className="etat">
-          {dateAffichee.toLocaleString('fr-FR')} · visée {viseeJ2000.longitudeDeg.toFixed(2)}° AD /{' '}
-          {viseeJ2000.latitudeDeg.toFixed(2)}° δ · azimut {azimutDeg.toFixed(0)}°, hauteur{' '}
-          {hauteurDeg.toFixed(0)}° · champ {fovDeg.toFixed(1)}° · jusqu’à la magnitude{' '}
-          {profondeur.magLimite.value.toFixed(1)} · époque {ciel.epoqueAnnee.toFixed(1)}
+          {visee} · jusqu’à la magnitude {profondeur.magLimite.value.toFixed(1)} · époque{' '}
+          {ciel.epoqueAnnee.toFixed(1)}
           {file.incrustation && couches.cadre && ' · filé incrusté dans le cadre, temps figé'}
           {fileEnAttente && ' · filé en cours de recalcul, le cadre montre l’image précédente'}
         </p>

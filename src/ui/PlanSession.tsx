@@ -291,7 +291,9 @@ function Pointage({ etape, ...props }: EtapeProps) {
 
       {carte.ancrages.length > 0 && (
         <>
-          <div className="schema" aria-label="Schéma du cadre, cible au centre">
+          {/* T-0068 — sans rôle, l'`aria-label` d'une `div` n'est pas exposé : l'intention
+                était bonne, l'effet nul. Le schéma est une image composée en HTML. */}
+          <div className="schema" role="img" aria-label="Schéma du cadre, cible au centre">
             <span className="schema-astre schema-cible" style={{ left: '50%', top: '50%' }}>
               ✛
             </span>

@@ -1,6 +1,7 @@
 /**
  * Les gestes que la scène accepte : glisser pour promener la visée, molette et pincement
- * pour le champ, défilement à deux doigts pour promener aussi.
+ * pour le champ, défilement à deux doigts pour promener aussi — et, depuis T-0069, les
+ * touches, qui rejouent les mêmes gestes dans les mêmes bornes.
  *
  * Le zoom est posé à la main, hors de React : `onWheel` attache un écouteur passif, où
  * `preventDefault()` reste sans effet — le navigateur zoomerait alors toute la page par-dessus
@@ -8,14 +9,15 @@
  */
 
 import { useEffect, useRef, type RefObject } from 'react'
-import { bornesZoom } from '../core/projection.ts'
-import { majLectures, majVue, type ActionsScene } from './scene-etat.ts'
+import { K } from '../registry/constants.ts'
+import { bornesZoom, type BornesZoom } from '../core/projection.ts'
+import { majLectures, majVue, type ActionsScene, type VueScene } from './scene-etat.ts'
 import { decritCible } from './planetarium-selection.ts'
 import { cibleSousLeCurseur, type CibleEcran, type SurvolEcran } from './dessine-ciel.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 
-/** Un cran de molette. Le pincement, lui, est continu : son amplitude se lit dans `deltaY`. */
-const FACTEUR_ZOOM_MOLETTE = 1.1
+/** Un cran de zoom — molette ou touche. Le pincement, lui, est continu : voir `deltaY`. */
+const FACTEUR_ZOOM_CRAN = K('FACTEUR_ZOOM_CRAN')
 /** Pincement au pavé : `deltaY` en pixels vers un facteur de champ, par l'exponentielle. */
 const SENSIBILITE_PINCEMENT = 0.01
 /** `WheelEvent.DOM_DELTA_PIXEL` : delta en pixels, le cas du pavé et des molettes sur macOS. */
@@ -24,6 +26,9 @@ const DOM_DELTA_PIXEL = 0
 const CRAN_WHEEL_DELTA = 120
 /** Faute de mieux, la hauteur en pixels d'un cran de molette. À retoucher si un pavé s'y trompe. */
 const SEUIL_CRAN_PX = 40
+/** T-0069 — pas d'une touche fléchée, en fraction du champ affiché (§3.3, registre). */
+const PAS_VISEE_FRACTION = K('PAS_VISEE_CLAVIER_FRACTION')
+const POURCENT = 100
 const HAUTEUR_MIN_DEG = -90
 const HAUTEUR_MAX_DEG = 90
 const TOUR_DEG = 360
@@ -37,7 +42,12 @@ const DEG_PAR_RADIAN = 180 / Math.PI
  */
 export function facteurZoom(deltaY: number, pincement: boolean): number {
   if (pincement) return Math.exp(deltaY * SENSIBILITE_PINCEMENT)
-  return deltaY > 0 ? FACTEUR_ZOOM_MOLETTE : 1 / FACTEUR_ZOOM_MOLETTE
+  return deltaY > 0 ? FACTEUR_ZOOM_CRAN : 1 / FACTEUR_ZOOM_CRAN
+}
+
+/** Le champ ramené dans les bornes de §3.3 — les mêmes pour la molette et pour les touches. */
+export function fovBorne(fovDeg: number, bornes: BornesZoom): number {
+  return Math.max(bornes.fovMinDeg, Math.min(bornes.fovMaxDeg, fovDeg))
 }
 
 /** Ce qu'un `wheel` doit déclencher sur la scène. */
@@ -214,11 +224,8 @@ export function usePointageSouris(entree: {
       if (depart === null) return
       if (Math.hypot(e.clientX - depart.x, e.clientY - depart.y) > 0) return
       const point = pointCanevas(e)
-      const cible = cibleSousLeCurseur(cibles.current, point.x, point.y)
-      const decrite = cible === null ? null : decritCible(cible)
-      majLectures({ selection: decrite })
-      // §3.4 — un objet du ciel profond ouvre sa fiche : le geste ne s'arrête pas sur un nom.
-      if (decrite?.objet != null) surSelectionObjet(decrite.objet)
+      // Sans rayon : le pointeur garde la tolérance au pixel de `cibleSousLeCurseur`.
+      choisitCible(cibles.current, point.x, point.y, surSelectionObjet)
     },
   }
 }
@@ -233,8 +240,7 @@ export function useGestesZoom(
     if (brut === null) return
     const cible: HTMLCanvasElement = brut
     const bornes = bornesZoom(gaiaCharge)
-    const borne = (fov: number): number =>
-      Math.max(bornes.fovMinDeg, Math.min(bornes.fovMaxDeg, fov))
+    const borne = (fov: number): number => fovBorne(fov, bornes)
 
     function surMolette(e: WheelEvent): void {
       e.preventDefault()
@@ -284,4 +290,144 @@ export function useGestesZoom(
       cible.removeEventListener('gestureend', surGesteFin)
     }
   }, [canevas, gaiaCharge])
+}
+
+
+/**
+ * §3.4 — ce qu'un choix de cible fait, quel que soit ce qui l'a déclenché.
+ *
+ * T-0069 — le clic et la touche Entrée passent par ici : c'est ce qui garantit que « le choix
+ * est le même dans les deux cas ». Seule la tolérance de désignation diffère, parce qu'un
+ * pointeur vise au pixel et pas une touche.
+ */
+export function choisitCible(
+  cibles: readonly CibleEcran[],
+  xPx: number,
+  yPx: number,
+  surSelectionObjet: (objet: ObjetCielProfond) => void,
+  rayonPx?: number,
+): void {
+  const cible = cibleSousLeCurseur(cibles, xPx, yPx, rayonPx)
+  const decrite = cible === null ? null : decritCible(cible)
+  majLectures({ selection: decrite })
+  // §3.4 — un objet du ciel profond ouvre sa fiche : le geste ne s'arrête pas sur un nom.
+  if (decrite?.objet != null) surSelectionObjet(decrite.objet)
+}
+
+/** Le geste que porte une touche. Rien d'autre n'est intercepté : Tab et Échap doivent passer. */
+export type CommandeClavier =
+  | 'VISEE_GAUCHE'
+  | 'VISEE_DROITE'
+  | 'VISEE_HAUT'
+  | 'VISEE_BAS'
+  | 'ZOOM_AVANT'
+  | 'ZOOM_ARRIERE'
+  | 'CHOISIR'
+
+export function commandeClavier(touche: string): CommandeClavier | null {
+  switch (touche) {
+    case 'ArrowLeft':
+      return 'VISEE_GAUCHE'
+    case 'ArrowRight':
+      return 'VISEE_DROITE'
+    case 'ArrowUp':
+      return 'VISEE_HAUT'
+    case 'ArrowDown':
+      return 'VISEE_BAS'
+    // `=` et `_` sont les touches non majuscules de `+` et `-` : les exiger avec Maj ferait
+    // du zoom un geste à deux mains sur un clavier français comme sur un clavier anglais.
+    case '+':
+    case '=':
+      return 'ZOOM_AVANT'
+    case '-':
+    case '_':
+      return 'ZOOM_ARRIERE'
+    case 'Enter':
+    case ' ':
+      return 'CHOISIR'
+    default:
+      return null
+  }
+}
+
+/**
+ * §3.3 / §3.5 — la vue après une touche, dans les bornes du glisser et de la molette.
+ *
+ * Le pas de visée est une FRACTION DU CHAMP, pas un nombre de degrés : à 5° de champ, un pas
+ * fixe de plusieurs degrés ferait sauter la visée d'un bout à l'autre de l'image. C'est la
+ * même règle que le glisser, où le déplacement vaut `fov / largeur` par pixel.
+ *
+ * Fonction pure : c'est elle qui se teste, le gestionnaire ne fait que la brancher.
+ */
+export function viseeApresCommande(
+  vue: VueScene,
+  commande: Exclude<CommandeClavier, 'CHOISIR'>,
+  bornes: BornesZoom,
+): Partial<VueScene> {
+  const pasDeg = vue.fovDeg * PAS_VISEE_FRACTION
+  switch (commande) {
+    case 'VISEE_GAUCHE':
+      return { azimutDeg: tourBorne(vue.azimutDeg - pasDeg) }
+    case 'VISEE_DROITE':
+      return { azimutDeg: tourBorne(vue.azimutDeg + pasDeg) }
+    case 'VISEE_HAUT':
+      return { hauteurDeg: hauteurBornee(vue.hauteurDeg + pasDeg) }
+    case 'VISEE_BAS':
+      return { hauteurDeg: hauteurBornee(vue.hauteurDeg - pasDeg) }
+    // Un cran de touche vaut un cran de molette : `facteurZoom` reste la seule source du
+    // facteur, et `fovBorne` les seules bornes (T-0030).
+    case 'ZOOM_AVANT':
+      return { fovDeg: fovBorne(vue.fovDeg * facteurZoom(-1, false), bornes) }
+    case 'ZOOM_ARRIERE':
+      return { fovDeg: fovBorne(vue.fovDeg * facteurZoom(1, false), bornes) }
+  }
+}
+
+/**
+ * T-0069 — les raccourcis énoncés, une fois, pour les deux endroits qui les annoncent : la
+ * description du canevas et le panneau Explorer. Les chiffres viennent du registre, sinon la
+ * phrase promettrait un pas que le code n'applique pas.
+ */
+export const RACCOURCIS_CLAVIER =
+  'Au clavier, la scène ayant le focus : ← ↑ ↓ → déplacent la visée de ' +
+  `${(PAS_VISEE_FRACTION * POURCENT).toFixed(0)} % du champ, + et − zooment d’un cran de ` +
+  'molette, Entrée ou Espace choisit l’objet le plus proche du centre.'
+
+/**
+ * T-0069 — WCAG 2.1.1 : le pilotage de la scène au clavier, dans les bornes du pointeur.
+ *
+ * Rien n'est recalculé pendant la répétition de touche : chaque appui n'écrit que l'azimut,
+ * la hauteur ou le champ, et c'est précisément la signature que l'incrustation surveille pour
+ * reporter sa passe à la fin du geste (T-0025, `signatureGeste`).
+ */
+export function usePilotageClavier(entree: {
+  readonly largeurPx: number
+  readonly hauteurPx: number
+  readonly gaiaCharge: boolean
+  readonly cibles: RefObject<readonly CibleEcran[]>
+  readonly surSelectionObjet: (objet: ObjetCielProfond) => void
+}): { readonly onKeyDown: (e: React.KeyboardEvent<HTMLCanvasElement>) => void } {
+  const { largeurPx, hauteurPx, gaiaCharge, cibles, surSelectionObjet } = entree
+  const bornes = bornesZoom(gaiaCharge)
+
+  return {
+    onKeyDown(e: React.KeyboardEvent<HTMLCanvasElement>): void {
+      const commande = commandeClavier(e.key)
+      if (commande === null) return
+      // Les flèches feraient défiler la page et l'Espace la ferait sauter d'un écran : le
+      // geste appartient à la scène tant qu'elle a le focus.
+      e.preventDefault()
+      if (commande === 'CHOISIR') {
+        choisitCible(
+          cibles.current,
+          largeurPx / 2,
+          hauteurPx / 2,
+          surSelectionObjet,
+          largeurPx * PAS_VISEE_FRACTION,
+        )
+        return
+      }
+      majVue((v) => viseeApresCommande(v, commande, bornes))
+    },
+  }
 }

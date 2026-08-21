@@ -2,7 +2,7 @@
 {
   "id": "T-0069",
   "titre": "Le planétarium se pilote au clavier",
-  "colonne": "pret",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "l",
   "tags": [
@@ -35,14 +35,14 @@ déjà : ce ticket les rebranche sur le clavier, il n'en invente pas.
 
 ## Critères d'acceptation
 
-- [ ] Le canevas est focusable et se signale comme tel (T-0070 fournit l'indicateur)
-- [ ] Les flèches déplacent la visée, `+` et `-` zooment, dans les mêmes bornes que la molette
+- [x] Le canevas est focusable et se signale comme tel (T-0070 fournit l'indicateur)
+- [x] Les flèches déplacent la visée, `+` et `-` zooment, dans les mêmes bornes que la molette
       (T-0030) — un même geste logique, deux entrées
-- [ ] Une cible se choisit sans pointeur, soit sur le canevas soit par la liste des visibles
+- [x] Une cible se choisit sans pointeur, soit sur le canevas soit par la liste des visibles
       (T-0045), et le choix est le même dans les deux cas
-- [ ] Tout pas de déplacement et toute borne viennent de `src/registry/` : aucun nombre en dur,
+- [x] Tout pas de déplacement et toute borne viennent de `src/registry/` : aucun nombre en dur,
       ni dans le gestionnaire de touches ni dans l'UI
-- [ ] Les raccourcis sont énoncés à l'écran, pas seulement dans le code
-- [ ] Le geste clavier ne relance pas le calcul pendant la répétition de touche — même règle que
+- [x] Les raccourcis sont énoncés à l'écran, pas seulement dans le code
+- [x] Le geste clavier ne relance pas le calcul pendant la répétition de touche — même règle que
       T-0025 pour le pointeur
-- [ ] Un test couvre visée, zoom et sélection au clavier
+- [x] Un test couvre visée, zoom et sélection au clavier

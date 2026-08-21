@@ -48,6 +48,17 @@ export function useIndexReel(etoiles: readonly Etoile[]): IndexCiel {
 }
 
 /**
+ * T-0025 — la signature d'un geste en cours : le pointage, le champ et la durée.
+ *
+ * Exportée pour que « une répétition de touche ne relance pas le calcul » (T-0069) se teste :
+ * un pas au clavier n'écrit que ces champs-là, donc il emprunte le même report qu'un
+ * panoramique à la souris — un rendu par geste, pas un rendu par événement.
+ */
+export function signatureGeste(vue: VueScene, dureeTotaleMin: number): string {
+  return `${vue.azimutDeg}|${vue.hauteurDeg}|${vue.rotationCadreDeg}|${vue.fovDeg}|${dureeTotaleMin}`
+}
+
+/**
  * Rend l'image du filé et la republie dans le magasin de séance. La référence retournée est
  * lue par la boucle de rendu, qui se contente de la redéposer dans le cadre.
  */
@@ -64,7 +75,7 @@ export function useIncrustationFile(
    * signature sert à distinguer « le réglage a changé » de « le réglage est en train de
    * changer » : le premier rend tout de suite, le second attend la fin du geste.
    */
-  const cleGeste = `${vue.azimutDeg}|${vue.hauteurDeg}|${vue.rotationCadreDeg}|${vue.fovDeg}|${file.dureeTotaleMin}`
+  const cleGeste = signatureGeste(vue, file.dureeTotaleMin)
   const cleGestePrecedente = useRef(cleGeste)
 
   const peintIncrustation = (): void => {

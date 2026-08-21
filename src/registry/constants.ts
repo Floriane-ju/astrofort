@@ -1041,6 +1041,28 @@ const RENDU = {
     ordreDeGrandeur: false,
     sections: ['3.3'],
   }),
+  FACTEUR_ZOOM_CRAN: entree({
+    ref: 'C-26',
+    libelle: 'Facteur de champ d’un cran de zoom — molette ou touche',
+    valeur: 1.1,
+    unite: '—',
+    source: '§3.3 — convention produit : un cran change le champ d’un dixième',
+    tolerance: 'convention produit — pilote le confort du geste, jamais un verdict',
+    ordreDeGrandeur: false,
+    sections: ['3.3'],
+  }),
+  PAS_VISEE_CLAVIER_FRACTION: entree({
+    ref: 'C-26',
+    libelle: 'Pas d’une touche fléchée, en fraction du champ affiché',
+    valeur: 0.1,
+    unite: '—',
+    source:
+      '§3.3 — convention produit : dix appuis traversent le champ affiché, et la tolérance ' +
+      'de choix au clavier vaut ce même pas — sans pointeur, il n’y a pas de visée au pixel',
+    tolerance: 'convention produit — pilote le confort du geste, jamais un verdict',
+    ordreDeGrandeur: false,
+    sections: ['3.3'],
+  }),
   RAYON_ETOILE_R0_PX: entree({
     ref: 'C-27',
     libelle: 'Rayon de rendu d’une étoile à la magnitude de référence',
