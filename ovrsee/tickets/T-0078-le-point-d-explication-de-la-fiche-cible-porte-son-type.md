@@ -2,7 +2,7 @@
 {
   "id": "T-0078",
   "titre": "Le point d'explication de la fiche cible porte son type",
-  "colonne": "pret",
+  "colonne": "en-cours",
   "priorite": "basse",
   "charge": "s",
   "tags": [
@@ -35,11 +35,11 @@ large plutôt que d'un invariant local.
 
 ## Critères d'acceptation
 
-- [ ] Une interface nommée décrit le point d'explication, avec ses cinq champs et leurs unités en
+- [x] Une interface nommée décrit le point d'explication, avec ses cinq champs et leurs unités en
       commentaire
-- [ ] Les six `!` de `src/ui/fiche-cible-calcul.ts:212-219` disparaissent, et ne sont pas remplacés
+- [x] Les six `!` de `src/ui/fiche-cible-calcul.ts:212-219` disparaissent, et ne sont pas remplacés
       par un `as`
-- [ ] Le moteur d'explication §10.2 reçoit toujours de quoi perturber un champ à la fois : la
+- [x] Le moteur d'explication §10.2 reçoit toujours de quoi perturber un champ à la fois : la
       capacité qui justifiait le `Record` est conservée, ou son remplacement est écrit
-- [ ] `pnpm typecheck` et `pnpm test` restent verts, `tests/explication.test.ts` compris
-- [ ] La sortie affichée de l'explication est inchangée
+- [x] `pnpm typecheck` et `pnpm test` restent verts, `tests/explication.test.ts` compris
+- [x] La sortie affichée de l'explication est inchangée

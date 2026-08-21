@@ -67,16 +67,24 @@ export function chaineCalcul(etapes: readonly EtapeSource[]): readonly EtapeChai
 // N2 — facteur dominant
 // ---------------------------------------------------------------------------
 
-export type Sortie = (variables: Readonly<Record<string, number>>) => number
+/**
+ * Générique sur la forme du point `P` : chaque appelant décrit ses propres entrées avec une
+ * interface nommée (T-0078) plutôt que de les recevoir en `Record` non typé. `sensibilites`
+ * perturbe ces entrées une à une sans connaître leurs noms à l'avance — c'est ce qui reste
+ * générique, et c'est la seule capacité que `P extends Record<string, number>` doit garder.
+ */
+export type Sortie<P extends Readonly<Record<string, number>> = Readonly<Record<string, number>>> = (
+  variables: P,
+) => number
 
 /**
  * Sensibilité logarithmique | ∂ln(sortie) / ∂ln(variable) | de chaque entrée, par différence
  * centrée. La valeur absolue du rapport garde le calcul valide pour les variables comme les
  * magnitudes, où le logarithme direct n'aurait pas de sens.
  */
-export function sensibilites(
-  sortie: Sortie,
-  point: Readonly<Record<string, number>>,
+export function sensibilites<P extends Readonly<Record<string, number>>>(
+  sortie: Sortie<P>,
+  point: P,
 ): Readonly<Record<string, number>> {
   const base = sortie(point)
   const resultat: Record<string, number> = {}
@@ -86,8 +94,11 @@ export function sensibilites(
       resultat[nom] = 0
       continue
     }
-    const haut = sortie({ ...point, [nom]: valeur + pas })
-    const bas = sortie({ ...point, [nom]: valeur - pas })
+    // La perturbation ne touche qu'une clé déjà présente dans `point` : la forme reste celle
+    // de `P`, seule sa valeur change. `as P` reste ici, au cœur du moteur générique — pas
+    // chez l'appelant, où c'est justement ce que T-0078 retire.
+    const haut = sortie({ ...point, [nom]: valeur + pas } as P)
+    const bas = sortie({ ...point, [nom]: valeur - pas } as P)
     const derivee = (haut - bas) / (2 * pas)
     const sensibilite = Math.abs((derivee * valeur) / base)
     resultat[nom] = Number.isFinite(sensibilite) ? sensibilite : 0
@@ -175,12 +186,12 @@ export interface Explication {
   readonly leviers: readonly LevierCatalogue[]
 }
 
-export interface EntreeExplication {
+export interface EntreeExplication<P extends Readonly<Record<string, number>> = Readonly<Record<string, number>>> {
   readonly verdictN1: string
   readonly phraseFacteur: string
   readonly etapes: readonly EtapeSource[]
-  readonly sortie: Sortie
-  readonly point: Readonly<Record<string, number>>
+  readonly sortie: Sortie<P>
+  readonly point: P
   readonly contexte: ContexteLeviers
 }
 
@@ -188,7 +199,7 @@ export interface EntreeExplication {
  * Une explication est produite pour TOUT verdict, favorable ou non : la chaîne de calcul
  * d'un « oui » se déplie exactement comme celle d'un « non ».
  */
-export function explication(entree: EntreeExplication): Explication {
+export function explication<P extends Readonly<Record<string, number>>>(entree: EntreeExplication<P>): Explication {
   const sens = sensibilites(entree.sortie, entree.point)
   const facteurs = facteursDominants(sens)
   const applicables = leviers({ ...entree.contexte, facteurs })

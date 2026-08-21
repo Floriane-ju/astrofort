@@ -282,6 +282,26 @@ export function evalue(
 }
 
 /**
+ * Le point d'explication §10.2 : les entrées que `sensibilites` (core/explain.ts) perturbe
+ * une à la fois pour désigner le facteur dominant. `masse_air` est absente hors évaluation
+ * lunaire (§7.6) — c'est le seul champ optionnel.
+ */
+interface PointExplicationFiche extends Readonly<Record<string, number>> {
+  /** mag/arcsec² — brillance de surface de l'objet, §6.3. */
+  readonly sb_obj: number
+  /** mag/arcsec² — brillance de surface du fond de ciel. */
+  readonly sb_ciel: number
+  /** s — pose unitaire recommandée, §7.2. */
+  readonly t_pose_s: number
+  /** e⁻ — bruit de lecture retenu pour la pose. */
+  readonly read_noise_e: number
+  /** sans unité — SNR visé. */
+  readonly snr_cible: number
+  /** sans unité — masse d'air de la cible, §7.6. */
+  readonly masse_air?: number
+}
+
+/**
  * §10.2 — la sensibilité est calculée sur la sortie qui porte le verdict : la durée
  * d'intégration requise. Les flux sont recalculés sans garde de domaine, pour que la
  * perturbation d'une entrée ne bute pas sur une borne de saisie.
@@ -307,7 +327,7 @@ function expliqueVerdict(
   // permet à §10.2 de désigner la HAUTEUR comme facteur dominant quand elle l'est, plutôt
   // que de laisser croire que seule la cible décide du temps de pose.
   const masseAirValeur = r.extinction.masseAir.value
-  const point = {
+  const point: PointExplicationFiche = {
     sb_obj: r.sbObj,
     sb_ciel: r.sbCiel,
     t_pose_s: r.pose.tRecommandeS.value,
@@ -315,19 +335,19 @@ function expliqueVerdict(
     snr_cible: snrCible,
     ...(masseAirValeur === null ? {} : { masse_air: masseAirValeur }),
   }
-  const sortie = (v: Readonly<Record<string, number>>): number =>
+  const sortie = (v: PointExplicationFiche): number =>
     integrationRequiseS(
       {
         eObj:
-          fluxE(v.sb_obj!, contexte.zeroSysteme.valeur, contexte.pitchUm, contexte.ouvertureN) *
+          fluxE(v.sb_obj, contexte.zeroSysteme.valeur, contexte.pitchUm, contexte.ouvertureN) *
           (v.masse_air === undefined ? 1 : attenuationBrute(v.masse_air)),
-        eCiel: fluxE(v.sb_ciel!, contexte.zeroSysteme.valeur, contexte.pitchUm, contexte.ouvertureN),
-        tPoseS: v.t_pose_s!,
-        readNoiseE: v.read_noise_e!,
-        snrCible: v.snr_cible!,
+        eCiel: fluxE(v.sb_ciel, contexte.zeroSysteme.valeur, contexte.pitchUm, contexte.ouvertureN),
+        tPoseS: v.t_pose_s,
+        readNoiseE: v.read_noise_e,
+        snrCible: v.snr_cible,
         tailleRawMo: contexte.boitier.tailleRawMo,
       },
-      v.snr_cible!,
+      v.snr_cible,
     )
 
   return explication({
