@@ -21,6 +21,7 @@ import {
 } from '../core/horloges.ts'
 import { projecteur } from '../core/projection.ts'
 import type { Cadre, ProfilCadre } from '../core/cadre.ts'
+import type { MasqueHorizon } from '../core/site.ts'
 import type { Site } from '../core/ephem.ts'
 import { afficheInstant, vuePlanetarium, type VueScene } from './scene-etat.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
@@ -59,6 +60,8 @@ export interface EtatBoucle {
   readonly asterismes: readonly CoucheTraces[]
   readonly frontieres: CoucheFrontieres
   readonly couches: CouchesActives
+  /** §4.1 — relief du site : la couche Sol y prend la hauteur du sol, azimut par azimut. */
+  readonly masque: MasqueHorizon
   readonly magLimite: number
   /** §3.7 — fond de ciel du site : il module le contraste de la bande de la Voie lactée. */
   readonly sbCiel: number
@@ -166,6 +169,7 @@ export function useBoucleRendu(entree: {
         magLimite: courant.magLimite,
         sbCiel: courant.sbCiel,
         latitudeDeg: courant.site.latitudeDeg,
+        masque: courant.masque,
         modeNuit: courant.modeNuit,
         survol: survol.current ?? undefined,
         surLeFond:

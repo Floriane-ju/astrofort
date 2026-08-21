@@ -181,6 +181,8 @@ const ETAT_INITIAL: EtatScene = {
       cadre: true,
       horizon: true,
       voieLactee: true,
+      // §4.1 — la scène montre d'abord le ciel observable : le sol masque ce qui est dessous.
+      sol: true,
     },
     vueRealiste: false,
   },

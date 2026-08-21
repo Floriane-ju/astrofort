@@ -40,7 +40,13 @@ import {
 } from '../core/projection.ts'
 import { contourCadreJ2000, type Cadre } from '../core/cadre.ts'
 import type { PositionCorps } from '../core/ephem.ts'
-import { altitudeCulmination, latitudeAccessibleDeg } from '../core/site.ts'
+import {
+  altitudeCulmination,
+  latitudeAccessibleDeg,
+  type MasqueHorizon,
+} from '../core/site.ts'
+import { projecteurSansSol } from '../core/sol.ts'
+import { dessineSol } from './dessine-sol.ts'
 import { couleurTeinte, palette, teinte, TEINTES } from './couleurs.ts'
 
 export interface CouchesActives {
@@ -50,6 +56,8 @@ export interface CouchesActives {
   readonly cadre: boolean
   readonly horizon: boolean
   readonly voieLactee: boolean
+  /** §4.1 — le sol du site masque ce qui est dessous : rien n'y est tracé ni cliquable. */
+  readonly sol: boolean
 }
 
 export type TypeCible = 'ETOILE' | 'OBJET' | 'CORPS'
@@ -103,6 +111,8 @@ export interface EntreeDessin {
   readonly sbCiel: number
   /** §3.7 — latitude du site : elle décide si le centre galactique est atteignable d'ici. */
   readonly latitudeDeg: number
+  /** §4.1 — relief du site : il donne sa hauteur au sol de la couche `sol`, azimut par azimut. */
+  readonly masque: MasqueHorizon
   readonly modeNuit: boolean
   /**
    * Peint entre le fond et tout le reste. C'est là que l'aperçu incrusté se dépose : sous les
@@ -133,6 +143,8 @@ const RAYON_CORPS_PX = 5
 const RAYON_MIN_ETOILE_PX = 0.7
 
 const NOM_VOIE_LACTEE = 'Voie lactée'
+/** Échantillonnage en azimut du cercle d'horizon. */
+const PAS_AZIMUT_HORIZON_DEG = 3
 const PAS_LONGITUDE_GALACTIQUE_DEG = 3
 const PAS_LATITUDE_BANDE_DEG = 5
 
@@ -243,13 +255,18 @@ function traceSegments(
   ctx.stroke()
 }
 
-/** Cercle d'horizon et points cardinaux, dans le repère du site. */
-function traceHorizon(entree: EntreeDessin, couleur: string): void {
-  const { ctx, projecteur } = entree
+/**
+ * Cercle d'horizon à 0° et points cardinaux, dans le repère du site.
+ *
+ * Le projecteur arrive en paramètre, et c'est le projecteur BRUT : c'est un repère de lecture,
+ * pas un objet posé sur le sol. Filtré comme le reste, le cercle disparaîtrait derrière chaque
+ * colline du relief (§4.1) — la crête, elle, est tracée par le sol qui la porte.
+ */
+function traceHorizon(entree: EntreeDessin, couleur: string, projecteur: Projecteur): void {
+  const { ctx } = entree
   const versJ2000 = transpose(entree.matriceCiel)
-  const PAS_AZIMUT_DEG = 3
   const points: Vec3[] = []
-  for (let az = 0; az <= 360; az += PAS_AZIMUT_DEG) {
+  for (let az = 0; az <= 360; az += PAS_AZIMUT_HORIZON_DEG) {
     points.push(applique(versJ2000, versVecteur(az, 0)))
   }
   ctx.strokeStyle = couleur
@@ -389,7 +406,18 @@ function repereCentreGalactique(
   }
 }
 
-export function dessineCiel(entree: EntreeDessin): SortieDessin {
+export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
+  const brut = entreeBrute.projecteur
+  // §4.1 — la couche Sol tient par deux gestes complémentaires. Le sol est PEINT, opaque, sur
+  // ce qui a été tracé avant lui : rien d'autre ne masque la largeur d'un trait épais. Et ce
+  // qui est tracé APRÈS lui hérite d'un projecteur aveugle au sol — sans quoi les étoiles se
+  // reposeraient par-dessus le sol qu'on vient de peindre, et resteraient cliquables.
+  const entree: EntreeDessin = entreeBrute.couches.sol
+    ? {
+        ...entreeBrute,
+        projecteur: projecteurSansSol(brut, entreeBrute.masque, entreeBrute.matriceCiel),
+      }
+    : entreeBrute
   const { ctx, projecteur, index } = entree
   const teintes = palette(entree.modeNuit)
   const largeur = projecteur.vue.largeurPx
@@ -399,7 +427,16 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
   ctx.fillRect(0, 0, largeur, hauteur)
   // §3.7 — la bande appartient au fond : elle passe sous l'aperçu incrusté de §9.5 comme
   // sous les repères. Peinte plus tard, elle laverait la prévisualisation qu'elle recouvre.
-  if (entree.couches.voieLactee) traceBandeVoieLactee(entree, teintes.voieLactee)
+  // Elle est tracée au projecteur BRUT, puis recouverte par le sol : filtrée, un trait de
+  // cinq degrés de large s'interromprait un pas d'azimut trop tôt et laisserait une encoche
+  // au-dessus de l'horizon.
+  if (entree.couches.voieLactee) traceBandeVoieLactee(entreeBrute, teintes.voieLactee)
+  // §4.1 — le sol, peint sur le fond et sur la bande, sous tout le reste.
+  if (entree.couches.sol) {
+    dessineSol(ctx, brut, entree.matriceCiel, entree.masque, teintes.sol, teintes.horizon)
+  }
+  // §9.5 — l'aperçu incrusté passe APRÈS le sol : le cadrage montre ce que le matériel
+  // capturerait, y compris pointé bas, et un masque de terrain n'a pas à l'effacer.
   entree.surLeFond?.(ctx)
   ctx.font = `${HAUTEUR_LABEL_PX}px system-ui, sans-serif`
   ctx.textBaseline = 'middle'
@@ -424,7 +461,7 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
     traceSegments(ctx, projecteur, entree.asterismes)
     ctx.lineWidth = 1
   }
-  if (entree.couches.horizon) traceHorizon(entree, teintes.horizon)
+  if (entree.couches.horizon) traceHorizon(entree, teintes.horizon, brut)
   let labelCentreGalactique: CandidatLabel | null = null
   if (entree.couches.voieLactee) {
     ctx.strokeStyle = teintes.voieLactee
@@ -533,6 +570,10 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
   for (const corps of entree.corps) {
     const v = applique(versJ2000, versVecteur(corps.azimutDeg, corps.hauteurDeg))
     if (!projecteur.projetteEn(v.x, v.y, v.z, p)) continue
+    // Hors canevas comme partout ailleurs : un corps derrière l'observateur reste projetable,
+    // et son label part avec la priorité la plus haute de la scène. Sans ce test, une planète
+    // qu'on ne voit pas prenait la place d'un nom qu'on voit (§3.4).
+    if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
     ctx.beginPath()
     ctx.arc(p.xPx, p.yPx, RAYON_CORPS_PX, 0, TOUR_RAD)
     ctx.fill()
@@ -610,7 +651,9 @@ export function dessineCiel(entree: EntreeDessin): SortieDessin {
     ctx.strokeStyle = teintes.cadre
     ctx.lineWidth = 2
     for (const cadre of entree.cadres) {
-      cheminCadre(ctx, projecteur, cadre, entree.matriceCiel)
+      // Projecteur BRUT : le contour dit où pointe le matériel, y compris sous l'horizon. Un
+      // cadrage qui se rompt en visant bas ne dirait plus où l'on pointe (§3.5).
+      cheminCadre(ctx, brut, cadre, entree.matriceCiel)
       ctx.stroke()
     }
     ctx.lineWidth = 1

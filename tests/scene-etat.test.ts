@@ -11,6 +11,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { K } from '../src/registry/constants.ts'
 import type { Site } from '../src/core/ephem.ts'
+import { masquePlat } from '../src/core/site.ts'
 import { pointZeroSysteme } from '../src/data/equipment.ts'
 import { PanneauFile } from '../src/ui/PanneauFile.tsx'
 import { PanneauExplorer } from '../src/ui/PanneauExplorer.tsx'
@@ -133,6 +134,7 @@ describe('§5.1 — le type d’objectif pilote la projection de la scène', () 
         profondeurMag: 6.5,
         mLimOeil: 6.05,
         epoqueAnnee: 2026.6,
+        masque: masquePlat(),
         modeNuit: false,
       }),
     )

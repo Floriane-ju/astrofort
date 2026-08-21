@@ -24,10 +24,16 @@ import {
 import { construitIndex } from '../src/core/index-ciel.ts'
 import { cielInstantane } from '../src/core/horloges.ts'
 import { magnitudeLimite, projecteur, type Vue } from '../src/core/projection.ts'
-import type { Site } from '../src/core/ephem.ts'
-import { applique, versSpherique } from '../src/core/mat3.ts'
+import type { PositionCorps, Site } from '../src/core/ephem.ts'
+import { applique, transpose, versSpherique, versVecteur } from '../src/core/mat3.ts'
 import { depuisGalactique } from '../src/core/galactique.ts'
-import { altitudeCulmination } from '../src/core/site.ts'
+import {
+  altitudeCulmination,
+  masqueDepuisPoints,
+  masquePlat,
+  obstructionDeg,
+  type MasqueHorizon,
+} from '../src/core/site.ts'
 import {
   cibleSousLeCurseur,
   dessineCiel,
@@ -36,6 +42,7 @@ import {
   type SurvolEcran,
 } from '../src/ui/dessine-ciel.ts'
 import { palette } from '../src/ui/couleurs.ts'
+import { sousLeSol } from '../src/core/sol.ts'
 import { K } from '../src/registry/constants.ts'
 
 const SITE: Site = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
@@ -95,6 +102,7 @@ function contexteEspion() {
     },
     fillRect: enregistre('fillRect'),
     beginPath: enregistre('beginPath'),
+    closePath: enregistre('closePath'),
     moveTo: enregistre('moveTo'),
     lineTo: enregistre('lineTo'),
     arc: enregistre('arc'),
@@ -126,6 +134,7 @@ const COUCHES: CouchesActives = {
   cadre: true,
   horizon: true,
   voieLactee: true,
+  sol: false,
 }
 
 /** Quelques étoiles brillantes bien réparties, pour ne pas dépendre du paquet HYG. */
@@ -149,13 +158,16 @@ function rend(
     latitudeDeg?: number
     vise?: { azimutDeg: number; hauteurDeg: number }
     survol?: SurvolEcran
+    masque?: MasqueHorizon
+    fovDeg?: number
+    corps?: readonly PositionCorps[]
   } = {},
 ) {
   const ctx = contexteEspion()
   const ciel = cielInstantane(SITE, DATE)
   const vue: Vue = {
     mode: 'MODE_PLANETARIUM',
-    fovDeg: 60,
+    fovDeg: options.fovDeg ?? 60,
     largeurPx: LARGEUR,
     hauteurPx: HAUTEUR,
     azimutDeg: options.vise?.azimutDeg ?? 180,
@@ -166,6 +178,7 @@ function rend(
     ctx: ctx as unknown as CanvasRenderingContext2D,
     projecteur: projecteur(vue, ciel.matrice),
     matriceCiel: ciel.matrice,
+    masque: options.masque ?? masquePlat(),
     index: construitIndex(etoilesDeTest()),
     etoiles: etoilesDeTest(),
     objets: options.objets ?? [],
@@ -173,8 +186,8 @@ function rend(
     asterismes: coucheAsterismes(PAQUET.asterismes),
     frontieres: coucheFrontieres(PAQUET),
     etoilesNommees: PAQUET.etoilesNommees,
-    corps: [],
-    nomsCorps: {},
+    corps: options.corps ?? [],
+    nomsCorps: { Moon: 'Lune' },
     cadres: [
       {
         profil: {
@@ -246,6 +259,7 @@ describe('passe de rendu §3.3', () => {
         cadre: false,
         horizon: false,
         voieLactee: false,
+        sol: false,
       },
     })
     const avec = rend()
@@ -496,5 +510,258 @@ describe('label du survol T-0085', () => {
       survol: { xPx: premier.xPx, yPx: premier.yPx, texte: `${premier.texte} — au complet` },
     })
     expect(sortie.revele).toBeNull()
+  })
+})
+
+describe('couche Sol — §4.1', () => {
+  const SOL: CouchesActives = { ...COUCHES, sol: true }
+  /** Une crête relevée à l'est, l'horizon dégagé au nord. */
+  const RELIEF = masqueDepuisPoints([
+    { azimutDeg: 0, altitudeDeg: 0 },
+    { azimutDeg: 90, altitudeDeg: 20 },
+  ])
+
+  it('ne trace rien sous l’horizon quand la visée plonge', () => {
+    const vise = { azimutDeg: 180, hauteurDeg: -60 }
+    const masque = rend({ couches: SOL, vise })
+    const sans = rend({ couches: COUCHES, vise })
+    expect(sans.sortie.etoilesDessinees).toBeGreaterThan(0)
+    expect(masque.sortie.etoilesDessinees).toBe(0)
+    // Rien de dessiné, rien de cliquable : les cibles naissent après la projection.
+    expect(masque.sortie.cibles).toHaveLength(0)
+    expect(sans.sortie.cibles.length).toBeGreaterThan(0)
+  })
+
+  it('coupe le ciel à l’horizon quand la visée le longe', () => {
+    const vise = { azimutDeg: 180, hauteurDeg: 0 }
+    const masque = rend({ couches: SOL, vise })
+    const sans = rend({ couches: COUCHES, vise })
+    expect(masque.sortie.etoilesDessinees).toBeGreaterThan(0)
+    expect(masque.sortie.etoilesDessinees).toBeLessThan(sans.sortie.etoilesDessinees)
+  })
+
+  it('garde le cercle d’horizon et ses points cardinaux, eux ne se masquent pas', () => {
+    const { ctx } = rend({ couches: SOL, vise: { azimutDeg: 180, hauteurDeg: 0 } })
+    expect(ctx.appels.some((a) => a.nom === 'fillText' && a.args[0] === 'S')).toBe(true)
+  })
+
+  it('peint le sol plutôt que de compter sur le fond, et souligne sa crête', () => {
+    const vise = { azimutDeg: 180, hauteurDeg: 0 }
+    const { ctx } = rend({ couches: SOL, vise })
+    // Un remplissage du chemin courant : les étoiles, elles, remplissent un `Path2D`. C'est
+    // celui-là qui recouvre la largeur du trait de la bande de §3.7.
+    expect(ctx.appels.some((a) => a.nom === 'fill' && a.args[0] === 'evenodd')).toBe(true)
+    expect(ctx.couleurs).toContain(palette(false).sol)
+    expect(ctx.appels.some((a) => a.nom === 'closePath')).toBe(true)
+    // La crête est tracée après le remplissage, de la teinte de l'horizon.
+    expect(ctx.couleurs).toContain(palette(false).horizon)
+  })
+
+  /**
+   * Le sol tel que le canevas le REMPLIRAIT.
+   *
+   * Reconstruire les polygones ne suffit pas : `fill` applique sa règle à TOUS les sous-chemins
+   * d'un même appel. Le test rejoue donc la règle annoncée — `evenodd` compte la parité des
+   * traversées, `nonzero` la somme des enroulements, où deux orientations contraires
+   * s'annulent. Sans cela, il déclarerait couvert un sol que l'écran montre troué.
+   */
+  interface Remplissage {
+    readonly sousChemins: number[][]
+    readonly parite: boolean
+  }
+
+  function remplissagesDuSol(ctx: ReturnType<typeof contexteEspion>): Remplissage[] {
+    const groupes: Remplissage[] = []
+    let sousChemins: number[][] = []
+    let courant: number[] | null = null
+    for (const appel of ctx.appels) {
+      if (appel.nom === 'beginPath') {
+        sousChemins = []
+        courant = null
+      } else if (appel.nom === 'moveTo') {
+        courant = [appel.args[0] as number, appel.args[1] as number]
+      } else if (appel.nom === 'lineTo' && courant !== null) {
+        courant.push(appel.args[0] as number, appel.args[1] as number)
+      } else if (appel.nom === 'closePath' && courant !== null) {
+        sousChemins.push(courant)
+        courant = null
+      } else if (appel.nom === 'fill' && sousChemins.length > 0) {
+        groupes.push({ sousChemins, parite: appel.args[0] === 'evenodd' })
+      }
+    }
+    return groupes
+  }
+
+  /** Le point est-il peint par ce remplissage, selon la règle qu'il a annoncée ? */
+  function couvertPar(remplissage: Remplissage, x: number, y: number): boolean {
+    let enroulement = 0
+    let traversees = 0
+    for (const polygone of remplissage.sousChemins) {
+      const n = polygone.length / 2
+      for (let i = 0, j = n - 1; i < n; j = i++) {
+        const xi = polygone[i * 2]!
+        const yi = polygone[i * 2 + 1]!
+        const xj = polygone[j * 2]!
+        const yj = polygone[j * 2 + 1]!
+        const cote = (xj - xi) * (y - yi) - (x - xi) * (yj - yi)
+        if (yi <= y && yj > y && cote > 0) {
+          enroulement++
+          traversees++
+        } else if (yj <= y && yi > y && cote < 0) {
+          enroulement--
+          traversees++
+        }
+      }
+    }
+    return remplissage.parite ? traversees % 2 === 1 : enroulement !== 0
+  }
+
+  /**
+   * Les deux moitiés du contrat d'un masque, sur une grille de pixels : rien de découvert sous
+   * le sol, rien de recouvert dans le ciel. La seconde est la plus facile à perdre — un sol qui
+   * déborde efface la bande de §3.7, peinte avant lui, sans toucher aux étoiles peintes après :
+   * le ciel devient noir sans que rien ne manque d'évident.
+   *
+   * Marge de deux degrés de part et d'autre de la crête : le polygone est inscrit sur la courbe,
+   * et le comparer au grand cercle exact au pixel près n'aurait pas de sens.
+   */
+  function verifieCouverture(
+    r: ReturnType<typeof rend>,
+    contexte: string,
+    pasPx: number,
+  ): { sous: number; ciel: number } {
+    const remplissages = remplissagesDuSol(r.ctx)
+    const enterre = sousLeSol(r.entree.masque, r.entree.matriceCiel)
+    const marge = 2
+    let sous = 0
+    let ciel = 0
+    for (let x = 8; x < LARGEUR; x += pasPx) {
+      for (let y = 8; y < HAUTEUR; y += pasPx) {
+        const v = r.entree.projecteur.inverse(x, y)
+        const hauteurDeg = versSpherique(applique(r.entree.matriceCiel, v)).latitudeDeg
+        const couvert = remplissages.some((groupe) => couvertPar(groupe, x, y))
+        if (enterre(v.x, v.y, v.z) && hauteurDeg < -marge) {
+          sous++
+          expect(couvert, `${contexte} : pixel ${x},${y} à découvert sous le sol`).toBe(true)
+        } else if (!enterre(v.x, v.y, v.z) && hauteurDeg > marge) {
+          ciel++
+          expect(couvert, `${contexte} : pixel ${x},${y} recouvert dans le ciel`).toBe(false)
+        }
+      }
+    }
+    return { sous, ciel }
+  }
+
+  for (const cas of [
+    { azimutDeg: 180, hauteurDeg: 0, fovDeg: 60, avecCiel: true },
+    // Visée plongeante : plus un pixel de ciel à l'écran, il n'y a rien à ne pas recouvrir.
+    { azimutDeg: 180, hauteurDeg: -30, fovDeg: 60, avecCiel: false },
+    { azimutDeg: 180, hauteurDeg: 20, fovDeg: 120, avecCiel: true },
+    { azimutDeg: 180, hauteurDeg: 30, fovDeg: 140, avecCiel: true },
+    { azimutDeg: 180, hauteurDeg: 45, fovDeg: 160, avecCiel: true },
+  ]) {
+    const { fovDeg, avecCiel, ...vise } = cas
+    it(`couvre le sol sans mordre le ciel, visée à ${vise.hauteurDeg}° sur ${fovDeg}°`, () => {
+      const compte = verifieCouverture(
+        rend({ couches: SOL, vise, fovDeg }),
+        `visée ${vise.hauteurDeg}°`,
+        40,
+      )
+      expect(compte.sous).toBeGreaterThan(0)
+      if (avecCiel) expect(compte.ciel).toBeGreaterThan(0)
+    })
+  }
+
+  it('ne troue ni ne déborde à aucune hauteur de visée', () => {
+    // Le défaut rapporté ne se voyait qu'à CERTAINES hauteurs : l'antipode de la visée tombait
+    // au milieu d'une maille, le sol débordait sur le ciel et la bande de §3.7 disparaissait.
+    // La fenêtre fautive faisait deux ou trois degrés de large — un cas isolé la manque, et un
+    // balayage grossier aussi. D'où le pas fin.
+    let sous = 0
+    let ciel = 0
+    for (let hauteurDeg = -88; hauteurDeg <= 88; hauteurDeg += 1.25) {
+      const compte = verifieCouverture(
+        rend({ couches: SOL, vise: { azimutDeg: 180, hauteurDeg }, fovDeg: 120 }),
+        `visée ${hauteurDeg}°`,
+        60,
+      )
+      sous += compte.sous
+      ciel += compte.ciel
+    }
+    expect(sous).toBeGreaterThan(0)
+    expect(ciel).toBeGreaterThan(0)
+  })
+
+  it('tient la visée au zénith, où le nadir n’est plus projetable', () => {
+    // Cas dégénéré de la projection stéréographique : la visée au zénith envoie le nadir à
+    // l'infini. Le balayage en espace écran n'en sait rien — c'est tout l'intérêt.
+    const { sortie } = rend({ couches: SOL, vise: { azimutDeg: 180, hauteurDeg: 90 } })
+    expect(sortie.etoilesDessinees).toBeGreaterThan(0)
+  })
+
+  it('épouse le relief relevé plutôt que l’horizon plat', () => {
+    // Un point au-dessus de l'horizon plat mais SOUS la crête relevée : masqué par le relief,
+    // découvert sans lui. Comparer des comptes d'appels ne dirait rien — c'est la position de
+    // la frontière qui doit suivre le relief.
+    const vise = { azimutDeg: 90, hauteurDeg: 20 }
+    const hauteurCible = obstructionDeg(RELIEF, vise.azimutDeg) / 2
+    const plat = rend({ couches: SOL, vise })
+    const relief = rend({ couches: SOL, vise, masque: RELIEF })
+    const cible = applique(
+      transpose(relief.entree.matriceCiel),
+      versVecteur(vise.azimutDeg, hauteurCible),
+    )
+    const p = relief.entree.projecteur.projette(cible)
+    expect(p).not.toBeNull()
+    const couvert = (r: ReturnType<typeof rend>): boolean =>
+      remplissagesDuSol(r.ctx).some((groupe) => couvertPar(groupe, p!.xPx, p!.yPx))
+    expect(couvert(relief)).toBe(true)
+    expect(couvert(plat)).toBe(false)
+  })
+
+  it('laisse le cadrage visible par-dessus le sol', () => {
+    // Cadre pointé sous l'horizon : filtré comme les étoiles, son contour disparaîtrait — et
+    // la scène ne dirait plus où le matériel pointe (§3.5).
+    const vise = { azimutDeg: 180, hauteurDeg: -60 }
+    const apresLeSol = (r: ReturnType<typeof rend>) => {
+      const sol = r.ctx.appels.findIndex((a) => a.nom === 'fill' && a.args[0] === 'evenodd')
+      expect(sol).toBeGreaterThan(-1)
+      return r.ctx.appels.slice(sol).filter((a) => a.nom === 'lineTo').length
+    }
+    const avec = apresLeSol(rend({ couches: { ...SOL, cadre: true }, vise }))
+    const sans = apresLeSol(rend({ couches: { ...SOL, cadre: false }, vise }))
+    expect(avec).toBeGreaterThan(sans)
+  })
+})
+
+describe('corps mobiles — §3.1', () => {
+  /** La Lune, posée à une hauteur et un azimut donnés. Le reste de la position ne sert pas ici. */
+  function lune(azimutDeg: number, hauteurDeg: number): PositionCorps {
+    return { corps: 'Moon' as PositionCorps['corps'], adH: 0, decDeg: 0, azimutDeg, hauteurDeg }
+  }
+
+  it('ignore un corps hors du canevas plutôt que de lui donner un label', () => {
+    // Un corps derrière l'observateur reste projetable — et son label part avec la priorité la
+    // plus haute de la scène. Sans test de canevas, il chassait un nom visible du budget §3.4.
+    const vise = { azimutDeg: 180, hauteurDeg: 45 }
+    const devant = rend({ vise, corps: [lune(vise.azimutDeg, vise.hauteurDeg)] })
+    const derriere = rend({ vise, corps: [lune(0, -45)] })
+    expect(devant.sortie.cibles.some((c) => c.type === 'CORPS')).toBe(true)
+    expect(devant.sortie.labels.some((l) => l.texte === 'Lune')).toBe(true)
+    expect(derriere.sortie.cibles.some((c) => c.type === 'CORPS')).toBe(false)
+    expect(derriere.sortie.labels.some((l) => l.texte === 'Lune')).toBe(false)
+  })
+
+  it('écarte un corps sous le sol quand la couche Sol est active', () => {
+    const vise = { azimutDeg: 180, hauteurDeg: 0 }
+    const sousLHorizon = [lune(vise.azimutDeg, -10)]
+    expect(
+      rend({ vise, corps: sousLHorizon }).sortie.cibles.some((c) => c.type === 'CORPS'),
+    ).toBe(true)
+    expect(
+      rend({ vise, corps: sousLHorizon, couches: { ...COUCHES, sol: true } }).sortie.cibles.some(
+        (c) => c.type === 'CORPS',
+      ),
+    ).toBe(false)
   })
 })

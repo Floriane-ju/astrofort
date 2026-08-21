@@ -159,6 +159,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
   const scene = calcul.ok ? (
     <Planetarium
       site={chaine.site}
+      masque={chaine.masque}
       etoiles={catalogues.etoiles}
       index={chaine.index}
       objets={catalogues.objets}

@@ -38,6 +38,7 @@ import { construitIndex } from '../src/core/index-ciel.ts'
 import { cielInstantane } from '../src/core/horloges.ts'
 import { magnitudeRendue, projecteur, type Projecteur, type Vue } from '../src/core/projection.ts'
 import type { Site } from '../src/core/ephem.ts'
+import { masquePlat } from '../src/core/site.ts'
 import { dessineCiel, type CouchesActives } from '../src/ui/dessine-ciel.ts'
 import { K } from '../src/registry/constants.ts'
 
@@ -66,6 +67,7 @@ const COUCHES: CouchesActives = {
   cadre: false,
   horizon: true,
   voieLactee: true,
+  sol: true,
 }
 
 let path2dConstruits = 0
@@ -231,6 +233,7 @@ function image(ctx: CanvasRenderingContext2D): { comptes: Comptes; dessinees: nu
     ctx,
     projecteur: proj,
     matriceCiel: ciel.matrice,
+    masque: masquePlat(),
     index,
     etoiles,
     objets,

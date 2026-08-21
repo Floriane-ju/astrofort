@@ -30,6 +30,7 @@ import { majVue, resolutionRendu, useScene } from './scene-etat.ts'
 import { useSeance } from './seance-etat.ts'
 import type { Cadre, ProfilCadre } from '../core/cadre.ts'
 import type { Site } from '../core/ephem.ts'
+import type { MasqueHorizon } from '../core/site.ts'
 import type { SurvolEcran } from './dessine-ciel.ts'
 import { useBoucleRendu, type EtatBoucle } from './planetarium-boucle.ts'
 import { useIncrustationFile } from './planetarium-incrustation.ts'
@@ -59,6 +60,8 @@ import type { MaterielFile } from './planetarium-materiel.ts'
 
 export interface PlanetariumProps {
   readonly site: Site
+  /** §4.1 — relief relevé du site : c'est lui que la couche Sol masque, pas un horizon plat. */
+  readonly masque: MasqueHorizon
   readonly etoiles: readonly Etoile[]
   /** Index de sélection du catalogue, construit une fois par l'application. */
   readonly index: IndexCiel
@@ -167,6 +170,7 @@ export function Planetarium(props: PlanetariumProps) {
   const etatBoucle = useRef<EtatBoucle>(null!)
   etatBoucle.current = {
     site: props.site,
+    masque: props.masque,
     etoiles: props.etoiles,
     objets: props.objets,
     constellations: props.constellations,

@@ -45,6 +45,7 @@ export function RegionSeance(props: RegionSeanceProps) {
         mLimOeil={mLimOeil}
         epoqueAnnee={props.epoqueAnnee}
         modeNuit={props.modeNuitActif}
+        masque={chaine.masque}
       />
     ),
     CIBLE:

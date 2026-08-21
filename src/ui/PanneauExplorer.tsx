@@ -23,6 +23,7 @@ import {
   type PasAstronomique,
 } from '../core/curseur-temps.ts'
 import { bornesZoom, etatProfondeur, type ModeProjection } from '../core/projection.ts'
+import type { MasqueHorizon } from '../core/site.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
 import { RACCOURCIS_CLAVIER } from './planetarium-gestes.ts'
 import { useScene } from './scene-etat.ts'
@@ -39,6 +40,8 @@ export interface PanneauExplorerProps {
   readonly epoqueAnnee: number
   /** §11.1 — aucune animation non sollicitée en mode nuit. */
   readonly modeNuit: boolean
+  /** §4.1 — relief du site : la couche Sol masque ce relief, et le déclare quand il est supposé. */
+  readonly masque: MasqueHorizon
 }
 
 const COUCHES: readonly (readonly [keyof CouchesActives, string])[] = [
@@ -47,6 +50,7 @@ const COUCHES: readonly (readonly [keyof CouchesActives, string])[] = [
   ['asterismes', 'Astérismes'],
   ['cadre', 'Cadre matériel'],
   ['horizon', 'Horizon'],
+  ['sol', 'Sol — masque ce qui est sous l’horizon'],
   ['voieLactee', 'Voie lactée'],
 ]
 
@@ -141,6 +145,11 @@ export function PanneauExplorer(props: PanneauExplorerProps) {
             </label>
           ))}
         </div>
+        {/* §4.1 — le sol masque, il doit donc dire sur quoi il repose : le masque porte déjà
+            sa note, hypothèse d'horizon plat comprise. La réécrire ici la ferait diverger. */}
+        {couches.sol && props.masque.note !== undefined && (
+          <p className={props.masque.estHypothese ? 'cause' : 'etat'}>{props.masque.note}</p>
+        )}
         {couches.asterismes && <p className="etat">{RAPPEL_ASTERISME}</p>}
         {couches.figures && <p className="etat">{RAPPEL_FIGURES}</p>}
         {couches.frontieres && (

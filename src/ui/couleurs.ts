@@ -77,6 +77,8 @@ export interface PaletteCiel {
   readonly corps: string
   readonly cadre: string
   readonly horizon: string
+  /** §4.1 — le sol : opaque et très foncé, il se distingue du fond de ciel sans l'éclairer. */
+  readonly sol: string
   /** T-0033 — plan galactique : rose en vue normale, rouge pur en mode nuit comme le reste. */
   readonly voieLactee: string
   readonly texte: string
@@ -95,6 +97,7 @@ const PALETTE_NUIT: PaletteCiel = Object.freeze({
   corps: 'rgb(190 0 0)',
   cadre: 'rgb(200 0 0)',
   horizon: 'rgb(70 0 0)',
+  sol: 'rgb(18 0 0)',
   voieLactee: 'rgb(110 0 0)',
   texte: 'rgb(170 0 0)',
 })
@@ -108,6 +111,7 @@ const PALETTE_JOUR: PaletteCiel = Object.freeze({
   corps: 'rgb(255 226 150)',
   cadre: 'rgb(255 170 60)',
   horizon: 'rgb(90 80 70)',
+  sol: 'rgb(14 13 12)',
   voieLactee: 'rgb(205 125 175)',
   texte: 'rgb(200 210 230)',
 })
