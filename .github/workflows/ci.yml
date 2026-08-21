@@ -1,0 +1,44 @@
+# T-0077 — le rouge est un arrêt, pas un avertissement : chaque étape échoue le job.
+# Aucun secret : l'application n'a pas de backend (§12.1, hors-ligne d'abord).
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  # Une poussée de plus sur la même branche annule la précédente : le dernier état seul compte.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Sans `version`, l'action lit `packageManager` de package.json — une seule source de vérité.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
+      - run: pnpm build
+
+      # `pnpm audit` échoue dès la première vulnérabilité connue, quelle que soit sa gravité.
+      - run: pnpm audit
+
+      # Activé par T-0060 (linter).
+      # - run: pnpm lint
+
+      # Activé par T-0061 (mesure de couverture).
+      # - run: pnpm test:couverture
