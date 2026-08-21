@@ -181,33 +181,81 @@ const PLAN_GALACTIQUE: readonly Vec3[] = Array.from(
 )
 
 /**
- * T-0091, T-0103 — la bande, échantillonnée en tranches de latitude galactique.
+ * T-0105 — longueur d'un segment de brillance, en longitude galactique.
  *
- * Une tranche = une polyligne à latitude constante, tracée au trait épais de la largeur de
- * la tranche. Le trait, et pas le polygone rempli : une polyligne dont une partie sort du
- * champ se rompt en segments, et un polygone rompu se referme n'importe où. Le trait, lui,
- * ne peint que ce qui reste — la bande se coupe proprement au bord du champ.
+ * Même critère que le pas en latitude, et la même mesure : à 18°, la marche de couleur entre
+ * deux segments voisins vaut au plus 1/255 sur toute la table Bortle — sous la quantification
+ * de l'écran, donc invisible sans flou. À 24° elle passe à 2/255 et se verrait ; le calcul
+ * analytique de la pente (0,00436 mag par degré) le laissait croire acceptable, la mesure dit
+ * le contraire. C'est `tests/voie-lactee.test.ts` qui tient ce chiffre.
+ *
+ * Le pas est un multiple de l'échantillonnage géométrique : un segment reste une polyligne de
+ * six cordes, pas une corde unique.
+ */
+const PAS_LONGITUDE_BANDE_DEG = 18
+const SEGMENTS_PAR_TRANCHE = 360 / PAS_LONGITUDE_BANDE_DEG
+
+/**
+ * T-0091, T-0103, T-0105 — la bande, en tranches de latitude, chacune coupée en segments de
+ * longitude.
+ *
+ * Une tranche = une bande à latitude constante, tracée au trait épais de la largeur de la
+ * tranche. Le trait, et pas le polygone rempli : une polyligne dont une partie sort du champ se
+ * rompt en segments, et un polygone rompu se referme n'importe où. Le trait, lui, ne peint que
+ * ce qui reste — la bande se coupe proprement au bord du champ.
+ *
+ * T-0105 découpe chaque tranche en longitude, parce que la brillance n'y est plus constante :
+ * le bulbe du Sagittaire est une demi-magnitude au-dessus de l'anticentre. Un segment porte une
+ * couleur, comme une tranche porte la sienne.
+ *
+ * Les raccords entre segments sont DÉCALÉS d'une tranche à l'autre. Deux segments voisins se
+ * touchent bout à bout (`lineCap = 'butt'`) : sur le côté convexe du virage, l'angle entre les
+ * deux bouts laisse une encoche de quelques pixels au bord de la tranche. Alignées d'une tranche
+ * sur l'autre, ces encoches se liraient comme un trait sombre en travers de la bande ; décalées,
+ * ce sont des accidents isolés sous le seuil de l'œil. Le décalage ne coûte rien : il est cuit
+ * dans les polylignes au chargement.
  *
  * L'échelle va d'un pôle galactique à l'autre : c'est la seule borne géométrique, et elle
  * remplace la latitude de coupure qu'il fallait auparavant choisir. Ce qui décide de ce qui
- * est peint est la brillance de la tranche, évaluée par image — pas une étendue figée ici.
+ * est peint est la brillance du segment, évaluée par image — pas une étendue figée ici.
  *
  * Fixe en J2000 : les polylignes se calculent au chargement du module.
  */
-const TRANCHES_BANDE: readonly { readonly bDeg: number; readonly ligne: readonly Vec3[] }[] =
-  Array.from({ length: (2 * QUART_TOUR_DEG) / PAS_LATITUDE_BANDE_DEG }, (_, i) => {
-    // Centre de la tranche : c'est lui qui porte sa brillance, comme `hauteurRepresentative`
-    // le fait pour un palier de halo.
-    const bDeg = -QUART_TOUR_DEG + (i + 0.5) * PAS_LATITUDE_BANDE_DEG
-    return Object.freeze({
-      bDeg,
-      ligne: Object.freeze(
-        Array.from({ length: 360 / PAS_LONGITUDE_GALACTIQUE_DEG + 1 }, (_unused, j) =>
-          depuisGalactique(j * PAS_LONGITUDE_GALACTIQUE_DEG, bDeg),
-        ),
-      ),
-    })
+interface SegmentBande {
+  /** Longitude du milieu du segment : c'est elle qui porte sa brillance. */
+  readonly lDeg: number
+  readonly ligne: readonly Vec3[]
+}
+
+const TRANCHES_BANDE: readonly {
+  readonly bDeg: number
+  readonly segments: readonly SegmentBande[]
+}[] = Array.from({ length: (2 * QUART_TOUR_DEG) / PAS_LATITUDE_BANDE_DEG }, (_, i) => {
+  // Centre de la tranche : c'est lui qui porte sa brillance, comme `hauteurRepresentative`
+  // le fait pour un palier de halo.
+  const bDeg = -QUART_TOUR_DEG + (i + 0.5) * PAS_LATITUDE_BANDE_DEG
+  const decalageDeg = (i % 2) * (PAS_LONGITUDE_BANDE_DEG / 2)
+  const pointsParSegment = PAS_LONGITUDE_BANDE_DEG / PAS_LONGITUDE_GALACTIQUE_DEG + 1
+  return Object.freeze({
+    bDeg,
+    segments: Object.freeze(
+      Array.from({ length: SEGMENTS_PAR_TRANCHE }, (_unused, k) => {
+        const departDeg = decalageDeg + k * PAS_LONGITUDE_BANDE_DEG
+        return Object.freeze({
+          lDeg: departDeg + PAS_LONGITUDE_BANDE_DEG / 2,
+          // Le dernier point d'un segment est le premier du suivant : les deux traits se
+          // rejoignent sur le même sommet, sans recouvrement — un recouvrement se composerait
+          // deux fois et laisserait une tache claire.
+          ligne: Object.freeze(
+            Array.from({ length: pointsParSegment }, (_p, j) =>
+              depuisGalactique(departDeg + j * PAS_LONGITUDE_GALACTIQUE_DEG, bDeg),
+            ),
+          ),
+        })
+      }),
+    ),
   })
+})
 
 /** T-0091 — le centre galactique : l = 0°, b = 0°, soit δ ≈ −29°. Calculé, jamais recopié. */
 const CENTRE_GALACTIQUE: Vec3 = depuisGalactique(0, 0)
@@ -372,25 +420,29 @@ function traceBandeVoieLactee(entree: EntreeDessin): void {
   const fondSeul = fondRealiste(entree.sbCiel)
   const opaciteInitiale = ctx.globalAlpha
   ctx.lineJoin = 'round'
-  ctx.lineCap = 'round'
+  // Bout franc, et pas arrondi : deux segments de longitude voisins partagent leur sommet, et
+  // un bout arrondi les ferait se recouvrir d'un demi-trait — un recouvrement translucide se
+  // compose deux fois, donc se voit comme une perle claire à chaque raccord.
+  ctx.lineCap = 'butt'
   ctx.lineWidth = (PAS_LATITUDE_BANDE_DEG * projecteur.vue.largeurPx) / projecteur.vue.fovDeg
   for (const tranche of TRANCHES_BANDE) {
-    const rendu = bandeRealiste(
-      brillanceCiel,
-      brillanceVoieLacteeNl(tranche.bDeg),
-      entree.modeNuit,
-    )
-    if (rendu.couleur === fondSeul) continue
-    ctx.globalAlpha = rendu.part
-    ctx.strokeStyle = rendu.couleur
-    traceLignes(ctx, projecteur, [tranche.ligne])
+    for (const segment of tranche.segments) {
+      const rendu = bandeRealiste(
+        brillanceCiel,
+        brillanceVoieLacteeNl(segment.lDeg, tranche.bDeg),
+        entree.modeNuit,
+      )
+      if (rendu.couleur === fondSeul) continue
+      ctx.globalAlpha = rendu.part
+      ctx.strokeStyle = rendu.couleur
+      traceLignes(ctx, projecteur, [segment.ligne])
+    }
   }
   ctx.globalAlpha = opaciteInitiale
   ctx.lineWidth = 1
   // Rendus à leurs valeurs par défaut : les repères tracés ensuite partagent ce contexte,
   // et un trait épais laissé arrondi arrondirait aussi les frontières et l'horizon.
   ctx.lineJoin = 'miter'
-  ctx.lineCap = 'butt'
 }
 
 /**

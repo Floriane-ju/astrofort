@@ -104,7 +104,7 @@ export function sbDepuisNanolamberts(brillanceNl: number): number {
 }
 
 /**
- * §3.7 — brillance de surface de la Voie lactée à cette latitude galactique, en nanolamberts.
+ * §3.7 — brillance de surface de la Voie lactée dans cette direction galactique, en nanolamberts.
  *
  * La bande est un contributeur de lumière comme le halo lunaire, pas un calque : c'est ce qui
  * lui permet de s'effacer quand le site est pollué SANS seuil ni opacité de convention. Sa part
@@ -115,15 +115,33 @@ export function sbDepuisNanolamberts(brillanceNl: number): number {
  * comptage d'étoiles décroissent du même plan, et dupliquer l'échelle en donnerait deux versions
  * à désaccorder.
  *
+ * LE PROFIL EN LONGITUDE (T-0105) est le premier mode de Fourier, et pas une bosse posée sur le
+ * Sagittaire. Un disque exponentiel regardé de l'intérieur donne une lumière intégrée maximale
+ * vers le centre, minimale vers l'anticentre, et monotone entre les deux : sa première harmonique
+ * est `(1 + cos l) / 2`. C'est ce qui permet de modéliser le bulbe SANS largeur en longitude à
+ * choisir — une gaussienne aurait demandé un σ que rien ne source. Les deux bornes, elles, sont
+ * des brillances observables, donc discutables sur pièce.
+ *
  * Elle n'entre PAS dans `brillanceFondNl` : verser la bande au fond de ciel ferait baisser la
  * magnitude limite à l'intérieur de la Voie lactée, donc afficher MOINS d'étoiles là où le ciel
  * en montre le plus.
+ *
+ * ponytail: l'échelle de latitude ne dépend pas de la longitude, alors que le bulbe est plus
+ * épais que le disque. La corriger demanderait une seconde échelle sans source ; l'échelle
+ * unique de 20° est déjà large. Limite déclarée, pas oubliée.
  */
-export function brillanceVoieLacteeNl(latitudeGalactiqueDeg: number): number {
+export function brillanceVoieLacteeNl(
+  longitudeGalactiqueDeg: number,
+  latitudeGalactiqueDeg: number,
+): number {
   const attenuationMag =
     K('POGSON') *
     Math.log10(Math.exp(Math.abs(latitudeGalactiqueDeg) / K('ECHELLE_LATITUDE_GALACTIQUE_DEG')))
-  return nanolamberts(K('SB_VOIE_LACTEE_PLAN_MAG') + attenuationMag)
+  const partBulbe = (1 + Math.cos(longitudeGalactiqueDeg * DEG)) / 2
+  const sbPlan =
+    K('SB_VOIE_LACTEE_PLAN_MAG') +
+    (K('SB_VOIE_LACTEE_BULBE_MAG') - K('SB_VOIE_LACTEE_PLAN_MAG')) * partBulbe
+  return nanolamberts(sbPlan + attenuationMag)
 }
 
 export interface EntreeFondRendu {

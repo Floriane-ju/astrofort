@@ -116,6 +116,31 @@ export interface SortieDessinChamp {
 }
 
 /**
+ * T-0105 — longitude galactique du plan la plus proche du centre de visée.
+ *
+ * C'est elle qui porte la brillance de toute la bande dans cet aperçu. Elle se cherche sur le
+ * plan `b = 0`, au même pas que le tracé : la direction visée n'est pas disponible en
+ * coordonnées galactiques, mais le point du plan le plus proche du centre de l'écran l'est, et
+ * c'est la même information.
+ *
+ * Aucun point projeté — le plan galactique est hors du champ : la bande visible est alors loin
+ * du plan, donc quasi éteinte. On rend l'anticentre, la moitié la moins brillante : une
+ * approximation ne doit pas inventer de lumière.
+ */
+function longitudeGalactiqueVisee(projecteur: Projecteur): number {
+  const ANTICENTRE_DEG = 180
+  let meilleure = ANTICENTRE_DEG
+  let plusProche = Infinity
+  for (let l = 0; l < 360; l += PAS_BANDE_L_DEG) {
+    const point = projecteur.projette(depuisGalactique(l, 0))
+    if (point === null || point.thetaDeg >= plusProche) continue
+    plusProche = point.thetaDeg
+    meilleure = l
+  }
+  return meilleure
+}
+
+/**
  * Couche 3 — la Voie lactée, en coordonnées galactiques (T-0104).
  *
  * Même moteur que le planétarium : la bande est un CONTRIBUTEUR DE BRILLANCE, et chaque tranche
@@ -128,6 +153,18 @@ export interface SortieDessinChamp {
  * bande n'en sort pas par un côté pour y rentrer par un autre — le problème qui impose le trait
  * au planétarium ne se pose pas ici. Le flou, lui, reste nécessaire : le pas de latitude est
  * grossier devant la taille de l'aperçu, et l'escalier s'y verrait.
+ *
+ * T-0105 — la brillance dépend maintenant de la longitude, et l'aperçu l'évalue en UNE longitude
+ * par image, celle de la visée. Le planétarium, lui, découpe ses tranches en longitude : il
+ * montre jusqu'à un demi-ciel, où le contraste bulbe/anticentre est justement ce qu'on regarde.
+ * Ici le champ est celui d'un objectif, la modulation vaut au plus 0,0044 mag par degré, et
+ * découper ces polygones en longitude rouvrirait la couture que ce rendu évite depuis T-0104 :
+ * le flou s'applique par ordre de peinture, donc deux polygones voisins se fondraient chacun de
+ * son côté et laisseraient une raie claire sur leur arête commune.
+ *
+ * ponytail: un objectif très grand angle couvre assez de longitude pour que l'écart aux bords
+ * atteigne quelques dixièmes de magnitude. Le jour où l'aperçu doit le rendre, c'est le découpage
+ * en longitude du planétarium à porter ici, avec une passe de flou unique hors écran.
  */
 function dessineVoieLactee(entree: EntreeDessinChamp): void {
   const { ctx, projecteur } = entree
@@ -135,11 +172,16 @@ function dessineVoieLactee(entree: EntreeDessinChamp): void {
   // Couleur du fond seul : la tranche qui la reproduit n'ajoute rien de visible, à un 255e
   // près. C'est la borne de peinture, et elle se déduit — elle ne se règle pas.
   const fondSeul = fondRealiste(entree.sbCiel)
+  const lVisee = longitudeGalactiqueVisee(projecteur)
   ctx.filter = `blur(${FLOU_BANDE_PX}px)`
 
   for (let b = -QUART_TOUR_DEG; b < QUART_TOUR_DEG; b += PAS_BANDE_B_DEG) {
     const milieu = b + PAS_BANDE_B_DEG / 2
-    const rendu = bandeRealiste(brillanceCiel, brillanceVoieLacteeNl(milieu), entree.modeNuit)
+    const rendu = bandeRealiste(
+      brillanceCiel,
+      brillanceVoieLacteeNl(lVisee, milieu),
+      entree.modeNuit,
+    )
     if (rendu.couleur === fondSeul) continue
     const rvb = rendu.couleur.slice(rendu.couleur.indexOf('(') + 1, rendu.couleur.indexOf(')'))
     ctx.fillStyle = `rgb(${rvb} / ${rendu.part})`

@@ -1450,13 +1450,27 @@ const GRAND_CHAMP = {
   }),
   SB_VOIE_LACTEE_PLAN_MAG: entree({
     ref: 'C-44',
-    libelle: 'Brillance de surface de la Voie lactée dans le plan galactique',
+    libelle: 'Brillance de surface de la Voie lactée dans le plan, à l’anticentre (l = 180°)',
     valeur: 21.0,
     unite: 'mag/as²',
     source:
-      'extension de rendu — brillance des parties brillantes de la bande en bande V. ' +
-      'Ordre de grandeur : le bulbe du Sagittaire est plus brillant (≈ 20,5) et sa ' +
-      'non-uniformité en longitude n’est pas modélisée (T-0105).',
+      'extension de rendu — brillance de la bande en bande V hors du bulbe. Depuis T-0105 ' +
+      'cette valeur est celle de l’ANTICENTRE : la modulation en longitude va de ' +
+      'SB_VOIE_LACTEE_BULBE_MAG en l = 0° à cette valeur en l = 180°.',
+    tolerance: 'ordre de grandeur — à confirmer sur source photométrique, jamais à caler sur le rendu',
+    ordreDeGrandeur: true,
+    sections: ['3.7'],
+  }),
+  SB_VOIE_LACTEE_BULBE_MAG: entree({
+    ref: 'C-48',
+    libelle: 'Brillance de surface de la Voie lactée au centre galactique (l = 0°, b = 0°)',
+    valeur: 20.5,
+    unite: 'mag/as²',
+    source:
+      'extension de rendu (T-0105) — les nuages du Sagittaire sont les parties les plus ' +
+      'brillantes de la bande, environ une demi-magnitude au-dessus de l’anticentre, soit ' +
+      'plus que l’écart entre deux crans de Bortle. Écart mesuré sur les cartes de lumière ' +
+      'stellaire intégrée ; la valeur est un ordre de grandeur, pas une photométrie.',
     tolerance: 'ordre de grandeur — à confirmer sur source photométrique, jamais à caler sur le rendu',
     ordreDeGrandeur: true,
     sections: ['3.7'],

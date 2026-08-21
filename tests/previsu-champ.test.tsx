@@ -236,12 +236,19 @@ describe('§9.2 — les trois couches', () => {
         .filter((m) => m !== null)
         .map((m) => Number(m![1]))
 
+    // Ce que « ne déplace plus le fond » veut dire se chiffre en magnitudes, pas en opacité :
+    // une part p élève le fond de −2,5 log10(1 − p). C'est le MÊME critère que le moteur
+    // (`tests/voie-lactee.test.ts`), et il ne dépend donc pas de la direction visée — depuis
+    // T-0105 la bande est une demi-magnitude plus brillante vers le bulbe, et un seuil posé
+    // sur l'opacité aurait fait dire à ce test que le rendu a changé de comportement.
+    const elevationMag = (part: number): number => -K('POGSON') * Math.log10(1 - part)
+
     const ville = parts(18.4)
     const montagne = parts(21.5)
     expect(montagne.length).toBeGreaterThan(0)
     expect(Math.max(...montagne)).toBeGreaterThan(0.5)
     // En ville, la bande est encore composée, mais elle ne déplace plus le fond.
-    expect(Math.max(...ville)).toBeLessThan(0.1)
+    expect(elevationMag(Math.max(...ville))).toBeLessThan(0.15)
   })
 })
 
