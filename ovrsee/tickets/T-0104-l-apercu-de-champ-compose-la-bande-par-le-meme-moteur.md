@@ -3,7 +3,7 @@
   "id": "T-0104",
   "titre": "L'aperçu de champ compose la bande par le même moteur",
   "epic": "T-0101",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "s",
   "tags": [

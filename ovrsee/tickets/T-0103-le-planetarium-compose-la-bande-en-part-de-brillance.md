@@ -3,7 +3,7 @@
   "id": "T-0103",
   "titre": "Le planétarium compose la bande en part de brillance",
   "epic": "T-0101",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "m",
   "tags": [

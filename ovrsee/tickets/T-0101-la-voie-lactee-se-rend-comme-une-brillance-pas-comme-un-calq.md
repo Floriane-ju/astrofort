@@ -3,7 +3,7 @@
   "id": "T-0101",
   "titre": "La Voie lactée se rend comme une brillance, pas comme un calque rose",
   "type": "epic",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "l",
   "tags": [
@@ -89,18 +89,18 @@ entrées les remplacent : la brillance de la bande au plan, et sa chromaticité.
 
 ## Critères d'acceptation
 
-- [ ] T-0102 à T-0104 sont livrés ; chacun se vérifie seul.
-- [ ] Un seul moteur de brillance : `dessine-ciel.ts` et `dessine-champ.ts` l'appellent, aucun
+- [x] T-0102 à T-0104 sont livrés ; chacun se vérifie seul.
+- [x] Un seul moteur de brillance : `dessine-ciel.ts` et `dessine-champ.ts` l'appellent, aucun
       des deux n'écrit de couleur.
-- [ ] Aucune opacité de convention, aucune coupure de latitude, aucun seuil de contraste dans
+- [x] Aucune opacité de convention, aucune coupure de latitude, aucun seuil de contraste dans
       le chemin de la bande : un `grep` des quatre constantes retirées ne rend rien.
-- [ ] Bortle 8 : la bande n'élève le fond de plus de 0,15 mag nulle part — invisible PAR LE
+- [x] Bortle 8 : la bande n'élève le fond de plus de 0,15 mag nulle part — invisible PAR LE
       MODÈLE, sans branche `if`.
-- [ ] Bortle 1 : élévation du fond au plan galactique supérieure à 1 mag.
-- [ ] La magnitude limite rendue est identique avec et sans la couche Voie lactée, à la même
+- [x] Bortle 1 : élévation du fond au plan galactique supérieure à 1 mag.
+- [x] La magnitude limite rendue est identique avec et sans la couche Voie lactée, à la même
       minute et dans la même direction (décision 1).
-- [ ] Mode nuit : la bande ne rend que du rouge, aucune composante verte ni bleue.
-- [ ] Le seul écart restant avec une photographie de référence est la non-uniformité en
+- [x] Mode nuit : la bande ne rend que du rouge, aucune composante verte ni bleue.
+- [x] Le seul écart restant avec une photographie de référence est la non-uniformité en
       longitude, et il est ticketé (T-0105) plutôt que laissé implicite.
 
 ## Livré

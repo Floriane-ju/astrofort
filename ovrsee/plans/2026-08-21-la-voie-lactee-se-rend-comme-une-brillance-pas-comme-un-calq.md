@@ -1,10 +1,28 @@
 ---
 {
-  "status": "open",
+  "status": "closed",
   "title": "La Voie lactée se rend comme une brillance, pas comme un calque rose",
   "opened": "2026-08-21",
-  "closed": null,
-  "commits": []
+  "closed": "2026-08-21",
+  "commits": [
+    {
+      "sha": "46fb479",
+      "date": "2026-08-21",
+      "files": [
+        "scripts/bench-ciel.ts",
+        "src/core/fond-ciel-rendu.ts",
+        "src/core/galactique.ts",
+        "src/registry/constants.ts",
+        "src/registry/glossaire.ts",
+        "src/ui/couleurs.ts",
+        "src/ui/dessine-champ.ts",
+        "src/ui/dessine-ciel.ts",
+        "tests/dessine-ciel.test.ts",
+        "tests/previsu-champ.test.tsx",
+        "tests/voie-lactee.test.ts"
+      ]
+    }
+  ]
 }
 ---
 

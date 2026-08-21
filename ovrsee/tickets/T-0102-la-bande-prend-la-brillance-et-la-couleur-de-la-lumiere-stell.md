@@ -3,7 +3,7 @@
   "id": "T-0102",
   "titre": "La bande prend la brillance et la couleur de la lumière stellaire",
   "epic": "T-0101",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "s",
   "tags": [
