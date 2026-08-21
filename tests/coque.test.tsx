@@ -28,6 +28,7 @@ import {
   etatScene,
   reinitialiseScene,
   resolutionRendu,
+  vuePlanetarium,
 } from '../src/ui/scene-etat.ts'
 import { MenuInfos } from '../src/ui/MenuInfos.tsx'
 import { MenuReglages, OptionsCatalogue, objetDesigne } from '../src/ui/MenuReglages.tsx'
@@ -175,7 +176,14 @@ describe('§9.3 — le filé se dépose dans le cadre, pas ailleurs', () => {
     rotationDeg: 0,
   }
   const CADRE: Cadre = {
-    profil: { libelle: '120 mm f/2.8', fovLDeg: 17, fovHDeg: 11.4, echApx: 8.8, tPoseS: 2.1 },
+    profil: {
+      libelle: '120 mm f/2.8',
+      fovLDeg: 17,
+      fovHDeg: 11.4,
+      echApx: 8.8,
+      capteurHMm: 24,
+      tPoseS: 2.1,
+    },
     azimutDeg: 180,
     hauteurDeg: 40,
     rotationDeg: 0,
@@ -294,7 +302,7 @@ function menuAvecCible(): {
   const ciel = cielInstantane(site, new Date(msAffiche))
   // La visée, ramenée en J2000 : y poser l'objet garantit qu'il tombe dans le cadre.
   const visee = versSpherique(
-    projecteur(vue, ciel.matrice).inverse(vue.largeurPx / 2, vue.hauteurPx / 2),
+    projecteur(vuePlanetarium(vue), ciel.matrice).inverse(vue.largeurPx / 2, vue.hauteurPx / 2),
   )
   return {
     site,
@@ -307,7 +315,9 @@ function menuAvecCible(): {
         decDeg: visee.latitudeDeg,
       },
     ],
-    profils: [{ libelle: '120 mm', fovLDeg: 17, fovHDeg: 11.4, echApx: 8.8, tPoseS: 2.1 }],
+    profils: [
+      { libelle: '120 mm', fovLDeg: 17, fovHDeg: 11.4, echApx: 8.8, capteurHMm: 24, tPoseS: 2.1 },
+    ],
     mLimOeil: 6.05,
   }
 }

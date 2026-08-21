@@ -67,7 +67,7 @@ export function useLecturesFile(
   renduFile: RenduFile | null,
 ): LecturesFile {
   const mode = materiel.modeObjectif
-  const { azimutDeg, hauteurDeg, rotationDeg } = vue
+  const { azimutDeg, hauteurDeg, rotationCadreDeg: rotationDeg } = vue
   const hauteurCadrePx = Math.round(
     (LARGEUR_CADRE_PX * rayonProjete(mode, (materiel.fovHDeg / 2) * DEG)) /
       rayonProjete(mode, (materiel.fovLDeg / 2) * DEG),

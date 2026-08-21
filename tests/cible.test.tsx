@@ -203,7 +203,7 @@ describe('T-0046 — « Voir » amène la cible au centre, et ne touche à rien 
     expect(apres.azimutDeg).toBeCloseTo(cible!.azimutDeg, 1)
     expect(apres.hauteurDeg).toBeCloseTo(cible!.hauteurDeg, 1)
     expect(apres.fovDeg).toBe(avant.fovDeg)
-    expect(apres.rotationDeg).toBe(avant.rotationDeg)
+    expect(apres.rotationCadreDeg).toBe(avant.rotationCadreDeg)
     reinitialiseScene()
   })
 })

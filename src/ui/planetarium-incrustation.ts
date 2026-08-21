@@ -16,7 +16,7 @@ import { construitIndex, type IndexCiel } from '../core/index-ciel.ts'
 import type { Etoile } from '../data/catalog.ts'
 import type { Cadre, ProfilCadre } from '../core/cadre.ts'
 import type { Site } from '../core/ephem.ts'
-import { majLectures, type VueScene } from './scene-etat.ts'
+import { majLectures, vuePlanetarium, type VueScene } from './scene-etat.ts'
 import { poseRenduFile, type ReglagesFile } from './seance-etat.ts'
 import { rendIncrustation } from './scene-overlay.ts'
 import { renduDiffere } from './rendu-differe.ts'
@@ -64,7 +64,7 @@ export function useIncrustationFile(
    * signature sert à distinguer « le réglage a changé » de « le réglage est en train de
    * changer » : le premier rend tout de suite, le second attend la fin du geste.
    */
-  const cleGeste = `${vue.azimutDeg}|${vue.hauteurDeg}|${vue.rotationDeg}|${vue.fovDeg}|${file.dureeTotaleMin}`
+  const cleGeste = `${vue.azimutDeg}|${vue.hauteurDeg}|${vue.rotationCadreDeg}|${vue.fovDeg}|${file.dureeTotaleMin}`
   const cleGestePrecedente = useRef(cleGeste)
 
   const peintIncrustation = (): void => {
@@ -74,7 +74,9 @@ export function useIncrustationFile(
     const dureeS =
       file.apercu === 'FILE' ? file.dureeTotaleMin * S_PAR_MIN : materiel.profondeur.tPoseS
     const sortie = rendIncrustation({
-      vue,
+      // L'incrustation partage le projecteur de la scène — donc sa vue sans roulis. Le roulis
+      // du boîtier est déjà porté par le cadre où l'image est clippée (§9.3, T-0084).
+      vue: vuePlanetarium(vue),
       matriceCiel: ciel.matrice,
       cadre,
       indexReel,
@@ -145,7 +147,7 @@ export function useIncrustationFile(
     vue.fovDeg,
     vue.azimutDeg,
     vue.hauteurDeg,
-    vue.rotationDeg,
+    vue.rotationCadreDeg,
     site.latitudeDeg,
     modeNuit,
     profils,

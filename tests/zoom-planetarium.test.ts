@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { facteurZoom, sourceMolette } from '../src/ui/Planetarium.tsx'
+import { facteurZoom, roulisApresGlisser, sourceMolette } from '../src/ui/Planetarium.tsx'
 
 describe('facteur de zoom — un cran de molette, un geste continu', () => {
   it('garde le cran fixe de la molette, dans les deux sens', () => {
@@ -63,5 +63,42 @@ describe('source d’un `wheel` — pincement, molette, défilement', () => {
       'DEFILEMENT',
     )
     expect(sourceMolette({ ctrlKey: false, deltaMode: 0, deltaX: 0, deltaY: 120 })).toBe('MOLETTE')
+  })
+})
+
+/**
+ * T-0084 — la rotation du cadre est un geste continu sur la scène, Maj enfoncée. Le
+ * branchement DOM ne se teste pas hors navigateur ; la règle de calcul, si.
+ */
+describe('rotation du cadre au glisser §3.5', () => {
+  const BOITE = { top: 0, left: 0, width: 800, height: 600 }
+  // Trois points sur le cercle centré, à 0°, 90° et 180° d'angle écran.
+  const droite = { x: 700, y: 300 }
+  const bas = { x: 400, y: 500 }
+  const gauche = { x: 100, y: 300 }
+
+  it('suit le doigt : un glisser horaire à l’écran tourne le cadre du même angle', () => {
+    // De la droite vers le bas : quart de tour horaire à l'écran, donc −90° de roulis.
+    expect(roulisApresGlisser(180, BOITE, droite, bas)).toBeCloseTo(90, 9)
+    // Et le retour rend exactement le roulis de départ : le geste est réversible.
+    expect(roulisApresGlisser(90, BOITE, bas, droite)).toBeCloseTo(180, 9)
+  })
+
+  it('reste continu : deux demi-gestes valent le geste entier', () => {
+    const entier = roulisApresGlisser(200, BOITE, droite, gauche)
+    const enDeux = roulisApresGlisser(roulisApresGlisser(200, BOITE, droite, bas), BOITE, bas, gauche)
+    expect(enDeux).toBeCloseTo(entier, 9)
+  })
+
+  it('borne le roulis à 0–360°, sans plafond sur le geste', () => {
+    // Le franchissement de zéro ne bloque pas le geste : il repasse par 360°.
+    const franchi = roulisApresGlisser(10, BOITE, droite, bas)
+    expect(franchi).toBeGreaterThanOrEqual(0)
+    expect(franchi).toBeLessThan(360)
+    expect(franchi).toBeCloseTo(280, 9)
+  })
+
+  it('ne bouge pas le cadre sans déplacement du pointeur', () => {
+    expect(roulisApresGlisser(42, BOITE, droite, droite)).toBeCloseTo(42, 9)
   })
 })

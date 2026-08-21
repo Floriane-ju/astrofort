@@ -22,7 +22,7 @@ import {
 import { projecteur } from '../core/projection.ts'
 import type { Cadre, ProfilCadre } from '../core/cadre.ts'
 import type { Site } from '../core/ephem.ts'
-import { afficheInstant, type VueScene } from './scene-etat.ts'
+import { afficheInstant, vuePlanetarium, type VueScene } from './scene-etat.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
 import { incrusteDansLeCadre } from './scene-overlay.ts'
 import { dessineCiel, type CibleEcran, type SurvolEcran } from './dessine-ciel.ts'
@@ -127,13 +127,16 @@ export function useBoucleRendu(entree: {
         : positionsInterpolees(ephemerides.current, instant.ms)
 
       const vue = courant.vue
+      // §3.5 — le boîtier tourne, la vue non : c'est ce qui rend le contour du cadre mobile
+      // à l'écran au lieu de faire tourner tout le ciel derrière un cadre immobile (T-0084).
+      const vueSansRoulis = vuePlanetarium(vue)
       const cadres = courant.couches.cadre
         ? courant.profils.map(
             (profil): Cadre => ({
               profil,
               azimutDeg: vue.azimutDeg,
               hauteurDeg: vue.hauteurDeg,
-              rotationDeg: vue.rotationDeg,
+              rotationDeg: vue.rotationCadreDeg,
             }),
           )
         : []
@@ -147,7 +150,7 @@ export function useBoucleRendu(entree: {
       // la boucle par étoile n'alloue plus (T-0065).
       const sortie = dessineCiel({
         ctx: contexte,
-        projecteur: projecteur(vue, ciel.matrice),
+        projecteur: projecteur(vueSansRoulis, ciel.matrice),
         matriceCiel: ciel.matrice,
         index: courant.index,
         etoiles: courant.etoiles,
@@ -168,7 +171,7 @@ export function useBoucleRendu(entree: {
         surLeFond:
           apercu !== null && cadre !== undefined
             ? (ctx) => {
-                incrusteDansLeCadre(ctx, vue, ciel.matrice, cadre, apercu)
+                incrusteDansLeCadre(ctx, vueSansRoulis, ciel.matrice, cadre, apercu)
               }
             : undefined,
       })

@@ -177,7 +177,14 @@ function rend(
     nomsCorps: {},
     cadres: [
       {
-        profil: { libelle: '120 mm', fovLDeg: 17.0, fovHDeg: 11.4, echApx: 8.8, tPoseS: 120 },
+        profil: {
+          libelle: '120 mm',
+          fovLDeg: 17.0,
+          fovHDeg: 11.4,
+          echApx: 8.8,
+          capteurHMm: 24,
+          tPoseS: 120,
+        },
         azimutDeg: 180,
         hauteurDeg: 45,
         rotationDeg: 0,

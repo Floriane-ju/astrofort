@@ -42,6 +42,14 @@ export const FORMULES = Object.freeze({
     unite: '—',
     section: '6.2',
   },
+  REMPLISSAGE_ORIENTE: {
+    expression:
+      'u = √( maj²·cos²φ + min²·sin²φ ) · v = √( maj²·sin²φ + min²·cos²φ ) · ' +
+      'remplissage = max( u / FOV_L_deg , v / FOV_H_deg )',
+    unite: '—',
+    section: '6.2',
+    note: 'φ est l’angle du grand axe de la cible dans le repère du cadre, roulis du boîtier compris (§3.5). u et v sont la boîte englobante de l’ELLIPSE de §6.3, pas d’un rectangle : une cible ronde resterait sinon grossie d’un facteur √2 à 45°, alors qu’un disque n’a pas d’orientation. La corde du rectangle est écartée pour la raison inverse — elle donnerait à 45° plus de marge qu’un grand axe aligné sur la grande dimension. À φ = 90° l’expression se réduit exactement à REMPLISSAGE, ce qui préserve la calibration de la table de §6.2.',
+  },
   DIAMETRE_PIXELS: {
     expression: 'diam_px = taille_objet_arcsec / ech_apx',
     unite: 'px',

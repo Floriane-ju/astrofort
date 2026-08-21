@@ -121,7 +121,7 @@ export function CadrageDuFile({
             max={360}
             step={1}
             value={rotationDeg}
-            onChange={(e) => actions.majVue({ rotationDeg: Number(e.target.value) })}
+            onChange={(e) => actions.majVue({ rotationCadreDeg: Number(e.target.value) })}
           />
         </label>
         <label className="interrupteur">

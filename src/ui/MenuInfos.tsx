@@ -27,17 +27,20 @@ import { etatProfondeur, projecteur } from '../core/projection.ts'
 import { versSpherique } from '../core/mat3.ts'
 import {
   REFUS_SANS_PROFIL,
+  angleGrandAxeDansCadre,
   cibleDominante,
   refusAuDelaDuMaximum,
   rotationSuggeree,
   type Cadre,
   type ProfilCadre,
 } from '../core/cadre.ts'
-import { majVue, useScene } from './scene-etat.ts'
+import { ficheCadrage } from '../core/framing.ts'
+import { majVue, useScene, vuePlanetarium } from './scene-etat.ts'
 import { useSeance } from './seance-etat.ts'
 import { Terme } from './Terme.tsx'
 
 const ARCMIN_PAR_DEG = 60
+const POURCENT = 100
 
 export interface MenuInfosProps {
   readonly site: Site
@@ -50,7 +53,7 @@ export interface MenuInfosProps {
 
 export function MenuInfos(props: MenuInfosProps) {
   const { vue: pointage, rendu, lectures, msAffiche } = useScene()
-  const { azimutDeg, hauteurDeg, rotationDeg, fovDeg, largeurPx, hauteurPx } = pointage
+  const { azimutDeg, hauteurDeg, rotationCadreDeg, fovDeg, largeurPx, hauteurPx } = pointage
   const { couches, vueRealiste } = rendu
   const { diagnostic, selection, fileEnAttente } = lectures
   const { file } = useSeance()
@@ -64,7 +67,7 @@ export function MenuInfos(props: MenuInfosProps) {
   const viseeJ2000 = useMemo(
     () =>
       versSpherique(
-        projecteur(pointage, ciel.matrice).inverse(largeurPx / 2, hauteurPx / 2),
+        projecteur(vuePlanetarium(pointage), ciel.matrice).inverse(largeurPx / 2, hauteurPx / 2),
       ),
     [pointage, largeurPx, hauteurPx, ciel],
   )
@@ -72,7 +75,7 @@ export function MenuInfos(props: MenuInfosProps) {
   const cadrePrincipal: Cadre | null =
     props.profils.length === 0
       ? null
-      : { profil: props.profils[0]!, azimutDeg, hauteurDeg, rotationDeg }
+      : { profil: props.profils[0]!, azimutDeg, hauteurDeg, rotationDeg: rotationCadreDeg }
 
   const dominante = useMemo(
     () =>
@@ -80,7 +83,7 @@ export function MenuInfos(props: MenuInfosProps) {
         ? null
         : cibleDominante(props.objets, cadrePrincipal, ciel.matrice),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [props.objets, ciel, azimutDeg, hauteurDeg, rotationDeg, props.profils],
+    [props.objets, ciel, azimutDeg, hauteurDeg, rotationCadreDeg, props.profils],
   )
   const suggestion = useMemo(
     () =>
@@ -88,8 +91,29 @@ export function MenuInfos(props: MenuInfosProps) {
         ? null
         : rotationSuggeree(dominante, cadrePrincipal, ciel.matrice),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dominante, ciel, azimutDeg, hauteurDeg, rotationDeg],
+    [dominante, ciel, azimutDeg, hauteurDeg, rotationCadreDeg],
   )
+
+  /**
+   * §6.2 recalculé à chaque rotation du boîtier : le remplissage et le verdict dépendent de
+   * l'orientation, et c'est tout l'intérêt du geste — tourner de 90° une cible allongée peut
+   * la faire passer de « cadrage large » à « cadrage optimal » (T-0084).
+   */
+  const cadrage = useMemo(() => {
+    if (dominante === null || cadrePrincipal === null) return null
+    const profil = cadrePrincipal.profil
+    return ficheCadrage({
+      fovHDeg: profil.fovHDeg,
+      fovLDeg: profil.fovLDeg,
+      echApx: profil.echApx,
+      capteurHMm: profil.capteurHMm,
+      tailleMajArcmin: dominante.tailleDeg * ARCMIN_PAR_DEG,
+      tailleMinArcmin: dominante.objet.minAxArcmin,
+      posAngDeg: dominante.objet.posAngDeg,
+      angleGrandAxeDeg: angleGrandAxeDansCadre(dominante, cadrePrincipal, ciel.matrice),
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dominante, ciel, azimutDeg, hauteurDeg, rotationCadreDeg, props.profils])
 
   /**
    * T-0041 — la liste, pas un booléen : le compte affiché sur le bouton et les paragraphes
@@ -107,8 +131,10 @@ export function MenuInfos(props: MenuInfosProps) {
   ].filter((c): c is string => c !== null)
 
   // Une rotation suggérée est un message à lire : son bouton « Appliquer » est la seule
-  // façon de l'appliquer, et un tiroir fermé le rendrait introuvable.
-  const aLire = causes.length + (suggestion === null ? 0 : 1)
+  // façon de l'appliquer, et un tiroir fermé le rendrait introuvable. Une absence d'angle
+  // motivée — cible ronde, angle de position manquant — se lit dans le tiroir mais n'alerte
+  // pas : il n'y a rien à y faire.
+  const aLire = causes.length + (suggestion?.angleDeg == null ? 0 : 1)
 
   return (
     <details
@@ -152,25 +178,31 @@ export function MenuInfos(props: MenuInfosProps) {
                 ne change ni le pitch ni la focale, donc ni la résolution (§5.1).
               </p>
             )}
-            {dominante !== null && (
-              <p className="etat">
-                Cible dominante dans le cadre : {dominante.objet.designation}, grand axe{' '}
-                {(dominante.tailleDeg * ARCMIN_PAR_DEG).toFixed(0)}’ — remplissage{' '}
-                {((dominante.tailleDeg / (props.profils[0]?.fovHDeg ?? 1)) * 100).toFixed(0)} % de
-                la petite dimension du champ.
-              </p>
+            {dominante !== null && cadrage !== null && (
+              <>
+                <p className="etat">
+                  Cible dominante dans le cadre : {dominante.objet.designation}, grand axe{' '}
+                  {(dominante.tailleDeg * ARCMIN_PAR_DEG).toFixed(0)}’ — remplissage{' '}
+                  {(cadrage.remplissage.value * POURCENT).toFixed(0)} % du cadre, boîtier à{' '}
+                  {rotationCadreDeg.toFixed(0)}°.
+                </p>
+                <p className="etat">{cadrage.message}</p>
+                {cadrage.cause !== undefined && <p className="cause">{cadrage.cause}</p>}
+              </>
             )}
             {suggestion !== null && (
               <div className="actions">
                 <span className="etat">{suggestion.message}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    majVue({ rotationDeg: suggestion.angleDeg })
-                  }}
-                >
-                  Appliquer {suggestion.angleDeg.toFixed(0)}°
-                </button>
+                {suggestion.angleDeg !== null && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      majVue({ rotationCadreDeg: suggestion.angleDeg ?? 0 })
+                    }}
+                  >
+                    Appliquer {suggestion.angleDeg.toFixed(0)}°
+                  </button>
+                )}
               </div>
             )}
           </>

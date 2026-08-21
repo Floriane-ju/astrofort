@@ -14,7 +14,7 @@
 
 import { useCallback, useSyncExternalStore } from 'react'
 import { K } from '../registry/constants.ts'
-import type { ModeProjection } from '../core/projection.ts'
+import type { ModeProjection, Vue } from '../core/projection.ts'
 import type { ModeTemps, PasAstronomique } from '../core/curseur-temps.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
@@ -56,19 +56,41 @@ export function resolutionRendu(
 
 /**
  * Le pointage : ce que la scène regarde, comment elle le projette, et sur combien de pixels.
- * Structurellement un `Vue` de §3.2 — la définition en fait partie depuis qu'elle suit la
- * boîte, et la séparer obligerait chaque appelant à la recoller.
+ * Un `Vue` de §3.2 à un champ près — le roulis, qui appartient au boîtier et non à la vue.
+ *
+ * T-0084 — la rotation porte un nom distinct de `Vue.rotationDeg` EXPRÈS. Tant que les deux
+ * s'appelaient pareil, le magasin se passait tel quel à `projecteur()` : la vue du planétarium
+ * roulait du même angle que le cadre, et le cadre ne pouvait donc jamais paraître tourné à
+ * l'écran — seul le ciel tournait derrière lui. §3.3 ne fait dépendre du mode que la fonction
+ * radiale R(θ) : le planétarium garde le zénith en haut, et c'est le boîtier qui tourne.
  */
 export interface VueScene {
   readonly azimutDeg: number
   readonly hauteurDeg: number
-  /** Rotation du boîtier autour de l'axe de visée (§3.5). */
-  readonly rotationDeg: number
+  /** §3.5 `angle_rotation_cadre` — orientation du boîtier, jamais le roulis de la vue. */
+  readonly rotationCadreDeg: number
   readonly fovDeg: number
   readonly mode: ModeProjection
   /** Définition de rendu, mesurée sur la boîte du canevas. */
   readonly largeurPx: number
   readonly hauteurPx: number
+}
+
+/**
+ * La `Vue` de §3.3 pour la scène : sans roulis. Le cadre matériel tourne comme objet de la
+ * scène (§3.5) ; la vue, elle, garde le zénith en haut, sans quoi tourner le boîtier ferait
+ * tourner tout le ciel et le contour du cadre resterait immobile à l'écran.
+ */
+export function vuePlanetarium(vue: VueScene): Vue {
+  return {
+    mode: vue.mode,
+    fovDeg: vue.fovDeg,
+    largeurPx: vue.largeurPx,
+    hauteurPx: vue.hauteurPx,
+    azimutDeg: vue.azimutDeg,
+    hauteurDeg: vue.hauteurDeg,
+    rotationDeg: 0,
+  }
 }
 
 /** Le temps : le mode du curseur temporel de §3.2 et ses réglages. */
@@ -144,7 +166,7 @@ const ETAT_INITIAL: EtatScene = {
   vue: {
     azimutDeg: 180,
     hauteurDeg: K('SEUIL_HAUTEUR_IMAGERIE_DEG'),
-    rotationDeg: 0,
+    rotationCadreDeg: 0,
     fovDeg: K('FOV_REFERENCE_RENDU_DEG'),
     mode: 'MODE_PLANETARIUM',
     largeurPx: LARGEUR_SCENE_PX,

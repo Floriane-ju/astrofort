@@ -62,7 +62,7 @@ export function PanneauFile(props: PanneauFileProps) {
         renduFile={renduFile}
         fovLDeg={props.fovLDeg}
         fovHDeg={props.fovHDeg}
-        rotationDeg={vue.rotationDeg}
+        rotationDeg={vue.rotationCadreDeg}
         mode={props.modeObjectif}
         actions={actions}
       />

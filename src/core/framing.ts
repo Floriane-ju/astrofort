@@ -141,6 +141,65 @@ export interface EntreeCadrage {
   readonly tailleMinArcmin?: number | null
   /** Angle de position du grand axe. Souvent absent du catalogue. */
   readonly posAngDeg?: number | null
+  /**
+   * §3.5 — champ de la grande dimension du capteur. Fourni avec `angleGrandAxeDeg`, il
+   * oriente le remplissage : sans lui, la petite dimension reste seule à décider.
+   */
+  readonly fovLDeg?: number
+  /**
+   * Angle du grand axe de la cible dans les axes du capteur, roulis du boîtier compris.
+   * `null` quand le catalogue ne permet pas de le calculer.
+   */
+  readonly angleGrandAxeDeg?: number | null
+}
+
+/**
+ * §6.2 avec l'orientation du boîtier de §3.5 : la fraction du cadre réellement occupée est
+ * celle de la BOÎTE ENGLOBANTE de la cible dans les axes du capteur.
+ *
+ * La corde du rectangle le long du grand axe donnerait, à 45°, plus de marge qu'un grand axe
+ * aligné sur la grande dimension du capteur — physiquement faux, et sans marge pour la
+ * rotation de champ ni les gradients de bord. La boîte englobante, elle, se réduit exactement
+ * à « grand axe contre petite dimension » quand φ = 90° : c'est la forme sur laquelle la table
+ * de §6.2 est calibrée, et tourner le boîtier de 90° change donc le verdict sans le décaler.
+ *
+ * Sans orientation exploitable, on retombe sur la petite dimension seule : c'est le cas
+ * conservateur, et il ne prétend pas connaître un angle que le catalogue ne donne pas.
+ */
+export function remplissageCadre(entree: EntreeCadrage): Traced<number> {
+  const majDeg = entree.tailleMajArcmin / ARCMIN_PAR_DEG
+  const phi = entree.angleGrandAxeDeg
+  if (entree.fovLDeg === undefined || phi === null || phi === undefined) {
+    return trace({
+      value: majDeg / entree.fovHDeg,
+      formula: 'REMPLISSAGE',
+      inputs: { taille_objet_deg: majDeg, fov_h_deg: entree.fovHDeg },
+    })
+  }
+  // Faute de petit axe au catalogue, la cible est tenue pour ronde — même hypothèse que
+  // `orientation()`, qui ne suggère alors aucun angle.
+  const minDeg =
+    (entree.tailleMinArcmin === null || entree.tailleMinArcmin === undefined
+      ? entree.tailleMajArcmin
+      : entree.tailleMinArcmin) / ARCMIN_PAR_DEG
+  // Boîte englobante d'une ELLIPSE, pas d'un rectangle : la cible est déjà modélisée en
+  // ellipse par §6.3 (AIRE_ELLIPSE). La forme rectangulaire ferait grandir une cible ronde
+  // d'un facteur √2 à 45°, ce qui est faux — un disque n'a pas d'orientation.
+  const cos2 = Math.cos(phi / DEG_PAR_RADIAN) ** 2
+  const sin2 = Math.sin(phi / DEG_PAR_RADIAN) ** 2
+  const u = Math.sqrt(majDeg ** 2 * cos2 + minDeg ** 2 * sin2)
+  const v = Math.sqrt(majDeg ** 2 * sin2 + minDeg ** 2 * cos2)
+  return trace({
+    value: Math.max(u / entree.fovLDeg, v / entree.fovHDeg),
+    formula: 'REMPLISSAGE_ORIENTE',
+    inputs: {
+      maj_deg: majDeg,
+      min_deg: minDeg,
+      phi_deg: phi,
+      fov_l_deg: entree.fovLDeg,
+      fov_h_deg: entree.fovHDeg,
+    },
+  })
 }
 
 export interface FicheCadrage {
@@ -202,9 +261,10 @@ function orientation(
  * fraction acceptable du champ et rester un amas de pixels sans détail exploitable.
  */
 export function ficheCadrage(entree: EntreeCadrage): FicheCadrage {
-  const { fovHDeg, echApx, capteurHMm, tailleMajArcmin } = entree
+  const { echApx, capteurHMm, tailleMajArcmin } = entree
   const tailleObjetDeg = tailleMajArcmin / ARCMIN_PAR_DEG
-  const remplissage = tailleObjetDeg / fovHDeg
+  const remplissageTrace = remplissageCadre(entree)
+  const remplissage = remplissageTrace.value
   const ligne = TABLE_CADRAGE.find((l) => remplissage >= l.remplissageMin) ?? TABLE_CADRAGE[TABLE_CADRAGE.length - 1]!
   const diamPx = (tailleMajArcmin * ARCSEC_PAR_ARCMIN) / echApx
   const tropPetitEnPixels = diamPx < K('DIAMETRE_PIXELS_MIN')
@@ -230,11 +290,7 @@ export function ficheCadrage(entree: EntreeCadrage): FicheCadrage {
       : null
 
   return {
-    remplissage: trace({
-      value: remplissage,
-      formula: 'REMPLISSAGE',
-      inputs: { taille_objet_deg: tailleObjetDeg, fov_h_deg: fovHDeg },
-    }),
+    remplissage: remplissageTrace,
     verdict: ligne.verdict,
     faisable,
     message: ligne.message,
@@ -250,7 +306,7 @@ export function ficheCadrage(entree: EntreeCadrage): FicheCadrage {
           nTuiles: trace({
             value: nTuilesValeur,
             formula: 'NOMBRE_TUILES',
-            inputs: { taille_objet_deg: tailleObjetDeg, fov_h_deg: fovHDeg },
+            inputs: { taille_objet_deg: tailleObjetDeg, fov_h_deg: entree.fovHDeg },
             constants: ['RECOUVREMENT_MOSAIQUE'],
             note:
               `Le nombre de tuiles multiplie d’autant le temps total de session : ` +

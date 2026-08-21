@@ -51,7 +51,7 @@ const COUCHES: readonly (readonly [keyof CouchesActives, string])[] = [
 
 export function PanneauExplorer(props: PanneauExplorerProps) {
   const { vue, temps, rendu, actions } = useScene()
-  const { fovDeg, rotationDeg, mode } = vue
+  const { fovDeg, rotationCadreDeg: rotationDeg, mode } = vue
   const { modeTemps, facteur, pas } = temps
   const { couches, vueRealiste } = rendu
 
@@ -92,14 +92,15 @@ export function PanneauExplorer(props: PanneauExplorerProps) {
             />
           </label>
           <label>
-            Rotation du cadre : {rotationDeg.toFixed(0)}°
+            {/* Le geste équivalent est sur la scène ; sans mention ici, il reste introuvable. */}
+            Rotation du cadre : {rotationDeg.toFixed(0)}° — ou Maj + glisser sur la scène
             <input
               type="range"
               min={0}
               max={360}
               step={1}
               value={rotationDeg}
-              onChange={(e) => actions.majVue({ rotationDeg: Number(e.target.value) })}
+              onChange={(e) => actions.majVue({ rotationCadreDeg: Number(e.target.value) })}
             />
           </label>
           <label className="interrupteur">

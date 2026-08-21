@@ -331,6 +331,7 @@ function profilsDeCadre(calcul: Calcul, materiel: SaisieMateriel): readonly Prof
       fovLDeg: optique.fovLDeg.value,
       fovHDeg: optique.fovHDeg.value,
       echApx: optique.echApx.value,
+      capteurHMm: capteur.capteurHMm,
       tPoseS,
     }
   })

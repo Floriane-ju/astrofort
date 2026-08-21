@@ -35,7 +35,12 @@ import { useBoucleRendu, type EtatBoucle } from './planetarium-boucle.ts'
 import { useIncrustationFile } from './planetarium-incrustation.ts'
 import { useGestesZoom, usePointageSouris } from './planetarium-gestes.ts'
 
-export { facteurZoom, sourceMolette, type SourceGeste } from './planetarium-gestes.ts'
+export {
+  facteurZoom,
+  roulisApresGlisser,
+  sourceMolette,
+  type SourceGeste,
+} from './planetarium-gestes.ts'
 export type { MaterielFile } from './planetarium-materiel.ts'
 
 import type { MaterielFile } from './planetarium-materiel.ts'
@@ -128,7 +133,7 @@ export function Planetarium(props: PlanetariumProps) {
           profil: props.profils[0]!,
           azimutDeg: pointage.azimutDeg,
           hauteurDeg: pointage.hauteurDeg,
-          rotationDeg: pointage.rotationDeg,
+          rotationDeg: pointage.rotationCadreDeg,
         }
 
   const incrustation = useIncrustationFile({

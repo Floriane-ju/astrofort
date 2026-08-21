@@ -11,6 +11,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import {
   REFUS_SANS_PROFIL,
+  angleGrandAxeDansCadre,
   cibleDominante,
   contourCadreJ2000,
   refusAuDelaDuMaximum,
@@ -18,6 +19,9 @@ import {
   type Cadre,
   type ProfilCadre,
 } from '../src/core/cadre.ts'
+import { ficheCadrage } from '../src/core/framing.ts'
+import { vuePlanetarium } from '../src/ui/scene-etat.ts'
+import { RAPPORT_AXES_ORIENTATION } from '../src/registry/verdicts.ts'
 import { fovDeg } from '../src/core/optics.ts'
 import { BOITIER_REFERENCE, capteurEffectif } from '../src/data/equipment.ts'
 import { IDENTITE, separationDeg, versSpherique, versVecteur } from '../src/core/mat3.ts'
@@ -36,6 +40,7 @@ function profil(mode: 'FULL_FRAME' | 'APSC_CROP'): ProfilCadre {
     fovLDeg: fovDeg(capteur.capteurLMm, FOCALE_REFERENCE_MM).value,
     fovHDeg: fovDeg(capteur.capteurHMm, FOCALE_REFERENCE_MM).value,
     echApx: (K('RADIAN_EN_ARCSEC') * capteur.pitchUm) / (FOCALE_REFERENCE_MM * 1000),
+    capteurHMm: capteur.capteurHMm,
     tPoseS: 120,
   }
 }
@@ -155,7 +160,13 @@ describe('cible dans le cadre §3.5, §6.2', () => {
     projecteur(vue('MODE_CADRE', 17), IDENTITE).inverse(1920 / 2, 1080 / 2),
   )
 
-  function objet(nom: string, dLonDeg: number, majAxArcmin: number, posAngDeg: number | null): ObjetCielProfond {
+  function objet(
+    nom: string,
+    dLonDeg: number,
+    majAxArcmin: number,
+    posAngDeg: number | null,
+    minAxArcmin: number | null = majAxArcmin / 3,
+  ): ObjetCielProfond {
     return {
       designation: nom,
       nomsCommuns: '',
@@ -163,7 +174,7 @@ describe('cible dans le cadre §3.5, §6.2', () => {
       decDeg: centre.latitudeDeg,
       type: 'GALAXIE',
       majAxArcmin,
-      minAxArcmin: majAxArcmin / 3,
+      minAxArcmin,
       posAngDeg,
       vMag: 8,
       bMag: null,
@@ -179,20 +190,136 @@ describe('cible dans le cadre §3.5, §6.2', () => {
     expect(dominante!.tailleDeg).toBeCloseTo(90 / 60, 6)
   })
 
-  it('ne suggère aucun angle quand le catalogue ne donne pas l’angle de position', () => {
+  it('ne suggère aucun angle sans angle de position, et nomme la donnée absente', () => {
     const dominante = cibleDominante([objet('sans angle', 0, 60, null)], CADRE, IDENTITE)
     expect(dominante).not.toBeNull()
-    expect(rotationSuggeree(dominante!, CADRE, IDENTITE)).toBeNull()
+    const suggestion = rotationSuggeree(dominante!, CADRE, IDENTITE)
+    expect(suggestion.angleDeg).toBeNull()
+    // §6.2 — l'absence de donnée est nommée : un silence se lirait « déjà bien cadré ».
+    expect(suggestion.message).toMatch(/angle de position/)
+    expect(suggestion.message).toMatch(/faute de donnée/)
+  })
+
+  it('ne suggère aucun angle sous le seuil de rapport d’axes, et le dit', () => {
+    // Rapport 1,2 : sous RAPPORT_AXES_ORIENTATION, tourner le boîtier ne change rien.
+    const ronde = objet('ronde', 0, 60, 23, 50)
+    const dominante = cibleDominante([ronde], CADRE, IDENTITE)
+    const suggestion = rotationSuggeree(dominante!, CADRE, IDENTITE)
+    expect(suggestion.angleDeg).toBeNull()
+    expect(suggestion.message).toMatch(String(RAPPORT_AXES_ORIENTATION))
+  })
+
+  it('nomme le petit axe manquant plutôt que de supposer la cible allongée', () => {
+    const dominante = cibleDominante([objet('sans petit axe', 0, 60, 23, null)], CADRE, IDENTITE)
+    const suggestion = rotationSuggeree(dominante!, CADRE, IDENTITE)
+    expect(suggestion.angleDeg).toBeNull()
+    expect(suggestion.message).toMatch(/petit axe/)
   })
 
   it('propose un angle borné à un demi-tour, appliqué d’un clic', () => {
     const dominante = cibleDominante([objet('allongée', 0, 60, 23)], CADRE, IDENTITE)
     const suggestion = rotationSuggeree(dominante!, CADRE, IDENTITE)
-    expect(suggestion).not.toBeNull()
-    expect(suggestion!.angleDeg).toBeGreaterThanOrEqual(0)
-    expect(suggestion!.angleDeg).toBeLessThan(180)
-    expect(suggestion!.message).toMatch(/grande dimension du capteur/)
-    expect(suggestion!.message).toMatch(/rotation de champ/)
+    expect(suggestion.angleDeg).not.toBeNull()
+    expect(suggestion.angleDeg!).toBeGreaterThanOrEqual(0)
+    expect(suggestion.angleDeg!).toBeLessThan(180)
+    expect(suggestion.message).toMatch(/grande dimension du capteur/)
+    expect(suggestion.message).toMatch(/rotation de champ/)
+  })
+
+  it('amène le grand axe sur la grande dimension du capteur quand l’angle est appliqué', () => {
+    const cible = cibleDominante([objet('allongée', 0, 60, 23)], CADRE, IDENTITE)!
+    const suggestion = rotationSuggeree(cible, CADRE, IDENTITE)
+    const applique: Cadre = { ...CADRE, rotationDeg: suggestion.angleDeg! }
+    // Le critère du PRD, vérifié géométriquement : après application, le grand axe est
+    // aligné sur l'axe u du capteur — à un demi-tour près, un axe n'ayant pas de sens.
+    const phi = angleGrandAxeDansCadre(cible, applique, IDENTITE)!
+    expect(Math.min(phi, 180 - phi)).toBeCloseTo(0, 6)
+  })
+})
+
+describe('le cadre tourne, la vue non — T-0084', () => {
+  it('déplace le contour projeté quand le boîtier tourne', () => {
+    // La MÊME vue projette les deux contours : c'est le cadre qui change, pas le ciel.
+    const proj = projecteur(vue('MODE_PLANETARIUM', 60), IDENTITE)
+    const points = (rotationDeg: number) =>
+      contourCadreJ2000({ ...CADRE, rotationDeg }, IDENTITE)
+        .map((v) => proj.projette(v))
+        .filter((p) => p !== null)
+
+    const droit = points(0)
+    const tourne = points(45)
+    // Le coin bas-gauche s'est franchement déplacé : le cadre paraît tourné à l'écran.
+    const deplacement = Math.hypot(
+      tourne[0]!.xPx - droit[0]!.xPx,
+      tourne[0]!.yPx - droit[0]!.yPx,
+    )
+    expect(deplacement).toBeGreaterThan(50)
+    // Un demi-tour ramène le contour sur lui-même : le rectangle a cette symétrie.
+    const demiTour = points(180)
+    const pas = K('SUBDIVISION_CADRE')
+    const oppose = demiTour[2 * pas]!
+    expect(oppose.xPx).toBeCloseTo(droit[0]!.xPx, 6)
+    expect(oppose.yPx).toBeCloseTo(droit[0]!.yPx, 6)
+  })
+
+  it('garde le zénith en haut : la vue de la scène ne roule jamais', () => {
+    // §3.3 — le mode ne change que R(θ). Le roulis appartient au boîtier, pas à la vue :
+    // sans cela, tourner le cadre ferait tourner tout le ciel et le contour resterait fixe.
+    const sansRoulis = vuePlanetarium({
+      azimutDeg: 180,
+      hauteurDeg: 40,
+      rotationCadreDeg: 137,
+      fovDeg: 60,
+      mode: 'MODE_PLANETARIUM',
+      largeurPx: 1920,
+      hauteurPx: 1080,
+    })
+    expect(sansRoulis.rotationDeg).toBe(0)
+  })
+})
+
+describe('remplissage orienté §6.2 après rotation du boîtier §3.5', () => {
+  const PROFIL = profil('FULL_FRAME')
+  const entree = (angleGrandAxeDeg: number | null) => ({
+    fovHDeg: PROFIL.fovHDeg,
+    fovLDeg: PROFIL.fovLDeg,
+    echApx: PROFIL.echApx,
+    capteurHMm: PROFIL.capteurHMm,
+    // Cible franchement allongée : c'est le seul cas où l'orientation change le verdict.
+    tailleMajArcmin: 4.5 * 60,
+    tailleMinArcmin: 1.0 * 60,
+    angleGrandAxeDeg,
+  })
+
+  it('retombe sur la petite dimension du champ sans orientation connue', () => {
+    const fiche = ficheCadrage(entree(null))
+    expect(fiche.remplissage.value).toBeCloseTo(4.5 / PROFIL.fovHDeg, 9)
+    expect(fiche.remplissage.formula.id).toBe('REMPLISSAGE')
+  })
+
+  it('grand axe sur la petite dimension : identique à la forme calibrée de la table', () => {
+    const fiche = ficheCadrage(entree(90))
+    expect(fiche.remplissage.value).toBeCloseTo(4.5 / PROFIL.fovHDeg, 9)
+    expect(fiche.remplissage.formula.id).toBe('REMPLISSAGE_ORIENTE')
+  })
+
+  it('tourner de 90° change le verdict de cadrage, pas seulement l’affichage', () => {
+    const serre = ficheCadrage(entree(90))
+    const large = ficheCadrage(entree(0))
+    expect(large.remplissage.value).toBeLessThan(serre.remplissage.value)
+    expect(serre.verdict).toBe('CADRAGE_OPTIMAL')
+    expect(large.verdict).toBe('CADRAGE_LARGE')
+  })
+
+  it('laisse une cible ronde indifférente à l’orientation', () => {
+    const ronde = {
+      ...entree(0),
+      tailleMajArcmin: 3 * 60,
+      tailleMinArcmin: 3 * 60,
+    }
+    const droit = ficheCadrage(ronde).remplissage.value
+    const tourne = ficheCadrage({ ...ronde, angleGrandAxeDeg: 45 }).remplissage.value
+    expect(tourne).toBeCloseTo(droit, 9)
   })
 })
 

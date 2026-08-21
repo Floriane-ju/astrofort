@@ -11,6 +11,7 @@
  */
 
 import { K } from '../registry/constants.ts'
+import { RAPPORT_AXES_ORIENTATION } from '../registry/verdicts.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import { matriceVue } from './projection.ts'
 import {
@@ -29,6 +30,8 @@ export interface ProfilCadre {
   readonly fovLDeg: number
   readonly fovHDeg: number
   readonly echApx: number
+  /** Petite dimension du capteur : c'est elle qui donne la focale idéale d'une cible (§6.1). */
+  readonly capteurHMm: number
   /** Pose affichée sur le cadre : optimale avec suivi, NPF sans (§7.2, §9.1). */
   readonly tPoseS: number | null
 }
@@ -171,24 +174,47 @@ export function cibleDominante(
 }
 
 export interface RotationSuggeree {
-  readonly angleDeg: number
+  /**
+   * Angle de boîtier à appliquer, en degrés. `null` quand aucun angle n'est suggérable : le
+   * message dit alors POURQUOI, plutôt que de laisser un silence à interpréter (§6.2).
+   */
+  readonly angleDeg: number | null
   readonly message: string
 }
 
+const DEG_PAR_RADIAN = 180 / Math.PI
+const DEMI_TOUR_DEG = 180
+
+/** Rapport grand axe / petit axe. `null` quand le catalogue ne donne pas le petit axe. */
+function rapportAxes(objet: ObjetCielProfond): number | null {
+  if (objet.majAxArcmin === null) return null
+  if (objet.minAxArcmin === null || objet.minAxArcmin === 0) return null
+  return objet.majAxArcmin / objet.minAxArcmin
+}
+
 /**
- * §3.5 et §6.2 — angle alignant le grand axe de la cible sur la grande dimension du capteur.
+ * Direction du grand axe de la cible dans les axes du capteur, mesurée depuis la GRANDE
+ * dimension du cadre, roulis du boîtier compris. `null` sans angle de position au catalogue.
+ *
  * L'angle de position du catalogue est équatorial ; le cadre, lui, vit dans le repère de
  * l'observateur : la conversion passe par les vecteurs tangents, jamais par une soustraction
  * d'angles qui ignorerait la rotation de champ.
  */
-export function rotationSuggeree(
+export function angleGrandAxeDansCadre(
   cible: CibleDansCadre,
   cadre: Cadre,
   matriceCiel: Mat3,
-): RotationSuggeree | null {
+): number | null {
   const posAng = cible.objet.posAngDeg
-  if (posAng === null) return null
+  return posAng === null ? null : angleAxeDansCadre(posAng, cible, cadre, matriceCiel)
+}
 
+function angleAxeDansCadre(
+  posAng: number,
+  cible: CibleDansCadre,
+  cadre: Cadre,
+  matriceCiel: Mat3,
+): number {
   const ad = cible.objet.adDeg * DEG
   const dec = cible.objet.decDeg * DEG
   // Vecteurs tangents nord et est à la position de l'objet, en J2000.
@@ -205,15 +231,62 @@ export function rotationSuggeree(
     z: Math.cos(pa) * nord.z + Math.sin(pa) * est.z,
   }
 
-  // Sans roulis : on cherche l'angle du grand axe dans le plan tangent du cadre.
-  const versCadre = matriceVue(cadre.azimutDeg, cadre.hauteurDeg, 0)
+  const versCadre = matriceVue(cadre.azimutDeg, cadre.hauteurDeg, cadre.rotationDeg)
   const local = applique(versCadre, applique(matriceCiel, axe))
-  const DEG_PAR_RADIAN = 180 / Math.PI
-  const angleAxe = Math.atan2(local.y, local.x) * DEG_PAR_RADIAN
+  // Un axe n'a pas de sens : deux directions opposées décrivent la même orientation.
+  const brut = Math.atan2(local.y, local.x) * DEG_PAR_RADIAN
+  return ((brut % DEMI_TOUR_DEG) + DEMI_TOUR_DEG) % DEMI_TOUR_DEG
+}
+
+/**
+ * §3.5 et §6.2 — angle alignant le grand axe de la cible sur la grande dimension du capteur.
+ *
+ * Trois issues, et chacune est dite : l'angle quand il existe, la cible trop ronde pour que
+ * l'orientation change quoi que ce soit, l'angle de position absent du catalogue. Un `null`
+ * muet laisserait croire à un calcul en cours ou à un cadrage déjà optimal.
+ */
+export function rotationSuggeree(
+  cible: CibleDansCadre,
+  cadre: Cadre,
+  matriceCiel: Mat3,
+): RotationSuggeree {
+  const rapport = rapportAxes(cible.objet)
+  if (rapport === null) {
+    return {
+      angleDeg: null,
+      message:
+        `Le catalogue ne donne pas le petit axe de ${cible.objet.designation} : son ` +
+        'allongement est inconnu, donc aucun angle n’est suggéré. Le remplissage reste ' +
+        'mesuré contre la petite dimension du champ, le cas conservateur (§6.2).',
+    }
+  }
+  if (rapport <= RAPPORT_AXES_ORIENTATION) {
+    return {
+      angleDeg: null,
+      message:
+        `${cible.objet.designation} est assez ronde (rapport d’axes ${rapport.toFixed(1)}, ` +
+        `sous le seuil de ${RAPPORT_AXES_ORIENTATION}) pour que l’orientation du boîtier ne ` +
+        'change rien : aucun angle n’est suggéré.',
+    }
+  }
+  const posAng = cible.objet.posAngDeg
+  if (posAng === null) {
+    return {
+      angleDeg: null,
+      message:
+        `${cible.objet.designation} est allongée (rapport d’axes ${rapport.toFixed(1)}), mais ` +
+        'le catalogue ne donne pas son angle de position : aucun angle n’est affiché faute ' +
+        'de donnée, et le boîtier garde son orientation courante (§6.2).',
+    }
+  }
+
+  // L'angle se mesure dans le cadre SANS roulis : il donne alors directement le roulis à
+  // appliquer pour amener le grand axe sur la grande dimension du capteur.
+  const angleAxe = angleAxeDansCadre(posAng, cible, { ...cadre, rotationDeg: 0 }, matriceCiel)
 
   const paysage = cadre.profil.fovLDeg >= cadre.profil.fovHDeg
   const brut = paysage ? angleAxe : angleAxe - 90
-  const angleDeg = ((brut % 180) + 180) % 180
+  const angleDeg = ((brut % DEMI_TOUR_DEG) + DEMI_TOUR_DEG) % DEMI_TOUR_DEG
 
   return {
     angleDeg,

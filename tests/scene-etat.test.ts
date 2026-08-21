@@ -68,7 +68,7 @@ describe('§3 — le magasin de scène', () => {
   it('part du pointage de référence, celui des deux vues avant fusion', () => {
     expect(etatScene().vue.azimutDeg).toBe(180)
     expect(etatScene().vue.hauteurDeg).toBe(K('SEUIL_HAUTEUR_IMAGERIE_DEG'))
-    expect(etatScene().vue.rotationDeg).toBe(0)
+    expect(etatScene().vue.rotationCadreDeg).toBe(0)
     expect(etatScene().temps.modeTemps).toBe('MAINTENANT')
   })
 

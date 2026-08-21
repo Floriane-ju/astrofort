@@ -26,6 +26,8 @@ const CRAN_WHEEL_DELTA = 120
 const SEUIL_CRAN_PX = 40
 const HAUTEUR_MIN_DEG = -90
 const HAUTEUR_MAX_DEG = 90
+const TOUR_DEG = 360
+const DEG_PAR_RADIAN = 180 / Math.PI
 
 /**
  * Le facteur appliqué au champ pour un `wheel`. La molette avance par crans : facteur fixe. Le
@@ -83,15 +85,58 @@ interface EvenementGeste extends Event {
   readonly scale: number
 }
 
-function azimutBorne(deg: number): number {
-  return ((deg % 360) + 360) % 360
+/** Un tour complet ramené dans 0–360°, la plage de §3.5 comme celle de l'azimut. */
+function tourBorne(deg: number): number {
+  return ((deg % TOUR_DEG) + TOUR_DEG) % TOUR_DEG
 }
 
 function hauteurBornee(deg: number): number {
   return Math.max(HAUTEUR_MIN_DEG, Math.min(HAUTEUR_MAX_DEG, deg))
 }
 
-/** Le glisser à la souris : promener la visée, et un clic sans déplacement désigne une cible. */
+/** La boîte du canevas, réduite à ce dont la rotation a besoin — testable sans DOM. */
+export interface BoiteCanevas {
+  readonly top: number
+  readonly left: number
+  readonly width: number
+  readonly height: number
+}
+
+function angleAutourDuCentre(boite: BoiteCanevas, clientX: number, clientY: number): number {
+  return (
+    Math.atan2(
+      clientY - (boite.top + boite.height / 2),
+      clientX - (boite.left + boite.width / 2),
+    ) * DEG_PAR_RADIAN
+  )
+}
+
+/**
+ * §3.5 — le roulis du boîtier après un glisser autour du centre du canevas, borné à 0–360°.
+ *
+ * L'écart d'angle du pointeur se RETRANCHE du roulis : l'axe des ordonnées de l'écran descend
+ * là où celui de la vue monte, si bien qu'un roulis croissant fait tourner le cadre dans le
+ * sens antihoraire à l'écran. Sans ce signe, le cadre partirait à l'envers du geste.
+ *
+ * Le geste est continu et sans plafond : deux demi-gestes valent le geste entier, et un tour
+ * complet ramène le cadre où il était.
+ */
+export function roulisApresGlisser(
+  roulisDeg: number,
+  boite: BoiteCanevas,
+  depart: { readonly x: number; readonly y: number },
+  arrivee: { readonly x: number; readonly y: number },
+): number {
+  const ecart =
+    angleAutourDuCentre(boite, arrivee.x, arrivee.y) -
+    angleAutourDuCentre(boite, depart.x, depart.y)
+  return tourBorne(roulisDeg - ecart)
+}
+
+/**
+ * Le glisser à la souris : promener la visée, tourner le cadre avec Maj, et un clic sans
+ * déplacement désigne une cible.
+ */
 export function usePointageSouris(entree: {
   readonly largeurPx: number
   readonly fovDeg: number
@@ -136,12 +181,24 @@ export function usePointageSouris(entree: {
       }
       survol.current = null
       const rect = e.currentTarget.getBoundingClientRect()
+
+      // §3.5 — Maj enfoncée, le geste tourne le BOÎTIER, pas la visée : un geste continu, dans
+      // les bornes 0–360°. Le pointage reste le glisser nu, qui est le geste de tous les jours.
+      if (e.shiftKey) {
+        const arrivee = { x: e.clientX, y: e.clientY }
+        actions.majVue((v) => ({
+          rotationCadreDeg: roulisApresGlisser(v.rotationCadreDeg, rect, depart, arrivee),
+        }))
+        glisse.current = arrivee
+        return
+      }
+
       const echelle = largeurPx / rect.width
       const dx = (e.clientX - depart.x) * echelle
       const dy = (e.clientY - depart.y) * echelle
       const degresParPixel = fovDeg / largeurPx
       actions.majVue((v) => ({
-        azimutDeg: azimutBorne(v.azimutDeg - dx * degresParPixel),
+        azimutDeg: tourBorne(v.azimutDeg - dx * degresParPixel),
         hauteurDeg: hauteurBornee(v.hauteurDeg + dy * degresParPixel),
       }))
       glisse.current = { x: e.clientX, y: e.clientY }
@@ -189,7 +246,7 @@ export function useGestesZoom(
         majVue((v) => {
           const degresParPixel = v.fovDeg / largeurCss
           return {
-            azimutDeg: azimutBorne(v.azimutDeg + e.deltaX * degresParPixel),
+            azimutDeg: tourBorne(v.azimutDeg + e.deltaX * degresParPixel),
             hauteurDeg: hauteurBornee(v.hauteurDeg - e.deltaY * degresParPixel),
           }
         })

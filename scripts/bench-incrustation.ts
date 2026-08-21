@@ -46,6 +46,7 @@ const PROFIL_10MM: ProfilCadre = {
   fovLDeg: 121.0,
   fovHDeg: 100.4,
   echApx: 105.6,
+  capteurHMm: 24,
   tPoseS: null,
 }
 /** Objectif standard : le cadre n'est plus qu'une vignette dans la scène. */
@@ -54,6 +55,7 @@ const PROFIL_50MM: ProfilCadre = {
   fovLDeg: 39.6,
   fovHDeg: 27.0,
   echApx: 24.5,
+  capteurHMm: 24,
   tPoseS: null,
 }
 
