@@ -2,7 +2,7 @@
 {
   "id": "T-0081",
   "titre": "Sharpless et Barnard entrent au paquet de catalogues",
-  "colonne": "en-cours",
+  "colonne": "fait",
   "priorite": "haute",
   "epic": "T-0079",
   "tags": [
