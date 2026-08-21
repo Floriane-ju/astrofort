@@ -259,6 +259,11 @@ function dessineCouche(
   })
   compteur.visitees += stats.etoilesExaminees
   ctx.globalAlpha = 1
+  // Rendus à leurs valeurs par défaut, comme la passe du ciel le fait de la bande : le
+  // marqueur du pôle est tracé après, et un bout de trait laissé arrondi lui arrondissait
+  // aussi les branches.
+  ctx.lineWidth = 1
+  ctx.lineCap = 'butt'
 }
 
 /** Vignettage — assombrissement des coins, chiffré en diaphragmes par §9.2. */
