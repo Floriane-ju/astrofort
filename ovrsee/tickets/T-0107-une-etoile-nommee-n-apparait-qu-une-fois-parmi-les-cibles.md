@@ -2,7 +2,7 @@
 {
   "id": "T-0107",
   "titre": "Une étoile nommée n'apparaît qu'une fois parmi les cibles",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "s",
   "tags": [

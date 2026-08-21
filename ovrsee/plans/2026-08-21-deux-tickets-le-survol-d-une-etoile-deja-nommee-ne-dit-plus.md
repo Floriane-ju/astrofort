@@ -4,7 +4,16 @@
   "title": "Deux tickets — le survol d'une étoile déjà nommée ne dit plus qu'elle est sans désignation",
   "opened": "2026-08-21",
   "closed": null,
-  "commits": []
+  "commits": [
+    {
+      "sha": "0f42361",
+      "date": "2026-08-22",
+      "files": [
+        "src/ui/dessine-ciel.ts",
+        "tests/dessine-ciel.test.ts"
+      ]
+    }
+  ]
 }
 ---
 

@@ -2,7 +2,7 @@
 {
   "id": "T-0108",
   "titre": "Une étoile déjà nommée à l'écran ne se laisse rien peindre au survol",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "xs",
   "tags": [
