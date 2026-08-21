@@ -261,3 +261,40 @@ describe('sur le catalogue OpenNGC embarqué', () => {
     }
   })
 })
+
+/**
+ * T-0079 — le noyau promis au débutant grand champ, vérifié bout en bout.
+ *
+ * Les trois enfants de l'épique livrés, il reste à voir ce que l'utilisateur obtient : un plan
+ * produit depuis le site de référence, sur le CATALOGUE RÉEL, doit citer une cible du domaine
+ * grand champ que ni NGC ni IC ne portent. Sans ce test, Sharpless et Barnard peuvent être
+ * dans le paquet sans jamais ressortir du scoring, et l'épique se solderait sur une promesse.
+ */
+describe('grand champ bout en bout §6.1 (T-0079)', () => {
+  function catalogueReel(): readonly ObjetCielProfond[] {
+    const lit = (nom: string): ArrayBuffer => {
+      const octets = readFileSync(join(import.meta.dirname, '..', 'public', 'data', nom))
+      return octets.buffer.slice(
+        octets.byteOffset,
+        octets.byteOffset + octets.byteLength,
+      ) as ArrayBuffer
+    }
+    return [
+      ...decodeObjets({
+        enregistrements: lit('openngc-1.bin'),
+        chaines: lit('openngc-noms-1.bin'),
+      }),
+      ...decodeObjets({
+        enregistrements: lit('deepsky-1.bin'),
+        chaines: lit('deepsky-noms-1.bin'),
+      }),
+    ]
+  }
+
+  it('cite une cible Sharpless ou Barnard dans un plan de grand champ', () => {
+    const plan = planSession(contexte(), catalogueReel())
+    expect(plan.etapes.length).toBeGreaterThan(0)
+    const complement = plan.etapes.filter((e) => /^(Sh2-|B)\d+$/.test(e.objet.designation))
+    expect(complement.length, plan.etapes.map((e) => e.objet.designation).join(', ')).toBeGreaterThan(0)
+  })
+})
