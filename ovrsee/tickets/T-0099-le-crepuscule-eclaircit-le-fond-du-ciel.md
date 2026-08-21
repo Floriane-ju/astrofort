@@ -3,7 +3,7 @@
   "id": "T-0099",
   "titre": "Le crépuscule éclaircit le fond du ciel",
   "epic": "T-0096",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "m",
   "tags": [
