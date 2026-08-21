@@ -35,7 +35,8 @@ export interface PanneauExplorerProps {
   readonly gaiaCharge: boolean
   /** Magnitude la plus faible du paquet chargé : au-delà, le champ paraît plus pauvre qu'il n'est. */
   readonly profondeurMag: number
-  readonly mLimOeil: number | null
+  /** §2.2 — fond de ciel du site : c'est lui qui plafonne la profondeur en vue réaliste. */
+  readonly sbCiel: number | null
   /** Époque de l'instant affiché : elle chiffre l'écart de précession des frontières B1875. */
   readonly epoqueAnnee: number
   /** §11.1 — aucune animation non sollicitée en mode nuit. */
@@ -61,7 +62,7 @@ export function PanneauExplorer(props: PanneauExplorerProps) {
   const { couches, vueRealiste } = rendu
 
   const bornes = bornesZoom(props.gaiaCharge, mode)
-  const profondeur = etatProfondeur(fovDeg, props.profondeurMag, props.mLimOeil, vueRealiste)
+  const profondeur = etatProfondeur(fovDeg, props.profondeurMag, props.sbCiel, vueRealiste)
   const reglage = reglageVitesse(facteur, vue.largeurPx, fovDeg)
 
   return (
@@ -114,8 +115,22 @@ export function PanneauExplorer(props: PanneauExplorerProps) {
               checked={vueRealiste}
               onChange={(e) => actions.majRendu({ vueRealiste: e.target.checked })}
             />
-            Vue réaliste — plafonnée par le fond de ciel
+            {/* T-0097 — la case ne plafonne plus seulement la magnitude : elle peint le fond
+                de ciel du site, son halo d'horizon et celui de la Lune. */}
+            Vue réaliste — fond de ciel et magnitude limite du site
           </label>
+          {/* T-0096 — les limites du fond peint se disent DANS l'app, pas seulement dans le
+              ticket : une approximation tue est une approximation que l'utilisateur prend
+              pour une mesure. */}
+          {vueRealiste && (
+            <p className="cause">
+              Le fond peint additionne, en nanolamberts, la brillance du site, son halo
+              d’horizon (van&nbsp;Rhijn 1921) et celle de la Lune (Krisciunas &amp; Schaefer
+              1991). Hors périmètre, et dit plutôt que supposé : le sol ne s’éclaircit pas, et
+              le halo du site reste symétrique en azimut — le dôme lumineux d’une ville est
+              plus clair de son côté, mais l’atlas qui le donnerait exige le réseau (§4.1).
+            </p>
+          )}
         </div>
         {bornes.cause !== undefined && <p className="cause">{bornes.cause}</p>}
 

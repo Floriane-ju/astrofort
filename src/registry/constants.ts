@@ -1195,6 +1195,95 @@ const RENDU = {
     ordreDeGrandeur: false,
     sections: ['3.5'],
   }),
+  /**
+   * T-0097 — extension de rendu. §3.3 ne dit du fond de ciel que « plafonne mag_limite en vue
+   * réaliste » : la couleur du fond n'y est pas spécifiée. Ces quatre entrées sont donc une
+   * convention produit assumée, comme FOV_MAX_GNOMONIQUE_DEG (T-0095), et prd.md reste intact.
+   */
+  K_EXPOSITION_FOND_CIEL: entree({
+    ref: 'C-38',
+    libelle: 'Exposition du fond de ciel peint',
+    valeur: 5.066e-5,
+    unite: 'Y/nL',
+    source:
+      'extension de rendu — seule constante libre du modèle, calée pour que la luminance ' +
+      'd’écran vaille 0,003 au fond de ciel le plus sombre de la table Bortle (21,9 mag/as², ' +
+      'Bortle 1), soit juste au-dessus du noir. Le RAPPORT des luminances, lui, est physique : ' +
+      'Y = K × B(sb) donne 36× entre Bortle 9 et Bortle 1, exactement le rapport des brillances.',
+    tolerance: 'convention produit — pilote l’apparence d’un fond, jamais un verdict',
+    ordreDeGrandeur: false,
+    sections: ['3.3'],
+  }),
+  CHROMA_FOND_CIEL_R: entree({
+    ref: 'C-39',
+    libelle: 'Chromaticité du fond de ciel — canal rouge',
+    valeur: 0.62,
+    unite: '—',
+    source:
+      'extension de rendu — teinte bleu-violet fixe du ciel nocturne, en lumière linéaire ; ' +
+      'seule la luminance varie avec le fond de ciel, jamais la chromaticité.',
+    tolerance: 'convention produit',
+    ordreDeGrandeur: false,
+    sections: ['3.3'],
+  }),
+  CHROMA_FOND_CIEL_V: entree({
+    ref: 'C-40',
+    libelle: 'Chromaticité du fond de ciel — canal vert',
+    valeur: 0.72,
+    unite: '—',
+    source: 'extension de rendu — voir CHROMA_FOND_CIEL_R',
+    tolerance: 'convention produit',
+    ordreDeGrandeur: false,
+    sections: ['3.3'],
+  }),
+  CHROMA_FOND_CIEL_B: entree({
+    ref: 'C-41',
+    libelle: 'Chromaticité du fond de ciel — canal bleu',
+    valeur: 1,
+    unite: '—',
+    source: 'extension de rendu — canal de référence, voir CHROMA_FOND_CIEL_R',
+    tolerance: 'convention produit',
+    ordreDeGrandeur: false,
+    sections: ['3.3'],
+  }),
+  RAYON_TERRE_KM: entree({
+    ref: 'A-TER',
+    libelle: 'Rayon terrestre moyen',
+    valeur: 6371,
+    unite: 'km',
+    source: 'rayon volumétrique moyen de la Terre (IUGG)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['3.3'],
+  }),
+  HAUTEUR_COUCHE_EMISSIVE_KM: entree({
+    ref: 'C-42',
+    libelle: 'Hauteur de la couche émissive du ciel nocturne',
+    valeur: 90,
+    unite: 'km',
+    source:
+      'van Rhijn (1921) — la lueur atmosphérique est émise par une couche mince vers 90 km ' +
+      '(raies OH vers 87 km, sodium vers 90 km, OI 557,7 nm vers 96 km). C’est cette couche, ' +
+      'vue sous une épaisseur croissante quand on baisse la visée, qui éclaircit l’horizon.',
+    tolerance: 'ordre de grandeur — 85 à 100 km selon l’émission dominante',
+    ordreDeGrandeur: true,
+    plage: [85, 100],
+    sections: ['3.3'],
+  }),
+  PALIERS_HALO_HORIZON: entree({
+    ref: 'C-43',
+    libelle: 'Nombre de paliers de hauteur du halo d’horizon',
+    valeur: 12,
+    unite: '—',
+    source:
+      'T-0098, convention produit — le profil de van Rhijn est continu ; il est peint en ' +
+      'paliers de hauteur égale parce que les courbes iso-hauteur ne sont pas des cercles à ' +
+      'l’écran et qu’un dégradé de canevas les rendrait faux. À 12 paliers, la marche la plus ' +
+      'visible (celle de l’horizon) vaut 0,17 mag/as², sous le seuil de perception d’un bord.',
+    tolerance: 'convention produit — baisser ce nombre allège le rendu, jamais la fréquence d’image',
+    ordreDeGrandeur: false,
+    sections: ['3.3'],
+  }),
   SUBDIVISION_CADRE: entree({
     ref: 'C-31',
     libelle: 'Nombre de points par bord du cadre matériel projeté',

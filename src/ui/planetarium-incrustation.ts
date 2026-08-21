@@ -34,6 +34,10 @@ export interface EntreeIncrustation {
   readonly site: Site
   readonly modeNuit: boolean
   readonly profils: readonly ProfilCadre[]
+  /** §3.3 — vue réaliste : l'aperçu prend le même fond que la scène qui l'accueille. */
+  readonly vueRealiste: boolean
+  /** Fond de ciel effectif de la direction du cadre. Absent : celui du site fait office. */
+  readonly sbFond?: number | undefined
 }
 
 /**
@@ -104,6 +108,8 @@ export function useIncrustationFile(
       axePoleNord: axePoleDeDate(ciel.epoqueAnnee),
       voieLactee: file.voieLactee,
       modeNuit,
+      vueRealiste: entree.vueRealiste,
+      ...(entree.sbFond === undefined ? {} : { sbFond: entree.sbFond }),
     })
     incrustation.current = sortie?.image ?? null
     if (sortie !== null) {

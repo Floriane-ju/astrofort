@@ -251,6 +251,7 @@ function mesure(cas: Cas, indexReel: IndexCiel, indexSemis: IndexCiel): void {
       projecteur: proj,
       indexReel,
       indexSemis,
+      vueRealiste: false,
       magLimite,
       profondeur,
       echApx: cas.profil.echApx,

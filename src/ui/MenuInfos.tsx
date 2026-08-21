@@ -48,7 +48,8 @@ export interface MenuInfosProps {
   readonly index: IndexCiel
   readonly objets: readonly ObjetCielProfond[]
   readonly profils: readonly ProfilCadre[]
-  readonly mLimOeil: number | null
+  /** §2.2 — fond de ciel du site : il plafonne la profondeur affichée en vue réaliste. */
+  readonly sbCiel: number | null
 }
 
 export function MenuInfos(props: MenuInfosProps) {
@@ -61,8 +62,8 @@ export function MenuInfos(props: MenuInfosProps) {
   const dateAffichee = useMemo(() => new Date(msAffiche), [msAffiche])
   const ciel = useMemo(() => cielInstantane(props.site, dateAffichee), [props.site, dateAffichee])
   const profondeur = useMemo(
-    () => etatProfondeur(fovDeg, props.index.profondeurMag, props.mLimOeil, vueRealiste),
-    [fovDeg, props.index.profondeurMag, props.mLimOeil, vueRealiste],
+    () => etatProfondeur(fovDeg, props.index.profondeurMag, props.sbCiel, vueRealiste),
+    [fovDeg, props.index.profondeurMag, props.sbCiel, vueRealiste],
   )
   // T-0068 — la même phrase que la description du canevas, composée une seule fois.
   const visee = useMemo(

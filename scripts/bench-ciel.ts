@@ -23,7 +23,7 @@
  * `--empreinte` remplace la mesure par le condensé des ordres de peinture : c'est lui qui
  * dit qu'une optimisation n'a PAS changé l'image (§critère « identique au pixel près »).
  *
- * Usage : `pnpm bench:ciel [--empreinte]`.
+ * Usage : `pnpm bench:ciel [--empreinte] [--realiste]`.
  */
 
 import { readFileSync } from 'node:fs'
@@ -49,6 +49,8 @@ const LARGEUR = 1920
 const HAUTEUR = 1080
 const IMAGES = 200
 const EMPREINTE = process.argv.includes('--empreinte')
+/** T-0098 — `--realiste` ajoute le fond peint et ses paliers de halo : c'est leur surcoût. */
+const REALISTE = process.argv.includes('--realiste')
 
 /** Scène de référence : plein champ, toutes les couches, le ciel d'un site réel. */
 const VUE: Vue = {
@@ -234,6 +236,7 @@ function image(ctx: CanvasRenderingContext2D): { comptes: Comptes; dessinees: nu
     projecteur: proj,
     matriceCiel: ciel.matrice,
     masque: masquePlat(),
+    vueRealiste: REALISTE,
     index,
     etoiles,
     objets,
@@ -295,7 +298,8 @@ if (EMPREINTE) {
 
   const objetsParImage = comptes!.projette() * 2 + path2dConstruits / IMAGES
   console.log(
-    `scène de référence — ${VUE.fovDeg}° de champ, ${index.nombreEtoiles.toLocaleString('fr-FR')} ` +
+    `scène de référence${REALISTE ? ' — VUE RÉALISTE' : ''} — ${VUE.fovDeg}° de champ, ` +
+      `${index.nombreEtoiles.toLocaleString('fr-FR')} ` +
       `étoiles au catalogue, ${dessinees.toLocaleString('fr-FR')} dessinées`,
   )
   console.log(

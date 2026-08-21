@@ -28,6 +28,7 @@ import type { Site } from '../src/core/ephem.ts'
 import { versVecteur } from '../src/core/mat3.ts'
 import { projecteur, type Vue } from '../src/core/projection.ts'
 import { dessineChamp, type EntreeDessinChamp } from '../src/ui/dessine-champ.ts'
+import { fondRealiste, palette } from '../src/ui/couleurs.ts'
 import { pointZeroSysteme } from '../src/data/equipment.ts'
 import { PanneauFile } from '../src/ui/PanneauFile.tsx'
 import { K } from '../src/registry/constants.ts'
@@ -136,6 +137,7 @@ function rend(options: Partial<EntreeDessinChamp> = {}) {
     profondeur: PROFONDEUR,
     echApx: 105.6,
     suiviActif: false,
+    vueRealiste: false,
     sbCiel: 21.0,
     dureeS: 1,
     latitudeDeg: SITE.latitudeDeg,
@@ -336,5 +338,27 @@ describe('§9.3 — une trace est moins brillante qu’un point', () => {
     )
     // Une magnitude sous le seuil : deux fois et demie plus pâle encore.
     expect(opaciteEtoile(11, 10)).toBeLessThan(opaciteEtoile(10, 10))
+  })
+})
+
+/**
+ * T-0097 — l'aperçu incrusté (§9.5) et le planétarium montrent le MÊME fond. Deux fonds
+ * différents dans une seule image se verraient comme un rectangle posé sur la scène.
+ */
+describe('fond de ciel réaliste de l’aperçu §9.5', () => {
+  it('prend la teinte du fond de ciel effectif de la direction du cadre', () => {
+    const sbFond = 19.4
+    const { ctx } = rend({ vueRealiste: true, sbFond })
+    expect(ctx.couleurs[0]).toBe(fondRealiste(sbFond))
+  })
+
+  it('retombe sur le fond du site quand aucun fond effectif n’est fourni', () => {
+    const { ctx } = rend({ vueRealiste: true, sbCiel: 20.6 })
+    expect(ctx.couleurs[0]).toBe(fondRealiste(20.6))
+  })
+
+  it('laisse le fond inchangé quand la vue réaliste est décochée', () => {
+    const { ctx } = rend({})
+    expect(ctx.couleurs[0]).toBe(palette(false).fond)
   })
 })

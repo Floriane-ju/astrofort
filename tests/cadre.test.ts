@@ -333,7 +333,7 @@ describe('garde-fous du cadre §3.5', () => {
         index: construitIndex([]),
         objets: [],
         profils: [],
-        mLimOeil: 6.05,
+        sbCiel: 20.6,
       }),
     )
     expect(html).toContain('ne superpose pas de cadre par défaut')

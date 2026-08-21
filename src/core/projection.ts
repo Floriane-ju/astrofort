@@ -17,6 +17,7 @@
  */
 
 import { K } from '../registry/constants.ts'
+import { mLimOeilBorne } from '../registry/bortle.ts'
 import { DEG, multiplie, transpose, type Mat3, type Vec3 } from './mat3.ts'
 import { trace, type Traced } from './traced.ts'
 
@@ -247,23 +248,39 @@ export function magnitudeLimite(fovDeg: number): Traced<number> {
 }
 
 /**
- * Vue réaliste : le fond de ciel local plafonne la profondeur affichée. Le rendu montre
+ * Vue réaliste : le fond de ciel EFFECTIF plafonne la profondeur affichée. Le rendu montre
  * alors le ciel tel qu'il serait vu, non le catalogue complet (§3.3).
+ *
+ * T-0100 — le paramètre est la brillance du fond de ciel, pas la magnitude limite à l'œil nu.
+ * Cette fonction plafonnait auparavant sur un `mLimOeil` déjà résolu, et ne plafonnait donc
+ * plus rien dès qu'il valait `null`. Or `null` veut dire « hors table » : sous la Lune, un
+ * ciel PLUS CLAIR que Bortle 9 montrait alors plus d'étoiles qu'un ciel de banlieue. La
+ * brillance, elle, dit de quel côté de la table on est sorti, et `mLimOeilBorne` borne au bord
+ * en le déclarant.
  */
 export function magnitudeRendue(
   fovDeg: number,
-  mLimOeil: number | null,
+  sbEffectif: number | null,
   vueRealiste: boolean,
 ): Traced<number> {
   const zoom = magnitudeLimite(fovDeg)
-  if (!vueRealiste || mLimOeil === null) return zoom
+  if (!vueRealiste || sbEffectif === null) return zoom
+  const oeil = mLimOeilBorne(sbEffectif)
+  const horsTable =
+    oeil.borne === 'AUCUNE'
+      ? ''
+      : ' Le fond de ciel effectif sort de la table Bortle : la magnitude limite est bornée ' +
+        `au bord de table (${oeil.value.toFixed(1)}), jamais extrapolée — ciel ` +
+        `${oeil.borne === 'CIEL_PLUS_CLAIR' ? 'plus clair que Bortle 9' : 'plus sombre que Bortle 1'}.`
   return trace({
-    value: Math.min(zoom.value, mLimOeil),
+    value: Math.min(zoom.value, oeil.value),
     formula: 'MAGNITUDE_LIMITE_RENDUE',
-    inputs: { mag_limite_zoom: zoom.value, m_lim_oeil: mLimOeil },
+    inputs: { mag_limite_zoom: zoom.value, sb_effectif: sbEffectif, m_lim_oeil: oeil.value },
+    ...(oeil.borne === 'AUCUNE' ? {} : { flags: ['HORS_DOMAINE'] as const }),
     note:
       'Vue réaliste : la magnitude affichée est plafonnée par le fond de ciel du site. ' +
-      'Désactiver la vue réaliste montre le catalogue complet, qui n’est pas ce que l’œil voit.',
+      'Désactiver la vue réaliste montre le catalogue complet, qui n’est pas ce que l’œil voit.' +
+      horsTable,
   })
 }
 
@@ -317,10 +334,10 @@ export interface EtatProfondeur {
 export function etatProfondeur(
   fovDeg: number,
   profondeurCatalogue: number,
-  mLimOeil: number | null,
+  sbEffectif: number | null,
   vueRealiste: boolean,
 ): EtatProfondeur {
-  const magLimite = magnitudeRendue(fovDeg, mLimOeil, vueRealiste)
+  const magLimite = magnitudeRendue(fovDeg, sbEffectif, vueRealiste)
   const epuise = magLimite.value > profondeurCatalogue
   return {
     magLimite,

@@ -100,3 +100,32 @@ export function mLimOeilDepuisSb(sb: number): number | null {
   }
   return null
 }
+
+/** Magnitude limite à l'œil nu aux deux bords de la table. */
+export const M_LIM_OEIL_PLAFOND = TABLE_BORTLE[0]!.mLimOeil
+export const M_LIM_OEIL_PLANCHER = TABLE_BORTLE[TABLE_BORTLE.length - 1]!.mLimOeil
+/** Fond de ciel le plus clair de la table, borne basse de son domaine. */
+export const SB_PLAFOND_TABLE = TABLE_BORTLE[TABLE_BORTLE.length - 1]!.sb
+
+export type BorneTableBortle = 'AUCUNE' | 'CIEL_PLUS_SOMBRE' | 'CIEL_PLUS_CLAIR'
+
+export interface MLimOeilBorne {
+  readonly value: number
+  readonly borne: BorneTableBortle
+}
+
+/**
+ * T-0100 — magnitude limite à l'œil nu, BORNÉE au bord de table hors domaine.
+ *
+ * `mLimOeilDepuisSb` rend `null` hors de la table, et c'est la bonne réponse tant qu'il s'agit
+ * de publier une valeur : rien n'est extrapolé. Mais un appelant qui doit PLAFONNER quelque
+ * chose ne peut rien faire d'un `null` — il finit par ne plus plafonner du tout, et un ciel de
+ * pleine Lune montre alors plus d'étoiles qu'un ciel de banlieue. On borne donc au bord de
+ * table en le déclarant, comme `contrast.ts` plafonne le seuil de Blackwell au dernier palier.
+ */
+export function mLimOeilBorne(sb: number): MLimOeilBorne {
+  if (!Number.isFinite(sb)) return { value: M_LIM_OEIL_PLANCHER, borne: 'CIEL_PLUS_CLAIR' }
+  if (sb > SB_PLANCHER_NATUREL) return { value: M_LIM_OEIL_PLAFOND, borne: 'CIEL_PLUS_SOMBRE' }
+  if (sb < SB_PLAFOND_TABLE) return { value: M_LIM_OEIL_PLANCHER, borne: 'CIEL_PLUS_CLAIR' }
+  return { value: mLimOeilDepuisSb(sb) ?? M_LIM_OEIL_PLANCHER, borne: 'AUCUNE' }
+}

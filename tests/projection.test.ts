@@ -24,6 +24,13 @@ import {
 } from '../src/core/projection.ts'
 import { IDENTITE, separationDeg, versVecteur } from '../src/core/mat3.ts'
 import { K } from '../src/registry/constants.ts'
+import {
+  M_LIM_OEIL_PLAFOND,
+  M_LIM_OEIL_PLANCHER,
+  SB_PLAFOND_TABLE,
+  SB_PLANCHER_NATUREL,
+  interpoleBortle,
+} from '../src/registry/bortle.ts'
 
 const LARGEUR = 1920
 const HAUTEUR = 1080
@@ -200,10 +207,29 @@ describe('profondeur asservie au zoom §3.3', () => {
   })
 
   it('plafonne la profondeur par le fond de ciel en vue réaliste', () => {
-    const bortle8 = 5.0
-    expect(magnitudeRendue(60, bortle8, true).value).toBeCloseTo(bortle8, 9)
-    expect(magnitudeRendue(60, bortle8, false).value).toBeCloseTo(K('MAG_BASE_RENDU'), 9)
-    expect(magnitudeRendue(60, bortle8, true).note).toMatch(/plafonnée par le fond de ciel/)
+    const bortle8 = interpoleBortle(8)
+    expect(magnitudeRendue(60, bortle8.sb, true).value).toBeCloseTo(bortle8.mLimOeil, 9)
+    expect(magnitudeRendue(60, bortle8.sb, false).value).toBeCloseTo(K('MAG_BASE_RENDU'), 9)
+    expect(magnitudeRendue(60, bortle8.sb, true).note).toMatch(/plafonnée par le fond de ciel/)
+  })
+
+  /**
+   * T-0100 — non-régression du bug corrigé : un fond de ciel HORS TABLE ne suspend plus le
+   * plafond. Sous la Lune, `sb_effectif` descend sous la dernière ligne de la table ; la
+   * version fautive rendait alors la magnitude du zoom, donc PLUS d'étoiles qu'un ciel de
+   * banlieue. Le plafond se pose maintenant au bord de table, et le déclare.
+   */
+  it('plafonne encore quand le fond de ciel sort de la table Bortle', () => {
+    const horsTableClair = SB_PLAFOND_TABLE - 1
+    const sousLaLune = magnitudeRendue(60, horsTableClair, true)
+    expect(sousLaLune.value).toBeCloseTo(M_LIM_OEIL_PLANCHER, 9)
+    expect(sousLaLune.value).toBeLessThan(magnitudeRendue(60, interpoleBortle(9).sb, true).value + 1e-9)
+    expect(sousLaLune.note).toMatch(/bord de table/)
+    expect(sousLaLune.flags).toContain('HORS_DOMAINE')
+
+    // L'autre bord : un SQM plus sombre que la table ne fait pas tomber le plafond non plus.
+    const horsTableSombre = magnitudeRendue(5, SB_PLANCHER_NATUREL + 1, true)
+    expect(horsTableSombre.value).toBeCloseTo(M_LIM_OEIL_PLAFOND, 9)
   })
 
   it('déclare le catalogue épuisé sous la borne du paquet chargé', () => {

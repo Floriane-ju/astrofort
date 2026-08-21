@@ -65,6 +65,10 @@ export interface EntreeIncrustation {
   readonly axePoleNord: Vec3
   readonly voieLactee: boolean
   readonly modeNuit: boolean
+  /** §3.3 — vue réaliste : l'aperçu prend le même fond que la scène qui l'accueille. */
+  readonly vueRealiste: boolean
+  /** Fond de ciel effectif de la direction du cadre. Absent : celui du site fait office. */
+  readonly sbFond?: number | undefined
 }
 
 export interface Incrustation {
@@ -103,6 +107,8 @@ export function rendIncrustation(entree: EntreeIncrustation): Incrustation | nul
     voieLactee: entree.voieLactee,
     vignettage: false,
     modeNuit: entree.modeNuit,
+    vueRealiste: entree.vueRealiste,
+    ...(entree.sbFond === undefined ? {} : { sbFond: entree.sbFond }),
     // Le canevas garde la définition et le repère de la scène — c'est ce partage qui fait
     // tomber les arcs sur les bonnes étoiles. Seule la sélection se resserre sur le cadre.
     cadreSelection: etendueCadre(entree.cadre, entree.matriceCiel),

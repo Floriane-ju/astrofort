@@ -295,7 +295,7 @@ function menuAvecCible(): {
   readonly index: ReturnType<typeof construitIndex>
   readonly objets: readonly ObjetCielProfond[]
   readonly profils: readonly ProfilCadre[]
-  readonly mLimOeil: number
+  readonly sbCiel: number
 } {
   const site: Site = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
   const { vue, msAffiche } = etatScene()
@@ -318,7 +318,7 @@ function menuAvecCible(): {
     profils: [
       { libelle: '120 mm', fovLDeg: 17, fovHDeg: 11.4, echApx: 8.8, capteurHMm: 24, tPoseS: 2.1 },
     ],
-    mLimOeil: 6.05,
+    sbCiel: 20.6,
   }
 }
 

@@ -25,6 +25,10 @@ import { coucheAsterismes, coucheFigures, coucheFrontieres } from '../core/const
 import { reglageVitesse } from '../core/curseur-temps.ts'
 import type { IndexCiel } from '../core/index-ciel.ts'
 import { cielInstantane } from '../core/horloges.ts'
+import { etatLune } from '../core/moon.ts'
+import { sbEffectifRendu } from '../core/fond-ciel-rendu.ts'
+import { separationDeg, versVecteur } from '../core/mat3.ts'
+import type { LuneEcran } from './dessine-fond-ciel.ts'
 import { etatProfondeur, type ModeProjection } from '../core/projection.ts'
 import { majVue, resolutionRendu, useScene } from './scene-etat.ts'
 import { useSeance } from './seance-etat.ts'
@@ -128,15 +132,60 @@ export function Planetarium(props: PlanetariumProps) {
   )
   const frontieres = useMemo(() => coucheFrontieres(props.constellations), [props.constellations])
 
+  const dateAffichee = useMemo(() => new Date(msAffiche), [msAffiche])
+  // T-0100 — la Lune de l'instant affiché : le halo est centré sur ELLE, donc sur le même
+  // état que le corps dessiné. §12.5 — un instant hors du domaine des séries n'éteint pas la
+  // scène : la Lune sort du calcul, le reste continue.
+  const lune = useMemo((): LuneEcran | null => {
+    try {
+      const etat = etatLune(props.site, dateAffichee)
+      return {
+        adH: etat.adH,
+        decDeg: etat.decDeg,
+        altitudeDeg: etat.altitudeDeg,
+        anglePhaseDeg: etat.anglePhaseDeg,
+        azimutDeg: etat.azimutDeg,
+      }
+    } catch {
+      return null
+    }
+  }, [props.site, dateAffichee])
+
+  /**
+   * T-0098, T-0100 — le fond de ciel EFFECTIF dans la direction visée : celui du site, majoré
+   * du halo d'horizon et de la Lune. C'est lui qui plafonne la magnitude limite en vue
+   * réaliste, sans quoi une pleine Lune montrerait autant d'étoiles qu'une nuit noire.
+   */
+  const sbEffectif = useMemo(
+    () =>
+      sbEffectifRendu({
+        sbSiteMag: props.sbCiel,
+        hauteurDeg: pointage.hauteurDeg,
+        ...(lune === null || lune.altitudeDeg <= 0
+          ? {}
+          : {
+              lune: {
+                altitudeLuneDeg: lune.altitudeDeg,
+                altitudeCibleDeg: pointage.hauteurDeg,
+                separationDeg: separationDeg(
+                  versVecteur(pointage.azimutDeg, pointage.hauteurDeg),
+                  versVecteur(lune.azimutDeg, lune.altitudeDeg),
+                ),
+                anglePhaseDeg: lune.anglePhaseDeg,
+              },
+            }),
+      }),
+    [props.sbCiel, pointage.azimutDeg, pointage.hauteurDeg, lune],
+  )
+
   const profondeur = useMemo(
-    () => etatProfondeur(fovDeg, props.index.profondeurMag, props.mLimOeil, rendu.vueRealiste),
-    [fovDeg, props.index.profondeurMag, props.mLimOeil, rendu.vueRealiste],
+    () => etatProfondeur(fovDeg, props.index.profondeurMag, sbEffectif, rendu.vueRealiste),
+    [fovDeg, props.index.profondeurMag, sbEffectif, rendu.vueRealiste],
   )
   const reglage = useMemo(
     () => reglageVitesse(temps.facteur, largeurPx, fovDeg),
     [temps.facteur, largeurPx, fovDeg],
   )
-  const dateAffichee = useMemo(() => new Date(msAffiche), [msAffiche])
   const ciel = useMemo(
     () => cielInstantane(props.site, dateAffichee),
     [props.site, dateAffichee],
@@ -162,6 +211,10 @@ export function Planetarium(props: PlanetariumProps) {
     site: props.site,
     modeNuit: props.modeNuit,
     profils: props.profils,
+    vueRealiste: rendu.vueRealiste,
+    // §9.5 — l'aperçu prend le fond de ciel de la direction du cadre, pas celui du zénith :
+    // deux fonds différents dans une même image se verraient comme un rectangle.
+    sbFond: sbEffectif,
   })
 
   useResolutionSuitLaBoite(canevas)
@@ -183,6 +236,8 @@ export function Planetarium(props: PlanetariumProps) {
     couches: rendu.couches,
     magLimite: profondeur.magLimite.value,
     sbCiel: props.sbCiel,
+    vueRealiste: rendu.vueRealiste,
+    lune,
     vue: pointage,
     modeTemps: temps.modeTemps,
     facteur: reglage.facteur,

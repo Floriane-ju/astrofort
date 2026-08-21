@@ -110,6 +110,18 @@ export function nanolamberts(sbMagArcsec2: number): number {
   )
 }
 
+/**
+ * Transmission atmosphérique en bande V sur une masse d'air donnée : 10^(−0,4 k X).
+ *
+ * Exportée parce que le rendu du fond de ciel (T-0098) applique la MÊME extinction au halo
+ * du site. Deux écritures de la même atténuation finiraient par diverger d'un facteur 0,4.
+ */
+export function extinctionV(masseAir: number): number {
+  return (
+    K('BASE_MAGNITUDE') ** (-(K('EXTINCTION_V_MAG_PAR_MASSE_AIR') * masseAir) / K('POGSON'))
+  )
+}
+
 /** Illuminance hors atmosphère de la Lune à l'angle de phase donné. */
 export function illuminanceLune(anglePhaseDeg: number): number {
   const a = Math.abs(anglePhaseDeg)
@@ -127,12 +139,34 @@ export function diffusionKS(separation: number): number {
   )
 }
 
-export interface EntreeDeltaSbLune {
-  readonly sbCielNoirMag: number
+export interface GeometrieLune {
   readonly altitudeLuneDeg: number
   readonly altitudeCibleDeg: number
   readonly separationDeg: number
   readonly anglePhaseDeg: number
+}
+
+export interface EntreeDeltaSbLune extends GeometrieLune {
+  readonly sbCielNoirMag: number
+}
+
+/**
+ * Brillance ajoutée par la Lune dans cette direction, en nanolamberts — le terme B_lune du
+ * modèle KS91, avant toute conversion en magnitudes.
+ *
+ * Exposée séparément parce que le rendu du planétarium (T-0100) ADDITIONNE cette brillance à
+ * celles du site et du crépuscule : additionner des magnitudes n'a pas de sens, et refaire ce
+ * produit ailleurs donnerait deux halos lunaires pour un seul modèle.
+ */
+export function brillanceLuneNl(entree: GeometrieLune): number {
+  // Règle 1 de ce module : une Lune sous l'horizon n'ajoute rien, quelle que soit sa phase.
+  if (entree.altitudeLuneDeg <= 0 || entree.altitudeCibleDeg <= 0) return 0
+  return (
+    diffusionKS(entree.separationDeg) *
+    illuminanceLune(entree.anglePhaseDeg) *
+    extinctionV(masseAirKS(entree.altitudeLuneDeg)) *
+    (1 - extinctionV(masseAirKS(entree.altitudeCibleDeg)))
+  )
 }
 
 /**
@@ -173,15 +207,7 @@ export function deltaSbLune(entree: EntreeDeltaSbLune): Traced<number> {
     })
   }
 
-  const k = K('EXTINCTION_V_MAG_PAR_MASSE_AIR')
-  const attenuation = (masseAir: number): number =>
-    K('BASE_MAGNITUDE') ** (-(k * masseAir) / K('POGSON'))
-
-  const bLune =
-    diffusionKS(entree.separationDeg) *
-    illuminanceLune(entree.anglePhaseDeg) *
-    attenuation(masseAirKS(entree.altitudeLuneDeg)) *
-    (1 - attenuation(masseAirKS(entree.altitudeCibleDeg)))
+  const bLune = brillanceLuneNl(entree)
 
   const bCiel = nanolamberts(entree.sbCielNoirMag)
   const delta = K('POGSON') * Math.log10((bCiel + bLune) / bCiel)

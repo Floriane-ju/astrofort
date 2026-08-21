@@ -27,6 +27,7 @@ import { afficheInstant, vuePlanetarium, type VueScene } from './scene-etat.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
 import { incrusteDansLeCadre } from './scene-overlay.ts'
 import { dessineCiel, type CibleEcran, type SurvolEcran } from './dessine-ciel.ts'
+import type { LuneEcran } from './dessine-fond-ciel.ts'
 
 /** Noms français des corps mobiles de §3.1. */
 const NOMS_CORPS: Readonly<Record<string, string>> = {
@@ -65,6 +66,10 @@ export interface EtatBoucle {
   readonly magLimite: number
   /** §3.7 — fond de ciel du site : il module le contraste de la bande de la Voie lactée. */
   readonly sbCiel: number
+  /** §3.3 — vue réaliste : le fond du ciel prend la luminance du site (T-0097). */
+  readonly vueRealiste: boolean
+  /** T-0100 — la Lune de l'instant affiché. Absente : aucun halo lunaire n'est peint. */
+  readonly lune: LuneEcran | null
   readonly vue: VueScene
   readonly modeTemps: string
   readonly facteur: number
@@ -168,6 +173,9 @@ export function useBoucleRendu(entree: {
         couches: courant.couches,
         magLimite: courant.magLimite,
         sbCiel: courant.sbCiel,
+        vueRealiste: courant.vueRealiste,
+        // §3.1 — corps masqués : la Lune n'est ni dessinée ni comptée, donc pas de halo.
+        ...(courant.lune === null || ciel.corpsMasques ? {} : { lune: courant.lune }),
         latitudeDeg: courant.site.latitudeDeg,
         masque: courant.masque,
         modeNuit: courant.modeNuit,

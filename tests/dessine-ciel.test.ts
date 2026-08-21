@@ -41,7 +41,8 @@ import {
   type EntreeDessin,
   type SurvolEcran,
 } from '../src/ui/dessine-ciel.ts'
-import { palette } from '../src/ui/couleurs.ts'
+import { palette, paletteRealiste } from '../src/ui/couleurs.ts'
+import type { LuneEcran } from '../src/ui/dessine-fond-ciel.ts'
 import { sousLeSol } from '../src/core/sol.ts'
 import { K } from '../src/registry/constants.ts'
 
@@ -111,6 +112,11 @@ function contexteEspion() {
       appels.push({ nom: 'stroke', args })
     },
     fill: enregistre('fill'),
+    createRadialGradient: (..._args: number[]) => ({
+      addColorStop(_o: number, c: string) {
+        couleurs.push(c)
+      },
+    }),
     fillText: enregistre('fillText'),
     setLineDash: enregistre('setLineDash'),
   }
@@ -161,6 +167,8 @@ function rend(
     masque?: MasqueHorizon
     fovDeg?: number
     corps?: readonly PositionCorps[]
+    vueRealiste?: boolean
+    lune?: LuneEcran
   } = {},
 ) {
   const ctx = contexteEspion()
@@ -179,6 +187,8 @@ function rend(
     projecteur: projecteur(vue, ciel.matrice),
     matriceCiel: ciel.matrice,
     masque: options.masque ?? masquePlat(),
+    vueRealiste: options.vueRealiste ?? false,
+    ...(options.lune === undefined ? {} : { lune: options.lune }),
     index: construitIndex(etoilesDeTest()),
     etoiles: etoilesDeTest(),
     objets: options.objets ?? [],
@@ -431,6 +441,56 @@ describe('passe de rendu §3.3', () => {
       // Seule couleur hexadécimale admise : le noir du fond.
       expect(couleur, couleur).toBe('#000000')
     }
+  })
+})
+
+/**
+ * T-0097, T-0098, T-0100 — la vue réaliste dans la passe de rendu.
+ *
+ * Le modèle lui-même est vérifié dans `fond-ciel.test.ts` ; ce qui se joue ici est l'ORDRE
+ * des couches et le fait que le mode nuit ne peint rien de tout cela.
+ */
+describe('fond de ciel réaliste §3.3', () => {
+  const SB = 19.9
+
+  it('laisse le fond inchangé au pixel près quand la case est décochée', () => {
+    const { ctx } = rend({ sbCiel: SB })
+    expect(ctx.couleurs[0]).toBe(palette(false).fond)
+    // Un seul `fillRect` pour le fond : ce n'est pas un dégradé de canevas.
+    expect(ctx.appels.filter((a) => a.nom === 'fillRect').length).toBe(1)
+  })
+
+  it('prend la luminance du site quand la case est cochée', () => {
+    const { ctx } = rend({ sbCiel: SB, vueRealiste: true })
+    expect(ctx.couleurs[0]).toBe(paletteRealiste(SB).fond)
+    expect(ctx.appels.filter((a) => a.nom === 'fillRect').length).toBe(1)
+  })
+
+  it('peint le halo d’horizon SOUS le sol : le relief le recouvre', () => {
+    const vise = { azimutDeg: 180, hauteurDeg: 10 }
+    const avecSol: CouchesActives = { ...COUCHES, sol: true }
+    const { ctx } = rend({ sbCiel: SB, vueRealiste: true, couches: avecSol, vise })
+    const teintes = paletteRealiste(SB)
+    const dernierHalo = ctx.couleurs.reduce(
+      (vu, couleur, i) => (couleur !== teintes.fond && couleur.startsWith('rgb(') && i < ctx.couleurs.indexOf(teintes.sol) ? i : vu),
+      -1,
+    )
+    const indexSol = ctx.couleurs.indexOf(teintes.sol)
+    expect(indexSol).toBeGreaterThan(0)
+    expect(dernierHalo).toBeLessThan(indexSol)
+    // Un remplissage par palier, plus celui du sol.
+    expect(ctx.appels.filter((a) => a.nom === 'fill' && a.args[0] === 'evenodd').length).toBe(
+      K('PALIERS_HALO_HORIZON'),
+    )
+  })
+
+  it('ne peint aucun halo en mode nuit : la vue réaliste n’y change que la magnitude', () => {
+    const clair = rend({ sbCiel: SB, vueRealiste: true })
+    const nuit = rend({ sbCiel: SB, vueRealiste: true, modeNuit: true })
+    expect(nuit.ctx.couleurs[0]).toBe('#000000')
+    expect(nuit.ctx.appels.filter((a) => a.nom === 'fill' && a.args[0] === 'evenodd').length).toBe(0)
+    expect(clair.ctx.appels.filter((a) => a.nom === 'fill' && a.args[0] === 'evenodd').length,
+    ).toBeGreaterThan(0)
   })
 })
 

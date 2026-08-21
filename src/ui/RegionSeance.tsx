@@ -34,7 +34,7 @@ export interface RegionSeanceProps {
 export function RegionSeance(props: RegionSeanceProps) {
   const { chaine, lieu, materiel, catalogue } = props
   const { calcul } = chaine
-  const mLimOeil = calcul.ok ? calcul.ciel.mLimOeil.value : null
+  const sbCiel = calcul.ok ? calcul.ciel.sbCiel.value : null
 
   const contenus = {
     EXPLORER: (
@@ -42,7 +42,7 @@ export function RegionSeance(props: RegionSeanceProps) {
         modeObjectif={modeObjectif(materiel.typeObjectif)}
         gaiaCharge={props.gaiaCharge}
         profondeurMag={chaine.index.profondeurMag}
-        mLimOeil={mLimOeil}
+        sbCiel={sbCiel}
         epoqueAnnee={props.epoqueAnnee}
         modeNuit={props.modeNuitActif}
         masque={chaine.masque}

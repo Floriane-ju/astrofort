@@ -38,7 +38,8 @@ export interface BarreHautProps {
   readonly site: Site
   readonly index: IndexCiel
   readonly profils: readonly ProfilCadre[]
-  readonly mLimOeil: number | null
+  /** §2.2 — fond de ciel du site, relayé au menu d'informations pour §3.3. */
+  readonly sbCiel: number | null
 }
 
 export function BarreHaut(props: BarreHautProps) {
@@ -85,7 +86,7 @@ export function BarreHaut(props: BarreHautProps) {
         index={props.index}
         objets={props.catalogue}
         profils={props.profils}
-        mLimOeil={props.mLimOeil}
+        sbCiel={props.sbCiel}
       />
     </>
   )

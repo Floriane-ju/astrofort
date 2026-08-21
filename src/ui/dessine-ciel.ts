@@ -47,7 +47,8 @@ import {
 } from '../core/site.ts'
 import { projecteurSansSol } from '../core/sol.ts'
 import { dessineSol } from './dessine-sol.ts'
-import { couleurTeinte, palette, teinte, TEINTES } from './couleurs.ts'
+import { couleurTeinte, paletteScene, teinte, TEINTES } from './couleurs.ts'
+import { dessineHaloHorizon, dessineHaloLune, type LuneEcran } from './dessine-fond-ciel.ts'
 
 export interface CouchesActives {
   readonly figures: boolean
@@ -113,6 +114,17 @@ export interface EntreeDessin {
   readonly latitudeDeg: number
   /** §4.1 — relief du site : il donne sa hauteur au sol de la couche `sol`, azimut par azimut. */
   readonly masque: MasqueHorizon
+  /**
+   * §3.3 — vue réaliste : le fond prend la luminance du fond de ciel du site, le halo
+   * d'horizon et le halo lunaire s'y ajoutent, et les repères compensent le contraste perdu.
+   * Décochée, la scène est celle d'avant T-0097, au pixel près.
+   */
+  readonly vueRealiste: boolean
+  /**
+   * T-0100 — la Lune telle que la scène la dessine. Absente : elle n'entre dans aucun calcul,
+   * ce qui est le cas dès qu'elle est masquée (§3.1) ou que la vue réaliste est décochée.
+   */
+  readonly lune?: LuneEcran | undefined
   readonly modeNuit: boolean
   /**
    * Peint entre le fond et tout le reste. C'est là que l'aperçu incrusté se dépose : sous les
@@ -419,12 +431,22 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
       }
     : entreeBrute
   const { ctx, projecteur, index } = entree
-  const teintes = palette(entree.modeNuit)
+  const teintes = paletteScene(entree.modeNuit, entree.vueRealiste, entree.sbCiel)
+  // §11.1 — le mode nuit protège l'adaptation à l'obscurité : éclaircir tout le canevas le
+  // rendrait inutile. La vue réaliste n'y change donc que la magnitude limite.
+  const fondPeint = entree.vueRealiste && !entree.modeNuit
   const largeur = projecteur.vue.largeurPx
   const hauteur = projecteur.vue.hauteurPx
 
   ctx.fillStyle = teintes.fond
   ctx.fillRect(0, 0, largeur, hauteur)
+  // T-0098, T-0100 — les deux couches qui éclaircissent le fond passent AVANT la bande, le
+  // sol et les repères : un fond peint par-dessus le repérage masque ce qui sert à s'orienter
+  // (§3.7), et le relief doit recouvrir le halo quand la visée est basse (T-0094).
+  if (fondPeint) {
+    dessineHaloHorizon(ctx, brut, entree.matriceCiel, entree.sbCiel)
+    if (entree.lune !== undefined) dessineHaloLune(ctx, brut, entree.sbCiel, entree.lune)
+  }
   // §3.7 — la bande appartient au fond : elle passe sous l'aperçu incrusté de §9.5 comme
   // sous les repères. Peinte plus tard, elle laverait la prévisualisation qu'elle recouvre.
   // Elle est tracée au projecteur BRUT, puis recouverte par le sol : filtrée, un trait de

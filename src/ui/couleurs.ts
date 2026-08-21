@@ -11,6 +11,8 @@
  * plusieurs milliers.
  */
 
+import { composantesFond } from '../core/fond-ciel-rendu.ts'
+
 const ANCRES: readonly (readonly [number, number, number, number])[] = [
   [-0.4, 155, 176, 255],
   [0.0, 202, 215, 255],
@@ -118,4 +120,161 @@ const PALETTE_JOUR: PaletteCiel = Object.freeze({
 
 export function palette(modeNuit: boolean): PaletteCiel {
   return modeNuit ? PALETTE_NUIT : PALETTE_JOUR
+}
+
+// ---------------------------------------------------------------------------
+// T-0097 — fond de ciel réaliste et compensation de contraste
+// ---------------------------------------------------------------------------
+
+/**
+ * Les coefficients qui suivent sont des DÉFINITIONS de l'espace sRGB et du calcul de
+ * contraste WCAG 2.1, au même titre que 180° est un demi-tour. Ce ne sont ni des seuils de
+ * projet ni des valeurs mesurées : le registre §2.1 ne porte que les grandeurs consommées par
+ * une formule d'astronomie, et les y ranger laisserait croire qu'elles se règlent.
+ */
+const SRGB_SEUIL_LINEAIRE = 0.0031308
+const SRGB_SEUIL_ENCODE = 0.04045
+const SRGB_PENTE = 12.92
+const SRGB_ALPHA = 0.055
+const SRGB_GAMMA = 2.4
+const WCAG_R = 0.2126
+const WCAG_V = 0.7152
+const WCAG_B = 0.0722
+/** Le 0,05 du rapport WCAG : la réflexion d'ambiance ajoutée aux deux luminances. */
+const WCAG_AMBIANCE = 0.05
+const OCTET_MAX = 255
+
+type Composantes = readonly [number, number, number]
+
+function versLineaire(octet: number): number {
+  const encode = octet / OCTET_MAX
+  return encode <= SRGB_SEUIL_ENCODE
+    ? encode / SRGB_PENTE
+    : ((encode + SRGB_ALPHA) / (1 + SRGB_ALPHA)) ** SRGB_GAMMA
+}
+
+function versOctet(lineaire: number): number {
+  const borne = Math.min(1, Math.max(0, lineaire))
+  const encode =
+    borne <= SRGB_SEUIL_LINEAIRE
+      ? borne * SRGB_PENTE
+      : (1 + SRGB_ALPHA) * borne ** (1 / SRGB_GAMMA) - SRGB_ALPHA
+  return Math.round(encode * OCTET_MAX)
+}
+
+const HEXA = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i
+const RVB = /^rgb\((\d+) (\d+) (\d+)\)$/
+
+/** Composantes linéaires d'une couleur CSS de la palette — `#rrggbb` ou `rgb(r v b)`. */
+function composantesDeCss(css: string): Composantes {
+  const hexa = HEXA.exec(css)
+  if (hexa !== null) {
+    return [
+      versLineaire(parseInt(hexa[1]!, 16)),
+      versLineaire(parseInt(hexa[2]!, 16)),
+      versLineaire(parseInt(hexa[3]!, 16)),
+    ]
+  }
+  const rvb = RVB.exec(css)
+  if (rvb === null) throw new Error(`Couleur de palette non reconnue : ${css}`)
+  return [
+    versLineaire(Number(rvb[1])),
+    versLineaire(Number(rvb[2])),
+    versLineaire(Number(rvb[3])),
+  ]
+}
+
+function css(composantes: Composantes): string {
+  return `rgb(${versOctet(composantes[0])} ${versOctet(composantes[1])} ${versOctet(composantes[2])})`
+}
+
+/** Luminance relative WCAG d'une couleur donnée en lumière linéaire. */
+export function luminanceRelative(composantes: Composantes): number {
+  return WCAG_R * composantes[0] + WCAG_V * composantes[1] + WCAG_B * composantes[2]
+}
+
+/** Rapport de contraste WCAG entre deux luminances relatives. */
+export function rapportContraste(claire: number, sombre: number): number {
+  return (claire + WCAG_AMBIANCE) / (sombre + WCAG_AMBIANCE)
+}
+
+/** Luminance du fond de référence : celui sur lequel la palette de jour a été choisie. */
+export const LUMINANCE_FOND_REFERENCE = luminanceRelative(composantesDeCss(PALETTE_JOUR.fond))
+
+/** Couleur du fond de ciel pour cette brillance de surface, en vue réaliste. */
+export function fondRealiste(sbCiel: number): string {
+  return css(composantesFond(sbCiel) as Composantes)
+}
+
+/**
+ * Retient une teinte de repère à SON rapport de contraste actuel contre `#05070d`.
+ *
+ * Sans cela, `frontieres` passe de 2,14:1 à 1,15:1 sur un fond de Bortle 9 et disparaît —
+ * exactement ce que §3.7 interdit. Préserver le rapport que chaque teinte a déjà évite
+ * d'introduire un seuil arbitraire et de re-litiger la palette.
+ *
+ * ponytail: la luminance est relevée par une homothétie sur les trois canaux, donc à
+ * chromaticité constante, puis chaque canal est écrêté à 1. Une teinte déjà proche du blanc —
+ * `cadre`, `corps`, `texte` — ne PEUT pas garder un rapport de 10:1 ou 16:1 sur un fond de
+ * Bortle 9 : le maximum atteignable y est 8,2:1, blanc pur compris. Elle sature donc, et
+ * `saturee` le dit. C'est une limite du gamut de l'écran, pas un défaut du modèle.
+ */
+export function ajusteContrasteSurFond(
+  teinte: string,
+  luminanceFond: number,
+): { readonly couleur: string; readonly saturee: boolean } {
+  const base = composantesDeCss(teinte)
+  const luminance = luminanceRelative(base)
+  if (luminance <= 0) return { couleur: teinte, saturee: false }
+  const rapport = rapportContraste(luminance, LUMINANCE_FOND_REFERENCE)
+  const cible = rapport * (luminanceFond + WCAG_AMBIANCE) - WCAG_AMBIANCE
+  if (cible <= luminance) return { couleur: teinte, saturee: false }
+  const facteur = cible / luminance
+  const etendues: Composantes = [base[0] * facteur, base[1] * facteur, base[2] * facteur]
+  return { couleur: css(etendues), saturee: etendues.some((c) => c > 1) }
+}
+
+/**
+ * Palette de vue réaliste : le fond prend la luminance du site, les repères la compensent.
+ *
+ * `sol` n'est pas compensé — le sol masque, il n'oriente pas, et l'éclaircir défait T-0094.
+ * Le fond n'est pas compensé non plus : c'est lui la référence.
+ *
+ * ponytail: un seul résultat gardé en cache. La boucle de rendu appelle cette fonction par
+ * image avec le même `sbCiel` pendant des milliers d'images ; recomposer neuf teintes à
+ * chaque fois allouerait pour rien, et un cache par valeur n'aurait jamais plus d'une entrée.
+ */
+let cacheRealiste: { sb: number; palette: PaletteCiel } | null = null
+
+export function paletteRealiste(sbCiel: number): PaletteCiel {
+  if (cacheRealiste !== null && cacheRealiste.sb === sbCiel) return cacheRealiste.palette
+  const fond = fondRealiste(sbCiel)
+  const luminanceFond = luminanceRelative(composantesFond(sbCiel) as Composantes)
+  const compense = (teinte: string): string =>
+    ajusteContrasteSurFond(teinte, luminanceFond).couleur
+  const composee: PaletteCiel = Object.freeze({
+    ...PALETTE_JOUR,
+    fond,
+    figures: compense(PALETTE_JOUR.figures),
+    frontieres: compense(PALETTE_JOUR.frontieres),
+    asterismes: compense(PALETTE_JOUR.asterismes),
+    objets: compense(PALETTE_JOUR.objets),
+    corps: compense(PALETTE_JOUR.corps),
+    cadre: compense(PALETTE_JOUR.cadre),
+    horizon: compense(PALETTE_JOUR.horizon),
+    voieLactee: compense(PALETTE_JOUR.voieLactee),
+    texte: compense(PALETTE_JOUR.texte),
+  })
+  cacheRealiste = { sb: sbCiel, palette: composee }
+  return composee
+}
+
+/**
+ * La palette de la scène : mode nuit d'abord — il protège l'adaptation à l'obscurité, et
+ * éclaircir tout le canevas le rendrait inutile. En mode nuit, la vue réaliste ne change donc
+ * que la magnitude limite (§11.1).
+ */
+export function paletteScene(modeNuit: boolean, vueRealiste: boolean, sbCiel: number): PaletteCiel {
+  if (modeNuit || !vueRealiste) return palette(modeNuit)
+  return paletteRealiste(sbCiel)
 }

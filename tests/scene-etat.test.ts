@@ -132,7 +132,7 @@ describe('§5.1 — le type d’objectif pilote la projection de la scène', () 
         modeObjectif: modeObjectif('FISHEYE'),
         gaiaCharge: false,
         profondeurMag: 6.5,
-        mLimOeil: 6.05,
+        sbCiel: 20.6,
         epoqueAnnee: 2026.6,
         masque: masquePlat(),
         modeNuit: false,

@@ -112,7 +112,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
   })
 
   const gaia = catalogues.etat === null ? false : gaiaCharge(catalogues.etat.catalogues)
-  const mLimOeil = calcul.ok ? calcul.ciel.mLimOeil.value : null
+  const sbCiel = calcul.ok ? calcul.ciel.sbCiel.value : null
 
   const topbar = (
     <BarreHaut
@@ -131,7 +131,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       site={chaine.site}
       index={chaine.index}
       profils={chaine.profilsCadre}
-      mLimOeil={mLimOeil}
+      sbCiel={sbCiel}
     />
   )
 

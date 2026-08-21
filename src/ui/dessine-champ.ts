@@ -36,7 +36,7 @@ import { selectionne } from '../core/index-ciel.ts'
 import type { EtendueCadre } from '../core/cadre.ts'
 import { rayonEtoilePx, type PointEcran, type Projecteur } from '../core/projection.ts'
 import { separationDeg, type Vec3 } from '../core/mat3.ts'
-import { couleurTeinte, palette, teinte } from './couleurs.ts'
+import { couleurTeinte, paletteScene, teinte } from './couleurs.ts'
 
 const S_PAR_MIN = 60
 const MIN_PAR_H = 60
@@ -75,6 +75,17 @@ export interface EntreeDessinChamp {
   /** Suivi actif (§5.2) : les étoiles restent ponctuelles et le pixel reçoit toute la pose. */
   readonly suiviActif: boolean
   readonly sbCiel: number
+  /**
+   * T-0097 — vue réaliste : le fond de l'aperçu prend la même teinte que le planétarium.
+   * Deux fonds différents dans une même image se verraient comme un rectangle.
+   */
+  readonly vueRealiste: boolean
+  /**
+   * Fond de ciel EFFECTIF de la direction du cadre — halo d'horizon et Lune compris. Absent :
+   * le fond du site sert de repli. Il ne pilote que la teinte du fond, jamais la profondeur ni
+   * le contraste de la bande, qui restent ceux du site.
+   */
+  readonly sbFond?: number | undefined
   /** Durée d'accumulation dessinée : pose unitaire en prévisualisation, durée totale en filé. */
   readonly dureeS: number
   readonly latitudeDeg: number
@@ -283,7 +294,11 @@ function dessineVignettage(entree: EntreeDessinChamp): void {
 
 export function dessineChamp(entree: EntreeDessinChamp): SortieDessinChamp {
   const { ctx, projecteur } = entree
-  const teintes = palette(entree.modeNuit)
+  const teintes = paletteScene(
+    entree.modeNuit,
+    entree.vueRealiste,
+    entree.sbFond ?? entree.sbCiel,
+  )
   const largeur = projecteur.vue.largeurPx
   const hauteur = projecteur.vue.hauteurPx
 

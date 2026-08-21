@@ -51,6 +51,20 @@ export function sousLeSol(masque: MasqueHorizon, matriceCiel: Mat3): TestSol {
 }
 
 /**
+ * T-0098 — la direction J2000 est-elle SOUS cette hauteur au-dessus de l'horizon ?
+ *
+ * Même géométrie que `sousLeSol`, à ceci près que la frontière est un parallèle de hauteur et
+ * non le relief : c'est ce prédicat que le halo d'horizon balaie, palier par palier. Le
+ * partager avec le sol garantit qu'un palier et la crête se referment de la même façon.
+ */
+export function sousLaHauteur(hauteurDeg: number, matriceCiel: Mat3): TestSol {
+  const [, , , , , , m31, m32, m33] = matriceCiel
+  const sin = Math.sin(hauteurDeg * DEG)
+  return (x, y, z) =>
+    m31 * x + m32 * y + m33 * z < sin * Math.sqrt(x * x + y * y + z * z)
+}
+
+/**
  * Le même projecteur, aveugle à ce qui est sous le sol.
  *
  * `inverse` n'est pas filtré : elle répond ce que le curseur désigne, y compris le sol. Un

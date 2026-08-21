@@ -398,6 +398,35 @@ export const FORMULES = Object.freeze({
       'Modèle de Krisciunas & Schaefer (1991). Une nuit de Lune n’est pas perdue : elle a un ' +
       'fond de ciel plus élevé, donc des poses plus courtes et une intégration plus longue.',
   },
+  // Fond de ciel peint — extension de rendu de §3.3 (T-0096)
+  LUMINANCE_FOND_CIEL: {
+    expression: 'Y_ecran = K_exposition × B(sb) · (R,V,B)_lin = Y_ecran × (chroma_R, chroma_V, chroma_B)',
+    unite: '—',
+    section: '3.3',
+    note:
+      'La luminance d’écran est proportionnelle à la brillance physique du ciel : une seule ' +
+      'constante libre, l’exposition. Le rapport entre deux fonds de ciel n’est donc jamais ' +
+      'choisi, il est celui des brillances.',
+  },
+  HALO_HORIZON: {
+    expression:
+      'vanRhijn(h) = 1 / √( 1 − (R / (R + H))² cos²h ) · ' +
+      'facteur(h) = vanRhijn(h) × 10^(−0,4 k (X(h) − 1))',
+    unite: '—',
+    section: '3.3',
+    note:
+      'van Rhijn (1921) : la couche émissive est vue sous une épaisseur croissante quand la ' +
+      'visée baisse. Le terme d’extinction n’est pas décoratif — van Rhijn seul donnerait ×6 ' +
+      'à l’horizon, valeur non observée ; avec l’extinction, ×3,2.',
+  },
+  SB_EFFECTIF_RENDU: {
+    expression: 'B_total = B_site × facteur(h) + B_lune(ρ, h_lune, α) · sb_effectif = B⁻¹(B_total)',
+    unite: 'mag/arcsec²',
+    section: '3.3',
+    note:
+      'Les brillances s’additionnent en nanolamberts, jamais en magnitudes : c’est déjà la ' +
+      'règle de ΔSB_lune (§8.1). Le rendu réemploie ce moteur, il ne le réécrit pas.',
+  },
   DUREE_NUIT_NAUTIQUE: {
     expression: 'fenetre_nautique = [ Soleil à −12° en descente ; Soleil à −12° en montée ]',
     unite: 'h',
