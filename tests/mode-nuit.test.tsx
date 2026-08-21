@@ -84,6 +84,125 @@ describe('palette du mode nuit §11.1', () => {
   })
 })
 
+/**
+ * T-0070 — les couleurs que le navigateur peint tout seul.
+ *
+ * Le test de fuite ci-dessus lit la feuille de style : il ne peut rien voir de ce qui n'y
+ * est pas écrit. L'anneau de focus, la sélection, le caret, la couleur d'accent et les
+ * ascenseurs sont dans ce cas — bleus par défaut, donc une fuite §11.1 invisible au test.
+ * Ce bloc vérifie qu'ils sont déclarés, et déclarés depuis les jetons de la palette : c'est
+ * ce qui les fait basculer au rouge avec le reste.
+ */
+describe('focus et couleurs du navigateur — T-0070', () => {
+  /** Seuil WCAG 2.4.11 « Focus Appearance » pour l'indicateur de focus. */
+  const CONTRASTE_FOCUS_MINIMAL = 3
+
+  /** Le corps d'une règle, désignée par son sélecteur en début de ligne. */
+  function regle(selecteur: string): string {
+    const debut = CSS.indexOf(`\n${selecteur} {`)
+    expect(debut, selecteur).toBeGreaterThan(-1)
+    return CSS.slice(debut, CSS.indexOf('}', debut))
+  }
+
+  /** Le second bloc `:root` : celui qui pose les couleurs peintes par le navigateur. */
+  function blocNavigateur(): string {
+    const debut = CSS.lastIndexOf('\n:root {')
+    expect(debut, 'aucun bloc :root pour les couleurs du navigateur').toBeGreaterThan(
+      CSS.indexOf(':root {'),
+    )
+    return CSS.slice(debut, CSS.indexOf('}', debut))
+  }
+
+  /** Les jetons cités par une déclaration : `var(--x) var(--y)` → ['x', 'y']. */
+  function jetonsCites(declaration: string): readonly string[] {
+    return [...declaration.matchAll(/var\(--([a-z-]+)\)/g)].map((m) => m[1]!)
+  }
+
+  function valeurDe(bloc: string, propriete: string): string {
+    const trouve = new RegExp(`\\b${propriete}:\\s*([^;]+);`).exec(bloc)
+    expect(trouve, `${propriete} absent`).not.toBeNull()
+    return trouve![1]!
+  }
+
+  /** Luminance relative WCAG 2.x d'une couleur `#rrggbb`. */
+  function luminance(hex: string): number {
+    const lineaire = [1, 3, 5]
+      .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+    return 0.2126 * lineaire[0]! + 0.7152 * lineaire[1]! + 0.0722 * lineaire[2]!
+  }
+
+  function contraste(a: string, b: string): number {
+    const [clair, sombre] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number]
+    return (clair + 0.05) / (sombre + 0.05)
+  }
+
+  /** Les jetons du thème par défaut, avec leur valeur. */
+  function paletteParDefaut(): Readonly<Record<string, string>> {
+    const debut = CSS.indexOf(':root {')
+    const bloc = CSS.slice(debut, CSS.indexOf('}', debut))
+    return Object.fromEntries(
+      [...bloc.matchAll(/--([a-z-]+):\s*([^;]+);/g)].map((m) => [m[1]!, m[2]!.trim()]),
+    )
+  }
+
+  const jetonsDeNuit = (): readonly string[] =>
+    [...blocModeNuit().matchAll(/--([a-z-]+):/g)].map((m) => m[1]!)
+
+  /** Le jeton qui colore l'anneau de focus. */
+  function jetonFocus(): string {
+    const cites = jetonsCites(valeurDe(regle(':focus-visible'), 'outline'))
+    expect(cites, 'l’anneau de focus n’est pas coloré par un jeton').toHaveLength(1)
+    return cites[0]!
+  }
+
+  it('trace un anneau de focus explicite, et n’en supprime aucun', () => {
+    expect(valeurDe(regle(':focus-visible'), 'outline')).toMatch(/\d+px solid var\(--[a-z-]+\)/)
+    // Un anneau détaché de la bordure de l'élément, sans quoi il s'y confond.
+    expect(regle(':focus-visible')).toMatch(/outline-offset:/)
+    // `outline: none` quelque part rendrait le parcours au clavier invisible à cet endroit.
+    expect(CSS).not.toMatch(/outline:\s*(none|0)\b/)
+  })
+
+  it('rentre l’anneau du canevas, que la scène rognerait', () => {
+    expect(valeurDe(regle('.planetarium:focus-visible'), 'outline-offset')).toMatch(/^-/)
+  })
+
+  it('donne à l’anneau ≥ 3:1 sur toutes les surfaces, à luminance nominale', () => {
+    const palette = paletteParDefaut()
+    const anneau = palette[jetonFocus()]!
+    for (const surface of ['fond', 'surface', 'surface-haute']) {
+      expect(contraste(anneau, palette[surface]!), surface).toBeGreaterThanOrEqual(
+        CONTRASTE_FOCUS_MINIMAL,
+      )
+    }
+  })
+
+  it('déclare les couleurs que le navigateur peindrait en bleu', () => {
+    const declarations = [
+      ...['accent-color', 'caret-color', 'scrollbar-color'].map((propriete) => [
+        propriete,
+        valeurDe(blocNavigateur(), propriete),
+      ]),
+      ['::selection background', valeurDe(regle('::selection'), 'background')],
+      ['::selection color', valeurDe(regle('::selection'), 'color')],
+    ] as const
+    for (const [nom, valeur] of declarations) {
+      const cites = jetonsCites(valeur)
+      expect(cites.length, `${nom} : ${valeur}`).toBeGreaterThan(0)
+      // Une couleur écrite autrement que par un jeton survivrait au basculement.
+      expect(valeur.replace(/var\(--[a-z-]+\)/g, '').trim(), nom).toBe('')
+      for (const jeton of cites) {
+        expect(jetonsDeNuit(), `${nom} → --${jeton}`).toContain(jeton)
+      }
+    }
+  })
+
+  it('colore l’anneau de focus depuis un jeton repeint en rouge la nuit', () => {
+    expect(jetonsDeNuit()).toContain(jetonFocus())
+  })
+})
+
 describe('ergonomie de consultation nocturne §11.2', () => {
   it('donne aux cibles de clic la taille d’un usage ganté', () => {
     expect(CSS).toMatch(/--cible-clic:\s*44px/)

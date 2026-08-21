@@ -2,7 +2,7 @@
 {
   "id": "T-0070",
   "titre": "Le focus se voit, et il ne fuit pas en bleu",
-  "colonne": "pret",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "m",
   "tags": [
@@ -46,13 +46,13 @@ couleurs n'y sont pas. Le test est bon, son angle mort est structurel — il se 
 
 ## Critères d'acceptation
 
-- [ ] Une règle `:focus-visible` explicite existe, d'un contraste ≥ 3:1 avec ce qui l'entoure
+- [x] Une règle `:focus-visible` explicite existe, d'un contraste ≥ 3:1 avec ce qui l'entoure
       (WCAG 2.4.11 et 2.4.13), et n'utilise que les jetons de la palette
-- [ ] `::selection`, `caret-color`, `accent-color` et la couleur des ascenseurs sont posés depuis
+- [x] `::selection`, `caret-color`, `accent-color` et la couleur des ascenseurs sont posés depuis
       ces mêmes jetons : en mode nuit ils sont rouges, sans exception
-- [ ] L'indicateur de focus reste perceptible au plancher de luminance de 2 % — s'il faut pour
+- [x] L'indicateur de focus reste perceptible au plancher de luminance de 2 % — s'il faut pour
       cela qu'il porte aussi une forme, ce choix est écrit
-- [ ] `tests/mode-nuit.test.tsx` couvre ces nouvelles déclarations et échoue si l'une d'elles
+- [x] `tests/mode-nuit.test.tsx` couvre ces nouvelles déclarations et échoue si l'une d'elles
       réintroduit une composante verte ou bleue
-- [ ] Le parcours au clavier de toute l'application montre en permanence où se trouve le focus,
+- [x] Le parcours au clavier de toute l'application montre en permanence où se trouve le focus,
       y compris sur le canevas (T-0069) et sur les `summary` des tiroirs
