@@ -2,7 +2,7 @@
 {
   "id": "T-0069",
   "titre": "Le planétarium se pilote au clavier",
-  "colonne": "a-specifier",
+  "colonne": "pret",
   "priorite": "haute",
   "charge": "l",
   "tags": [
@@ -11,7 +11,7 @@
     "planetarium"
   ],
   "cree": "2026-08-19",
-  "maj": "2026-08-19",
+  "maj": "2026-08-21",
   "epic": "T-0067",
   "plan": "2026-08-19-audit-general-design-accessibilite-securite-pratiques.md"
 }

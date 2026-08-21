@@ -2,7 +2,7 @@
 {
   "id": "T-0073",
   "titre": "L'ordre de parcours au clavier suit les motifs attendus",
-  "colonne": "a-specifier",
+  "colonne": "backlog",
   "priorite": "moyenne",
   "charge": "m",
   "tags": [
@@ -11,7 +11,7 @@
     "ui"
   ],
   "cree": "2026-08-19",
-  "maj": "2026-08-19",
+  "maj": "2026-08-21",
   "epic": "T-0067",
   "plan": "2026-08-19-audit-general-design-accessibilite-securite-pratiques.md"
 }

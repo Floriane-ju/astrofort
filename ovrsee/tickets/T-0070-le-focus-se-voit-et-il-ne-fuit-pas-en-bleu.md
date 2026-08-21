@@ -2,7 +2,7 @@
 {
   "id": "T-0070",
   "titre": "Le focus se voit, et il ne fuit pas en bleu",
-  "colonne": "a-specifier",
+  "colonne": "pret",
   "priorite": "haute",
   "charge": "m",
   "tags": [
@@ -12,7 +12,7 @@
     "design"
   ],
   "cree": "2026-08-19",
-  "maj": "2026-08-19",
+  "maj": "2026-08-21",
   "epic": "T-0067",
   "plan": "2026-08-19-audit-general-design-accessibilite-securite-pratiques.md"
 }

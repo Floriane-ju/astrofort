@@ -2,7 +2,7 @@
 {
   "id": "T-0077",
   "titre": "Une intégration continue garde typecheck, tests et audit",
-  "colonne": "a-specifier",
+  "colonne": "pret",
   "priorite": "moyenne",
   "charge": "m",
   "tags": [
@@ -11,7 +11,7 @@
     "securite"
   ],
   "cree": "2026-08-19",
-  "maj": "2026-08-19",
+  "maj": "2026-08-21",
   "epic": "T-0074",
   "plan": "2026-08-19-audit-general-design-accessibilite-securite-pratiques.md"
 }
