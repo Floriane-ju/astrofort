@@ -11,6 +11,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
+import { integrationRequiseS } from '../src/core/exposure.ts'
 import { fenetreNocturne } from '../src/core/night.ts'
 import { etatLune, fenetreUtile } from '../src/core/moon.ts'
 import { masquePlat } from '../src/core/site.ts'
@@ -157,10 +158,46 @@ describe('T-0089 — la fiche et le plan dosent la même nuit', () => {
     expect(fiche.sbCielEffectif).toBeCloseTo(etape.sbCielEffectif, 12)
   })
 
-  it('annonce la même pose unitaire et la même intégration totale que le plan', () => {
+  it('annonce la même pose unitaire que le plan : le fond de ciel est le même', () => {
+    // La pose ne dépend que du flux de fond de ciel : c'est la garantie de T-0089, et §7.6
+    // ne la touche pas — l'extinction porte sur l'objet, jamais sur le ciel.
     expect(fiche.pose?.tRecommandeS.value).toBeCloseTo(etape.pose.tRecommandeS.value, 12)
-    expect(fiche.integration?.tRequisS.value).toBeCloseTo(etape.integration.tRequisS.value, 12)
-    expect(fiche.integration?.nPoses.value).toBe(etape.nPoses)
+  })
+
+  /**
+   * T-0090 — les deux écrans n'éteignent PAS la cible à la même hauteur, et c'est voulu : la
+   * fiche n'a pas de créneau, elle chiffre la culmination ; le plan en a un, et chiffre la
+   * masse d'air moyenne de la capture. La fiche annonce donc un plancher.
+   *
+   * Ce test garde fermé le défaut réel : que les deux divergent pour une AUTRE raison que la
+   * masse d'air. Il rejoue l'intégration du plan avec la masse d'air de la fiche et exige
+   * l'égalité exacte.
+   */
+  it('ne diverge du plan que par la masse d’air, et jamais dans le mauvais sens', () => {
+    const extinctionPlan = etape.extinction
+    const extinctionFiche = fiche.extinction
+    expect(extinctionFiche).not.toBeNull()
+
+    const masseAirPlan = extinctionPlan.masseAir.value!
+    const masseAirFiche = extinctionFiche!.masseAir.value!
+    // La moyenne du créneau n'est jamais sous la masse d'air de la culmination.
+    expect(masseAirPlan).toBeGreaterThanOrEqual(masseAirFiche)
+    expect(fiche.integration!.tRequisS.value).toBeLessThanOrEqual(etape.integration.tRequisS.value)
+
+    const inputsPlan = etape.integration.tRequisS.inputs
+    const eObjSansExtinction = extinctionPlan.eObjReel.value! / extinctionPlan.attenuation.value!
+    const rejoue = integrationRequiseS(
+      {
+        eObj: eObjSansExtinction * extinctionFiche!.attenuation.value!,
+        eCiel: inputsPlan.e_ciel!,
+        tPoseS: inputsPlan.t_pose_s!,
+        readNoiseE: inputsPlan.read_noise_e!,
+        snrCible: SNR_PLAN,
+        tailleRawMo: BOITIER_REFERENCE.tailleRawMo,
+      },
+      SNR_PLAN,
+    )
+    expect(fiche.integration!.tRequisS.value).toBeCloseTo(rejoue, 9)
   })
 
   it('divergerait si la fiche ignorait la Lune — c’est le défaut que ce test garde fermé', () => {

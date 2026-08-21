@@ -8,12 +8,15 @@
  *      le même fond de ciel par pixel, quel que soit leur diamètre.
  *   2. UN CIEL PLUS NOIR EXIGE DES POSES PLUS LONGUES, pas plus courtes : t_opt ∝ 1 / E_ciel.
  *   3. SNR ∝ √T. Doubler la qualité quadruple le temps.
+ *   4. §7.6 — LE FLUX DE L'OBJET EST ATTÉNUÉ PAR L'ATMOSPHÈRE, PAS LE FOND DE CIEL. Une
+ *      magnitude de catalogue est hors atmosphère ; une brillance de fond de ciel est relevée
+ *      au sol, donc déjà éteinte. Atténuer les deux compterait l'extinction deux fois.
  *
  * Et aucune calibration : le point zéro est livré par boîtier, en lecture seule. L'optimum
  * de pose est plat, la plage utile [t/2 ; t×2] absorbe l'incertitude (§2.3, §7.1).
  */
 
-import { K } from '../registry/constants.ts'
+import { K, plageK } from '../registry/constants.ts'
 import { valide, type DomaineId } from '../registry/domains.ts'
 import { VALEURS_OBTURATEUR_S } from '../registry/verdicts.ts'
 import type { Flag, Traced } from './traced.ts'
@@ -75,6 +78,143 @@ export function fluxCiel(entree: EntreeFlux): Traced<number> {
 /** Flux de l'objet, e⁻/s/px, à partir de sa brillance de surface (§6.3). */
 export function fluxObjet(entree: EntreeFlux): Traced<number> {
   return flux(entree, 'sb_obj', 'FLUX_OBJET')
+}
+
+// ---------------------------------------------------------------------------
+// §7.6 — atténuation atmosphérique par masse d'air
+// ---------------------------------------------------------------------------
+
+/**
+ * Fraction du flux qui survit à la traversée, pour une masse d'air donnée. Sans trace :
+ * consommée telle quelle par l'analyse de sensibilité de §10.2, qui perturbe la masse d'air
+ * comme les autres entrées et ne doit pas buter sur une garde de domaine.
+ */
+export function attenuationBrute(masseAirX: number, kExtinction = K('EXTINCTION_V_MAG_PAR_MASSE_AIR')): number {
+  return K('BASE_MAGNITUDE') ** (-(kExtinction * masseAirX) / K('POGSON'))
+}
+
+export interface FluxObjetReel {
+  /** La masse d'air d'évaluation, telle que l'appelant l'a choisie et doit l'afficher. */
+  readonly masseAir: Traced<number | null>
+  readonly attenuation: Traced<number | null>
+  /** E_obj × atténuation. `null` quand l'atténuation est refusée : rien n'est extrapolé. */
+  readonly eObjReel: Traced<number | null>
+  /**
+   * E_obj réel aux deux bornes de k. Toute sortie qui en dépend — l'intégration — porte sa
+   * fourchette plutôt qu'une valeur exacte (§2.1) : k est un ordre de grandeur.
+   */
+  readonly plageEObj: readonly [number, number] | null
+}
+
+/**
+ * §7.6 — le flux qui atteint réellement le capteur.
+ *
+ * Trois cas, tous nommés à l'écran, aucun silencieux :
+ *
+ *   1. masse d'air connue et dans le domaine → atténuation appliquée ;
+ *   2. masse d'air hors du domaine de l'approximation plane (sous ~15° de hauteur) →
+ *      atténuation REFUSÉE. L'extrapoler sous-estimerait l'extinction là où elle est la plus
+ *      forte, ce qui est le sens de l'erreur le plus coûteux ;
+ *   3. hauteur inconnue — cible personnalisée, sans coordonnées → aucune atténuation, et la
+ *      sortie porte [HYP] : la durée annoncée est alors un PLANCHER, pas une estimation.
+ */
+export function fluxObjetReel(
+  eObj: Traced<number>,
+  masseAirCible: Traced<number | null>,
+): FluxObjetReel {
+  const x = masseAirCible.value
+  const inputs = { masse_air: x ?? Number.NaN, e_obj: eObj.value }
+  const constants = ['EXTINCTION_V_MAG_PAR_MASSE_AIR', 'POGSON', 'BASE_MAGNITUDE'] as const
+
+  if (x === null) {
+    const attenuation = trace({
+      value: 1,
+      formula: 'ATTENUATION_ATMOSPHERIQUE',
+      inputs,
+      constants,
+      flags: ['HYP'],
+      note:
+        'Hauteur de la cible inconnue : aucune extinction n’est appliquée, et aucune hauteur ' +
+        'n’est supposée. L’intégration annoncée est donc un PLANCHER — au zénith elle serait ' +
+        'déjà 1,37 fois plus longue, et près du double à 30° de hauteur. Choisir la cible ' +
+        'dans le catalogue lui donne des coordonnées, donc une masse d’air.',
+    })
+    return {
+      masseAir: masseAirCible,
+      attenuation,
+      eObjReel: trace({
+        value: eObj.value,
+        formula: 'FLUX_OBJET_REEL',
+        inputs,
+        flags: ['HYP'],
+      }),
+      plageEObj: null,
+    }
+  }
+
+  if (masseAirCible.flags?.includes('HORS_DOMAINE') === true) {
+    const note =
+      `Masse d’air de ${x.toFixed(2)} : sous ${K('HAUTEUR_MIN_MASSE_AIR_DEG')}° de hauteur ` +
+      'l’approximation 1 / sin(alt) n’est plus valide, et l’extinction n’est donc pas ' +
+      'chiffrée. Rien n’est extrapolé : la cible se réévalue plus haut dans le ciel.'
+    return {
+      masseAir: masseAirCible,
+      attenuation: trace({
+        value: null,
+        formula: 'ATTENUATION_ATMOSPHERIQUE',
+        inputs,
+        constants,
+        flags: ['HORS_DOMAINE'],
+        note,
+      }),
+      eObjReel: trace({
+        value: null,
+        formula: 'FLUX_OBJET_REEL',
+        inputs,
+        flags: ['HORS_DOMAINE'],
+        note,
+      }),
+      plageEObj: null,
+    }
+  }
+
+  const attenuationValeur = attenuationBrute(x)
+  const bornesK = plageK('EXTINCTION_V_MAG_PAR_MASSE_AIR')
+  // Un k plus grand éteint davantage : la borne haute de k donne la borne BASSE du flux.
+  const plageAttenuation =
+    bornesK === null
+      ? null
+      : ([attenuationBrute(x, bornesK[1]), attenuationBrute(x, bornesK[0])] as const)
+
+  return {
+    masseAir: masseAirCible,
+    attenuation: trace({
+      value: attenuationValeur,
+      formula: 'ATTENUATION_ATMOSPHERIQUE',
+      inputs,
+      constants,
+      ...(plageAttenuation === null ? {} : { range: plageAttenuation }),
+      note:
+        `${((1 - attenuationValeur) * 100).toFixed(0)} % du flux de l’objet est perdu ` +
+        `dans l’atmosphère à cette hauteur, soit ${(K('EXTINCTION_V_MAG_PAR_MASSE_AIR') * x).toFixed(2)} ` +
+        'mag. L’intégration se paie au carré de cette perte : la HAUTEUR de la cible, pas ' +
+        'seulement la cible, dicte le temps de pose.',
+    }),
+    eObjReel: trace({
+      value: eObj.value * attenuationValeur,
+      formula: 'FLUX_OBJET_REEL',
+      inputs,
+      constants,
+      ...(plageAttenuation === null
+        ? {}
+        : { range: [eObj.value * plageAttenuation[0], eObj.value * plageAttenuation[1]] as const }),
+      ...(eObj.flags === undefined ? {} : { flags: eObj.flags }),
+    }),
+    plageEObj:
+      plageAttenuation === null
+        ? null
+        : [eObj.value * plageAttenuation[0], eObj.value * plageAttenuation[1]],
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -222,6 +362,11 @@ export interface EntreeIntegration {
   readonly tailleRawMo: number
   /** Durée exploitable d'une nuit sur cette cible (§8.2). Absente : pas de découpe. */
   readonly dureeCreneauS?: number | null
+  /**
+   * §7.6 — E_obj réel aux deux bornes du coefficient d'extinction. Présente, l'intégration
+   * s'affiche avec sa fourchette : k est un ordre de grandeur, donc la durée aussi (§2.1).
+   */
+  readonly eObjPlage?: readonly [number, number] | null
 }
 
 export interface PlanIntegration {
@@ -267,6 +412,17 @@ export function planIntegration(entree: EntreeIntegration): PlanIntegration {
     read_noise_e: entree.readNoiseE,
   }
 
+  // Un E_obj plus faible allonge l'intégration : la borne basse du flux donne la borne
+  // HAUTE de la durée. La fourchette n'a pas de sens quand l'affichage est déjà plafonné.
+  const plageEObj = entree.eObjPlage ?? null
+  const plageT =
+    plageEObj === null || horsDePortee
+      ? null
+      : ([
+          integrationRequiseS({ ...entree, eObj: plageEObj[1] }, snrCible),
+          integrationRequiseS({ ...entree, eObj: plageEObj[0] }, snrCible),
+        ] as const)
+
   const messages: string[] = []
   if (horsDePortee) {
     messages.push(
@@ -301,6 +457,7 @@ export function planIntegration(entree: EntreeIntegration): PlanIntegration {
       value: tRequis,
       formula: 'INTEGRATION_REQUISE',
       inputs,
+      ...(plageT === null ? {} : { range: plageT, constants: ['EXTINCTION_V_MAG_PAR_MASSE_AIR'] }),
       ...(horsDePortee
         ? {
             flags: ['HORS_DOMAINE' as const],

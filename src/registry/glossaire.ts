@@ -498,6 +498,30 @@ export const GLOSSAIRE = Object.freeze({
     consequence: 'Diviser ce flux par deux quadruple le temps nécessaire à qualité égale.',
     sections: ['7.1'],
   }),
+  masse_air: terme({
+    libelle: 'Masse d’air',
+    glose: 'épaisseur d’atmosphère traversée',
+    explication:
+      'La masse d’air compte les épaisseurs d’atmosphère que la lumière traverse avant ' +
+      'd’atteindre le capteur : 1 au zénith, 2 à 30° de hauteur, près de 3 à 20°. Elle ne ' +
+      'dépend que de la hauteur de la cible, et l’approximation employée cesse d’être valide ' +
+      'sous une quinzaine de degrés.',
+    consequence:
+      'À 30° de hauteur, une cible demande près du double du temps de pose qu’au zénith.',
+    sections: ['7.6', '8.2'],
+  }),
+  extinction_atmospherique: terme({
+    libelle: 'Atténuation atmosphérique',
+    glose: 'part du flux qui survit',
+    explication:
+      'Une magnitude de catalogue est mesurée hors atmosphère : le flux qui arrive vraiment au ' +
+      'capteur est plus faible, d’autant plus que la cible est basse. Le fond de ciel, lui, est ' +
+      'relevé depuis le sol : il est déjà atténué, et n’est donc pas éteint une seconde fois.',
+    consequence:
+      'Le temps d’intégration varie comme le carré de cette perte : viser haut coûte deux fois ' +
+      'moins de temps que viser bas.',
+    sections: ['7.6'],
+  }),
   pose_unitaire: terme({
     libelle: 'Pose unitaire',
     glose: 'durée d’une image',

@@ -211,6 +211,40 @@ function PoseUnitaire({
   )
 }
 
+/**
+ * §7.6 — l'atténuation atmosphérique du flux de l'objet, avec la hauteur qui la produit.
+ *
+ * Rendue avec l'intégration et non avec la pose : c'est la durée totale que ce terme dose,
+ * et la pose unitaire n'en dépend pas — elle ne tient qu'au fond de ciel.
+ *
+ * La hauteur d'évaluation est écrite en clair : sans elle, la masse d'air est un nombre
+ * orphelin, et l'utilisateur ne peut pas savoir que c'est le meilleur instant de la nuit qui
+ * est chiffré. La précision reste au centième, celle du modèle (§12.4).
+ */
+function Extinction({ r }: { readonly r: Resultat }) {
+  const extinction = r.extinction
+  if (extinction === null) return null
+  return (
+    <>
+      <p className="etat">
+        Hauteur d’évaluation :{' '}
+        {r.hauteurEvaluationDeg === null
+          ? 'inconnue — cible sans coordonnées, aucune extinction appliquée'
+          : `culmination à ${r.hauteurEvaluationDeg.toFixed(1)}° depuis ce site`}
+      </p>
+      <TracedValue terme="masse_air" trace={extinction.masseAir} />
+      <TracedValue terme="extinction_atmospherique" trace={extinction.attenuation} decimales={3} />
+      <TracedValue
+        terme="flux_objet"
+        suffixe="reçu au capteur, après atténuation"
+        trace={extinction.eObjReel}
+        decimales={3}
+        unite="e⁻/s/px"
+      />
+    </>
+  )
+}
+
 /** §7.3 — l'intégration requise pour la qualité visée, en heures, en poses et en gigaoctets. */
 function CombienDePhotos({
   r,
@@ -222,7 +256,17 @@ function CombienDePhotos({
   readonly surSnr: (valeur: number) => void
 }) {
   const integration = r.integration
-  if (integration === null) return null
+  if (integration === null) {
+    const refus = r.extinction?.attenuation.note
+    // §7.6 — un refus se lit. Faire disparaître la section laisserait croire que le calcul
+    // n'a pas été demandé, alors qu'il a été refusé, et pour une raison nommable.
+    return refus === undefined ? null : (
+      <section>
+        <h2>Combien de photos — §7.3</h2>
+        <p className="cause">{refus}</p>
+      </section>
+    )
+  }
   return (
     <section>
       <h2>Combien de photos — §7.3</h2>
@@ -236,6 +280,7 @@ function CombienDePhotos({
           ))}
         </select>
       </label>
+      <Extinction r={r} />
       <TracedValue terme="integration_totale" trace={integration.tRequisS} decimales={0} unite="s" />
       <p className="etat">soit {dureeLisible(integration.tRequisS.value)}</p>
       <TracedValue terme="nombre_poses" trace={integration.nPoses} decimales={0} unite="poses" />

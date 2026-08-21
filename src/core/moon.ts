@@ -224,6 +224,12 @@ export interface CielSousLaLune {
   readonly sbCielEffectif: number
   readonly altLuneDeg: number
   readonly separationDeg: number
+  /**
+   * La hauteur de cible employée pour l'extinction sur son trajet, renvoyée telle que
+   * l'appelant l'a fournie. §7.6 éteint le flux de l'objet à cette même hauteur : deux
+   * conventions pour une seule grandeur donneraient deux poses sur un même écran.
+   */
+  readonly altitudeCibleDeg: number
   /** Fraction illuminée : ce qui se lit à l'écran, la phase nommée n'étant pas un nombre. */
   readonly illumination: number
 }
@@ -250,6 +256,7 @@ export function cielSousLaLune(entree: EntreeCielSousLaLune): CielSousLaLune {
     sbCielEffectif: sbCielAvecLune(entree.sbCielNoirMag, delta.value),
     altLuneDeg: lune.altitudeDeg,
     separationDeg: separation,
+    altitudeCibleDeg: entree.altitudeCibleDeg,
     illumination: lune.illumination,
   }
 }

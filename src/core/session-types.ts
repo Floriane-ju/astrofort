@@ -14,7 +14,7 @@ import type { CreneauCible, Intervalle } from './creneaux.ts'
 import type { Detectabilite, VerdictDetectabilite } from './detectability.ts'
 import type { Site } from './ephem.ts'
 import type { FicheCadrage } from './framing.ts'
-import type { PlanIntegration, PoseUnitaire } from './exposure.ts'
+import type { FluxObjetReel, PlanIntegration, PoseUnitaire } from './exposure.ts'
 import type { PlanCalibration } from './calibration.ts'
 import type { FenetreUtile } from './moon.ts'
 import type { FenetreNocturne } from './night.ts'
@@ -137,6 +137,8 @@ export interface EtapePlan {
   readonly creneau: CreneauCible
   readonly pose: PoseUnitaire
   readonly integration: PlanIntegration
+  /** §7.6 — reprise de la candidate : la masse d'air qui a dosé l'intégration affichée. */
+  readonly extinction: FluxObjetReel
   readonly cadrage: FicheCadrage
   readonly detect: Detectabilite
 }
@@ -187,6 +189,8 @@ export interface Candidate {
   readonly detect: Detectabilite
   readonly pose: PoseUnitaire
   readonly integration: PlanIntegration
+  /** §7.6 — masse d'air moyenne du créneau et atténuation qu'elle impose au flux. */
+  readonly extinction: FluxObjetReel
   readonly deltaSbLuneMag: Traced<number>
   readonly sbCielEffectif: number
   readonly detailScore: DetailScore

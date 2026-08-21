@@ -202,6 +202,12 @@ function Etape({ etape, rang, ...props }: EtapeProps) {
       <p className="etat">
         Pose {etape.tPoseS} s · {etape.nPoses} poses · {etape.volumeGo.toFixed(1)} Go ·{' '}
         intégration requise {dureeLisible(etape.integration.tRequisS.value)}
+        {/* §7.6 — k est un ordre de grandeur : la durée porte sa fourchette, jamais une
+            valeur exacte. Sans elle, l'utilisateur lit une précision qui n'existe pas. */}
+        {etape.integration.tRequisS.range !== undefined &&
+          ` (${dureeLisible(etape.integration.tRequisS.range[0])} à ${dureeLisible(
+            etape.integration.tRequisS.range[1],
+          )} selon la transparence du ciel)`}
       </p>
       <p className="etat">
         Verdict {etape.verdict ?? '[DONNÉE MANQUANTE]'} · cadrage {etape.verdictCadrage} · fond
@@ -220,6 +226,18 @@ function Etape({ etape, rang, ...props }: EtapeProps) {
           séquence redémarre.
         </p>
       )}
+      {/* §7.6 — la masse d'air qui a dosé cette intégration : la MOYENNE du créneau, pas
+          celle de la culmination. La cible passe une partie de la nuit plus bas. */}
+      <TracedValue
+        terme="masse_air"
+        suffixe="moyenne du créneau"
+        trace={etape.extinction.masseAir}
+      />
+      <TracedValue
+        terme="extinction_atmospherique"
+        trace={etape.extinction.attenuation}
+        decimales={3}
+      />
       <TracedValue terme="degradation_lunaire" trace={etape.deltaSbLuneMag} unite="mag/as²" />
       <TracedValue terme="score_cible" trace={etape.score} decimales={3} unite="sur 1" />
       <p className="score-detail">

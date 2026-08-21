@@ -165,18 +165,35 @@ export function latitudeAccessibleDeg(decDeg: number, seuilHauteurDeg: number): 
   return decDeg + (ANGLE_DROIT_DEG - seuilHauteurDeg)
 }
 
-/** Masse d'air. La formule cesse d'être valide sous environ 15° de hauteur. */
-export function masseAir(hauteurDeg: number): Traced<number | null> {
-  if (hauteurDeg <= 0) {
+/**
+ * Masse d'air sans trace : appelée par échantillon sur un créneau entier, là où produire un
+ * résultat tracé par minute d'observation n'apporterait rien et coûterait tout.
+ */
+export function masseAirBrute(hauteurDeg: number): number {
+  return 1 / Math.sin((hauteurDeg * Math.PI) / 180)
+}
+
+/**
+ * Masse d'air. La formule cesse d'être valide sous environ 15° de hauteur.
+ *
+ * `null` en entrée n'est pas une erreur : une cible personnalisée n'a pas de coordonnées,
+ * donc pas de hauteur, et la sortie le dit au lieu de supposer le zénith (§7.6).
+ */
+export function masseAir(hauteurDeg: number | null): Traced<number | null> {
+  if (hauteurDeg === null || hauteurDeg <= 0) {
     return trace({
       value: null,
       formula: 'MASSE_AIR',
-      inputs: { alt_deg: hauteurDeg },
+      ...(hauteurDeg === null ? {} : { inputs: { alt_deg: hauteurDeg } }),
       flags: ['DONNEE_MANQUANTE'],
-      note: 'Cible sous l’horizon : aucune masse d’air n’est définie.',
+      note:
+        hauteurDeg === null
+          ? 'Hauteur de la cible inconnue : aucune masse d’air n’est calculée, et aucune ' +
+            'n’est supposée.'
+          : 'Cible sous l’horizon : aucune masse d’air n’est définie.',
     })
   }
-  const valeur = 1 / Math.sin((hauteurDeg * Math.PI) / 180)
+  const valeur = masseAirBrute(hauteurDeg)
   const sousLeDomaine = hauteurDeg < K('HAUTEUR_MIN_MASSE_AIR_DEG')
   return trace({
     value: valeur,

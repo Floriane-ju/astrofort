@@ -9,13 +9,16 @@
 import { ficheCadrage, verdictDomaine, type FicheCadrage, type VerdictDomaine } from '../core/framing.ts'
 import { detectabilite, type Detectabilite } from '../core/detectability.ts'
 import {
+  attenuationBrute,
   dureeLisible,
   fluxCiel,
   fluxE,
   fluxObjet,
+  fluxObjetReel,
   integrationRequiseS,
   planIntegration,
   poseUnitaire,
+  type FluxObjetReel,
   type PlanIntegration,
   type PoseUnitaire,
 } from '../core/exposure.ts'
@@ -28,8 +31,10 @@ import {
   type ConseilFiltre,
   type SortieRecommandations,
 } from '../core/recommandations.ts'
+import { K } from '../registry/constants.ts'
 import type { FamilleFiltre } from '../registry/filters.ts'
 import type { ProfilOptique } from '../core/optics.ts'
+import { masseAir } from '../core/site.ts'
 import type { Traced } from '../core/traced.ts'
 import type { TypeObjet, ObjetCielProfond } from '../data/deepsky.ts'
 import type { Boitier, IsoRetenu, PointZeroSysteme } from '../data/equipment.ts'
@@ -83,6 +88,13 @@ export interface Resultat {
   readonly detect: Detectabilite
   readonly eCiel: Traced<number>
   readonly eObj: Traced<number> | null
+  /**
+   * §7.6 — l'extinction atmosphérique appliquée au flux de l'objet, avec la masse d'air et
+   * la hauteur qui la produisent. Toujours présente : un refus se lit, il ne disparaît pas.
+   */
+  readonly extinction: FluxObjetReel | null
+  /** Hauteur à laquelle la cible a été évaluée. `null` quand elle n'est pas connue. */
+  readonly hauteurEvaluationDeg: number | null
   readonly pose: PoseUnitaire | null
   readonly integration: PlanIntegration | null
   readonly calibration: PlanCalibration | null
@@ -159,6 +171,14 @@ export function evalue(
     zpEstime,
   })
 
+  /**
+   * §7.6 — la hauteur à laquelle la cible est éteinte : sa CULMINATION, la même convention
+   * que celle du modèle lunaire de cette fiche et du plan de séance. Une cible personnalisée
+   * n'a pas de coordonnées, donc pas de hauteur : l'extinction n'est alors pas supposée, et
+   * la durée annoncée se présente comme un plancher.
+   */
+  const hauteurEvaluationDeg = lune.evaluee ? lune.ciel.altitudeCibleDeg : null
+
   const sbObj = detect.sbObj.value
   if (sbObj === null) {
     return {
@@ -169,6 +189,8 @@ export function evalue(
       detect,
       eCiel,
       eObj: null,
+      extinction: null,
+      hauteurEvaluationDeg,
       pose: null,
       integration: null,
       calibration: null,
@@ -183,6 +205,28 @@ export function evalue(
     ouvertureN: contexte.ouvertureN,
     zpEstime,
   })
+  const extinction = fluxObjetReel(eObj, masseAir(hauteurEvaluationDeg))
+  const eObjReel = extinction.eObjReel.value
+
+  // Extinction refusée hors du domaine de l'approximation plane : la chaîne s'arrête là,
+  // et l'écran affiche le refus plutôt qu'une intégration extrapolée (§7.6, borne dure).
+  if (eObjReel === null) {
+    return {
+      domaine,
+      lune,
+      sbCielEffectif: sbCiel,
+      cadrage,
+      detect,
+      eCiel,
+      eObj,
+      extinction,
+      hauteurEvaluationDeg,
+      pose: null,
+      integration: null,
+      calibration: null,
+      explique: null,
+    }
+  }
 
   const pose = poseUnitaire({
     eCiel: eCiel.value,
@@ -193,12 +237,13 @@ export function evalue(
   })
 
   const integration = planIntegration({
-    eObj: eObj.value,
+    eObj: eObjReel,
     eCiel: eCiel.value,
     tPoseS: pose.tRecommandeS.value,
     readNoiseE: pose.readNoiseUtiliseE,
     snrCible,
     tailleRawMo: contexte.boitier.tailleRawMo,
+    eObjPlage: extinction.plageEObj,
   })
 
   const calibration = planCalibration({
@@ -216,6 +261,8 @@ export function evalue(
     detect,
     eCiel,
     eObj,
+    extinction,
+    hauteurEvaluationDeg,
     pose,
     integration,
     calibration,
@@ -224,6 +271,8 @@ export function evalue(
       detect,
       eCiel,
       eObj,
+      extinction,
+      hauteurEvaluationDeg,
       pose,
       integration,
       sbObj,
@@ -246,23 +295,32 @@ function expliqueVerdict(
     readonly detect: Detectabilite
     readonly eCiel: Traced<number>
     readonly eObj: Traced<number>
+    readonly extinction: FluxObjetReel
+    readonly hauteurEvaluationDeg: number | null
     readonly pose: PoseUnitaire
     readonly integration: PlanIntegration
     readonly sbObj: number
     readonly sbCiel: number
   },
 ): Explication {
+  // §7.6 — la masse d'air entre dans la sensibilité comme les autres entrées : c'est ce qui
+  // permet à §10.2 de désigner la HAUTEUR comme facteur dominant quand elle l'est, plutôt
+  // que de laisser croire que seule la cible décide du temps de pose.
+  const masseAirValeur = r.extinction.masseAir.value
   const point = {
     sb_obj: r.sbObj,
     sb_ciel: r.sbCiel,
     t_pose_s: r.pose.tRecommandeS.value,
     read_noise_e: r.pose.readNoiseUtiliseE,
     snr_cible: snrCible,
+    ...(masseAirValeur === null ? {} : { masse_air: masseAirValeur }),
   }
   const sortie = (v: Readonly<Record<string, number>>): number =>
     integrationRequiseS(
       {
-        eObj: fluxE(v.sb_obj!, contexte.zeroSysteme.valeur, contexte.pitchUm, contexte.ouvertureN),
+        eObj:
+          fluxE(v.sb_obj!, contexte.zeroSysteme.valeur, contexte.pitchUm, contexte.ouvertureN) *
+          (v.masse_air === undefined ? 1 : attenuationBrute(v.masse_air)),
         eCiel: fluxE(v.sb_ciel!, contexte.zeroSysteme.valeur, contexte.pitchUm, contexte.ouvertureN),
         tPoseS: v.t_pose_s!,
         readNoiseE: v.read_noise_e!,
@@ -280,6 +338,9 @@ function expliqueVerdict(
       { libelle: 'Contraste sur le fond de ciel', trace: r.detect.deltaSb },
       { libelle: 'Flux du fond de ciel', trace: r.eCiel },
       { libelle: 'Flux de l’objet', trace: r.eObj },
+      { libelle: 'Masse d’air de la cible', trace: r.extinction.masseAir },
+      { libelle: 'Atténuation atmosphérique', trace: r.extinction.attenuation },
+      { libelle: 'Flux de l’objet reçu au capteur', trace: r.extinction.eObjReel },
       { libelle: 'Pose optimale', trace: r.pose.tOptS },
       { libelle: 'Pose retenue', trace: r.pose.tRecommandeS },
       { libelle: 'Intégration requise', trace: r.integration.tRequisS },
@@ -293,6 +354,11 @@ function expliqueVerdict(
       typeObjet: saisie.typeObjet,
       cibleImposee: true,
       cadrageRefuse: !r.cadrage.faisable,
+      // §7.6 — sous le seuil d'imagerie, le créneau devient un levier chiffré et non une
+      // recommandation de principe : l'extinction y double le temps d'intégration.
+      hauteurFaible:
+        r.hauteurEvaluationDeg !== null &&
+        r.hauteurEvaluationDeg < K('SEUIL_HAUTEUR_IMAGERIE_DEG'),
     },
   })
 }

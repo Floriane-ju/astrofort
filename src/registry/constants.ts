@@ -23,6 +23,12 @@ export interface ConstantEntry {
    * s'affiche avec sa plage, jamais comme une valeur exacte (§2.1, dernier critère).
    */
   readonly ordreDeGrandeur: boolean
+  /**
+   * Bornes déclarées de la tolérance, quand le PRD les chiffre. La plage générique de
+   * `plageOrdreDeGrandeur` — un facteur deux — est une convention de repli : elle serait
+   * fausse pour une constante dont le PRD annonce un intervalle plus étroit (§7.6, L-04).
+   */
+  readonly plage?: readonly [number, number]
   readonly sections: readonly string[]
   /** Constante conservée pour mémoire mais qu'aucun moteur ne doit consommer. */
   readonly deprecie?: string
@@ -680,7 +686,8 @@ const LUNE = {
     source: 'valeur de site de montagne retenue par Krisciunas & Schaefer (1991)',
     tolerance: 'ordre de grandeur — 0,15 à 0,30 selon la transparence du soir',
     ordreDeGrandeur: true,
-    sections: ['8.1'],
+    plage: [0.15, 0.3],
+    sections: ['7.6', '8.1'],
   }),
   NANOLAMBERT_ECHELLE: entree({
     ref: 'L-05',
@@ -1541,9 +1548,29 @@ export interface ConstantRef {
   readonly source: string
   readonly tolerance: string | null
   readonly ordreDeGrandeur: boolean
+  readonly plage?: readonly [number, number]
 }
 
 export function ref(id: ConstantId): ConstantRef {
-  const { ref, libelle, valeur, unite, source, tolerance, ordreDeGrandeur } = REGISTRE[id]
-  return { id, ref, libelle, valeur, unite, source, tolerance, ordreDeGrandeur }
+  const { ref, libelle, valeur, unite, source, tolerance, ordreDeGrandeur, plage } = REGISTRE[id]
+  return {
+    id,
+    ref,
+    libelle,
+    valeur,
+    unite,
+    source,
+    tolerance,
+    ordreDeGrandeur,
+    ...(plage === undefined ? {} : { plage }),
+  }
+}
+
+/**
+ * Bornes déclarées d'une constante d'ordre de grandeur, quand le PRD les chiffre. Une
+ * sortie qui consomme la constante encadre alors son résultat par ces bornes plutôt que
+ * par la convention générique du facteur deux (§2.1, dernier critère).
+ */
+export function plageK(id: ConstantId): readonly [number, number] | null {
+  return REGISTRE[id].plage ?? null
 }

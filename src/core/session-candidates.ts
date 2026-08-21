@@ -12,7 +12,7 @@ import { REMPLISSAGE_MIN_PLANIFIABLE, VERDICTS_PLANIFIABLES } from '../registry/
 import { creneauCible, type CreneauCible, type Intervalle } from './creneaux.ts'
 import { detectabilite } from './detectability.ts'
 import { ficheCadrage } from './framing.ts'
-import { fluxCiel, fluxObjet, planIntegration, poseUnitaire } from './exposure.ts'
+import { fluxCiel, fluxObjet, fluxObjetReel, planIntegration, poseUnitaire } from './exposure.ts'
 import { cielSousLaLune } from './moon.ts'
 import { altitudeCulmination } from './site.ts'
 import {
@@ -150,6 +150,18 @@ export function evalueCandidate(
   }
   const eCiel = fluxCiel({ sbMagArcsec2: sbCielEffectif, ...fluxCommun })
   const eObj = fluxObjet({ sbMagArcsec2: sbObj, ...fluxCommun })
+  // §7.6 — le plan connaît le créneau : la masse d'air retenue est sa MOYENNE, pas celle de
+  // la culmination. C'est le coût réel de la capture, et il est plus élevé que le meilleur
+  // instant de la nuit. Le fond de ciel, lui, reste à sa valeur relevée au sol.
+  const extinction = fluxObjetReel(eObj, creneau.masseAirMoyenne)
+  const eObjReel = extinction.eObjReel.value
+  if (eObjReel === null) {
+    return {
+      designation: objet.designation,
+      code: 'HAUTEUR',
+      cause: extinction.eObjReel.note ?? 'Masse d’air hors du domaine de validité (§7.6).',
+    }
+  }
   const pose = poseUnitaire({
     eCiel: eCiel.value,
     readNoiseE: contexte.readNoiseE,
@@ -157,13 +169,14 @@ export function evalueCandidate(
     zpEstime: contexte.zpEstime,
   })
   const integration = planIntegration({
-    eObj: eObj.value,
+    eObj: eObjReel,
     eCiel: eCiel.value,
     tPoseS: pose.tRecommandeS.value,
     readNoiseE: pose.readNoiseUtiliseE,
     snrCible: contexte.snrCible,
     tailleRawMo: contexte.tailleRawMo,
     dureeCreneauS: creneau.dureeTotaleMin.value * S_PAR_MINUTE,
+    eObjPlage: extinction.plageEObj,
   })
   if (integration.horsDePortee) {
     return {
@@ -192,6 +205,7 @@ export function evalueCandidate(
     detect,
     pose,
     integration,
+    extinction,
     deltaSbLuneMag: delta,
     sbCielEffectif,
     detailScore,

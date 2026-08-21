@@ -21,7 +21,13 @@ import type { TypeMonture } from './tracking.ts'
 import type { Site } from './ephem.ts'
 import { observateur } from './ephem.ts'
 import type { MasqueHorizon } from './site.ts'
-import { altitudeCulmination, latitudeAccessibleDeg, masseAir, obstructionDeg } from './site.ts'
+import {
+  altitudeCulmination,
+  latitudeAccessibleDeg,
+  masseAir,
+  masseAirBrute,
+  obstructionDeg,
+} from './site.ts'
 import type { Traced } from './traced.ts'
 import { trace } from './traced.ts'
 
@@ -58,6 +64,12 @@ export interface CreneauCible {
   readonly creneaux: readonly SousCreneau[]
   readonly dureeTotaleMin: Traced<number>
   readonly masseAirMin: Traced<number | null>
+  /**
+   * §7.6 — la masse d'air moyenne sur le créneau, celle qui dose l'extinction du flux. La
+   * masse d'air minimale ci-dessus est le meilleur instant de la nuit ; c'est la moyenne
+   * qui chiffre ce que la capture paiera réellement.
+   */
+  readonly masseAirMoyenne: Traced<number | null>
   readonly circumpolaire: boolean
   readonly retournementMeridien: boolean
   readonly causeExclusion?: CauseExclusion
@@ -140,6 +152,57 @@ function assembleCreneaux(
   return creneaux
 }
 
+/**
+ * §7.6 — masse d'air moyenne des échantillons du créneau.
+ *
+ * La moyenne, et non la masse d'air de la culmination : une cible passe une partie de son
+ * créneau plus bas, et l'extinction se paie sur toute la durée de capture. Prendre la
+ * culmination annoncerait le meilleur cas comme s'il valait pour la nuit entière.
+ *
+ * `null` dès qu'un échantillon sort du domaine de l'approximation plane : une moyenne dont
+ * une partie des termes est fausse est fausse, et rien n'est extrapolé (§7.6, borne dure).
+ */
+function masseAirMoyenneCreneau(visibles: readonly Echantillon[]): Traced<number | null> {
+  const altitudes = visibles.map((e) => e.altitudeDeg)
+  const altMin = altitudes.length === 0 ? 0 : Math.min(...altitudes)
+  // Les deux hauteurs extrêmes entrent dans la trace : une moyenne sans les bornes qui la
+  // produisent est un nombre orphelin, et §7.6 exige la hauteur à côté de la masse d'air.
+  const inputs = {
+    n_echantillons: visibles.length,
+    alt_min_deg: altMin,
+    alt_max_deg: altitudes.length === 0 ? 0 : Math.max(...altitudes),
+  }
+
+  if (altitudes.length === 0) {
+    return trace({
+      value: null,
+      formula: 'MASSE_AIR_MOYENNE',
+      inputs,
+      flags: ['DONNEE_MANQUANTE'],
+      note: 'Aucun échantillon visible : le créneau est vide, il n’y a pas de masse d’air.',
+    })
+  }
+  if (altMin < K('HAUTEUR_MIN_MASSE_AIR_DEG')) {
+    return trace({
+      value: null,
+      formula: 'MASSE_AIR_MOYENNE',
+      inputs,
+      constants: ['HAUTEUR_MIN_MASSE_AIR_DEG'],
+      flags: ['HORS_DOMAINE'],
+      note:
+        `Le créneau descend à ${altMin.toFixed(1)}°, sous les ` +
+        `${K('HAUTEUR_MIN_MASSE_AIR_DEG')}° où l’approximation 1 / sin(alt) cesse d’être ` +
+        'valide : la moyenne n’est pas calculée plutôt que calculée sur des termes faux.',
+    })
+  }
+  const somme = altitudes.reduce((total, alt) => total + masseAirBrute(alt), 0)
+  return trace({
+    value: somme / altitudes.length,
+    formula: 'MASSE_AIR_MOYENNE',
+    inputs,
+  })
+}
+
 export function creneauCible(entree: EntreeCreneau): CreneauCible {
   const seuil = entree.seuilHauteurDeg ?? K('SEUIL_HAUTEUR_IMAGERIE_DEG')
   const latitude = entree.site.latitudeDeg
@@ -179,6 +242,7 @@ export function creneauCible(entree: EntreeCreneau): CreneauCible {
       constants: entree.seuilHauteurDeg === undefined ? ['SEUIL_HAUTEUR_IMAGERIE_DEG'] : [],
     }),
     masseAirMin: masseAir(altitudeMax > 0 ? altitudeMax : altCulmination.value),
+    masseAirMoyenne: masseAirMoyenneCreneau(visibles),
     circumpolaire,
     retournementMeridien: retournementMeridien && creneaux.some((c) => c.apresRetournement),
   }

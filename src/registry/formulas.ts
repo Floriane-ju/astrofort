@@ -140,6 +140,25 @@ export const FORMULES = Object.freeze({
     unite: 'e⁻/s/px',
     section: '7.1',
   },
+  ATTENUATION_ATMOSPHERIQUE: {
+    expression: 'attenuation = 10^( −0,4 × k × X )',
+    unite: '—',
+    section: '7.6',
+    note:
+      'Une magnitude de catalogue est une magnitude HORS ATMOSPHÈRE : le flux qui atteint le ' +
+      'capteur est atténué par la traversée. Le fond de ciel, lui, est relevé AU SOL — SQM ou ' +
+      'table Bortle — donc déjà atténué : l’éteindre une seconde fois le compterait deux fois. ' +
+      'Comme T_requis ∝ 1 / E_obj², la perte se paie au carré : le temps est multiplié par ' +
+      '10^( +0,8 × k × X ), soit 1,37 au zénith et 1,88 à 30° de hauteur.',
+  },
+  FLUX_OBJET_REEL: {
+    expression: 'E_obj_reel = E_obj × attenuation',
+    unite: 'e⁻/s/px',
+    section: '7.6',
+    note:
+      'C’est ce flux, et non celui du catalogue, qui alimente la pose et l’intégration de ' +
+      '§7.3. Une cible basse coûte près du double du temps d’une cible au zénith.',
+  },
   POSE_OPTIMALE: {
     expression: 't_opt = C × RN² / E_ciel',
     unite: 's',
@@ -297,6 +316,15 @@ export const FORMULES = Object.freeze({
     unite: '—',
     section: '8.2',
     note: 'Valide au-dessus d’environ 15° de hauteur.',
+  },
+  MASSE_AIR_MOYENNE: {
+    expression: 'X_moyen = moyenne( 1 / sin(alt_i) ) sur les échantillons du créneau',
+    unite: '—',
+    section: '8.2',
+    note:
+      'La masse d’air d’un créneau n’est pas celle de la culmination : une cible passe une ' +
+      'partie de son créneau plus bas, et l’extinction se paie sur toute la durée. La ' +
+      'moyenne est donc supérieure à la masse d’air minimale affichée par ailleurs.',
   },
   DECLINAISON_CIRCUMPOLAIRE: {
     expression: 'circumpolaire si δ > 90° − latitude',

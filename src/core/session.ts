@@ -251,6 +251,7 @@ function construitEtape(
     creneau: candidate.creneau,
     pose: candidate.pose,
     integration: candidate.integration,
+    extinction: candidate.extinction,
     cadrage: candidate.cadrage,
     detect: candidate.detect,
   }
