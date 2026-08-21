@@ -34,5 +34,23 @@
     "sha256": "e6052103cf335c1b999437f7998a8889ad4ee3bb837b4887dee21d153be6fbcb",
     "source": "Stellarium, culture « modern » — https://raw.githubusercontent.com/Stellarium/stellarium/daace2add6a1bf886e8ee1934f51e9c69f818d18/skycultures/modern/index.json ; frontières IAU de Delporte (B1875)",
     "obligatoire": true
+  },
+  {
+    "nom": "deepsky",
+    "version": "1",
+    "nombreEntrees": 614,
+    "octets": 17192,
+    "sha256": "00b8dcc17ca30ec3acef6281ad74247cb20d5f948f5109b66a4afca55860c91f",
+    "source": "Sharpless et Barnard, catalogue DSO Stellarium v3.23 — https://raw.githubusercontent.com/Stellarium/stellarium/9ca023a97f344975e1faa96f91b20a4c18a7c02b/nebulae/default/catalog.txt + https://raw.githubusercontent.com/Stellarium/stellarium/9ca023a97f344975e1faa96f91b20a4c18a7c02b/nebulae/default/names.dat ; entrées doublant un NGC/IC d'OpenNGC écartées, Caldwell hors périmètre (redésignations NGC/IC)",
+    "obligatoire": true
+  },
+  {
+    "nom": "deepsky-noms",
+    "version": "1",
+    "nombreEntrees": 614,
+    "octets": 4802,
+    "sha256": "42cf7bce1fbc32c59be240ed0a829c812c4941bdda9135ddc2b4c24f76205b32",
+    "source": "Bloc de chaînes du paquet deepsky",
+    "obligatoire": true
   }
 ]

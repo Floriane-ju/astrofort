@@ -3637,7 +3637,7 @@ La colonne « mesuré » porte la taille du paquet réellement construit par `pn
 |---|---|---|---|
 | HYG v4.1 (mag ≤ 9) | 1,7 Mo | **0,96 Mo** | 83 479 × 12 o, comptage mesuré |
 | OpenNGC + addendum | 1,2 Mo | **0,43 Mo** | 12 518 × 28 o + bloc de chaînes |
-| Sharpless (278 après filtrage NGC/IC) + Barnard (343) | < 0,1 Mo | **0,03 Mo** | 621 objets Stellarium DSO v3.23, Caldwell hors périmètre |
+| Sharpless (271 après filtrage NGC/IC) + Barnard (343) | < 0,1 Mo | **0,02 Mo** | 614 objets Stellarium DSO v3.23, Caldwell hors périmètre |
 | Frontières IAU B1875 + figures + astérismes + étoiles nommées | < 0,25 Mo | **0,26 Mo** | un seul paquet, JSON en UTF-8 |
 | Masque Voie lactée procédural | ≈ 0,5 Mo | **0 Mo** | calculé à l'exécution, aucune donnée |
 | Base matériel (boîtiers, capteurs, filtres) | ≈ 0,2 Mo | **dans le code** | tables gelées du registre |

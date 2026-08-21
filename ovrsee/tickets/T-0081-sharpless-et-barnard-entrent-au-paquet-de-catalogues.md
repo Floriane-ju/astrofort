@@ -2,7 +2,7 @@
 {
   "id": "T-0081",
   "titre": "Sharpless et Barnard entrent au paquet de catalogues",
-  "colonne": "pret",
+  "colonne": "en-cours",
   "priorite": "haute",
   "epic": "T-0079",
   "tags": [
@@ -11,7 +11,7 @@
     "catalogue"
   ],
   "cree": "2026-08-19",
-  "maj": "2026-08-20",
+  "maj": "2026-08-21",
   "plan": null
 }
 ---
@@ -59,23 +59,36 @@ sans doublons NGC/IC restent.
 
 ## Implémentation
 
-**Source épinglée :** Stellarium DSO catalog v3.23
-- URL : https://raw.githubusercontent.com/Stellarium/stellarium/9ca023a97f344975e1faa96f91b20a4c18a7c02b/nebulae/default/catalog.txt
-- SHA-256 : 38a7c8c19b07bb3b2a659769acf4e5611a261732727d8e541c52ce691ab607aa
-- Commit : 9ca023a97f344975e1faa96f91b20a4c18a7c02b (« Updated DSO catalog to v3.23 (#4853) »)
+**Sources épinglées :** Stellarium DSO v3.23, au commit `9ca023a`
+- `nebulae/default/catalog.txt` — SHA-256 `38a7c8c1…607aa`
+- `nebulae/default/names.dat` — SHA-256 `f66313ec…1de8e` : les noms d'usage vivent hors du
+  catalogue. Sans ce second fichier, Sh2-276 n'est qu'un numéro et « Barnard's Loop » ne se
+  cherche plus (T-0052).
 
-**Catalogues extraits et filtrés :**
-- Sharpless (Sh2-) : 313 objets source, X après filtrage doublons NGC/IC
-- Barnard (B) : 343 objets source, Y après filtrage doublons NGC/IC
-- Caldwell (C) : écartés (109 redésignations NGC/IC)
-- **Total paquet deepsky** : X + Y objets (mesurés à la construction)
+**Catalogues extraits et filtrés — comptages mesurés à la construction :**
+- Sharpless (`Sh2-`) : 316 objets source, **271** après retrait des 45 qui doublent un
+  NGC/IC présent dans OpenNGC
+- Barnard (`B`) : 343 objets source, **343** — aucun doublon NGC/IC
+- Caldwell (`C`) : 110 entrées écartées en bloc
+- **Paquet `deepsky`** : 614 objets, 0,02 Mo (17 192 o + 4 802 o de chaînes)
+
+Sept entrées Sharpless sont typées « étoile » par Stellarium, qui y désigne l'étoile
+excitatrice plutôt que la nébulosité — dont Sh2-308 (Dolphin Head) et Sh2-9, deux cibles
+grand champ de vingt minutes d'arc. Les écarter comme le fait le filtre OpenNGC aurait perdu
+des cibles réelles : un numéro Sh2 désigne une région HII, un numéro B une nébuleuse obscure.
+C'est le catalogue d'origine qui tranche le type, pas l'étiquette de Stellarium.
 
 **Modificatifs au code :**
-- `scripts/build-catalogs.ts` : 
-  - Ajout source `SOURCE_STELLARIUM_DSO`, groupe de construction `deepsky`
-  - Fonction `extraitDesignationsNgcIc()` pour identifier les doublons
-  - Fonction `construitCataloguesComplementaires()` qui filtre les objets avec NGC/IC présents dans OpenNGC
-  - Mapping de types Stellarium DSO vers types du projet
-- `src/data/bootstrap.ts` : extension de `chargeObjetsCielProfond()` pour charger deepsky aux côtés d'openngc
-- `tests/catalog.test.ts` : ajout test de non-chevauchement NGC/IC, vérification explicite de Sh2-276
-- `prd.md` §12.2 : mise à jour du tableau avec volume et comptage réels après filtrage
+- `scripts/build-catalogs.ts` : sources `SOURCE_STELLARIUM_DSO` et `…_DSO_NOMS`, groupe de
+  construction `deepsky`, `extraitDesignationsNgcIc()`, `analyseNomsDso()`,
+  `construitCataloguesComplementaires()`, `typeDso()`. OpenNGC est mémoïsé : les deux groupes
+  le partagent.
+- `src/data/bootstrap.ts` : `chargeObjetsCielProfond()` concatène `openngc` et `deepsky`.
+- `tests/catalog.test.ts` : Boucle de Barnard présente et nommée, magnitude absente et non
+  nulle, taille encodée au-delà de 10° ; aucun chevauchement de désignation avec OpenNGC ;
+  le catalogue chargé de bout en bout porte Sh2-276 et B33.
+- `prd.md` §12.2 : 614 objets, 0,02 Mo mesurés.
+
+**Hors périmètre, assumé :** les noms sont ceux de la source, en anglais — « Barnard's Loop »,
+pas « Boucle de Barnard ». C'est déjà le cas des noms communs d'OpenNGC (« Andromeda Galaxy ») :
+traduire est un sujet à soi, pas une dette de ce ticket.

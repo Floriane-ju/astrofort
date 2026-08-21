@@ -18,7 +18,9 @@ import { chercheCatalogue } from '../src/core/recherche-catalogue.ts'
 import {
   chargeObjetsCielProfond,
   PAQUET_NOMS_OBJETS,
+  PAQUET_NOMS_OBJETS_COMPLEMENT,
   PAQUET_OBJETS,
+  PAQUET_OBJETS_COMPLEMENT,
 } from '../src/data/bootstrap.ts'
 import { ecritPaquet } from '../src/data/db.ts'
 
@@ -197,6 +199,55 @@ describe('paquets générés §12.2', () => {
   })
 })
 
+describe('Sharpless et Barnard §6.1', () => {
+  const lit = async (nom: string): Promise<ArrayBuffer | null> => {
+    const octets = await readFile(join(RACINE, 'public', 'data', nom)).catch(() => null)
+    if (octets === null) return null
+    return octets.buffer.slice(
+      octets.byteOffset,
+      octets.byteOffset + octets.byteLength,
+    ) as ArrayBuffer
+  }
+
+  const litObjets = async (paquet: string): Promise<ObjetCielProfond[] | null> => {
+    const [enregistrements, chaines] = await Promise.all([
+      lit(`${paquet}-1.bin`),
+      lit(`${paquet}-noms-1.bin`),
+    ])
+    if (enregistrements === null || chaines === null) return null
+    return decodeObjets({ enregistrements, chaines })
+  }
+
+  it('porte la Boucle de Barnard, que ni NGC ni IC ne décrivent', async () => {
+    const objets = await litObjets('deepsky')
+    if (objets === null) return
+
+    const boucle = objets.find((o) => o.designation === 'Sh2-276')
+    expect(boucle?.nomsCommuns.split('|')).toContain("Barnard's Loop")
+    expect(boucle?.type).toBe('EMISSION')
+    // §6.3 — un complexe nébuleux sans magnitude intégrée ne reçoit pas une magnitude 0.
+    expect(boucle?.vMag).toBeNull()
+    // La Boucle couvre une vingtaine de degrés : l'encodage doit tenir cette taille.
+    const ARCMIN_PAR_DEG = 60
+    expect(boucle!.majAxArcmin! / ARCMIN_PAR_DEG).toBeGreaterThan(10)
+  })
+
+  it('ne redouble aucune entrée d’OpenNGC', async () => {
+    const [complement, ngc] = await Promise.all([litObjets('deepsky'), litObjets('openngc')])
+    if (complement === null || ngc === null) return
+
+    // Le paquet complémentaire n'existe que pour ce qu'OpenNGC ignore : deux fiches pour
+    // un même objet du ciel feraient une liste de cibles §6.4 qui répond et qui a tort.
+    const designations = new Set(ngc.map((o) => o.designation))
+    for (const objet of complement) {
+      expect(designations.has(objet.designation), objet.designation).toBe(false)
+      expect(objet.designation).toMatch(/^(Sh2-|B)\d+$/)
+    }
+    expect(complement.filter((o) => o.designation.startsWith('Sh2-')).length).toBeGreaterThan(200)
+    expect(complement.filter((o) => o.designation.startsWith('B')).length).toBeGreaterThan(300)
+  })
+})
+
 describe('chargement du catalogue ciel profond §6.1', () => {
   it('décode les objets rangés par le démarrage, et rend une liste vide sans paquet', async () => {
     // La fiche de cible tire ses exemples de cette liste : le chemin de bout en bout
@@ -217,10 +268,25 @@ describe('chargement du catalogue ciel profond §6.1', () => {
       donnees: await lit('openngc-noms-1.bin'),
     })
 
+    await ecritPaquet({
+      nom: PAQUET_OBJETS_COMPLEMENT,
+      version: '1',
+      donnees: await lit('deepsky-1.bin'),
+    })
+    await ecritPaquet({
+      nom: PAQUET_NOMS_OBJETS_COMPLEMENT,
+      version: '1',
+      donnees: await lit('deepsky-noms-1.bin'),
+    })
+
     const objets = await chargeObjetsCielProfond()
     expect(objets.length).toBeGreaterThan(10000)
     const m31 = objets.find((o) => o.designation === 'M31')
     expect(m31?.majAxArcmin).toBeCloseTo(177.8, 1)
     expect(m31?.type).toBe('GALAXIE')
+
+    // §6.1 — un seul catalogue pour la liste des cibles, deux paquets pour le construire.
+    expect(chercheCatalogue(objets, 'barnard', 20).map((o) => o.designation)).toContain('Sh2-276')
+    expect(objets.some((o) => o.designation === 'B33')).toBe(true)
   })
 })

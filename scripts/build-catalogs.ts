@@ -102,6 +102,33 @@ const SOURCE_STELLARIUM: SourceEpinglee = {
   sha256: '1f2f5ffd6c9e25a7d0dcfdbf1f756e2db03dd3b8ed4ec016a2839b09f6b0fe1e',
 }
 
+/**
+ * §6.1 — Sharpless et Barnard, obligatoires au MVP. OpenNGC ne décrit pas les complexes
+ * nébuleux de plusieurs degrés, qui sont précisément le domaine d'un setup grand champ :
+ * la Boucle de Barnard est Sh2-276, absente de NGC comme d'IC.
+ *
+ * Le catalogue DSO de Stellarium porte les deux dans un seul fichier, avec les renvois
+ * croisés NGC/IC qui servent à écarter les doublons.
+ */
+const SOURCE_STELLARIUM_DSO: SourceEpinglee = {
+  nom: 'Stellarium (catalogue DSO v3.23)',
+  url:
+    'https://raw.githubusercontent.com/Stellarium/stellarium/' +
+    '9ca023a97f344975e1faa96f91b20a4c18a7c02b/nebulae/default/catalog.txt',
+  sha256: '38a7c8c19b07bb3b2a659769acf4e5611a261732727d8e541c52ce691ab607aa',
+}
+/**
+ * Les noms d'usage vivent hors du catalogue, dans un second fichier de la même version.
+ * Sans lui, Sh2-276 n'est qu'un numéro : « Barnard's Loop » ne se cherche plus (T-0052).
+ */
+const SOURCE_STELLARIUM_DSO_NOMS: SourceEpinglee = {
+  nom: 'Stellarium (noms DSO v3.23)',
+  url:
+    'https://raw.githubusercontent.com/Stellarium/stellarium/' +
+    '9ca023a97f344975e1faa96f91b20a4c18a7c02b/nebulae/default/names.dat',
+  sha256: 'f66313ecbeb2bb3c0c98f1d24852fa586217a3ca87ae456394f123752091de8e',
+}
+
 /** §3.3 : HYG est complet jusqu'à magnitude ≈ 9. Au-delà, le catalogue n'est plus fiable. */
 const MAG_LIMITE_HYG = 9
 const VERSION_PAQUETS = '1'
@@ -271,6 +298,169 @@ function construitObjets(csv: string): ObjetCielProfond[] {
       vMag: nombreOuNull(ligne.get('V-Mag')),
       bMag: nombreOuNull(ligne.get('B-Mag')),
       surfBr: nombreOuNull(ligne.get('SurfBr')),
+    })
+  }
+  return objets
+}
+
+// ---------------------------------------------------------------------------
+// §6.1 — Sharpless et Barnard, extraits du catalogue DSO de Stellarium
+// ---------------------------------------------------------------------------
+
+/** Colonnes du catalogue DSO, numérotées comme son en-tête (1 → indice 0). */
+const COL_AD = 1
+const COL_DEC = 2
+const COL_B_MAG = 3
+const COL_V_MAG = 4
+const COL_TYPE = 5
+const COL_MAJ_AX = 7
+const COL_MIN_AX = 8
+const COL_POS_ANG = 9
+const COL_NGC = 16
+const COL_IC = 17
+const COL_BARNARD = 20
+const COL_SHARPLESS = 21
+
+/**
+ * Stellarium écrit 99 pour « magnitude inconnue ». Encodée telle quelle, elle donnerait
+ * une nébuleuse obscure « de magnitude 99 » plutôt qu'une magnitude absente (§6.3), et un
+ * verdict de détectabilité serait rendu sur une valeur qui n'en est pas une.
+ */
+const MAG_INCONNUE_DSO = 99
+
+/** Correspondance des codes de type du catalogue DSO vers les types de §6.3. */
+const TYPES_DSO: Readonly<Record<string, TypeObjet>> = {
+  DN: 'NEB_OBSCURE',
+  MoC: 'NEB_OBSCURE',
+  HII: 'EMISSION',
+  EN: 'EMISSION',
+  RN: 'REFLEXION',
+  PN: 'NEB_PLANETAIRE',
+  SNR: 'RESTE_SUPERNOVA',
+  OpC: 'AMAS_OUVERT',
+  GlC: 'AMAS_GLOB',
+  G: 'GALAXIE',
+  Gx: 'GALAXIE',
+  GiG: 'GALAXIE',
+  YSO: 'AUTRE',
+}
+
+/**
+ * Le catalogue d'origine porte le type quand Stellarium ne le donne pas.
+ *
+ * Sept entrées Sharpless sont typées « étoile » : Stellarium y désigne l'étoile excitatrice
+ * plutôt que la nébulosité. Les écarter perdrait Sh2-308 (Dolphin Head) et Sh2-9, deux
+ * cibles grand champ de vingt minutes d'arc. Un numéro Sh2 désigne une région HII, un
+ * numéro B une nébuleuse obscure : c'est le catalogue qui tranche, pas l'étiquette.
+ */
+function typeDso(codeType: string, sharpless: number): TypeObjet {
+  return TYPES_DSO[codeType] ?? (sharpless > 0 ? 'EMISSION' : 'NEB_OBSCURE')
+}
+
+/**
+ * Les désignations NGC et IC déjà portées par OpenNGC.
+ *
+ * OpenNGC range le numéro NGC dans les noms communs quand l'objet est un Messier : la
+ * désignation seule laisserait passer M42 en doublon de son entrée Sharpless.
+ */
+function extraitDesignationsNgcIc(objets: readonly ObjetCielProfond[]): Set<string> {
+  const presentes = new Set<string>()
+  for (const objet of objets) {
+    for (const nom of [objet.designation, ...objet.nomsCommuns.split('|')]) {
+      const trouve = /^(NGC|IC)(\d+)/.exec(nom.trim())
+      if (trouve !== null) presentes.add(`${trouve[1]}${Number(trouve[2])}`)
+    }
+  }
+  return presentes
+}
+
+/**
+ * Noms d'usage du catalogue DSO, indexés par « SH2 276 » ou « B 33 ».
+ *
+ * Format d'une ligne : préfixe, numéro, puis le nom entre `_("…")`. Un même objet peut en
+ * porter plusieurs — « Barnard's Loop » et « Barnard's Arc » —, tous conservés.
+ */
+function analyseNomsDso(contenu: string): Map<string, string[]> {
+  const noms = new Map<string, string[]>()
+  for (const ligne of contenu.split('\n')) {
+    if (ligne.startsWith('#')) continue
+    const trouve = /^(\S+)\s+(\S+)\s+_\("(.+?)"\)/.exec(ligne)
+    if (trouve === null) continue
+    const cle = `${trouve[1]} ${Number(trouve[2])}`
+    const deja = noms.get(cle)
+    if (deja === undefined) noms.set(cle, [trouve[3]!])
+    else deja.push(trouve[3]!)
+  }
+  return noms
+}
+
+/** Une taille ou un angle à zéro est l'absence de mesure, pas une mesure nulle. */
+function positifOuNull(brut: string | undefined): number | null {
+  const valeur = nombreOuNull(brut)
+  return valeur === null || valeur <= 0 ? null : valeur
+}
+
+function magnitudeDso(brut: string | undefined): number | null {
+  const valeur = nombreOuNull(brut)
+  return valeur === null || valeur >= MAG_INCONNUE_DSO ? null : valeur
+}
+
+/**
+ * §6.1 — les entrées Sharpless et Barnard du catalogue DSO qu'OpenNGC ne porte pas déjà.
+ *
+ * Le filtre est un filtre de doublons, pas un filtre de qualité : une entrée Sharpless qui
+ * renvoie vers un NGC présent décrit le même objet du ciel, et la liste des cibles §6.4 le
+ * montrerait deux fois sous deux fiches. Caldwell est écarté en bloc pour la même raison —
+ * ses 109 entrées sont *toutes* des redésignations NGC/IC, sans une seule cible nouvelle.
+ */
+function construitCataloguesComplementaires(
+  catalogue: string,
+  nomsBruts: string,
+  dejaPresents: ReadonlySet<string>,
+): ObjetCielProfond[] {
+  const noms = analyseNomsDso(nomsBruts)
+  const objets: ObjetCielProfond[] = []
+  let donnees = false
+
+  for (const ligne of catalogue.split('\n')) {
+    if (!donnees) {
+      donnees = ligne.startsWith('# --- DATA ---')
+      continue
+    }
+    if (ligne.trim() === '') continue
+    const champs = ligne.split('\t')
+
+    const sharpless = nombreOuNull(champs[COL_SHARPLESS]) ?? 0
+    const barnard = nombreOuNull(champs[COL_BARNARD]) ?? 0
+    if (sharpless <= 0 && barnard <= 0) continue
+
+    const ngc = nombreOuNull(champs[COL_NGC]) ?? 0
+    const ic = nombreOuNull(champs[COL_IC]) ?? 0
+    if (ngc > 0 && dejaPresents.has(`NGC${ngc}`)) continue
+    if (ic > 0 && dejaPresents.has(`IC${ic}`)) continue
+
+    const adDeg = nombreOuNull(champs[COL_AD])
+    const decDeg = nombreOuNull(champs[COL_DEC])
+    if (adDeg === null || decDeg === null) continue
+
+    // Sharpless prime : un objet des deux catalogues est une région d'émission décrite par
+    // Sharpless, que Barnard n'a relevée que par sa partie obscure.
+    const cle = sharpless > 0 ? `SH2 ${sharpless}` : `B ${barnard}`
+    const designation = sharpless > 0 ? `Sh2-${sharpless}` : `B${barnard}`
+
+    objets.push({
+      designation,
+      nomsCommuns: (noms.get(cle) ?? []).join('|'),
+      adDeg,
+      decDeg,
+      type: typeDso((champs[COL_TYPE] ?? '').trim(), sharpless),
+      majAxArcmin: positifOuNull(champs[COL_MAJ_AX]),
+      minAxArcmin: positifOuNull(champs[COL_MIN_AX]),
+      posAngDeg: positifOuNull(champs[COL_POS_ANG]),
+      vMag: magnitudeDso(champs[COL_V_MAG]),
+      bMag: magnitudeDso(champs[COL_B_MAG]),
+      // Le catalogue DSO ne publie pas de brillance de surface.
+      surfBr: null,
     })
   }
   return objets
@@ -557,8 +747,8 @@ function fusionne(
   return [...parNom.values()]
 }
 
-/** Groupes constructibles : `pnpm data:build [hyg] [openngc] [constellations]`. */
-const GROUPES = ['hyg', 'openngc', 'constellations'] as const
+/** Groupes constructibles : `pnpm data:build [hyg] [openngc] [deepsky] [constellations]`. */
+const GROUPES = ['hyg', 'openngc', 'deepsky', 'constellations'] as const
 type Groupe = (typeof GROUPES)[number]
 
 async function principal(): Promise<void> {
@@ -594,12 +784,17 @@ async function principal(): Promise<void> {
     )
   }
 
-  if (aConstruire.has('openngc')) {
-    process.stdout.write('OpenNGC (ciel profond)\n')
-    const objets = [
+  // OpenNGC sert deux groupes : `deepsky` s'en sert pour écarter les doublons NGC/IC.
+  let objetsNgc: ObjetCielProfond[] | null = null
+  const openngc = async (): Promise<ObjetCielProfond[]> =>
+    (objetsNgc ??= [
       ...construitObjets(await telecharge(SOURCE_OPENNGC)),
       ...construitObjets(await telecharge(SOURCE_OPENNGC_ADDENDUM)),
-    ]
+    ])
+
+  if (aConstruire.has('openngc')) {
+    process.stdout.write('OpenNGC (ciel profond)\n')
+    const objets = await openngc()
     const paquetObjets = encodeObjets(objets)
     produits.push(
       await ecritPaquet(
@@ -614,6 +809,35 @@ async function principal(): Promise<void> {
         paquetObjets.chaines,
         objets.length,
         'Bloc de chaînes du paquet openngc',
+        true,
+      ),
+    )
+  }
+
+  if (aConstruire.has('deepsky')) {
+    process.stdout.write('Sharpless et Barnard (ciel profond complémentaire)\n')
+    const objets = construitCataloguesComplementaires(
+      await telecharge(SOURCE_STELLARIUM_DSO),
+      await telecharge(SOURCE_STELLARIUM_DSO_NOMS),
+      extraitDesignationsNgcIc(await openngc()),
+    )
+    const sharpless = objets.filter((o) => o.designation.startsWith('Sh2-')).length
+    process.stdout.write(
+      `  ${sharpless} Sharpless · ${objets.length - sharpless} Barnard, ` +
+        'doublons NGC/IC et Caldwell écartés\n',
+    )
+    const paquetObjets = encodeObjets(objets)
+    const source =
+      `Sharpless et Barnard, catalogue DSO Stellarium v3.23 — ${SOURCE_STELLARIUM_DSO.url} ` +
+      `+ ${SOURCE_STELLARIUM_DSO_NOMS.url} ; entrées doublant un NGC/IC d'OpenNGC écartées, ` +
+      'Caldwell hors périmètre (redésignations NGC/IC)'
+    produits.push(
+      await ecritPaquet('deepsky', paquetObjets.enregistrements, objets.length, source, true),
+      await ecritPaquet(
+        'deepsky-noms',
+        paquetObjets.chaines,
+        objets.length,
+        'Bloc de chaînes du paquet deepsky',
         true,
       ),
     )

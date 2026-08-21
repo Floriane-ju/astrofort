@@ -104,19 +104,38 @@ export async function verifieCatalogues(): Promise<EtatCatalogues> {
 export const PAQUET_OBJETS = 'openngc'
 export const PAQUET_NOMS_OBJETS = 'openngc-noms'
 
+/** §6.1 — Sharpless et Barnard, ce qu'OpenNGC ne décrit pas du domaine grand champ. */
+export const PAQUET_OBJETS_COMPLEMENT = 'deepsky'
+export const PAQUET_NOMS_OBJETS_COMPLEMENT = 'deepsky-noms'
+
+async function decodePaireDeObjets(
+  nomEnregistrements: string,
+  nomChaines: string,
+): Promise<readonly ObjetCielProfond[]> {
+  const [enregistrements, chaines] = await Promise.all([
+    litPaquet(nomEnregistrements),
+    litPaquet(nomChaines),
+  ])
+  if (enregistrements === null || chaines === null) return []
+  return decodeObjets({ enregistrements, chaines })
+}
+
 /**
  * Catalogue d'objets du ciel profond décodé depuis les paquets rangés par `demarre()`.
  * Retourne une liste vide quand les paquets manquent : la cause est déjà nommée par
  * `verifieCatalogues()`, et les moteurs §6 et §7 restent utilisables sur une cible saisie
  * à la main (§12.5).
+ *
+ * Deux paquets, un seul catalogue : OpenNGC porte le ciel profond classique, `deepsky`
+ * les entrées Sharpless et Barnard qu'il ignore. La construction garantit qu'ils ne se
+ * chevauchent pas — les doublons NGC/IC sont écartés à la source, pas ici (§6.1).
  */
 export async function chargeObjetsCielProfond(): Promise<readonly ObjetCielProfond[]> {
-  const [enregistrements, chaines] = await Promise.all([
-    litPaquet(PAQUET_OBJETS),
-    litPaquet(PAQUET_NOMS_OBJETS),
+  const [ngc, complement] = await Promise.all([
+    decodePaireDeObjets(PAQUET_OBJETS, PAQUET_NOMS_OBJETS),
+    decodePaireDeObjets(PAQUET_OBJETS_COMPLEMENT, PAQUET_NOMS_OBJETS_COMPLEMENT),
   ])
-  if (enregistrements === null || chaines === null) return []
-  return decodeObjets({ enregistrements, chaines })
+  return [...ngc, ...complement]
 }
 
 export const PAQUET_ETOILES = 'hyg'
