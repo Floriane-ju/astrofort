@@ -2,7 +2,7 @@
 {
   "id": "T-0082",
   "titre": "Les saisies survivent au rechargement, et l'export cesse d'être vide",
-  "colonne": "en-cours",
+  "colonne": "fait",
   "priorite": "haute",
   "epic": "T-0079",
   "tags": [
