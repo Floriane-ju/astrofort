@@ -1,9 +1,9 @@
 ---
 {
-  "status": "open",
+  "status": "closed",
   "title": "Audit général — design, accessibilité, sécurité, pratiques",
   "opened": "2026-08-19",
-  "closed": null,
+  "closed": "2026-08-21",
   "commits": [
     {
       "sha": "ee22e86",
@@ -74,6 +74,11 @@
       "files": [
         ".github/workflows/ci.yml"
       ]
+    },
+    {
+      "sha": "0b37e93",
+      "date": "2026-08-21",
+      "files": []
     }
   ]
 }

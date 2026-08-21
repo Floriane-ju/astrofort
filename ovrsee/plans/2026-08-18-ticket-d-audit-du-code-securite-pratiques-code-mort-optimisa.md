@@ -1,9 +1,9 @@
 ---
 {
-  "status": "open",
+  "status": "closed",
   "title": "Ticket d'audit du code — sécurité, pratiques, code mort, optimisation",
   "opened": "2026-08-18",
-  "closed": null,
+  "closed": "2026-08-19",
   "commits": [
     {
       "sha": "73eb7db",
