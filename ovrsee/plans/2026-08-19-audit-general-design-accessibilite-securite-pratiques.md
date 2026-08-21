@@ -35,6 +35,22 @@
       "sha": "b874126",
       "date": "2026-08-21",
       "files": []
+    },
+    {
+      "sha": "00b79bf",
+      "date": "2026-08-21",
+      "files": [
+        "src/ui/styles.css",
+        "tests/mode-nuit.test.tsx"
+      ]
+    },
+    {
+      "sha": "66c6b70",
+      "date": "2026-08-21",
+      "files": [
+        "src/core/explain.ts",
+        "src/ui/fiche-cible-calcul.ts"
+      ]
     }
   ]
 }

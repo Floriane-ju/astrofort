@@ -2,7 +2,7 @@
 {
   "id": "T-0078",
   "titre": "Le point d'explication de la fiche cible porte son type",
-  "colonne": "en-cours",
+  "colonne": "fait",
   "priorite": "basse",
   "charge": "s",
   "tags": [

@@ -41,6 +41,54 @@ function declarationsCouleur(bloc: string): readonly string[] {
     .map((ligne) => ligne.slice(ligne.indexOf(':') + 1).replace(';', '').trim())
 }
 
+/** Les jetons d'un bloc de palette, avec leur valeur brute. */
+function jetonsDuBloc(bloc: string): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    [...bloc.matchAll(/--([a-z-]+):\s*([^;]+);/g)].map((m) => [m[1]!, m[2]!.trim()]),
+  )
+}
+
+const paletteParDefaut = (): Readonly<Record<string, string>> =>
+  jetonsDuBloc(CSS.slice(CSS.indexOf(':root {'), CSS.indexOf('}', CSS.indexOf(':root {'))))
+
+const paletteDeNuit = (): Readonly<Record<string, string>> => jetonsDuBloc(blocModeNuit())
+
+/**
+ * Les canaux 0-255 d'une valeur de palette, AU FACTEUR DE LUMINANCE NOMINAL : `#rrggbb`, ou
+ * `rgb(calc(var(--luminance-nuit) * N) 0 0)` — le facteur multiplie toute la palette, donc
+ * le lire à 1 revient à mesurer le meilleur cas, celui où le seuil doit tenir.
+ */
+function canaux(valeur: string): readonly [number, number, number] {
+  const hex = /^#([0-9a-f]{6})$/i.exec(valeur)
+  if (hex) {
+    const canal = (i: number): number => parseInt(hex[1]!.slice(i, i + 2), 16)
+    return [canal(0), canal(2), canal(4)]
+  }
+  const rouge = /^rgb\(\s*calc\(var\(--luminance-nuit\)\s*\*\s*(\d+)\)\s+0\s+0\s*\)$/.exec(valeur)
+  expect(rouge, `valeur de palette illisible : ${valeur}`).not.toBeNull()
+  return [Number(rouge![1]), 0, 0]
+}
+
+/** Luminance relative WCAG 2.2, https://www.w3.org/TR/WCAG22/#dfn-relative-luminance. */
+function luminance(valeur: string): number {
+  const lineaire = (c: number): number => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+  const [r, v, b] = canaux(valeur)
+  return 0.2126 * lineaire(r / 255) + 0.7152 * lineaire(v / 255) + 0.0722 * lineaire(b / 255)
+}
+
+/** Ratio de contraste WCAG 2.2, https://www.w3.org/TR/WCAG22/#dfn-contrast-ratio. */
+function contraste(a: string, b: string): number {
+  const [clair, sombre] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number]
+  return (clair + 0.05) / (sombre + 0.05)
+}
+
+/** Le corps d'une règle, désignée par son sélecteur en début de ligne. */
+function regle(selecteur: string): string {
+  const debut = CSS.indexOf(`\n${selecteur} {`)
+  expect(debut, selecteur).toBeGreaterThan(-1)
+  return CSS.slice(debut, CSS.indexOf('}', debut))
+}
+
 describe('palette du mode nuit §11.1', () => {
   it('n’écrit que du rouge pur : canaux vert et bleu strictement nuls', () => {
     for (const valeur of declarationsCouleur(blocModeNuit())) {
@@ -97,13 +145,6 @@ describe('focus et couleurs du navigateur — T-0070', () => {
   /** Seuil WCAG 2.4.11 « Focus Appearance » pour l'indicateur de focus. */
   const CONTRASTE_FOCUS_MINIMAL = 3
 
-  /** Le corps d'une règle, désignée par son sélecteur en début de ligne. */
-  function regle(selecteur: string): string {
-    const debut = CSS.indexOf(`\n${selecteur} {`)
-    expect(debut, selecteur).toBeGreaterThan(-1)
-    return CSS.slice(debut, CSS.indexOf('}', debut))
-  }
-
   /** Le second bloc `:root` : celui qui pose les couleurs peintes par le navigateur. */
   function blocNavigateur(): string {
     const debut = CSS.lastIndexOf('\n:root {')
@@ -122,28 +163,6 @@ describe('focus et couleurs du navigateur — T-0070', () => {
     const trouve = new RegExp(`\\b${propriete}:\\s*([^;]+);`).exec(bloc)
     expect(trouve, `${propriete} absent`).not.toBeNull()
     return trouve![1]!
-  }
-
-  /** Luminance relative WCAG 2.x d'une couleur `#rrggbb`. */
-  function luminance(hex: string): number {
-    const lineaire = [1, 3, 5]
-      .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
-      .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
-    return 0.2126 * lineaire[0]! + 0.7152 * lineaire[1]! + 0.0722 * lineaire[2]!
-  }
-
-  function contraste(a: string, b: string): number {
-    const [clair, sombre] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number]
-    return (clair + 0.05) / (sombre + 0.05)
-  }
-
-  /** Les jetons du thème par défaut, avec leur valeur. */
-  function paletteParDefaut(): Readonly<Record<string, string>> {
-    const debut = CSS.indexOf(':root {')
-    const bloc = CSS.slice(debut, CSS.indexOf('}', debut))
-    return Object.fromEntries(
-      [...bloc.matchAll(/--([a-z-]+):\s*([^;]+);/g)].map((m) => [m[1]!, m[2]!.trim()]),
-    )
   }
 
   const jetonsDeNuit = (): readonly string[] =>
@@ -200,6 +219,52 @@ describe('focus et couleurs du navigateur — T-0070', () => {
 
   it('colore l’anneau de focus depuis un jeton repeint en rouge la nuit', () => {
     expect(jetonsDeNuit()).toContain(jetonFocus())
+  })
+})
+
+/**
+ * T-0071 — le contraste du texte, recalculé depuis la feuille.
+ *
+ * Le seuil est une propriété des jetons, pas une impression visuelle : il se recalcule à
+ * chaque exécution depuis `styles.css`, et tout jeton qui régresse fait échouer ce test.
+ * Le calcul, le plafond du rouge pur et l'effondrement au plancher de 2 % sont écrits à
+ * côté de la palette, dans la feuille.
+ */
+describe('contraste du texte — WCAG 2.2 AA', () => {
+  /** Seuil AA du texte courant. Les libellés sont à 0,85 rem : jamais du « texte large ». */
+  const CONTRASTE_TEXTE_MINIMAL = 4.5
+
+  const JETONS_TEXTE = ['texte', 'attenue', 'alerte'] as const
+  /** `--bordure` est un trait, pas un glyphe : il ne relève pas du seuil de texte. */
+  const JETONS_FOND = ['fond', 'surface', 'surface-haute', 'fond-alerte'] as const
+
+  for (const [mode, palette] of [
+    ['normal', paletteParDefaut],
+    ['nuit', paletteDeNuit],
+  ] as const) {
+    it(`donne ≥ 4,5:1 à tout texte sur toute surface, en mode ${mode}`, () => {
+      const jetons = palette()
+      for (const texte of JETONS_TEXTE) {
+        for (const fond of JETONS_FOND) {
+          expect(
+            contraste(jetons[texte]!, jetons[fond]!),
+            `--${texte} sur --${fond}`,
+          ).toBeGreaterThanOrEqual(CONTRASTE_TEXTE_MINIMAL)
+        }
+      }
+    })
+  }
+
+  it('garde la hiérarchie du texte secondaire, que la luminance ne porte plus', () => {
+    // Le plafond de 5,25:1 colle --attenue à --texte : l'ordre subsiste mais ne se voit
+    // plus. Ce qui distingue le texte secondaire est donc sa taille, et sa graisse là où
+    // deux états partagent la même.
+    const nuit = paletteDeNuit()
+    expect(luminance(nuit['attenue']!)).toBeLessThan(luminance(nuit['texte']!))
+    for (const selecteur of ['label', '.etat', '.niveau']) {
+      expect(regle(selecteur), selecteur).toMatch(/font-size: 0\.\d+rem/)
+    }
+    expect(regle('.onglet.actif')).toMatch(/font-weight: 700/)
   })
 })
 

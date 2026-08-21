@@ -23,16 +23,48 @@
 }
 
 /* §11.1 — sortie = (R, 0, 0). Le facteur de luminance est réglable jusqu'à un plancher
-   d'environ 2 % de la luminance nominale, et il multiplie toute la palette. */
+   d'environ 2 % de la luminance nominale, et il multiplie toute la palette.
+
+   T-0071 — CONTRASTE DU TEXTE. Ratios WCAG 2.2 (§ « contrast ratio » et « relative
+   luminance », https://www.w3.org/TR/WCAG22/#dfn-contrast-ratio) : pour un canal c dans
+   [0, 1], lin(c) = c/12,92 si c ≤ 0,03928, sinon ((c + 0,055)/1,055)^2,4 ; la luminance
+   relative vaut L = 0,2126·lin(R) + 0,7152·lin(V) + 0,0722·lin(B) — donc L = 0,2126·lin(R)
+   ici, puisque V et B sont nuls ; le ratio est (L_clair + 0,05)/(L_sombre + 0,05).
+   Seuil AA texte courant : 4,5:1 (3:1 seulement à ≥ 18,66 px ou en gras — aucun texte
+   d'information n'est dans ce cas ici, les libellés sont à 0,85 rem ≈ 12,75 px).
+
+   Au facteur nominal, avec les valeurs ci-dessous — le pire fond est --fond-alerte :
+
+     --texte    : 5,06:1 sur --fond … 4,85:1 sur --fond-alerte
+     --attenue  : 4,78:1 sur --fond … 4,57:1 sur --fond-alerte
+     --alerte   : 5,25:1 sur --fond … 5,03:1 sur --fond-alerte
+
+   PLAFOND — le rouge pur sur noir plafonne à 5,25:1. AA tient, sans marge. C'est pour ça
+   que les glyphes montent (230 → 250, 150 → 242) et que les aplats descendent
+   (26 → 8, 46 → 18, 40 → 26) : à surface d'écran allumée, ce sont les fonds qui pèsent, pas
+   les traits des lettres. Le flux émis reste du même ordre qu'avant ; la lisibilité, non.
+
+   ÉCART ASSUMÉ — 1. Au plancher de 2 %, tous les ratios s'effondrent vers 1,01:1. C'est
+   arithmétique et c'est voulu : le plancher existe pour que l'écran cesse d'être une source
+   de lumière. 2. La primaire rouge sRGB n'est pas monochromatique (~611 nm, épaulement vers
+   590 nm) : les bâtonnets en absorbent une part. WCAG mesure un contraste photopique, §11.1
+   optimise une vision scotopique — 4,5:1 est ici un garde-fou, pas une mesure de ce que
+   l'œil adapté perçoit. Les deux ne se réconcilient pas, et rien ne se gagne en ajoutant du
+   vert ou du bleu : §11.1 est une contrainte de physiologie, pas une préférence esthétique.
+
+   HIÉRARCHIE — 5,25:1 de plafond ne laisse pas de place pour étager la luminance : --texte
+   et --attenue se touchent presque. Ce qui sépare le texte secondaire du principal passe
+   donc par la taille (0,85 rem contre 15 px) et par la graisse (`.onglet.actif`, `th`), pas
+   par la couleur. */
 :root[data-mode-nuit='true'] {
   --fond: #000000;
-  --surface: rgb(calc(var(--luminance-nuit) * 26) 0 0);
-  --surface-haute: rgb(calc(var(--luminance-nuit) * 46) 0 0);
-  --texte: rgb(calc(var(--luminance-nuit) * 230) 0 0);
-  --attenue: rgb(calc(var(--luminance-nuit) * 150) 0 0);
+  --surface: rgb(calc(var(--luminance-nuit) * 8) 0 0);
+  --surface-haute: rgb(calc(var(--luminance-nuit) * 18) 0 0);
+  --texte: rgb(calc(var(--luminance-nuit) * 250) 0 0);
+  --attenue: rgb(calc(var(--luminance-nuit) * 242) 0 0);
   --bordure: rgb(calc(var(--luminance-nuit) * 90) 0 0);
   --alerte: rgb(calc(var(--luminance-nuit) * 255) 0 0);
-  --fond-alerte: rgb(calc(var(--luminance-nuit) * 40) 0 0);
+  --fond-alerte: rgb(calc(var(--luminance-nuit) * 26) 0 0);
 }
 
 /* Passage progressif, jamais un basculement brutal ni un flash (§11.1). */
