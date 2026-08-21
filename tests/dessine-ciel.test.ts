@@ -37,11 +37,13 @@ import {
 import {
   cibleSousLeCurseur,
   dessineCiel,
+  type CibleEcran,
   type CouchesActives,
   type EntreeDessin,
   type SurvolEcran,
 } from '../src/ui/dessine-ciel.ts'
 import { decritCible } from '../src/ui/planetarium-selection.ts'
+import { ancreLabel, libelleCible, titreCible } from '../src/ui/libelles-cibles.ts'
 import { etoileLabellisable } from '../src/core/labels.ts'
 import { palette, paletteRealiste } from '../src/ui/couleurs.ts'
 import type { LuneEcran } from '../src/ui/dessine-fond-ciel.ts'
@@ -227,6 +229,37 @@ function rend(
     surLeFond: options.surLeFond,
   }
   return { ctx, sortie: dessineCiel(entree), entree }
+}
+
+/** La direction visée au centre du canevas : elle ne dépend pas du champ, seulement du cap. */
+const CENTRE_VUE = versSpherique(
+  projecteur(
+    {
+      mode: 'MODE_PLANETARIUM',
+      fovDeg: K('FOV_REFERENCE_RENDU_DEG'),
+      largeurPx: LARGEUR,
+      hauteurPx: HAUTEUR,
+      azimutDeg: 180,
+      hauteurDeg: 45,
+      rotationDeg: 0,
+    },
+    cielInstantane(SITE, DATE).matrice,
+  ).inverse(LARGEUR / 2, HAUTEUR / 2),
+)
+
+/** Un objet posé pile au centre du champ par défaut : le curseur l'y trouve sans chercher. */
+const OBJET_AU_CENTRE: ObjetCielProfond = {
+  designation: 'M31',
+  nomsCommuns: 'Galaxie d’Andromède|Grande Nébuleuse d’Andromède',
+  adDeg: CENTRE_VUE.longitudeDeg,
+  decDeg: CENTRE_VUE.latitudeDeg,
+  type: 'GALAXIE',
+  majAxArcmin: 190,
+  minAxArcmin: 60,
+  posAngDeg: 35,
+  vMag: 3.4,
+  bMag: null,
+  surfBr: null,
 }
 
 describe('passe de rendu §3.3', () => {
@@ -542,26 +575,43 @@ describe('pointage à la souris §3.4', () => {
 })
 
 /**
- * T-0085 — le nom que le seuil de zoom a masqué, révélé le temps du survol. Le libellé vient
- * de l'appelant (`decritCible`) : la passe ne compose pas un second vocabulaire, elle place.
+ * T-0085 — le nom que le seuil de zoom a masqué, révélé le temps du survol.
+ *
+ * T-0109 — le survol ne transporte plus qu'une cible : la passe la nomme et la place avec les
+ * fonctions des labels peints, jamais avec un second vocabulaire.
  */
 describe('label du survol T-0085', () => {
-  const SURVOL: SurvolEcran = { xPx: 480, yPx: 270, texte: 'M31 — Galaxie d’Andromède' }
+  /** Le champ par défaut du harnais est bien au-dessus du seuil des objets : M31 n'a pas de
+   *  label peint, et c'est exactement l'élément que le survol vient nommer. */
+  const LARGE = K('FOV_REFERENCE_RENDU_DEG')
+  /** Sous le seuil de §3.4, le même objet porte son label : il n'a plus rien à révéler. */
+  const SERRE = K('FOV_MIN_AVEC_GAIA_DEG')
+
+  const cibleObjet = (fovDeg: number): CibleEcran =>
+    rend({ objets: [OBJET_AU_CENTRE], fovDeg }).sortie.cibles.find((c) => c.type === 'OBJET')!
 
   it('révèle le nom survolé sans entrer dans le budget de §3.4', () => {
-    const sans = rend()
-    const avec = rend({ survol: SURVOL })
+    const sans = rend({ objets: [OBJET_AU_CENTRE], fovDeg: LARGE })
+    const avec = rend({
+      objets: [OBJET_AU_CENTRE],
+      fovDeg: LARGE,
+      survol: { cible: cibleObjet(LARGE) },
+    })
     expect(sans.sortie.revele).toBeNull()
     expect(avec.sortie.revele).not.toBeNull()
     // Hors budget : le nom révélé ne chasse aucun label retenu et n'en ajoute aucun.
     expect(avec.sortie.labels.map((l) => l.texte)).toEqual(sans.sortie.labels.map((l) => l.texte))
-    expect(
-      avec.ctx.appels.some((a) => a.nom === 'fillText' && a.args[0] === SURVOL.texte),
-    ).toBe(true)
+    const attendu = libelleCible(cibleObjet(LARGE))
+    expect(avec.sortie.revele!.texte).toBe(attendu)
+    expect(avec.ctx.appels.some((a) => a.nom === 'fillText' && a.args[0] === attendu)).toBe(true)
   })
 
   it('ne recouvre aucun label retenu', () => {
-    const { sortie } = rend({ survol: SURVOL })
+    const { sortie } = rend({
+      objets: [OBJET_AU_CENTRE],
+      fovDeg: LARGE,
+      survol: { cible: cibleObjet(LARGE) },
+    })
     const revele = sortie.revele!
     for (const label of sortie.labels) {
       const chevauche =
@@ -572,10 +622,10 @@ describe('label du survol T-0085', () => {
   })
 
   it('ne double pas un nom que la scène affiche déjà', () => {
-    const premier = rend().sortie.labels[0]!
-    const { sortie } = rend({
-      survol: { xPx: premier.xPx, yPx: premier.yPx, texte: `${premier.texte} — au complet` },
-    })
+    const cible = cibleObjet(SERRE)
+    const { sortie } = rend({ objets: [OBJET_AU_CENTRE], fovDeg: SERRE, survol: { cible } })
+    // Le label est peint à ce champ : c'est la condition du test, pas un effet de bord.
+    expect(sortie.labels.some((l) => l.texte === libelleCible(cible))).toBe(true)
     expect(sortie.revele).toBeNull()
   })
 })
@@ -643,10 +693,10 @@ describe('cibles dédoublonnées T-0107', () => {
           // C'est bien une étoile identifiée qui répond — un voisin nommé fait l'affaire,
           // l'entrée anonyme non.
           const titre = decritCible(cible!).titre
-          expect(cible!.etoileNommee, `${attendue.nom} → « ${titre} »`).toBeDefined()
-          // Et son titre commence par le nom peint : c'est ce que `labelSurvol` exploite
-          // pour ne pas nommer deux fois le même astre.
-          expect(titre.startsWith(cible!.nom)).toBe(true)
+          expect(cible!.etoileNommee, `rien d’identifié en ${attendue.xPx}, ${attendue.yPx} → « ${titre} »`).toBeDefined()
+          // Et elle porte un nom à ce champ : c'est l'égalité exacte entre ce libellé et le
+          // label peint que `labelSurvol` exploite pour ne pas nommer deux fois le même astre.
+          expect(libelleCible(cible!), titre).not.toBeNull()
         }
       }
     }
@@ -658,7 +708,7 @@ describe('cibles dédoublonnées T-0107', () => {
     expect(labellisees.length).toBeGreaterThan(0)
     for (const label of labellisees) {
       const etoile = sortie.cibles.find(
-        (c) => c.etoileNommee !== undefined && c.nom === label.texte,
+        (c) => c.etoileNommee !== undefined && libelleCible(c) === label.texte,
       )!
       // Le curseur ne tombe jamais au centre exact de l'astre : viser les quatre coins du
       // pixel, sans quoi la cible nommée gagne par une distance nulle et le cas ne prouve
@@ -667,12 +717,11 @@ describe('cibles dédoublonnées T-0107', () => {
       for (const dx of [-0.5, 0.5]) {
         for (const dy of [-0.5, 0.5]) {
           const cible = cibleSousLeCurseur(sortie.cibles, etoile.xPx + dx, etoile.yPx + dy)!
-          const survol: SurvolEcran = {
-            xPx: cible.xPx,
-            yPx: cible.yPx,
-            texte: decritCible(cible).titre,
-          }
-          expect(rendNommees(survol).sortie.revele, `${label.texte} → ${survol.texte}`).toBeNull()
+          const survol: SurvolEcran = { cible }
+          expect(
+            rendNommees(survol).sortie.revele,
+            `${label.texte} → ${libelleCible(cible)}`,
+          ).toBeNull()
         }
       }
     }
@@ -693,11 +742,116 @@ describe('cibles dédoublonnées T-0107', () => {
     // Aucun nom à porter, et une fiche qui dit ce que le paquet contient — rien de plus.
     expect(premiere.nom).toBe('')
     expect(decrite.lignes.join(' ')).toContain(premiere.etoile!.magV.toFixed(2))
+    // Aucun libellé peint : le survol retombe sur le titre de la fiche, seul nom qu'elle ait.
+    expect(libelleCible(premiere)).toBeNull()
     const reveles = anonymes.slice(0, 5).filter((c) => {
-      const survol: SurvolEcran = { xPx: c.xPx, yPx: c.yPx, texte: decritCible(c).titre }
-      return rend({ survol }).sortie.revele !== null
+      const sortieSurvol = rend({ survol: { cible: c } }).sortie
+      return sortieSurvol.revele?.texte === titreCible(c)
     })
     expect(reveles.length).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * T-0109 — un élément porte le même libellé, au même endroit, qu'il soit peint ou révélé.
+ *
+ * La scène composait le texte des labels, le survol empruntait celui de la fiche : deux
+ * vocabulaires, deux ancres, et un nom qui changeait de forme ET de place au premier cran de
+ * zoom. `libelles-cibles.ts` est désormais la seule source des deux.
+ */
+describe('libellés d’un même astre T-0109', () => {
+  /** Entre les deux seuils de §3.4 : les étoiles sont nommées, les objets non. */
+  const LARGE = K('FOV_LABELS_CONSTELLATIONS_DEG')
+  /** Sous le seuil des objets : tout est nommé, et les étoiles au complet. */
+  const SERRE = K('FOV_MIN_AVEC_GAIA_DEG')
+  /** Un degré au-dessus de la visée : dans le champ aux deux zooms, sans disputer sa place
+   *  au label de l'objet posé pile au centre. */
+  const LUNE: PositionCorps = {
+    corps: 'Moon' as PositionCorps['corps'],
+    adH: 0,
+    decDeg: 0,
+    azimutDeg: 180,
+    hauteurDeg: 46,
+  }
+
+  const scene = (fovDeg: number) =>
+    rend({ fovDeg, objets: [OBJET_AU_CENTRE], corps: [LUNE] }).sortie
+
+  it('n’a qu’une source de texte et qu’une source d’ancre pour tout label de cible', () => {
+    const vus = new Set<string>()
+    for (const fovDeg of [LARGE, SERRE]) {
+      const sortie = scene(fovDeg)
+      for (const label of sortie.labels) {
+        const cible = sortie.cibles.find((c) => libelleCible(c) === label.texte)
+        if (cible === undefined) continue // nom de constellation, d'astérisme ou de la bande
+        const ancre = ancreLabel(cible)
+        expect(label.xPx, `${label.texte} à ${fovDeg}°`).toBe(ancre.xPx)
+        expect(label.yPx, `${label.texte} à ${fovDeg}°`).toBe(ancre.yPx)
+        vus.add(cible.type)
+      }
+    }
+    // Les trois familles de cibles ont été confrontées, pas seulement la plus dense — les
+    // étoiles au grand champ, l'objet au petit, le corps aux deux.
+    expect([...vus].sort()).toEqual(['CORPS', 'ETOILE', 'OBJET'])
+  })
+
+  it('révèle un label écarté au texte et au pixel près de ce qu’il aurait été peint', () => {
+    // L'objet est au centre du champ, hors du seuil de §3.4 : son label est écarté, et rien
+    // ne se dispute sa place. Le survol doit donc le poser exactement où il serait allé.
+    const sortie = rend({ fovDeg: LARGE, objets: [OBJET_AU_CENTRE] }).sortie
+    const cible = sortie.cibles.find((c) => c.type === 'OBJET')!
+    expect(sortie.labels.some((l) => l.texte === libelleCible(cible))).toBe(false)
+    const revele = rend({
+      fovDeg: LARGE,
+      objets: [OBJET_AU_CENTRE],
+      survol: { cible },
+    }).sortie.revele!
+    expect(revele).not.toBeNull()
+    expect(revele.texte).toBe(libelleCible(cible))
+    expect(revele.xPx).toBe(ancreLabel(cible).xPx)
+    expect(revele.yPx).toBe(ancreLabel(cible).yPx)
+  })
+
+  it('nomme une étoile par son nom propre, à tout champ — la désignation reste à la fiche', () => {
+    const complete = PAQUET.etoilesNommees.find(
+      (e) => e.nomPropre !== '' && e.designation !== '' && etoileLabellisable(e.magV),
+    )!
+    const cible: CibleEcran = {
+      type: 'ETOILE',
+      xPx: 0,
+      yPx: 0,
+      nom: '',
+      etoileNommee: complete,
+    }
+    // Un astre porte UN nom sur la scène : « Dabih », jamais « β Cap » ni « Dabih — β Cap ».
+    expect(libelleCible(cible)).toBe(complete.nomPropre)
+    // La désignation vit dans la fiche, qui reste la forme longue.
+    expect(titreCible(cible)).toBe(`${complete.nomPropre} — ${complete.designation}`)
+    // Et la scène peint bien ce que le module annonce, aux deux champs : tout label d'étoile
+    // est le nom propre d'une étoile du paquet, à défaut sa désignation.
+    const nomsPeignables = new Set(
+      PAQUET.etoilesNommees.map((e) => (e.nomPropre === '' ? e.designation : e.nomPropre)),
+    )
+    for (const fovDeg of [LARGE, SERRE]) {
+      const peints = rend({ fovDeg }).sortie.labels.filter((l) => l.categorie === 'ETOILE')
+      if (fovDeg === LARGE) expect(peints.length).toBeGreaterThan(0)
+      for (const label of peints) expect(nomsPeignables.has(label.texte), label.texte).toBe(true)
+    }
+  })
+
+  it('ne laisse aucun tiret orphelin quand une des deux formes manque', () => {
+    const cibleDe = (nomPropre: string, designation: string): CibleEcran => ({
+      type: 'ETOILE',
+      xPx: 0,
+      yPx: 0,
+      nom: '',
+      etoileNommee: { ...PAQUET.etoilesNommees[0]!, nomPropre, designation },
+    })
+    // Sans nom propre, la désignation fait le label — le seul cas où elle est peinte.
+    expect(libelleCible(cibleDe('', 'β Cap'))).toBe('β Cap')
+    expect(libelleCible(cibleDe('Dabih', ''))).toBe('Dabih')
+    expect(titreCible(cibleDe('', 'β Cap'))).toBe('β Cap')
+    expect(titreCible(cibleDe('Dabih', ''))).toBe('Dabih')
   })
 })
 

@@ -178,15 +178,14 @@ export function usePointageSouris(entree: {
     onPointerMove(e: React.PointerEvent<HTMLCanvasElement>): void {
       const depart = glisse.current
       if (depart === null) {
-        // T-0085 — hors glisser, le curseur révèle le nom que le seuil de zoom a masqué. Le
-        // libellé est celui du clic : `decritCible` reste la seule source, et le survol ne
-        // touche ni à l'onglet ni à l'état de la scène.
+        // T-0085 — hors glisser, le curseur révèle le nom que le seuil de zoom a masqué.
+        // T-0109 — on ne range QUE la cible : c'est la scène qui la nomme et la place, avec
+        // les fonctions des labels peints. Composer le texte ici en ferait un second
+        // vocabulaire, désaccordé de celui du dessin — c'est le bogue d'origine. Le survol
+        // ne touche ni à l'onglet ni à l'état de la scène.
         const point = pointCanevas(e)
         const cible = cibleSousLeCurseur(cibles.current, point.x, point.y)
-        survol.current =
-          cible === null
-            ? null
-            : { xPx: cible.xPx, yPx: cible.yPx, texte: decritCible(cible).titre }
+        survol.current = cible === null ? null : { cible }
         return
       }
       survol.current = null

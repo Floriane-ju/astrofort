@@ -47,6 +47,15 @@ import {
 } from '../core/site.ts'
 import { projecteurSansSol } from '../core/sol.ts'
 import { dessineSol } from './dessine-sol.ts'
+import {
+  boiteLabel,
+  libelleCible,
+  titreCible,
+  HAUTEUR_LABEL_PX,
+  LARGEUR_CARACTERE_PX,
+  MARQUEUR_OBJET_PX,
+  RAYON_CORPS_PX,
+} from './libelles-cibles.ts'
 import { bandeRealiste, couleurTeinte, fondRealiste, paletteScene, teinte, TEINTES } from './couleurs.ts'
 import { brillanceVoieLacteeNl } from '../core/fond-ciel-rendu.ts'
 import { nanolamberts } from '../core/moon.ts'
@@ -78,16 +87,15 @@ export interface CibleEcran {
 }
 
 /**
- * T-0085 — l'élément sous le curseur et le libellé que le clic lui donnerait.
+ * T-0085, T-0109 — l'élément sous le curseur, et rien d'autre.
  *
- * Le texte est résolu par l'appelant, avec `decritCible` : la scène ne compose pas un second
- * vocabulaire, elle emprunte celui du clic. Le point est celui de l'élément, pas du curseur —
- * le nom reste collé à ce qu'il nomme.
+ * L'appelant range ce que `cibleSousLeCurseur` lui a rendu ; la scène résout le texte et sa
+ * place au moment où elle peint, avec les mêmes fonctions que les labels retenus. Un texte
+ * déjà composé par l'appelant serait un second vocabulaire — c'est exactement ce que T-0109
+ * a supprimé.
  */
 export interface SurvolEcran {
-  readonly xPx: number
-  readonly yPx: number
-  readonly texte: string
+  readonly cible: CibleEcran
 }
 
 export interface EntreeDessin {
@@ -146,16 +154,13 @@ export interface SortieDessin {
   readonly revele: BoiteLabel | null
 }
 
-/* T-0027 — noms des éléments trop petits à l'écran une fois le canevas 1920×1080 réduit à
-   la taille d'affichage réelle (object-fit: contain). */
-const HAUTEUR_LABEL_PX = 18
-const LARGEUR_CARACTERE_PX = 10
+/* T-0109 — la mise en page des labels appartient à `libelles-cibles.ts` : les tailles y sont
+   déclarées, et importées ici pour les labels qui n'ont pas de cible (constellations,
+   astérismes, Voie lactée). */
 const RAYON_CLIC_PX = 10
-const MARQUEUR_OBJET_PX = 4
 /* T-0107 — pas de la clé de pixel entier. Toute largeur de canevas réaliste lui est très
    inférieure, ce qui rend `y * PAS + x` injectif, y compris pour le voisinage à x = −1. */
 const PAS_CLE_PIXEL = 65536
-const RAYON_CORPS_PX = 5
 /** Sous ce rayon, l'antialiasing efface le disque : la plus faible étoile reste un point. */
 const RAYON_MIN_ETOILE_PX = 0.7
 
@@ -599,6 +604,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   }
 
   // --- Étoiles ------------------------------------------------------------
+  const fovDeg = projecteur.vue.fovDeg
   const centreJ2000 = projecteur.inverse(largeur / 2, hauteur / 2)
   // Rayon du champ : la diagonale du canevas, exprimée en degrés au centre.
   const rayonChampDeg = Math.min(
@@ -648,24 +654,21 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     const v = versVecteur(nommee.adDeg, nommee.decDeg)
     if (!projecteur.projetteEn(v.x, v.y, v.z, p)) continue
     if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
-    const texte = nommee.nomPropre === '' ? nommee.designation : nommee.nomPropre
     pixelsNommes.add(Math.round(p.yPx) * PAS_CLE_PIXEL + Math.round(p.xPx))
-    cibles.push({
+    // T-0109 — `nom` ne porte plus le libellé : le nom d'une étoile se demande à
+    // `libelleCible`, seule source du vocabulaire de la scène.
+    const cible: CibleEcran = {
       type: 'ETOILE',
       xPx: p.xPx,
       yPx: p.yPx,
-      nom: texte,
+      nom: '',
       etoileNommee: nommee,
-    })
-    candidats.push({
-      texte,
-      categorie: 'ETOILE',
-      xPx: p.xPx + HAUTEUR_LABEL_PX / 2,
-      yPx: p.yPx - HAUTEUR_LABEL_PX / 2,
-      priorite: nommee.magV,
-      largeurPx: texte.length * LARGEUR_CARACTERE_PX,
-      hauteurPx: HAUTEUR_LABEL_PX,
-    })
+    }
+    cibles.push(cible)
+    const texte = libelleCible(cible)
+    if (texte !== null) {
+      candidats.push({ ...boiteLabel(cible, texte), categorie: 'ETOILE', priorite: nommee.magV })
+    }
   }
 
   // --- Objets du ciel profond ---------------------------------------------
@@ -681,16 +684,18 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     ctx.lineTo(p.xPx + MARQUEUR_OBJET_PX, p.yPx + MARQUEUR_OBJET_PX)
     ctx.moveTo(p.xPx + MARQUEUR_OBJET_PX, p.yPx - MARQUEUR_OBJET_PX)
     ctx.lineTo(p.xPx - MARQUEUR_OBJET_PX, p.yPx + MARQUEUR_OBJET_PX)
-    cibles.push({ type: 'OBJET', xPx: p.xPx, yPx: p.yPx, nom: objet.designation, objet })
-    candidats.push({
-      texte: objet.designation,
-      categorie: 'OBJET',
-      xPx: p.xPx + MARQUEUR_OBJET_PX + HAUTEUR_LABEL_PX / 2,
+    const cible: CibleEcran = {
+      type: 'OBJET',
+      xPx: p.xPx,
       yPx: p.yPx,
-      priorite: objet.vMag,
-      largeurPx: objet.designation.length * LARGEUR_CARACTERE_PX,
-      hauteurPx: HAUTEUR_LABEL_PX,
-    })
+      nom: objet.designation,
+      objet,
+    }
+    cibles.push(cible)
+    const texte = libelleCible(cible)
+    if (texte !== null) {
+      candidats.push({ ...boiteLabel(cible, texte), categorie: 'OBJET', priorite: objet.vMag })
+    }
   }
   ctx.stroke()
 
@@ -708,16 +713,16 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     ctx.arc(p.xPx, p.yPx, RAYON_CORPS_PX, 0, TOUR_RAD)
     ctx.fill()
     const nom = entree.nomsCorps[corps.corps] ?? String(corps.corps)
-    cibles.push({ type: 'CORPS', xPx: p.xPx, yPx: p.yPx, nom, corps })
-    candidats.push({
-      texte: nom,
-      categorie: 'CONSTELLATION',
-      xPx: p.xPx + RAYON_CORPS_PX + HAUTEUR_LABEL_PX / 2,
-      yPx: p.yPx,
-      priorite: -Infinity,
-      largeurPx: nom.length * LARGEUR_CARACTERE_PX,
-      hauteurPx: HAUTEUR_LABEL_PX,
-    })
+    const cible: CibleEcran = { type: 'CORPS', xPx: p.xPx, yPx: p.yPx, nom, corps }
+    cibles.push(cible)
+    const texte = libelleCible(cible)
+    if (texte !== null) {
+      candidats.push({
+        ...boiteLabel(cible, texte),
+        categorie: 'CONSTELLATION',
+        priorite: -Infinity,
+      })
+    }
   }
 
   // --- Noms de la couche Voie lactée --------------------------------------
@@ -790,7 +795,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   }
 
   // --- Labels --------------------------------------------------------------
-  const labels = composeLabels(candidats, projecteur.vue.fovDeg)
+  const labels = composeLabels(candidats, fovDeg)
   for (const label of labels) {
     ctx.fillStyle = label.couleur ?? teintes.texte
     ctx.fillText(label.texte, label.xPx, label.yPx)
@@ -799,16 +804,21 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   // T-0085 — le nom masqué par le seuil de zoom, révélé le temps du survol. Il est peint
   // après les labels retenus et n'entre pas dans leur budget : `labelSurvol` le loge entre
   // eux ou y renonce, il n'en efface aucun.
+  //
+  // T-0109 — mêmes fonctions que la passe des labels, donc même texte au même pixel : ce que
+  // le survol révèle est exactement ce que l'élément aurait porté peint. Faute de libellé —
+  // une étoile brillante que le paquet nommé ne porte pas — il retombe sur le titre de fiche,
+  // seul nom que cet astre possède.
   const revele =
     entree.survol === undefined
       ? null
-      : labelSurvol(labels, {
-          texte: entree.survol.texte,
-          xPx: entree.survol.xPx + RAYON_CLIC_PX + HAUTEUR_LABEL_PX / 2,
-          yPx: entree.survol.yPx,
-          largeurPx: entree.survol.texte.length * LARGEUR_CARACTERE_PX,
-          hauteurPx: HAUTEUR_LABEL_PX,
-        })
+      : labelSurvol(
+          labels,
+          boiteLabel(
+            entree.survol.cible,
+            libelleCible(entree.survol.cible) ?? titreCible(entree.survol.cible),
+          ),
+        )
   if (revele !== null) {
     ctx.fillStyle = teintes.texte
     ctx.fillText(revele.texte, revele.xPx, revele.yPx)

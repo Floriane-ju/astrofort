@@ -4,9 +4,13 @@
  * La géométrie a déjà tranché : `cibleSousLeCurseur` a rendu la cible la plus proche. Ne
  * reste qu'à la décrire pour le magasin de scène — et à ne jamais inventer ce que le
  * catalogue ne porte pas.
+ *
+ * T-0109 — le titre vient de `titreCible` : la fiche et la scène nomment le même astre, et
+ * ce module ne garde que ce qu'il est seul à savoir dire, les lignes de détail.
  */
 
 import { K } from '../registry/constants.ts'
+import { titreCible } from './libelles-cibles.ts'
 import type { SelectionScene } from './scene-etat.ts'
 import type { CibleEcran } from './dessine-ciel.ts'
 
@@ -14,7 +18,7 @@ export function decritCible(cible: CibleEcran): SelectionScene {
   if (cible.type === 'OBJET' && cible.objet !== undefined) {
     const o = cible.objet
     return {
-      titre: o.designation + (o.nomsCommuns === '' ? '' : ` — ${o.nomsCommuns.split('|')[0]}`),
+      titre: titreCible(cible),
       lignes: [
         `type ${o.type}`,
         o.vMag === null ? 'magnitude intégrée absente du catalogue' : `magnitude ${o.vMag}`,
@@ -26,7 +30,7 @@ export function decritCible(cible: CibleEcran): SelectionScene {
   if (cible.type === 'CORPS' && cible.corps !== undefined) {
     const c = cible.corps
     return {
-      titre: cible.nom,
+      titre: titreCible(cible),
       lignes: [
         `ascension droite ${c.adH.toFixed(3)} h · déclinaison ${c.decDeg.toFixed(2)}°`,
         `azimut ${c.azimutDeg.toFixed(1)}° · hauteur ${c.hauteurDeg.toFixed(1)}°`,
@@ -38,7 +42,7 @@ export function decritCible(cible: CibleEcran): SelectionScene {
   const nommee = cible.etoileNommee
   if (nommee !== undefined) {
     return {
-      titre: nommee.nomPropre === '' ? nommee.designation : `${nommee.nomPropre} — ${nommee.designation}`,
+      titre: titreCible(cible),
       lignes: [
         `magnitude ${nommee.magV.toFixed(2)} · constellation ${nommee.constellation}`,
         nommee.spectre === '' ? 'type spectral absent du catalogue' : `type spectral ${nommee.spectre}`,
@@ -51,7 +55,7 @@ export function decritCible(cible: CibleEcran): SelectionScene {
   }
   const etoile = cible.etoile
   return {
-    titre: 'Étoile sans désignation dans le paquet chargé',
+    titre: titreCible(cible),
     lignes: [
       etoile === undefined
         ? ''

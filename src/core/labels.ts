@@ -89,10 +89,11 @@ const DECALAGES_SURVOL: readonly number[] = Object.freeze([0, -1, 1, -2, 2])
  * range entre eux ou renonce. La hiérarchie par zoom ne s'y applique pas : c'est justement
  * l'élément qu'elle a écarté que le survol vient nommer.
  *
- * Un élément déjà nommé n'est pas nommé deux fois. Le libellé du clic commence toujours par
- * celui du label dessiné pour le même élément (« Véga » puis « Véga — α Lyr ») : ce préfixe
- * suffit à reconnaître le doublon, sans comparer des positions que chaque catégorie décale
- * autrement.
+ * Un élément déjà nommé n'est pas nommé deux fois. Depuis T-0109 la scène et le survol tirent
+ * leur texte de la même fonction : au même champ, c'est le MÊME libellé, et le doublon se
+ * reconnaît à l'égalité. Le test reste écrit en préfixe — il couvre en plus le cas d'un
+ * libellé enrichi (« Véga » puis « Véga — α Lyr ») — et compare des textes, jamais des
+ * positions que chaque catégorie décale autrement.
  */
 export function labelSurvol(
   retenus: readonly CandidatLabel[],
