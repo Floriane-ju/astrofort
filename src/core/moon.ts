@@ -203,6 +203,57 @@ export function sbCielAvecLune(sbCielNoirMag: number, deltaSb: number): number {
   return sbCielNoirMag - deltaSb
 }
 
+export interface EntreeCielSousLaLune {
+  readonly site: Site
+  /** Instant auquel la Lune est évaluée. L'appelant le choisit, et l'annonce. */
+  readonly instant: Date
+  /** Coordonnées de la cible : ascension droite en heures, déclinaison en degrés. */
+  readonly adH: number
+  readonly decDeg: number
+  /**
+   * Hauteur de la cible retenue pour l'extinction sur son trajet. Le plan y met la
+   * culmination (§8.1) : c'est la convention, et la fiche doit employer la même, sans quoi
+   * les deux écrans dosent la même nuit différemment.
+   */
+  readonly altitudeCibleDeg: number
+  readonly sbCielNoirMag: number
+}
+
+export interface CielSousLaLune {
+  readonly delta: Traced<number>
+  readonly sbCielEffectif: number
+  readonly altLuneDeg: number
+  readonly separationDeg: number
+  /** Fraction illuminée : ce qui se lit à l'écran, la phase nommée n'étant pas un nombre. */
+  readonly illumination: number
+}
+
+/**
+ * §8.1 — le fond de ciel qu'une cible voit sous la Lune, à un instant donné.
+ *
+ * Partagé entre le plan de séance et la fiche cible (T-0089) : deux écrans qui évaluent la
+ * même cible la même nuit doivent appeler le même moteur, sinon ils annoncent deux poses.
+ */
+export function cielSousLaLune(entree: EntreeCielSousLaLune): CielSousLaLune {
+  const lune = etatLune(entree.site, entree.instant)
+  const posLune = positionEquatorialeLune(entree.instant, entree.site)
+  const separation = separationDeg(entree.adH, entree.decDeg, posLune.adH, posLune.decDeg)
+  const delta = deltaSbLune({
+    sbCielNoirMag: entree.sbCielNoirMag,
+    altitudeLuneDeg: lune.altitudeDeg,
+    altitudeCibleDeg: entree.altitudeCibleDeg,
+    separationDeg: separation,
+    anglePhaseDeg: lune.anglePhaseDeg,
+  })
+  return {
+    delta,
+    sbCielEffectif: sbCielAvecLune(entree.sbCielNoirMag, delta.value),
+    altLuneDeg: lune.altitudeDeg,
+    separationDeg: separation,
+    illumination: lune.illumination,
+  }
+}
+
 // ---------------------------------------------------------------------------
 // §8.1 — fenêtre utile
 // ---------------------------------------------------------------------------

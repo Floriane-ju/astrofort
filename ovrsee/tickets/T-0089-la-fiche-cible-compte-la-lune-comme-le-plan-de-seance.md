@@ -2,7 +2,7 @@
 {
   "id": "T-0089",
   "titre": "La fiche cible compte la Lune comme le plan de séance",
-  "colonne": "pret",
+  "colonne": "en-cours",
   "priorite": "haute",
   "tags": [
     "defaut",
@@ -10,7 +10,7 @@
     "pose"
   ],
   "cree": "2026-08-19",
-  "maj": "2026-08-19",
+  "maj": "2026-08-21",
   "plan": null
 }
 ---
@@ -40,14 +40,14 @@ juste existe déjà, à un argument près.
 
 ## Critères d'acceptation
 
-- [ ] La fiche cible reçoit l'état de la Lune et emploie le même `deltaSbLune` que le plan.
-- [ ] Pour une cible et un instant donnés, la fiche et le plan annoncent la même pose
+- [x] La fiche cible reçoit l'état de la Lune et emploie le même `deltaSbLune` que le plan.
+- [x] Pour une cible et un instant donnés, la fiche et le plan annoncent la même pose
       unitaire et la même intégration totale.
-- [ ] Une Lune sous l'horizon ne dégrade rien, et la fiche le dit explicitement (§6.3).
-- [ ] Une nébuleuse en émission sous Lune gibbeuse reste faisable, avec le conseil dual-band
+- [x] Une Lune sous l'horizon ne dégrade rien, et la fiche le dit explicitement (§6.3).
+- [x] Une nébuleuse en émission sous Lune gibbeuse reste faisable, avec le conseil dual-band
       de §7.5 déclenché par la dégradation lunaire et non par le seul Bortle.
-- [ ] La tolérance lunaire par type d'objet (§6.3) est appliquée : la même Lune ne pénalise
+- [x] La tolérance lunaire par type d'objet (§6.3) est appliquée : la même Lune ne pénalise
       pas une galaxie et une nébuleuse Hα de la même façon.
-- [ ] L'instant d'évaluation de la Lune est nommé à l'écran — la fiche n'a pas de créneau,
+- [x] L'instant d'évaluation de la Lune est nommé à l'écran — la fiche n'a pas de créneau,
       donc le choix doit être explicite plutôt qu'implicite.
-- [ ] Un test compare les deux chemins sur la même entrée et échoue s'ils divergent.
+- [x] Un test compare les deux chemins sur la même entrée et échoue s'ils divergent.

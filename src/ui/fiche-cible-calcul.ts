@@ -20,6 +20,7 @@ import {
   type PoseUnitaire,
 } from '../core/exposure.ts'
 import { planCalibration, type PlanCalibration } from '../core/calibration.ts'
+import type { CielSousLaLune } from '../core/moon.ts'
 import { explication, type Explication } from '../core/explain.ts'
 import {
   conseilFiltre,
@@ -54,6 +55,15 @@ export interface ContexteFiche {
   readonly focaleMm: number
 }
 
+/**
+ * T-0089 — l'état du ciel sous la Lune retenu par la fiche. Jamais implicite : soit la Lune
+ * est évaluée à un instant nommé, soit elle ne l'est pas et la fiche dit pourquoi. Le fond
+ * de ciel noir du site n'est jamais présenté comme le ciel de la nuit sans le dire.
+ */
+export type LuneFiche =
+  | { readonly evaluee: true; readonly instant: Date; readonly ciel: CielSousLaLune }
+  | { readonly evaluee: false; readonly cause: string }
+
 /** Les six champs de la fiche, tels que l'utilisateur les voit — donc des chaînes. */
 export interface SaisieCible {
   readonly typeObjet: TypeObjet
@@ -65,6 +75,10 @@ export interface SaisieCible {
 
 export interface Resultat {
   readonly domaine: VerdictDomaine
+  /** §8.1 — le ciel sous la Lune tel qu'il a été retenu, ou la raison de son absence. */
+  readonly lune: LuneFiche
+  /** Fond de ciel effectivement employé : celui du site, dégradé par la Lune si elle l'est. */
+  readonly sbCielEffectif: number
   readonly cadrage: FicheCadrage
   readonly detect: Detectabilite
   readonly eCiel: Traced<number>
@@ -94,9 +108,14 @@ export function evalue(
   saisie: SaisieCible,
   snrCible: number,
   iso: IsoRetenu,
+  lune: LuneFiche,
   permissif = false,
 ): Resultat {
   const fovHDeg = contexte.optique.fovHDeg.value
+  // T-0089 — le plan de séance dose la pose sous le ciel réel de la nuit (§8.1) ; la fiche
+  // le faisait sous le ciel noir du site, et annonçait donc une autre pose pour la même
+  // cible. Un seul fond de ciel traverse maintenant toute la chaîne.
+  const sbCiel = lune.evaluee ? lune.ciel.sbCielEffectif : contexte.sbCiel
   const domaine = verdictDomaine(fovHDeg, contexte.catalogue)
   const a = nombreOuNull(saisie.aArcmin)
   const b = nombreOuNull(saisie.bArcmin)
@@ -116,14 +135,24 @@ export function evalue(
     aArcmin: a,
     bArcmin: b,
     typeObjet: saisie.typeObjet,
-    sbCiel: contexte.sbCiel,
+    sbCiel,
     mLimOeil: contexte.mLimOeil,
     dMm: contexte.optique.dMm.value,
+    // La tolérance lunaire du type d'objet (§6.3) n'est portée que si la Lune est évaluée :
+    // annoncer « Lune sous l'horizon » sans l'avoir calculée serait une affirmation gratuite.
+    ...(lune.evaluee
+      ? {
+          lune: {
+            altitudeDeg: lune.ciel.altLuneDeg,
+            separationDeg: lune.ciel.separationDeg,
+          },
+        }
+      : {}),
   })
 
   const zpEstime = contexte.zeroSysteme.estime
   const eCiel = fluxCiel({
-    sbMagArcsec2: contexte.sbCiel,
+    sbMagArcsec2: sbCiel,
     zpSys: contexte.zeroSysteme.valeur,
     pitchUm: contexte.pitchUm,
     ouvertureN: contexte.ouvertureN,
@@ -132,7 +161,19 @@ export function evalue(
 
   const sbObj = detect.sbObj.value
   if (sbObj === null) {
-    return { domaine, cadrage, detect, eCiel, eObj: null, pose: null, integration: null, calibration: null, explique: null }
+    return {
+      domaine,
+      lune,
+      sbCielEffectif: sbCiel,
+      cadrage,
+      detect,
+      eCiel,
+      eObj: null,
+      pose: null,
+      integration: null,
+      calibration: null,
+      explique: null,
+    }
   }
 
   const eObj = fluxObjet({
@@ -169,6 +210,8 @@ export function evalue(
 
   return {
     domaine,
+    lune,
+    sbCielEffectif: sbCiel,
     cadrage,
     detect,
     eCiel,
@@ -184,6 +227,7 @@ export function evalue(
       pose,
       integration,
       sbObj,
+      sbCiel,
     }),
   }
 }
@@ -205,11 +249,12 @@ function expliqueVerdict(
     readonly pose: PoseUnitaire
     readonly integration: PlanIntegration
     readonly sbObj: number
+    readonly sbCiel: number
   },
 ): Explication {
   const point = {
     sb_obj: r.sbObj,
-    sb_ciel: contexte.sbCiel,
+    sb_ciel: r.sbCiel,
     t_pose_s: r.pose.tRecommandeS.value,
     read_noise_e: r.pose.readNoiseUtiliseE,
     snr_cible: snrCible,
@@ -272,9 +317,10 @@ export function conseilsCible(
     typeObjet: entree.typeObjet,
     filtresPossedes: filtres,
     bortle: contexte.bortle,
-    // La fiche évalue une cible hors contexte de nuit : la Lune est portée par le plan
-    // de session (§8.1), pas ici. Seul le fond de ciel déclaré déclenche le conseil.
-    deltaSbLuneMag: 0,
+    // §7.5 — la dégradation lunaire déclenche le conseil filtre au même titre que le
+    // Bortle : une nébuleuse en émission reste faisable sous Lune gibbeuse avec un
+    // bi-bande, et c'est là que ça se dit.
+    deltaSbLuneMag: r.lune.evaluee ? r.lune.ciel.delta.value : 0,
     cadragePlanifiable: r.cadrage.faisable,
     explicationDepliee: entree.explicationDepliee,
     eObj: r.eObj.value,

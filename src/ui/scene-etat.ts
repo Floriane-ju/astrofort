@@ -271,6 +271,21 @@ export function reinitialiseScene(): void {
  * comparable par `Object.is` : c'est cette comparaison que `useSyncExternalStore` applique
  * pour décider de rendre ou non.
  */
+/** Une minute en millisecondes : la granularité des lectures datées sur l'horloge. */
+export const MS_PAR_MINUTE = 60_000
+
+/**
+ * La minute affichée par la scène. Les panneaux qui datent une lecture s'abonnent à elle
+ * plutôt qu'à l'instant : entre deux publications de la même minute, ni la liste des
+ * visibles ni la position de la Lune ne changent de façon lisible.
+ *
+ * Défini au niveau du module — donc d'identité stable — parce que c'est ce que
+ * `useTrancheScene` exige de son sélecteur.
+ */
+export function minuteAffichee(etat: EtatScene): number {
+  return Math.floor(etat.msAffiche / MS_PAR_MINUTE)
+}
+
 export function useTrancheScene<T>(selecteur: (etat: EtatScene) => T): T {
   const lit = useCallback(() => selecteur(etatScene()), [selecteur])
   return useSyncExternalStore(abonne, lit, lit)

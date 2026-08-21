@@ -20,6 +20,7 @@ import type { Site } from '../core/ephem.ts'
 import { ChampsCible } from './ChampsCible.tsx'
 import { Verdicts } from './Verdicts.tsx'
 import { useSaisieCible } from './fiche-cible-saisie.ts'
+import { useLuneCible } from './fiche-cible-lune.ts'
 import { conseilsCible, evalue, type ContexteFiche, type Resultat } from './fiche-cible-calcul.ts'
 
 export { LIBELLE_TYPE_OBJET, libelleObjet } from './libelles-objet.ts'
@@ -46,16 +47,22 @@ export function FicheCible(props: FicheCibleProps) {
 
   const saisie = useSaisieCible(props.objetSelectionne ?? null)
   const iso = props.iso
+  /**
+   * T-0089 — la Lune de cette cible, à l'instant affiché par le planétarium. Elle entre dans
+   * la chaîne comme dans le plan de séance : c'est le fond de ciel qui change, donc la pose,
+   * le nombre d'images et l'intégration.
+   */
+  const lune = useLuneCible(props.site, props.sbCiel, saisie.objetCatalogue)
 
   const calcul = useMemo<{ ok: true; r: Resultat } | { ok: false; erreur: string }>(() => {
     try {
-      return { ok: true, r: evalue(props, saisie.saisie, snrCible, iso, permissif) }
+      return { ok: true, r: evalue(props, saisie.saisie, snrCible, iso, lune, permissif) }
     } catch (erreur) {
       if (erreur instanceof SaisieRefuseeError) return { ok: false, erreur: erreur.message }
       throw erreur
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props, saisie.saisie, snrCible, iso.iso, permissif])
+  }, [props, saisie.saisie, snrCible, iso.iso, lune, permissif])
 
   const conseils = useMemo(
     () =>

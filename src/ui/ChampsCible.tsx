@@ -12,7 +12,7 @@ import type { VerdictDetectabilite } from '../core/detectability.ts'
 import { ciblesVisibles, parType, typesPresents, type CibleVisible } from '../core/visibles.ts'
 import { cielInstantane } from '../core/horloges.ts'
 import type { Site } from '../core/ephem.ts'
-import { majVue, useTrancheScene, type EtatScene } from './scene-etat.ts'
+import { majVue, minuteAffichee, MS_PAR_MINUTE, useTrancheScene } from './scene-etat.ts'
 import { Etiquette } from './Terme.tsx'
 import { LIBELLE_TYPE_OBJET, libelleCible } from './libelles-objet.ts'
 import type { EtatSaisieCible } from './fiche-cible-saisie.ts'
@@ -26,21 +26,6 @@ import type { EtatSaisieCible } from './fiche-cible-saisie.ts'
  * pagination.
  */
 const CIBLES_LISTEES_MAX = 200
-
-/**
- * La liste des visibles est recalculée sur la minute affichée, pas sur l'instant : la scène
- * publie `msAffiche` deux fois par seconde et le catalogue compte ~14 000 entrées. Une minute
- * de granularité ne change pas quel objet est au-dessus de l'horizon.
- */
-const MS_PAR_MINUTE = 60_000
-
-/**
- * T-0056 — la fiche s'abonne à cette minute, pas au magasin entier : entre deux publications
- * de la même minute, il n'y a rien à recalculer ni à redessiner.
- */
-function minuteAffichee(etat: EtatScene): number {
-  return Math.floor(etat.msAffiche / MS_PAR_MINUTE)
-}
 
 /** L'ordre des groupes dit ce que le setup fera de la cible, du plus direct au plus long. */
 const VERDICTS_GROUPES: readonly VerdictDetectabilite[] = [
@@ -70,6 +55,9 @@ export interface ChampsCibleProps {
 
 export function ChampsCible(props: ChampsCibleProps) {
   const { saisie, catalogue, site, sbCiel, mLimOeil, dMm, filtreType } = props
+  // T-0056 — la liste des visibles suit la minute affichée, pas l'instant : la scène publie
+  // `msAffiche` deux fois par seconde et le catalogue compte ~14 000 entrées, alors qu'une
+  // minute de granularité ne change pas quel objet est au-dessus de l'horizon.
   const minute = useTrancheScene(minuteAffichee)
 
   const visibles = useMemo(

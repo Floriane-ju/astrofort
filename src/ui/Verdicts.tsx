@@ -31,6 +31,11 @@ export interface VerdictsProps {
   readonly surDeplie: (valeur: boolean) => void
 }
 
+/** L'heure affichée comme partout ailleurs : locale, à la minute. */
+function heure(date: Date): string {
+  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+}
+
 export function Verdicts(props: VerdictsProps) {
   const { r } = props
   return (
@@ -104,12 +109,31 @@ function CadrageDeLaCible({ r }: { readonly r: Resultat }) {
   )
 }
 
+/**
+ * §8.1 — sous quel ciel la cible est évaluée. T-0089 : la fiche n'a pas de créneau, donc
+ * l'instant de la Lune est un choix, et un choix s'annonce. Sans cette ligne, deux écrans
+ * annonceraient deux poses sans que rien ne dise laquelle porte quelle nuit.
+ */
+function CielSousLaLune({ r }: { readonly r: Resultat }) {
+  if (!r.lune.evaluee) return <p className="cause">{r.lune.cause}</p>
+  return (
+    <>
+      <p className="etat">
+        Lune évaluée à {heure(r.lune.instant)}, l’instant affiché par le planétarium, avec la
+        cible prise à sa culmination — la convention du plan de séance (§8.1).
+      </p>
+      <TracedValue terme="degradation_lunaire" trace={r.lune.ciel.delta} unite="mag/as²" />
+    </>
+  )
+}
+
 /** §6.3 — ce qui verra la cible : l'œil, des jumelles, un télescope, ou la photo seule. */
 function Detectabilite({ r }: { readonly r: Resultat }) {
   return (
     <section>
       <h2>Détectabilité — §6.3</h2>
       <p className="etat">verdict : {r.detect.verdict ?? '[DONNÉE MANQUANTE]'}</p>
+      <CielSousLaLune r={r} />
       <TracedValue terme="brillance_surface" trace={r.detect.sbObj} unite="mag/as²" />
       <TracedValue terme="contraste_ciel" trace={r.detect.deltaSb} unite="mag/as²" />
       <TracedValue terme="magnitude_limite_instrument" trace={r.detect.mLimInstr} unite="mag" />

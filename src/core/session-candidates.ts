@@ -13,15 +13,8 @@ import { creneauCible, type CreneauCible, type Intervalle } from './creneaux.ts'
 import { detectabilite } from './detectability.ts'
 import { ficheCadrage } from './framing.ts'
 import { fluxCiel, fluxObjet, planIntegration, poseUnitaire } from './exposure.ts'
-import {
-  deltaSbLune,
-  etatLune,
-  positionEquatorialeLune,
-  sbCielAvecLune,
-  separationDeg,
-} from './moon.ts'
+import { cielSousLaLune } from './moon.ts'
 import { altitudeCulmination } from './site.ts'
-import type { Traced } from './traced.ts'
 import {
   scoreCadrage,
   scoreFenetre,
@@ -45,7 +38,12 @@ const ARCMIN_PAR_DEG = 60
 const HEURES_PAR_TOUR = 24
 const DEG_PAR_HEURE = 360 / HEURES_PAR_TOUR
 
-function instantMedian(creneau: CreneauCible, repli: Date): Date {
+/**
+ * §8.1 — la Lune est évaluée au milieu du créneau de la cible : c'est là que la dégradation
+ * est représentative de la session, plutôt qu'à un instant arbitraire de la nuit. Exporté
+ * parce que c'est une convention du plan, et qu'un autre écran doit pouvoir l'employer.
+ */
+export function instantLune(creneau: CreneauCible, repli: Date): Date {
   const premier = creneau.creneaux[0]
   const dernier = creneau.creneaux[creneau.creneaux.length - 1]
   if (premier === undefined || dernier === undefined) return repli
@@ -58,34 +56,6 @@ function codeExclusionCreneau(creneau: CreneauCible): CauseEcart {
     return 'HAUTEUR'
   }
   return creneau.causeExclusion === 'RELIEF' ? 'RELIEF' : 'FENETRE'
-}
-
-/**
- * §8.1 — la Lune est évaluée au milieu du créneau de la cible : c'est là que la dégradation
- * est représentative de la session, plutôt qu'à un instant arbitraire de la nuit.
- */
-function cielSousLaLune(
-  contexte: ContexteSession,
-  objet: ObjetCielProfond,
-  creneau: CreneauCible,
-  instant: Date,
-  sbCielBase: number,
-): { readonly delta: Traced<number>; readonly sbCielEffectif: number; readonly altLuneDeg: number } {
-  const lune = etatLune(contexte.site, instant)
-  const posLune = positionEquatorialeLune(instant, contexte.site)
-  const delta = deltaSbLune({
-    sbCielNoirMag: sbCielBase,
-    altitudeLuneDeg: lune.altitudeDeg,
-    altitudeCibleDeg: creneau.altCulminationDeg.value,
-    separationDeg: separationDeg(
-      objet.adDeg / DEG_PAR_HEURE,
-      objet.decDeg,
-      posLune.adH,
-      posLune.decDeg,
-    ),
-    anglePhaseDeg: lune.anglePhaseDeg,
-  })
-  return { delta, sbCielEffectif: sbCielAvecLune(sbCielBase, delta.value), altLuneDeg: lune.altitudeDeg }
 }
 
 export function evalueCandidate(
@@ -144,13 +114,14 @@ export function evalueCandidate(
     }
   }
 
-  const { delta, sbCielEffectif, altLuneDeg } = cielSousLaLune(
-    contexte,
-    objet,
-    creneau,
-    instantMedian(creneau, fenetre.debut),
-    sbCielBase,
-  )
+  const { delta, sbCielEffectif, altLuneDeg, separationDeg } = cielSousLaLune({
+    site: contexte.site,
+    instant: instantLune(creneau, fenetre.debut),
+    adH: objet.adDeg / DEG_PAR_HEURE,
+    decDeg: objet.decDeg,
+    altitudeCibleDeg: creneau.altCulminationDeg.value,
+    sbCielNoirMag: sbCielBase,
+  })
 
   const detect = detectabilite({
     mInt: objet.vMag,
@@ -160,7 +131,7 @@ export function evalueCandidate(
     sbCiel: sbCielEffectif,
     mLimOeil: contexte.mLimOeil,
     dMm: contexte.dMm,
-    lune: { altitudeDeg: altLuneDeg },
+    lune: { altitudeDeg: altLuneDeg, separationDeg },
   })
   const sbObj = detect.sbObj.value
   if (sbObj === null) {
