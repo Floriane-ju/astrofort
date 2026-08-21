@@ -2,7 +2,7 @@
 {
   "id": "T-0090",
   "titre": "Le flux de l'objet s'atténue avec la masse d'air",
-  "colonne": "en-cours",
+  "colonne": "fait",
   "priorite": "haute",
   "tags": [
     "prd",
