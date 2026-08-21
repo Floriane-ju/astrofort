@@ -2,7 +2,7 @@
 {
   "id": "T-0077",
   "titre": "Une intégration continue garde typecheck, tests et audit",
-  "colonne": "pret",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "m",
   "tags": [

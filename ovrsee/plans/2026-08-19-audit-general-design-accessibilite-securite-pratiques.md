@@ -51,6 +51,29 @@
         "src/core/explain.ts",
         "src/ui/fiche-cible-calcul.ts"
       ]
+    },
+    {
+      "sha": "dc7a2f4",
+      "date": "2026-08-21",
+      "files": [
+        "src/ui/styles.css",
+        "tests/mode-nuit.test.tsx"
+      ]
+    },
+    {
+      "sha": "88733ff",
+      "date": "2026-08-21",
+      "files": [
+        "tests/csp.test.ts",
+        "vite.config.ts"
+      ]
+    },
+    {
+      "sha": "70714c1",
+      "date": "2026-08-21",
+      "files": [
+        ".github/workflows/ci.yml"
+      ]
     }
   ]
 }
