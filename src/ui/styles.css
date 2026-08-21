@@ -138,6 +138,21 @@ body {
   padding: 0;
 }
 
+/* T-0068 — la description du canevas : ce que la vue montre en ce moment, et les raccourcis
+   qui la pilotent. Elle est retirée du flux visuel — la colonne centrale ne réserve plus
+   aucune hauteur sous le canevas (T-0040) — mais reste dans l'arbre d'accessibilité, où
+   `display: none` l'aurait supprimée. */
+.scene-description {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* T-0040 — le canevas remplit sa boîte, sans `object-fit` : sa définition de rendu suit la
    boîte (`resolutionRendu`), donc l'image n'a plus à s'y loger. Un rendu 16/9 figé se logeait
    en `contain` et laissait des bandes noires en haut et en bas dès que la place disponible

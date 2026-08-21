@@ -24,6 +24,7 @@ import {
 } from '../core/curseur-temps.ts'
 import { bornesZoom, etatProfondeur, type ModeProjection } from '../core/projection.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
+import { RACCOURCIS_CLAVIER } from './planetarium-gestes.ts'
 import { useScene } from './scene-etat.ts'
 import { TracedValue } from './TracedValue.tsx'
 
@@ -113,6 +114,10 @@ export function PanneauExplorer(props: PanneauExplorerProps) {
           </label>
         </div>
         {bornes.cause !== undefined && <p className="cause">{bornes.cause}</p>}
+
+        {/* T-0069 — un raccourci qui n'est écrit que dans le code n'existe pas. Il est
+            annoncé ici, avec les autres gestes de la scène (§11.2). */}
+        <p className="etat">{RACCOURCIS_CLAVIER}</p>
 
         <TracedValue terme="magnitude_limite_rendue" trace={profondeur.magLimite} unite="mag" />
         {profondeur.cause !== undefined && <p className="cause">{profondeur.cause}</p>}

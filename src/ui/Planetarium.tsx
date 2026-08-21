@@ -33,7 +33,13 @@ import type { Site } from '../core/ephem.ts'
 import type { SurvolEcran } from './dessine-ciel.ts'
 import { useBoucleRendu, type EtatBoucle } from './planetarium-boucle.ts'
 import { useIncrustationFile } from './planetarium-incrustation.ts'
-import { useGestesZoom, usePointageSouris } from './planetarium-gestes.ts'
+import {
+  RACCOURCIS_CLAVIER,
+  useGestesZoom,
+  usePilotageClavier,
+  usePointageSouris,
+} from './planetarium-gestes.ts'
+import { ligneVisee } from './scene-lecture.ts'
 
 export {
   facteurZoom,
@@ -41,6 +47,12 @@ export {
   sourceMolette,
   type SourceGeste,
 } from './planetarium-gestes.ts'
+
+/**
+ * T-0068 — la description associée au canevas. Un identifiant plutôt qu'un `aria-label` long :
+ * le nom dit CE QUE C'EST, la description dit CE QU'ON Y VOIT EN CE MOMENT.
+ */
+const ID_DESCRIPTION = 'planetarium-description'
 export type { MaterielFile } from './planetarium-materiel.ts'
 
 import type { MaterielFile } from './planetarium-materiel.ts'
@@ -121,9 +133,10 @@ export function Planetarium(props: PlanetariumProps) {
     () => reglageVitesse(temps.facteur, largeurPx, fovDeg),
     [temps.facteur, largeurPx, fovDeg],
   )
+  const dateAffichee = useMemo(() => new Date(msAffiche), [msAffiche])
   const ciel = useMemo(
-    () => cielInstantane(props.site, new Date(msAffiche)),
-    [props.site, msAffiche],
+    () => cielInstantane(props.site, dateAffichee),
+    [props.site, dateAffichee],
   )
 
   const cadrePrincipal: Cadre | null =
@@ -186,6 +199,14 @@ export function Planetarium(props: PlanetariumProps) {
     surSelectionObjet: props.surSelectionObjet,
   })
   useGestesZoom(canevas, props.gaiaCharge)
+  // T-0069 — WCAG 2.1.1 : les mêmes gestes, au clavier, dans les mêmes bornes.
+  const clavier = usePilotageClavier({
+    largeurPx,
+    hauteurPx,
+    gaiaCharge: props.gaiaCharge,
+    cibles,
+    surSelectionObjet: props.surSelectionObjet,
+  })
 
   return (
     <section className="scene">
@@ -194,11 +215,27 @@ export function Planetarium(props: PlanetariumProps) {
         className="planetarium"
         width={largeurPx}
         height={hauteurPx}
+        /* T-0068 / T-0069 — `application` et non `img` : la scène se pilote au clavier, et
+           une technologie d'assistance doit lui laisser passer les flèches plutôt que de les
+           garder pour son propre parcours. Sans rôle, un canevas n'est qu'une boîte de pixels
+           qui n'existe pas pour elle. */
+        role="application"
+        tabIndex={0}
+        aria-label="Planétarium — le ciel du site à l’instant affiché"
+        aria-describedby={ID_DESCRIPTION}
+        onKeyDown={clavier.onKeyDown}
         onPointerDown={souris.onPointerDown}
         onPointerMove={souris.onPointerMove}
         onPointerUp={souris.onPointerUp}
         onPointerLeave={souris.onPointerLeave}
       />
+      {/* T-0068 — ce que la vue montre en ce moment, dans les mots exacts de la lecture
+          affichée au menu d'information : `ligneVisee` est la seule à composer la phrase.
+          Hors flux visuel — la colonne centrale ne réserve aucune hauteur sous le canevas
+          (T-0040) — mais présente dans l'arbre d'accessibilité. */}
+      <p className="scene-description" id={ID_DESCRIPTION}>
+        {ligneVisee(pointage, ciel.matrice, dateAffichee)}. {RACCOURCIS_CLAVIER}
+      </p>
     </section>
   )
 }

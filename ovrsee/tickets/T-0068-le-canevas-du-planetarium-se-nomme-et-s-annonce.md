@@ -2,7 +2,7 @@
 {
   "id": "T-0068",
   "titre": "Le canevas du planétarium se nomme et s'annonce",
-  "colonne": "pret",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "s",
   "tags": [
@@ -32,12 +32,12 @@ sur une `<div>` sans rôle **n'est pas exposé** — l'intention est bonne, l'ef
 
 ## Critères d'acceptation
 
-- [ ] Le canevas porte un rôle explicite — `role="img"` tant qu'il n'est pas interactif,
+- [x] Le canevas porte un rôle explicite — `role="img"` tant qu'il n'est pas interactif,
       `role="application"` si T-0069 le rend pilotable — et un nom accessible
-- [ ] Une description associée dit ce que la vue montre en ce moment : visée, champ, instant
-- [ ] Le schéma de cadre de `src/ui/PlanSession.tsx:276` porte un rôle qui rend son `aria-label`
+- [x] Une description associée dit ce que la vue montre en ce moment : visée, champ, instant
+- [x] Le schéma de cadre de `src/ui/PlanSession.tsx:276` porte un rôle qui rend son `aria-label`
       effectif
-- [ ] Le nom et la description viennent des mêmes valeurs que les lectures affichées : aucune
+- [x] Le nom et la description viennent des mêmes valeurs que les lectures affichées : aucune
       chaîne dupliquée qui puisse dériver
-- [ ] Un test de `tests/` vérifie la présence du nom accessible sur le rendu statique, comme
+- [x] Un test de `tests/` vérifie la présence du nom accessible sur le rendu statique, comme
       `tests/coque.test.tsx` le fait déjà pour la structure de la coque

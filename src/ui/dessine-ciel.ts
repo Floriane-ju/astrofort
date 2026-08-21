@@ -649,9 +649,15 @@ export function cibleSousLeCurseur(
   cibles: readonly CibleEcran[],
   xPx: number,
   yPx: number,
+  /**
+   * T-0069 — tolérance de désignation. Le pointeur vise au pixel, une touche non : le
+   * pilotage au clavier passe donc un rayon plus large, sans changer la règle — c'est
+   * toujours la cible la plus proche du point visé qui est retenue.
+   */
+  rayonPx: number = RAYON_CLIC_PX,
 ): CibleEcran | null {
   let meilleure: CibleEcran | null = null
-  let meilleureDistance = RAYON_CLIC_PX
+  let meilleureDistance = rayonPx
   for (const cible of cibles) {
     const distance = Math.hypot(cible.xPx - xPx, cible.yPx - yPx)
     if (distance <= meilleureDistance) {
