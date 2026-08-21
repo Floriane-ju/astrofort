@@ -210,7 +210,7 @@ body {
 /* T-0041 — un tiroir fermé cache ce qu'il contient. Le bouton change d'aspect quand il a
    quelque chose à dire ; le compte, lui, est écrit en toutes lettres dans le libellé — le
    rouge ne porte jamais seul une information (§11.1). */
-.tiroir-infos[data-alerte='true'] > summary {
+.tiroir[data-alerte='true'] > summary {
   border-color: var(--alerte);
   color: var(--alerte);
   background: var(--fond-alerte);
@@ -290,7 +290,7 @@ body {
 /* T-0041 — un tiroir fermé cache ce qu'il contient. Le bouton change d'aspect quand il a
    quelque chose à dire ; le compte, lui, est écrit en toutes lettres dans le libellé — le
    rouge ne porte jamais seul une information (§11.1). */
-.tiroir-infos[data-alerte='true'] > summary {
+.tiroir[data-alerte='true'] > summary {
   border-color: var(--alerte);
   color: var(--alerte);
   background: var(--fond-alerte);

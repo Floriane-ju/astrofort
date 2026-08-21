@@ -42,14 +42,32 @@ export interface SaisieLieu {
   readonly surPointsMasque: (v: readonly PointMasque[]) => void
 }
 
-export function useSaisieLieu(): SaisieLieu {
-  const [latitude, surLatitude] = useState(DEFAUT.latitude)
-  const [longitude, surLongitude] = useState(DEFAUT.longitude)
-  const [altitude, surAltitude] = useState(DEFAUT.altitude)
-  const [bortle, surBortle] = useState(DEFAUT.bortle)
-  const [sqm, surSqm] = useState('')
+/**
+ * §12.3 — le lieu tel qu'il a été enregistré, relu au démarrage. `null` au premier
+ * démarrage : les valeurs de l'Annexe A servent alors de départ.
+ *
+ * La date n'en fait pas partie : une séance se prépare pour la nuit qui vient, pas pour
+ * celle du dernier rechargement.
+ */
+export interface DepartLieu {
+  readonly latitude: string
+  readonly longitude: string
+  readonly altitude: string
+  readonly bortle: string
+  readonly sqm: string
+  readonly pointsMasque: readonly PointMasque[]
+}
+
+export function useSaisieLieu(depart: DepartLieu | null): SaisieLieu {
+  const [latitude, surLatitude] = useState(depart?.latitude ?? DEFAUT.latitude)
+  const [longitude, surLongitude] = useState(depart?.longitude ?? DEFAUT.longitude)
+  const [altitude, surAltitude] = useState(depart?.altitude ?? DEFAUT.altitude)
+  const [bortle, surBortle] = useState(depart?.bortle ?? DEFAUT.bortle)
+  const [sqm, surSqm] = useState(depart?.sqm ?? '')
   const [dateIso, surDateIso] = useState(() => new Date().toISOString().slice(0, 10))
-  const [pointsMasque, surPointsMasque] = useState<readonly PointMasque[]>([])
+  const [pointsMasque, surPointsMasque] = useState<readonly PointMasque[]>(
+    depart?.pointsMasque ?? [],
+  )
 
   return {
     latitude,
@@ -107,20 +125,42 @@ export interface SaisieMateriel {
   readonly surTypeMonture: (v: TypeMonture) => void
 }
 
-export function useSaisieMateriel(): SaisieMateriel {
-  const [boitier, surBoitier] = useState<SaisieBoitier>(() => ({
-    boitierId: BOITIER_REFERENCE.id,
-    ...BOITIER_VIDE,
-  }))
-  const [iso, surIso] = useState('')
-  const [focale, surFocale] = useState(DEFAUT.focale)
-  const [ouverture, surOuverture] = useState(DEFAUT.ouverture)
-  const [capteurMode, surCapteurMode] = useState<CapteurMode>('FULL_FRAME')
+/**
+ * §12.3 — le matériel tel qu'il a été enregistré, relu au démarrage.
+ *
+ * La comparaison de recadrage n'en fait pas partie : c'est une superposition d'affichage,
+ * pas une caractéristique du matériel (§3.5).
+ */
+export interface DepartMateriel {
+  readonly boitier: SaisieBoitier
+  readonly iso: string
+  readonly focale: string
+  readonly ouverture: string
+  readonly capteurMode: CapteurMode
+  readonly typeObjectif: TypeObjectif
+  readonly suiviActif: boolean
+  /** Absents d'un enregistrement venu d'ailleurs : le départ de la saisie s'applique. */
+  readonly qualiteMes?: QualiteMiseEnStation
+  readonly typeMonture?: TypeMonture
+}
+
+export function useSaisieMateriel(depart: DepartMateriel | null): SaisieMateriel {
+  const [boitier, surBoitier] = useState<SaisieBoitier>(
+    () => depart?.boitier ?? { boitierId: BOITIER_REFERENCE.id, ...BOITIER_VIDE },
+  )
+  const [iso, surIso] = useState(depart?.iso ?? '')
+  const [focale, surFocale] = useState(depart?.focale ?? DEFAUT.focale)
+  const [ouverture, surOuverture] = useState(depart?.ouverture ?? DEFAUT.ouverture)
+  const [capteurMode, surCapteurMode] = useState<CapteurMode>(depart?.capteurMode ?? 'FULL_FRAME')
   const [comparerRecadrage, surComparerRecadrage] = useState(false)
-  const [typeObjectif, setTypeObjectif] = useState<TypeObjectif>('RECTILINEAIRE')
-  const [suiviActif, surSuiviActif] = useState(false)
-  const [qualiteMes, surQualiteMes] = useState<QualiteMiseEnStation>('INCONNUE')
-  const [typeMonture, surTypeMonture] = useState<TypeMonture>('TRACKER')
+  const [typeObjectif, setTypeObjectif] = useState<TypeObjectif>(
+    depart?.typeObjectif ?? 'RECTILINEAIRE',
+  )
+  const [suiviActif, surSuiviActif] = useState(depart?.suiviActif ?? false)
+  const [qualiteMes, surQualiteMes] = useState<QualiteMiseEnStation>(
+    depart?.qualiteMes ?? 'INCONNUE',
+  )
+  const [typeMonture, surTypeMonture] = useState<TypeMonture>(depart?.typeMonture ?? 'TRACKER')
 
   /**
    * §5.1 — changer d'objectif change la projection, pas un réglage de rendu. Si la scène

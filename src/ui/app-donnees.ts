@@ -6,7 +6,7 @@
  * ont fait — un rejet muet aurait l'air de ne rien faire (§12.3).
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   chargeConstellations,
   chargeEtoiles,
@@ -19,14 +19,24 @@ import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { Etoile } from '../data/catalog.ts'
 import {
   demandePersistance,
+  enregistreProfilActif,
   enregistreSiteActif,
   exporteDonneesUtilisateur,
   importeFichierUtilisateur,
   litPointsMasqueActif,
+  litProfilActif,
+  litSiteActif,
+  type ProfilAEnregistrer,
   type SiteAExporter,
 } from '../data/persistence.ts'
 import type { PointMasque } from '../core/site.ts'
-import { CRITERES_SCORING, type SaisiePoids } from './app-saisie.ts'
+import {
+  CRITERES_SCORING,
+  type DepartLieu,
+  type DepartMateriel,
+  type SaisiePoids,
+} from './app-saisie.ts'
+import { departLieu, departMateriel } from './saisie-persistee.ts'
 
 export interface Catalogues {
   readonly etat: EtatDemarrage | null
@@ -55,25 +65,170 @@ export function useCatalogues(): Catalogues {
   return { etat, objets, etoiles, constellations }
 }
 
+/** Ce que la relecture du démarrage rend à la saisie. */
+export interface SaisieRestauree {
+  readonly lieu: DepartLieu | null
+  readonly materiel: DepartMateriel | null
+  /** Renseigné quand la relecture a échoué : les écritures restent alors suspendues. */
+  readonly erreur: string | null
+}
+
+const RIEN_A_RESTAURER: SaisieRestauree = Object.freeze({
+  lieu: null,
+  materiel: null,
+  erreur: null,
+})
+
+/**
+ * §12.3 — la saisie enregistrée, relue avant le premier rendu.
+ *
+ * L'attente est volontaire : hydrater après coup ferait calculer la première image sur les
+ * valeurs par défaut, donc afficher une nuit qui n'est pas celle du site enregistré, avant
+ * de la remplacer. `null` tant que la relecture court.
+ *
+ * §12.5 — un navigateur sans IndexedDB n'a rien à restaurer, et l'application démarre
+ * quand même : attendre n'a de sens que là où il y a quelque chose à attendre.
+ */
+export function useSaisieRestauree(): SaisieRestauree | null {
+  const [restauree, setRestauree] = useState<SaisieRestauree | null>(() =>
+    typeof indexedDB === 'undefined' ? RIEN_A_RESTAURER : null,
+  )
+
+  useEffect(() => {
+    if (typeof indexedDB === 'undefined') return
+    void (async () => {
+      try {
+        const [site, profil] = await Promise.all([litSiteActif(), litProfilActif()])
+        setRestauree({ lieu: departLieu(site), materiel: departMateriel(profil), erreur: null })
+      } catch (erreur) {
+        // Ce qu'on n'a pas su lire ne doit surtout pas être écrasé : la saisie repart des
+        // valeurs par défaut, mais plus rien ne s'enregistre tant que la cause est là.
+        setRestauree({
+          lieu: null,
+          materiel: null,
+          erreur:
+            'Données enregistrées illisibles, la saisie repart des valeurs par défaut et ' +
+            'plus rien n’est enregistré, pour ne pas écraser ce qui n’a pas su être lu. ' +
+            'Exporter avant de continuer. ' +
+            (erreur instanceof Error ? erreur.message : 'Cause inconnue.'),
+        })
+      }
+    })()
+  }, [])
+
+  return restauree
+}
+
 export interface Persistance {
   readonly message: string | null
+  /** Vrai quand le message rapporte un échec : le tiroir fermé doit alors se signaler. */
+  readonly echec: boolean
   readonly surExport: () => void
   readonly surImport: (fichier: File) => void
 }
 
+/** Un message à l'écran, et s'il rapporte un échec ou un simple compte rendu. */
+interface Avis {
+  readonly texte: string
+  readonly echec: boolean
+}
+
+export interface EntreePersistance {
+  /** Le site tel qu'il s'enregistre ; `null` tant que la saisie n'est pas chiffrable. */
+  readonly site: SiteAExporter | null
+  readonly profil: ProfilAEnregistrer | null
+  readonly surMasqueImporte: (points: readonly PointMasque[]) => void
+  readonly poids: SaisiePoids
+  /** L'échec de relecture du démarrage, qui suspend les écritures. */
+  readonly erreurRestauration: string | null
+}
+
 /**
- * Le site n'est enregistré qu'au moment de l'export, pas à chaque frappe : c'est là que
- * l'utilisateur demande à protéger sa saisie, et l'échec y a un endroit pour s'afficher.
+ * §12.3 — ce que l'utilisateur saisit s'enregistre au fil de la saisie, pas au moment de
+ * l'export : entre deux exports, une éviction ou un simple rechargement détruisait tout ce
+ * qui vivait en mémoire — le lieu, le matériel, le masque relevé à la main.
  */
-export function usePersistance(
-  siteActif: SiteAExporter,
-  surMasqueImporte: (points: readonly PointMasque[]) => void,
-  poids: SaisiePoids,
-): Persistance {
-  const [message, setMessage] = useState<string | null>(null)
+export function usePersistance(entree: EntreePersistance): Persistance {
+  const { site, profil, poids, surMasqueImporte } = entree
+  const [avis, setAvis] = useState<Avis | null>(() =>
+    entree.erreurRestauration === null
+      ? null
+      : { texte: entree.erreurRestauration, echec: true },
+  )
+  const persistanceDemandee = useRef(false)
+  /**
+   * Un import remplace en base le lieu et le matériel, mais l'écran, lui, tient encore la
+   * saisie précédente : continuer à l'enregistrer réécrirait par-dessus ce qui vient d'être
+   * importé. Les écritures s'arrêtent donc jusqu'au rechargement, qui relit la base.
+   */
+  const [suspendues, setSuspendues] = useState(false)
+
+  /**
+   * §12.3 — la demande de mode persistant, une seule fois, après une première action utile :
+   * une demande non motivée au chargement est refusée par réflexe. Le résultat s'affiche,
+   * comme le critère d'acceptation l'exige.
+   */
+  async function demandeLaPersistanceUneFois(): Promise<void> {
+    if (persistanceDemandee.current) return
+    persistanceDemandee.current = true
+    const accorde = await demandePersistance()
+    setAvis({
+      texte: accorde
+        ? 'Stockage persistant accordé : les données résistent désormais à la pression disque.'
+        : 'Stockage persistant refusé. Installer l’application améliore les chances de l’obtenir ; ' +
+          'en attendant, conserver l’export.',
+      echec: false,
+    })
+  }
+
+  /**
+   * La valeur des enregistrements sert de clé d'effet : ils sont reconstruits à chaque rendu,
+   * et seul leur contenu doit déclencher une écriture.
+   *
+   * ponytail: une comparaison par sérialisation, dont le masque d'horizon fait 360 nombres.
+   * C'est négligeable devant la chaîne de calcul que le même rendu vient de traverser ; le
+   * jour où ça compte, c'est une signature du masque qu'il faut, pas un débounce — écrire
+   * moins souvent, c'est perdre les dernières frappes.
+   */
+  const aEcrire =
+    entree.erreurRestauration === null && !suspendues ? JSON.stringify({ site, profil }) : null
+
+  /**
+   * L'état du démarrage : il sort de la base, ou n'a pas encore été saisi. Tant que rien ne
+   * s'en écarte, il n'y a rien à écrire — et surtout rien qui justifie de demander le mode
+   * persistant, qu'une demande au chargement fait refuser par réflexe (§12.3).
+   */
+  const auDepart = useRef(aEcrire)
+
+  useEffect(() => {
+    if (aEcrire === null || aEcrire === auDepart.current) return
+    if (site === null && profil === null) return
+    void (async () => {
+      try {
+        if (site !== null) await enregistreSiteActif(site)
+        if (profil !== null) await enregistreProfilActif(profil)
+        // La saisie enregistrée EST la première action utile : c'est elle qu'une éviction
+        // détruirait, pas l'export qui viendra peut-être.
+        await demandeLaPersistanceUneFois()
+      } catch (erreur) {
+        setAvis({
+          texte:
+            'Enregistrement impossible : la saisie n’est pour l’instant qu’en mémoire et ' +
+            'disparaîtra au rechargement. Exporter pour ne rien perdre. ' +
+            (erreur instanceof Error ? erreur.message : 'Cause inconnue.'),
+          echec: true,
+        })
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aEcrire])
 
   async function exporte(): Promise<void> {
-    await enregistreSiteActif(siteActif)
+    // Même raison qu'au fil de la saisie : après un import, l'écran n'est plus la référence.
+    if (!suspendues) {
+      if (site !== null) await enregistreSiteActif(site)
+      if (profil !== null) await enregistreProfilActif(profil)
+    }
     const donnees = await exporteDonneesUtilisateur(poids.poids)
     const blob = new Blob([JSON.stringify(donnees, null, 2)], { type: 'application/json' })
     const lien = document.createElement('a')
@@ -81,14 +236,8 @@ export function usePersistance(
     lien.download = `astrofort-${donnees.exporteLe.slice(0, 10)}.json`
     lien.click()
     URL.revokeObjectURL(lien.href)
-    // Première action utile accomplie : c'est le moment de demander la persistance (§12.3).
-    const accorde = await demandePersistance()
-    setMessage(
-      accorde
-        ? 'Stockage persistant accordé : les données résistent désormais à la pression disque.'
-        : 'Stockage persistant refusé. Installer l’application améliore les chances de l’obtenir ; ' +
-            'en attendant, conserver l’export.',
-    )
+    setAvis({ texte: `Export écrit dans ${lien.download}.`, echec: false })
+    await demandeLaPersistanceUneFois()
   }
 
   async function importe(fichier: File): Promise<void> {
@@ -103,18 +252,28 @@ export function usePersistance(
       if (poidsImportes !== null) {
         for (const critere of CRITERES_SCORING) poids.surPoids(critere, poidsImportes[critere])
       }
-      setMessage('Import terminé : les sites, profils et plans ont été restaurés.')
+      setSuspendues(true)
+      setAvis({
+        texte:
+          'Import terminé : les sites, profils et plans ont été restaurés. Recharger la page ' +
+          'pour repartir du lieu et du matériel importés — d’ici là, la saisie à l’écran n’est ' +
+          'plus enregistrée, pour ne pas réécrire par-dessus l’import.',
+        echec: false,
+      })
     } catch (erreur) {
-      setMessage(
-        erreur instanceof Error
-          ? `Import abandonné, rien n’a été modifié. ${erreur.message}`
-          : 'Import abandonné, rien n’a été modifié : cause inconnue.',
-      )
+      setAvis({
+        texte:
+          erreur instanceof Error
+            ? `Import abandonné, rien n’a été modifié. ${erreur.message}`
+            : 'Import abandonné, rien n’a été modifié : cause inconnue.',
+        echec: true,
+      })
     }
   }
 
   return {
-    message,
+    message: avis?.texte ?? null,
+    echec: avis?.echec ?? false,
     surExport: () => void exporte(),
     surImport: (fichier) => void importe(fichier),
   }

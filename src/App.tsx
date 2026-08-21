@@ -21,7 +21,13 @@ import { ouvreCible, useSeance } from './ui/seance-etat.ts'
 import { BarreHaut } from './ui/BarreHaut.tsx'
 import { RegionSeance } from './ui/RegionSeance.tsx'
 import { useSaisieLieu, useSaisieMateriel, useSaisiePoids } from './ui/app-saisie.ts'
-import { useCatalogues, usePersistance } from './ui/app-donnees.ts'
+import {
+  useCatalogues,
+  usePersistance,
+  useSaisieRestauree,
+  type SaisieRestauree,
+} from './ui/app-donnees.ts'
+import { profilAEnregistrer, siteAEnregistrer } from './ui/saisie-persistee.ts'
 import { useChaineCalcul } from './ui/app-calcul.ts'
 import {
   appliqueModeNuit,
@@ -59,10 +65,21 @@ function useModeNuit(debutNautique: Date | null): [EtatModeNuit, (etat: EtatMode
   return [modeNuit, setModeNuit]
 }
 
+/**
+ * §12.3 — la saisie enregistrée se relit avant tout le reste. L'application n'a qu'un lieu et
+ * qu'un matériel : les monter sur les valeurs par défaut pour les remplacer ensuite ferait
+ * calculer, afficher puis jeter une nuit qui n'est pas celle du site enregistré.
+ */
 export function App() {
+  const restauree = useSaisieRestauree()
+  if (restauree === null) return <p className="etat">Lecture des données enregistrées…</p>
+  return <AppPrete restauree={restauree} />
+}
+
+function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
   const [niveau, setNiveau] = useState<NiveauUtilisateur>('DEBUTANT')
-  const lieu = useSaisieLieu()
-  const materiel = useSaisieMateriel()
+  const lieu = useSaisieLieu(restauree.lieu)
+  const materiel = useSaisieMateriel(restauree.materiel)
   const poids = useSaisiePoids()
   const catalogues = useCatalogues()
   // §12.5 — l'état affiché suit les bascules, il n'est pas figé au démarrage.
@@ -84,12 +101,15 @@ export function App() {
   const { calcul } = chaine
   const [modeNuit, setModeNuit] = useModeNuit(calcul.ok ? calcul.nuit.debutNautique : null)
 
-  // §12.3 — l'export emporte le site tel qu'il est saisi, masque d'horizon relevé compris.
-  const persistance = usePersistance(
-    { ...chaine.site, masque: chaine.masque, pointsMasque: lieu.pointsMasque },
-    lieu.surPointsMasque,
+  // §12.3 — le lieu et le matériel s'enregistrent au fil de la saisie, masque d'horizon
+  // relevé compris, et l'export les emporte tels qu'ils sont à l'écran.
+  const persistance = usePersistance({
+    site: siteAEnregistrer(lieu, chaine.masque),
+    profil: profilAEnregistrer(materiel),
+    surMasqueImporte: lieu.surPointsMasque,
     poids,
-  )
+    erreurRestauration: restauree.erreur,
+  })
 
   const gaia = catalogues.etat === null ? false : gaiaCharge(catalogues.etat.catalogues)
   const mLimOeil = calcul.ok ? calcul.ciel.mLimOeil.value : null

@@ -20,6 +20,8 @@ export interface VerificationProps {
   readonly etat: EtatDemarrage | null
   readonly modeReseau: string
   readonly messagePersistance: string | null
+  /** §12.3 — une écriture perdue ne doit pas rester cachée dans un tiroir fermé. */
+  readonly echecPersistance: boolean
   readonly surExport: () => void
   readonly surImport: (fichier: File) => void
 }
@@ -28,8 +30,11 @@ export function Verification(props: VerificationProps) {
   const { etat } = props
 
   return (
-    <details className="tiroir tiroir-verification">
-      <summary>Vérification</summary>
+    <details className="tiroir tiroir-verification" data-alerte={props.echecPersistance}>
+      {/* T-0041 — le libellé porte l'alerte en mots : le rouge ne l'annonce jamais seul (§11.1). */}
+      <summary>
+        {props.echecPersistance ? 'Vérification — données non enregistrées' : 'Vérification'}
+      </summary>
       <div className="tiroir-contenu">
         <section>
           <h2>État du socle</h2>
@@ -73,7 +78,9 @@ export function Verification(props: VerificationProps) {
             </label>
           </div>
           {props.messagePersistance !== null && (
-            <p className="cause">{props.messagePersistance}</p>
+            <p className={props.echecPersistance ? 'cause' : 'etat'}>
+              {props.messagePersistance}
+            </p>
           )}
         </section>
 

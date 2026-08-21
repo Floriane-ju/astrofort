@@ -341,16 +341,25 @@ export async function importeDonneesUtilisateur(donnees: unknown): Promise<Poids
  */
 export const ID_SITE_ACTIF = 'site-actif'
 
+/** §5.1 — un seul profil matériel actif, pour la même raison qu'un seul site. */
+export const ID_PROFIL_ACTIF = 'profil-actif'
+
 export interface SiteAExporter {
   readonly latitudeDeg: number
   readonly longitudeDeg: number
   readonly altitudeM: number
+  /** §4.1 — le ciel déclaré, Bortle ou SQM. Absent quand la saisie ne le donne pas. */
+  readonly bortleDeclare?: number
+  readonly sqmMesure?: number
   readonly masque: MasqueHorizon
   readonly pointsMasque: readonly PointMasque[]
 }
 
+/** Le profil matériel de la séance sans son identité : elle est fixée à l'écriture. */
+export type ProfilAEnregistrer = Omit<ProfilMateriel, 'id' | 'nom'>
+
 /**
- * Écrit le site de la séance avant un export : sans cela, le masque relevé à la main vivrait
+ * Écrit le site de la séance dès qu'il change : sans cela, le masque relevé à la main vivrait
  * en mémoire et disparaîtrait avec l'onglet, alors que c'est exactement le genre de donnée
  * que §12.3 doit protéger — elle ne se retélécharge pas.
  *
@@ -367,6 +376,8 @@ export async function enregistreSiteActif(site: SiteAExporter): Promise<void> {
     longitudeDeg: site.longitudeDeg,
     altitudeM: site.altitudeM,
     fuseau: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    ...(site.bortleDeclare === undefined ? {} : { bortleDeclare: site.bortleDeclare }),
+    ...(site.sqmMesure === undefined ? {} : { sqmMesure: site.sqmMesure }),
     masqueHorizon: [...site.masque.altitudesDeg],
     masqueEstHypothese: site.masque.estHypothese,
     masquePoints: [...site.pointsMasque],
@@ -374,8 +385,30 @@ export async function enregistreSiteActif(site: SiteAExporter): Promise<void> {
   await (await db()).put('sites', enregistrement)
 }
 
+/**
+ * Écrit le profil matériel de la séance. Même motif que le site : les grandeurs d'un boîtier
+ * saisi à la main ne se retéléchargent pas, et sans elles un profil réimporté décrirait le
+ * capteur d'un autre appareil (§12.3).
+ */
+export async function enregistreProfilActif(profil: ProfilAEnregistrer): Promise<void> {
+  await (await db()).put('profils', {
+    id: ID_PROFIL_ACTIF,
+    nom: 'Matériel de la séance',
+    ...profil,
+  })
+}
+
+/** Le site actif tel qu'il a été enregistré, ou `null` au premier démarrage. */
+export async function litSiteActif(): Promise<SiteEnregistre | null> {
+  return (await (await db()).get('sites', ID_SITE_ACTIF)) ?? null
+}
+
+/** Le profil actif tel qu'il a été enregistré, ou `null` au premier démarrage. */
+export async function litProfilActif(): Promise<ProfilMateriel | null> {
+  return (await (await db()).get('profils', ID_PROFIL_ACTIF)) ?? null
+}
+
 /** Les relevés du site actif, tels qu'un import vient de les restaurer. */
 export async function litPointsMasqueActif(): Promise<readonly PointMasque[]> {
-  const site = await (await db()).get('sites', ID_SITE_ACTIF)
-  return site?.masquePoints ?? []
+  return (await litSiteActif())?.masquePoints ?? []
 }
