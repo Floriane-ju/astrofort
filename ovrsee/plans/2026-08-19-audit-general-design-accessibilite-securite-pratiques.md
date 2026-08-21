@@ -30,6 +30,11 @@
         "src/ui/styles.css",
         "tests/mode-nuit.test.tsx"
       ]
+    },
+    {
+      "sha": "b874126",
+      "date": "2026-08-21",
+      "files": []
     }
   ]
 }
