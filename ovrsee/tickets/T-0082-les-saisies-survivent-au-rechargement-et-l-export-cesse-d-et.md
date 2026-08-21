@@ -2,7 +2,7 @@
 {
   "id": "T-0082",
   "titre": "Les saisies survivent au rechargement, et l'export cesse d'être vide",
-  "colonne": "pret",
+  "colonne": "fait",
   "priorite": "haute",
   "epic": "T-0079",
   "tags": [
@@ -11,7 +11,7 @@
     "donnees"
   ],
   "cree": "2026-08-19",
-  "maj": "2026-08-19",
+  "maj": "2026-08-21",
   "plan": null
 }
 ---
@@ -36,14 +36,25 @@ version ultérieure du PRD.
 
 ## Critères d'acceptation
 
-- [ ] Le site saisi (coordonnées, altitude, Bortle ou SQM, masque) est écrit dans le magasin
+- [x] Le site saisi (coordonnées, altitude, Bortle ou SQM, masque) est écrit dans le magasin
       `sites` et rechargé au démarrage.
-- [ ] Le profil matériel saisi est écrit dans `profils` et rechargé au démarrage.
-- [ ] Un rechargement de la page retrouve l'état de saisie, sans repasser par les valeurs
+- [x] Le profil matériel saisi est écrit dans `profils` et rechargé au démarrage.
+- [x] Un rechargement de la page retrouve l'état de saisie, sans repasser par les valeurs
       par défaut.
-- [ ] L'export contient ce site et ce profil ; son réimport les restaure à l'identique.
-- [ ] La demande de stockage persistant reste posée après une première action utile, pas au
+- [x] L'export contient ce site et ce profil ; son réimport les restaure à l'identique.
+- [x] La demande de stockage persistant reste posée après une première action utile, pas au
       chargement (§12.3).
-- [ ] Une écriture qui échoue le dit à l'écran plutôt que de perdre la saisie en silence.
-- [ ] Le critère de §2.1 est tenu ou explicitement écarté dans le ticket : un plan enregistré
+- [x] Une écriture qui échoue le dit à l'écran plutôt que de perdre la saisie en silence.
+- [x] Le critère de §2.1 est tenu ou explicitement écarté dans le ticket : un plan enregistré
       est recalculé après une mise à jour du registre, jamais servi avec les anciennes valeurs.
+
+## Arbitrage du critère §2.1 — écarté, et pourquoi
+
+Rien ici n'enregistre de plan : le magasin `plans` reste écrit par le seul réimport. Ce
+ticket ne persiste que des **entrées** — coordonnées, ciel déclaré, masque relevé, grandeurs
+du boîtier — jamais une sortie calculée. Chaque démarrage les repasse dans les moteurs, donc
+aucun résultat obtenu sous d'anciennes constantes ne peut être resservi.
+
+Le critère « un plan enregistré est recalculé après une mise à jour du registre » reste donc
+entier, et appartient au ticket qui enregistrera un plan : c'est lui qui devra comparer
+`versionRegistre` (déjà au schéma, `src/data/db.ts`) à la version du registre au démarrage.

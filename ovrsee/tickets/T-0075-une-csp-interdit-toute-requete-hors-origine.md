@@ -2,7 +2,7 @@
 {
   "id": "T-0075",
   "titre": "Une CSP interdit toute requête hors origine",
-  "colonne": "a-specifier",
+  "colonne": "pret",
   "priorite": "moyenne",
   "charge": "m",
   "tags": [
@@ -11,7 +11,7 @@
     "pwa"
   ],
   "cree": "2026-08-19",
-  "maj": "2026-08-19",
+  "maj": "2026-08-21",
   "epic": "T-0074",
   "plan": "2026-08-19-audit-general-design-accessibilite-securite-pratiques.md"
 }

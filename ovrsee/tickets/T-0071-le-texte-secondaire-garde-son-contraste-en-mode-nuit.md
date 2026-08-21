@@ -2,7 +2,7 @@
 {
   "id": "T-0071",
   "titre": "Le texte secondaire garde son contraste en mode nuit",
-  "colonne": "a-specifier",
+  "colonne": "pret",
   "priorite": "moyenne",
   "charge": "m",
   "tags": [
@@ -12,7 +12,7 @@
     "design"
   ],
   "cree": "2026-08-19",
-  "maj": "2026-08-19",
+  "maj": "2026-08-21",
   "epic": "T-0067",
   "plan": "2026-08-19-audit-general-design-accessibilite-securite-pratiques.md"
 }

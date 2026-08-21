@@ -2,7 +2,7 @@
 {
   "id": "T-0078",
   "titre": "Le point d'explication de la fiche cible porte son type",
-  "colonne": "a-specifier",
+  "colonne": "pret",
   "priorite": "basse",
   "charge": "s",
   "tags": [
@@ -10,7 +10,7 @@
     "qualite"
   ],
   "cree": "2026-08-19",
-  "maj": "2026-08-19",
+  "maj": "2026-08-21",
   "plan": "2026-08-19-audit-general-design-accessibilite-securite-pratiques.md"
 }
 ---

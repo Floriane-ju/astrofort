@@ -71,6 +71,7 @@ export function BarreHaut(props: BarreHautProps) {
         etat={props.etat}
         modeReseau={props.modeReseau}
         messagePersistance={props.persistance.message}
+        echecPersistance={props.persistance.echec}
         surExport={props.persistance.surExport}
         surImport={props.persistance.surImport}
       />

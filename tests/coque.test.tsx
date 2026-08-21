@@ -432,7 +432,9 @@ describe('T-0041 — le bouton du menu dit qu’il a quelque chose à lire', () 
   })
 
   it('ne fait pas porter le signalement par la seule couleur', () => {
-    const debut = CSS.indexOf(".tiroir-infos[data-alerte='true'] > summary {")
+    // La règle vaut pour tout tiroir qui s'alerte — le menu d'information comme le tiroir
+    // de vérification, dont T-0082 signale une écriture perdue.
+    const debut = CSS.indexOf(".tiroir[data-alerte='true'] > summary {")
     expect(debut).toBeGreaterThan(-1)
     const corps = CSS.slice(debut, CSS.indexOf('}', debut))
     // La graisse et la bordure changent aussi : le rouge du mode nuit ne dit rien seul.
