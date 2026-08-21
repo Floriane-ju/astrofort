@@ -4,7 +4,52 @@
   "title": "Le fond du ciel montre la pollution lumineuse — 5 tickets ovrsee",
   "opened": "2026-08-21",
   "closed": null,
-  "commits": []
+  "commits": [
+    {
+      "sha": "dd0680c",
+      "date": "2026-08-21",
+      "files": [
+        "scripts/bench-ciel.ts",
+        "scripts/bench-incrustation.ts",
+        "src/App.tsx",
+        "src/core/fond-ciel-rendu.ts",
+        "src/core/moon.ts",
+        "src/core/projection.ts",
+        "src/core/sol.ts",
+        "src/registry/bortle.ts",
+        "src/registry/constants.ts",
+        "src/registry/formulas.ts",
+        "src/ui/BarreHaut.tsx",
+        "src/ui/MenuInfos.tsx",
+        "src/ui/PanneauExplorer.tsx",
+        "src/ui/Planetarium.tsx",
+        "src/ui/RegionSeance.tsx",
+        "src/ui/balayage-ecran.ts",
+        "src/ui/couleurs.ts",
+        "src/ui/dessine-champ.ts",
+        "src/ui/dessine-ciel.ts",
+        "src/ui/dessine-fond-ciel.ts",
+        "src/ui/dessine-sol.ts",
+        "src/ui/planetarium-boucle.ts",
+        "src/ui/planetarium-incrustation.ts",
+        "src/ui/scene-overlay.ts",
+        "tests/cadre.test.ts",
+        "tests/coque.test.tsx",
+        "tests/dessine-ciel.test.ts",
+        "tests/fond-ciel.test.ts",
+        "tests/previsu-champ.test.tsx",
+        "tests/projection.test.ts",
+        "tests/scene-etat.test.ts"
+      ]
+    },
+    {
+      "sha": "2c26788",
+      "date": "2026-08-21",
+      "files": [
+        "tests/plan-session.test.ts"
+      ]
+    }
+  ]
 }
 ---
 
