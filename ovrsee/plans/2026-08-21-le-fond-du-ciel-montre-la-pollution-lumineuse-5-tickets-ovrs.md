@@ -48,6 +48,11 @@
       "files": [
         "tests/plan-session.test.ts"
       ]
+    },
+    {
+      "sha": "73a3876",
+      "date": "2026-08-21",
+      "files": []
     }
   ]
 }

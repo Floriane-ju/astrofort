@@ -1,9 +1,9 @@
 ---
 {
-  "status": "open",
+  "status": "closed",
   "title": "Masquer le ciel sous l'horizon — couche « Sol »",
   "opened": "2026-08-21",
-  "closed": null,
+  "closed": "2026-08-21",
   "commits": [
     {
       "sha": "521ff95",

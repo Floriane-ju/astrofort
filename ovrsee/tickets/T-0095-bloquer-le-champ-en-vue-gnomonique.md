@@ -2,7 +2,7 @@
 {
   "id": "T-0095",
   "titre": "Bloquer le champ en vue gnomonique",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "tags": ["planetarium", "projection"],
   "cree": "2026-08-21",
