@@ -60,7 +60,7 @@ export function PanneauExplorer(props: PanneauExplorerProps) {
   const { modeTemps, facteur, pas } = temps
   const { couches, vueRealiste } = rendu
 
-  const bornes = bornesZoom(props.gaiaCharge)
+  const bornes = bornesZoom(props.gaiaCharge, mode)
   const profondeur = etatProfondeur(fovDeg, props.profondeurMag, props.mLimOeil, vueRealiste)
   const reglage = reglageVitesse(facteur, vue.largeurPx, fovDeg)
 

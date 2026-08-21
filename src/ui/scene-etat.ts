@@ -14,7 +14,7 @@
 
 import { useCallback, useSyncExternalStore } from 'react'
 import { K } from '../registry/constants.ts'
-import type { ModeProjection, Vue } from '../core/projection.ts'
+import { fovMaxSelonMode, type ModeProjection, type Vue } from '../core/projection.ts'
 import type { ModeTemps, PasAstronomique } from '../core/curseur-temps.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
@@ -223,8 +223,21 @@ function pose(suivant: EtatScene): void {
   for (const notifie of abonnes) notifie()
 }
 
+/**
+ * T-0095 — le champ est ramené sous le plafond de sa projection à l'écriture, pas au rendu.
+ *
+ * C'est le seul passage obligé : la molette, le pincement, les touches, le curseur du panneau
+ * et le changement de projection écrivent tous ici. Poser la borne ailleurs laisserait le cas
+ * qui l'a motivée — on regarde 180° en stéréographique, on bascule en gnomonique — sortir par
+ * un chemin qui ne borne que le champ, jamais le mode.
+ */
 export function majVue(retouche: Retouche<VueScene>): void {
-  pose({ ...etat, vue: applique(etat.vue, retouche) })
+  const vue = applique(etat.vue, retouche)
+  const fovMaxDeg = fovMaxSelonMode(vue.mode)
+  pose({
+    ...etat,
+    vue: vue.fovDeg <= fovMaxDeg ? vue : { ...vue, fovDeg: fovMaxDeg },
+  })
 }
 
 export function majTemps(retouche: Retouche<TempsScene>): void {

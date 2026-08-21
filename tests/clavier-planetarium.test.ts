@@ -38,7 +38,7 @@ const M31: ObjetCielProfond = {
 }
 
 /** Sans le paquet Gaia : les bornes que la molette applique déjà (§3.3). */
-const BORNES = bornesZoom(false)
+const BORNES = bornesZoom(false, 'MODE_PLANETARIUM')
 const FRACTION = K('PAS_VISEE_CLAVIER_FRACTION')
 
 function vue(retouche: Partial<VueScene> = {}): VueScene {

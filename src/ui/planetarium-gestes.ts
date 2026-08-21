@@ -239,8 +239,9 @@ export function useGestesZoom(
     const brut = canevas.current
     if (brut === null) return
     const cible: HTMLCanvasElement = brut
-    const bornes = bornesZoom(gaiaCharge)
-    const borne = (fov: number): number => fovBorne(fov, bornes)
+    // Les bornes sont relues à chaque geste, pas capturées : le plafond dépend de la
+    // projection courante (T-0095), et la projection change sans démonter l'écouteur.
+    const borne = (v: VueScene, fov: number): number => fovBorne(fov, bornesZoom(gaiaCharge, v.mode))
 
     function surMolette(e: WheelEvent): void {
       e.preventDefault()
@@ -258,7 +259,7 @@ export function useGestesZoom(
         })
         return
       }
-      majVue((v) => ({ fovDeg: borne(v.fovDeg * facteurZoom(e.deltaY, source === 'PINCEMENT')) }))
+      majVue((v) => ({ fovDeg: borne(v, v.fovDeg * facteurZoom(e.deltaY, source === 'PINCEMENT')) }))
     }
 
     // Safari : `scale` est cumulée depuis le début du geste, on n'en garde que la variation.
@@ -273,7 +274,7 @@ export function useGestesZoom(
       if (!Number.isFinite(echelle) || echelle <= 0) return
       const facteur = echelleGeste / echelle
       echelleGeste = echelle
-      majVue((v) => ({ fovDeg: borne(v.fovDeg * facteur) }))
+      majVue((v) => ({ fovDeg: borne(v, v.fovDeg * facteur) }))
     }
     function surGesteFin(e: Event): void {
       e.preventDefault()
@@ -408,7 +409,6 @@ export function usePilotageClavier(entree: {
   readonly surSelectionObjet: (objet: ObjetCielProfond) => void
 }): { readonly onKeyDown: (e: React.KeyboardEvent<HTMLCanvasElement>) => void } {
   const { largeurPx, hauteurPx, gaiaCharge, cibles, surSelectionObjet } = entree
-  const bornes = bornesZoom(gaiaCharge)
 
   return {
     onKeyDown(e: React.KeyboardEvent<HTMLCanvasElement>): void {
@@ -427,7 +427,7 @@ export function usePilotageClavier(entree: {
         )
         return
       }
-      majVue((v) => viseeApresCommande(v, commande, bornes))
+      majVue((v) => viseeApresCommande(v, commande, bornesZoom(gaiaCharge, v.mode)))
     },
   }
 }

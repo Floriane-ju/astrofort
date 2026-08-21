@@ -274,9 +274,21 @@ export interface BornesZoom {
   readonly cause?: string
 }
 
+/**
+ * T-0095 — le plafond de champ appartient à la projection, pas à la vue.
+ *
+ * En gnomonique, R = tan(θ) : l'échelle pixel est (largeur/2) / R(fov/2), donc elle tend vers
+ * zéro quand fov tend vers 180° et tout le ciel s'effondre sur le pixel central. Rien ne
+ * plante — c'est exactement ce qui rend le défaut coûteux. Stéréographique (2·tan(θ/2)) et
+ * équidistante (θ) restent finies à 180° et gardent le plafond de §3.3.
+ */
+export function fovMaxSelonMode(mode: ModeProjection): number {
+  return mode === 'MODE_CADRE' ? K('FOV_MAX_GNOMONIQUE_DEG') : K('FOV_MAX_DEG')
+}
+
 /** §3.3 — sans le paquet Gaia, l'application plafonne à 15° de champ et le déclare. */
-export function bornesZoom(gaiaCharge: boolean): BornesZoom {
-  const fovMaxDeg = K('FOV_MAX_DEG')
+export function bornesZoom(gaiaCharge: boolean, mode: ModeProjection): BornesZoom {
+  const fovMaxDeg = fovMaxSelonMode(mode)
   if (gaiaCharge) return { fovMinDeg: K('FOV_MIN_AVEC_GAIA_DEG'), fovMaxDeg }
   return {
     fovMinDeg: K('FOV_MIN_SANS_GAIA_DEG'),

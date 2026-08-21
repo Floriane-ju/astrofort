@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest'
 import {
   bornesZoom,
   echelleProjection,
+  fovMaxSelonMode,
   etatProfondeur,
   magnitudeLimite,
   magnitudeRendue,
@@ -216,12 +217,37 @@ describe('profondeur asservie au zoom §3.3', () => {
   })
 
   it('plafonne le zoom à 15° sans le paquet Gaia, et le déclare', () => {
-    const sans = bornesZoom(false)
+    const sans = bornesZoom(false, 'MODE_PLANETARIUM')
     expect(sans.fovMinDeg).toBe(K('FOV_MIN_SANS_GAIA_DEG'))
     expect(sans.cause).toMatch(/12 Mo/)
-    const avec = bornesZoom(true)
+    const avec = bornesZoom(true, 'MODE_PLANETARIUM')
     expect(avec.fovMinDeg).toBe(K('FOV_MIN_AVEC_GAIA_DEG'))
     expect(avec.cause).toBeUndefined()
+  })
+
+  it('plafonne le champ de la gnomonique et laisse les autres projections à 180°', () => {
+    expect(fovMaxSelonMode('MODE_CADRE')).toBe(K('FOV_MAX_GNOMONIQUE_DEG'))
+    expect(fovMaxSelonMode('MODE_PLANETARIUM')).toBe(K('FOV_MAX_DEG'))
+    expect(fovMaxSelonMode('MODE_FISHEYE')).toBe(K('FOV_MAX_DEG'))
+    // Le plancher lié au catalogue et le plafond lié à la projection sont indépendants : le
+    // paquet Gaia ne change pas ce que tan(θ) fait au bord du champ.
+    expect(bornesZoom(true, 'MODE_CADRE').fovMaxDeg).toBe(K('FOV_MAX_GNOMONIQUE_DEG'))
+    expect(bornesZoom(false, 'MODE_CADRE').fovMaxDeg).toBe(K('FOV_MAX_GNOMONIQUE_DEG'))
+  })
+
+  it('garde une échelle utilisable au plafond gnomonique, là où 180° effondre la scène', () => {
+    // R(θ) = tan(θ) et l'échelle vaut (largeur / 2) / R(fov / 2). Au plafond elle est du même
+    // ordre que la demi-largeur du canevas ; à 180° elle s'annule à la précision machine et
+    // toutes les étoiles tombent sur le pixel central — rien ne plante, tout disparaît.
+    const auPlafond = echelleProjection(vue('MODE_CADRE', K('FOV_MAX_GNOMONIQUE_DEG')))
+    const a180 = echelleProjection(vue('MODE_CADRE', K('FOV_MAX_DEG')))
+    expect(auPlafond).toBeGreaterThan(1)
+    expect(a180).toBeLessThan(auPlafond * 1e-9)
+    // Les deux projections que le plafond de §3.3 conserve gardent, elles, une échelle du même
+    // ordre de grandeur : ni 2·tan(θ/2) ni θ ne divergent à 90°.
+    for (const mode of ['MODE_PLANETARIUM', 'MODE_FISHEYE'] as const) {
+      expect(echelleProjection(vue(mode, K('FOV_MAX_DEG')))).toBeGreaterThan(auPlafond * 1e-9)
+    }
   })
 
   it('refuse un point projeté hors de portée, singularité comprise', () => {

@@ -144,6 +144,36 @@ describe('§5.1 — le type d’objectif pilote la projection de la scène', () 
   })
 })
 
+describe('T-0095 — le champ ne survit pas au passage en gnomonique', () => {
+  beforeEach(() => {
+    reinitialiseScene()
+  })
+
+  it('ramène le champ sous le plafond de la projection choisie', () => {
+    majVue({ mode: 'MODE_PLANETARIUM', fovDeg: K('FOV_MAX_DEG') })
+    expect(etatScene().vue.fovDeg).toBe(K('FOV_MAX_DEG'))
+    // Le geste que le ticket décrit : on regardait tout le ciel, on passe à la projection de
+    // l'objectif. Sans borne, l'échelle s'annule et le ciel s'effondre sur le pixel central.
+    majVue({ mode: 'MODE_CADRE' })
+    expect(etatScene().vue.fovDeg).toBe(K('FOV_MAX_GNOMONIQUE_DEG'))
+    // Le retour en stéréographique ne rend pas le champ perdu : la borne descend, elle ne
+    // remonte pas. Rouvrir le champ est un geste de zoom, pas un effet de bord du menu.
+    majVue({ mode: 'MODE_PLANETARIUM' })
+    expect(etatScene().vue.fovDeg).toBe(K('FOV_MAX_GNOMONIQUE_DEG'))
+  })
+
+  it('laisse le champ maximal aux projections qui ne divergent pas', () => {
+    majVue({ mode: 'MODE_FISHEYE', fovDeg: K('FOV_MAX_DEG') })
+    expect(etatScene().vue.fovDeg).toBe(K('FOV_MAX_DEG'))
+  })
+
+  it('borne aussi une écriture directe du champ, pas seulement le changement de projection', () => {
+    majVue({ mode: 'MODE_CADRE' })
+    majVue({ fovDeg: K('FOV_MAX_DEG') })
+    expect(etatScene().vue.fovDeg).toBe(K('FOV_MAX_GNOMONIQUE_DEG'))
+  })
+})
+
 describe('T-0056 — s’abonner à une tranche, pas au magasin entier', () => {
   beforeEach(() => {
     reinitialiseScene()

@@ -1041,6 +1041,22 @@ const RENDU = {
     ordreDeGrandeur: false,
     sections: ['3.3'],
   }),
+  FOV_MAX_GNOMONIQUE_DEG: entree({
+    ref: 'C-26',
+    libelle: 'Champ maximal en projection gnomonique',
+    valeur: 150,
+    unite: '°',
+    source:
+      '§3.3 — convention produit : R = tan(θ) diverge à θ = 90°, donc à 180° de champ. ' +
+      'À 150°, le bord est étiré 14,9 fois par rapport au centre (1/cos²(θ)) et la scène ' +
+      'reste lisible ; à 160° l’étirement passe à 33, à 179° à 13 000, et à 180° l’échelle ' +
+      'tombe à zéro — tout le ciel s’effondre sur le pixel central.',
+    tolerance:
+      'convention produit — pilote le confort d’une vue, jamais un verdict. La projection ' +
+      'stéréographique et l’équidistante gardent 180° : ni 2·tan(θ/2) ni θ ne divergent.',
+    ordreDeGrandeur: false,
+    sections: ['3.3'],
+  }),
   FACTEUR_ZOOM_CRAN: entree({
     ref: 'C-26',
     libelle: 'Facteur de champ d’un cran de zoom — molette ou touche',
