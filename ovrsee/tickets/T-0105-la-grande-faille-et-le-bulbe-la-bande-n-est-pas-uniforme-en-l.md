@@ -3,7 +3,7 @@
   "id": "T-0105",
   "titre": "Le bulbe : la bande n'est pas uniforme en longitude",
   "epic": "T-0101",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "basse",
   "charge": "m",
   "tags": [
