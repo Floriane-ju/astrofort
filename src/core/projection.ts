@@ -113,6 +113,22 @@ export function echelleProjection(vue: Vue): number {
   return vue.largeurPx / 2 / rayonProjete(vue.mode, (vue.fovDeg / 2) * DEG)
 }
 
+/**
+ * Portée utile d'un point projeté, en diagonales de canevas.
+ *
+ * Au-delà, une position n'est plus une position : c'est le voisinage de la singularité de la
+ * projection, où le facteur radial diverge. Deux sommets voisins d'une polyligne s'y retrouvent
+ * à des dizaines de milliers de pixels de part et d'autre du canevas, et la corde qui les relie
+ * TRAVERSE l'image — une droite fantôme en travers du ciel, un maillage qui recouvre ce qu'il
+ * devait border. Ces points sont donc déclarés non projetables, au même titre que ceux que la
+ * formule refuse : ils sont hors du champ affiché de plusieurs écrans, et rien de ce qui s'y
+ * appuie n'était visible autrement que par accident.
+ */
+/** Portée utile, en pixels, pour une vue donnée. */
+export function porteeUtilePx(vue: Vue): number {
+  return K('PORTEE_PROJECTION_DIAGONALES') * Math.hypot(vue.largeurPx, vue.hauteurPx)
+}
+
 export interface Projecteur {
   readonly vue: Vue
   /** J2000 équatorial → repère de la vue. Une seule matrice pour toute l'image (§3.1). */
@@ -143,6 +159,9 @@ export function projecteur(vue: Vue, matriceCiel: Mat3): Projecteur {
   const centreX = vue.largeurPx / 2
   const centreY = vue.hauteurPx / 2
   const mode = vue.mode
+  // Comparée au carré : une racine par étoile pour une borne, alors que la borne se compare
+  // aussi bien au carré (T-0065).
+  const porteeCarree = porteeUtilePx(vue) ** 2
 
   // Fermeture nommée plutôt que méthode : `projette` l'appelle sans passer par `this`, et
   // un projecteur déstructuré garde donc le même comportement.
@@ -171,8 +190,11 @@ export function projecteur(vue: Vue, matriceCiel: Mat3): Projecteur {
       }
       facteur = Math.atan2(s, z) / s
     }
-    out.xPx = centreX + k * facteur * x
-    out.yPx = centreY - k * facteur * y
+    const xPx = centreX + k * facteur * x
+    const yPx = centreY - k * facteur * y
+    if ((xPx - centreX) ** 2 + (yPx - centreY) ** 2 > porteeCarree) return false
+    out.xPx = xPx
+    out.yPx = yPx
     out.thetaDeg = Math.atan2(Math.hypot(x, y), z) / DEG
     return true
   }

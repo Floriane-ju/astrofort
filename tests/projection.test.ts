@@ -16,6 +16,7 @@ import {
   magnitudeRendue,
   matriceVue,
   pointEcran,
+  porteeUtilePx,
   projecteur,
   rayonEtoilePx,
   type Vue,
@@ -221,6 +222,37 @@ describe('profondeur asservie au zoom §3.3', () => {
     const avec = bornesZoom(true)
     expect(avec.fovMinDeg).toBe(K('FOV_MIN_AVEC_GAIA_DEG'))
     expect(avec.cause).toBeUndefined()
+  })
+
+  it('refuse un point projeté hors de portée, singularité comprise', () => {
+    // Près de l'antipode de la visée, le facteur radial diverge : le point est « projetable »
+    // au sens de la formule, mais à des dizaines de milliers de pixels. Deux voisins d'une
+    // polyligne y tombent de part et d'autre du canevas, et la corde traverse l'image.
+    const vue: Vue = {
+      mode: 'MODE_PLANETARIUM',
+      fovDeg: 60,
+      largeurPx: 960,
+      hauteurPx: 540,
+      azimutDeg: 0,
+      hauteurDeg: 0,
+      rotationDeg: 0,
+    }
+    const proj = projecteur(vue, IDENTITE)
+    const portee = porteeUtilePx(vue)
+    expect(portee).toBeGreaterThan(Math.hypot(vue.largeurPx, vue.hauteurPx))
+
+    const dansLeChamp = proj.projette(versVecteur(0, 0))
+    expect(dansLeChamp).not.toBeNull()
+
+    // Juste hors du champ affiché : toujours projeté, c'est ce qui permet aux polylignes de
+    // sortir proprement de l'image.
+    const horsChamp = proj.projette(versVecteur(vue.fovDeg, 0))
+    expect(horsChamp).not.toBeNull()
+    expect(Math.hypot(horsChamp!.xPx - vue.largeurPx / 2, horsChamp!.yPx - vue.hauteurPx / 2))
+      .toBeGreaterThan(vue.largeurPx / 2)
+
+    // À un degré de l'antipode : refusé.
+    expect(proj.projette(versVecteur(179, 0))).toBeNull()
   })
 
   it('fait décroître le rayon d’une étoile avec sa magnitude', () => {

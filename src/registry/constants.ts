@@ -1388,6 +1388,20 @@ const GRAND_CHAMP = {
     ordreDeGrandeur: false,
     sections: ['3.7'],
   }),
+  PORTEE_PROJECTION_DIAGONALES: entree({
+    ref: 'C-34',
+    libelle: 'Portée utile d’un point projeté, en diagonales de canevas',
+    valeur: 8,
+    unite: 'diagonale',
+    source:
+      '§3.3 — au-delà, le facteur radial de la projection diverge : deux sommets voisins ' +
+      'd’une polyligne tombent de part et d’autre du canevas et la corde qui les relie ' +
+      'traverse l’image. Huit diagonales laissent passer tout ce qu’un champ de 180° peut ' +
+      'porter à l’écran, et arrêtent le maillage du sol à plusieurs écrans du champ affiché',
+    tolerance: 'convention produit — pilote l’aspect, jamais un verdict',
+    ordreDeGrandeur: true,
+    sections: ['3.3'],
+  }),
   VIGNETTAGE_COINS_DIAPH: entree({
     ref: 'C-34',
     libelle: 'Assombrissement des coins du champ',
