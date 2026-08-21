@@ -2,7 +2,7 @@
 {
   "id": "T-0089",
   "titre": "La fiche cible compte la Lune comme le plan de séance",
-  "colonne": "en-cours",
+  "colonne": "fait",
   "priorite": "haute",
   "tags": [
     "defaut",
