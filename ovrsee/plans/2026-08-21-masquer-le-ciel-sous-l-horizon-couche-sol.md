@@ -20,6 +20,31 @@
       "files": [
         "src/ui/dessine-champ.ts"
       ]
+    },
+    {
+      "sha": "98196d9",
+      "date": "2026-08-21",
+      "files": [
+        "scripts/bench-ciel.ts",
+        "src/App.tsx",
+        "src/core/sol.ts",
+        "src/ui/PanneauExplorer.tsx",
+        "src/ui/Planetarium.tsx",
+        "src/ui/RegionSeance.tsx",
+        "src/ui/couleurs.ts",
+        "src/ui/dessine-ciel.ts",
+        "src/ui/dessine-sol.ts",
+        "src/ui/planetarium-boucle.ts",
+        "src/ui/scene-etat.ts",
+        "tests/dessine-ciel.test.ts",
+        "tests/scene-etat.test.ts",
+        "tests/sol.test.ts"
+      ]
+    },
+    {
+      "sha": "c1335df",
+      "date": "2026-08-21",
+      "files": []
     }
   ]
 }
