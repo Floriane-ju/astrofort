@@ -23,6 +23,11 @@ export interface Vec3 {
   readonly z: number
 }
 
+/**
+ * Conversion degré → radian, unique dans `src/` : diviser par `DEG` fait le chemin inverse.
+ * Domiciliée ici plutôt que dans `src/registry/` — une identité mathématique n'a ni source
+ * ni tolérance, et c'est le module que consomme déjà tout ce qui tourne un angle.
+ */
 export const DEG = Math.PI / 180
 
 export const IDENTITE: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1]

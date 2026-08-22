@@ -19,7 +19,7 @@
 
 import { K } from '../registry/constants.ts'
 import { latitudeGalactiqueDeg } from '../core/galactique.ts'
-import { versVecteur } from '../core/mat3.ts'
+import { DEG, versVecteur } from '../core/mat3.ts'
 import type { Etoile } from './catalog.ts'
 
 /** Graine fixe : c'est elle qui rend le rendu reproductible d'une session à l'autre. */
@@ -66,7 +66,7 @@ export function semisGeneratif(): readonly Etoile[] {
   while (etoiles.length < total) {
     const adDeg = alea() * 360
     // Tirage uniforme en sin(δ) : uniforme en déclinaison concentrerait tout aux pôles.
-    const decDeg = (Math.asin(2 * alea() - 1) * 180) / Math.PI
+    const decDeg = Math.asin(2 * alea() - 1) / DEG
     const b = latitudeGalactiqueDeg(versVecteur(adDeg, decDeg))
     // Rejet selon densite(b) = exp(−|b| / 20°), normalisée à 1 dans le plan galactique.
     if (alea() > Math.exp(-Math.abs(b) / echelle)) continue

@@ -21,8 +21,8 @@ import {
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { Traced } from './traced.ts'
 import { trace } from './traced.ts'
+import { DEG } from './mat3.ts'
 
-const DEG_PAR_RADIAN = 180 / Math.PI
 const ARCMIN_PAR_DEG = 60
 const ARCSEC_PAR_ARCMIN = 60
 const POURCENT = 100
@@ -117,7 +117,7 @@ export function verdictDomaine(
 export function focaleIdeale(tailleObjetDeg: number, capteurHMm: number): Traced<number> {
   const focalePour = (remplissage: number): number => {
     const fovDeg = tailleObjetDeg / remplissage
-    return capteurHMm / (2 * Math.tan(fovDeg / (2 * DEG_PAR_RADIAN)))
+    return capteurHMm / (2 * Math.tan((fovDeg / 2) * DEG))
   }
   return trace({
     value: focalePour(K('REMPLISSAGE_CADRE_CIBLE')),
@@ -185,8 +185,8 @@ export function remplissageCadre(entree: EntreeCadrage): Traced<number> {
   // Boîte englobante d'une ELLIPSE, pas d'un rectangle : la cible est déjà modélisée en
   // ellipse par §6.3 (AIRE_ELLIPSE). La forme rectangulaire ferait grandir une cible ronde
   // d'un facteur √2 à 45°, ce qui est faux — un disque n'a pas d'orientation.
-  const cos2 = Math.cos(phi / DEG_PAR_RADIAN) ** 2
-  const sin2 = Math.sin(phi / DEG_PAR_RADIAN) ** 2
+  const cos2 = Math.cos(phi * DEG) ** 2
+  const sin2 = Math.sin(phi * DEG) ** 2
   const u = Math.sqrt(majDeg ** 2 * cos2 + minDeg ** 2 * sin2)
   const v = Math.sqrt(majDeg ** 2 * sin2 + minDeg ** 2 * cos2)
   return trace({

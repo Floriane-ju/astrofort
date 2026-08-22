@@ -14,7 +14,7 @@ import { magnitudeLimitePrevisu, type EntreeProfondeur } from '../core/galactiqu
 import { focaleEquivalente24x36 } from '../core/optics.ts'
 import { sequenceFile, type SequenceFile } from '../core/sequence-file.ts'
 import type { Site } from '../core/ephem.ts'
-import { versSpherique } from '../core/mat3.ts'
+import { DEG, versSpherique } from '../core/mat3.ts'
 import { projecteur, rayonProjete, type ModeProjection, type Vue } from '../core/projection.ts'
 import type { Traced } from '../core/traced.ts'
 import type { VueScene } from './scene-etat.ts'
@@ -26,7 +26,6 @@ import { mentionProjection } from './scene-overlay.ts'
  * c'est l'échelle en pixels sur laquelle §9.3 chiffre longueurs d'arcs et position du pôle.
  */
 export const LARGEUR_CADRE_PX = 1200
-const DEG = Math.PI / 180
 
 export interface MaterielCadre {
   readonly site: Site

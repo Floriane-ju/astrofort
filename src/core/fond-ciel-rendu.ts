@@ -31,8 +31,8 @@ import {
   nanolamberts,
   type GeometrieLune,
 } from './moon.ts'
+import { DEG } from './mat3.ts'
 
-const DEG = Math.PI / 180
 const ANGLE_DROIT_DEG = 90
 
 /**

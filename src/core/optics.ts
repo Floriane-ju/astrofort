@@ -14,8 +14,8 @@ import { K } from '../registry/constants.ts'
 import { valide } from '../registry/domains.ts'
 import type { Traced } from './traced.ts'
 import { trace } from './traced.ts'
+import { DEG } from './mat3.ts'
 
-const DEG_PAR_RADIAN = 180 / Math.PI
 const UM_PAR_MM = 1000
 
 /** §5.1 — quatre régimes, pour un seeing courant de 2 à 3" (C-04). */
@@ -52,7 +52,7 @@ export interface ProfilOptique {
 /** Champ angulaire d'une dimension de capteur. Arctangente, sans exception (§5.1). */
 export function fovDeg(dimensionMm: number, focaleMm: number): Traced<number> {
   return trace({
-    value: 2 * Math.atan(dimensionMm / (2 * focaleMm)) * DEG_PAR_RADIAN,
+    value: (2 * Math.atan(dimensionMm / (2 * focaleMm))) / DEG,
     formula: 'FOV',
     inputs: { dimension_capteur_mm: dimensionMm, focale_mm: focaleMm },
   })

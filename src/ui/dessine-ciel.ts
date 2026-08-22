@@ -260,8 +260,7 @@ const TRANCHES_BANDE: readonly {
         const lDeg = departDeg + PAS_LONGITUDE_BANDE_DEG / 2
         // Un segment couvre PAS_LONGITUDE de longitude — soit un arc rétréci par cos(b), les
         // méridiens se resserrant vers les pôles — et l'épaisseur d'une tranche en latitude.
-        const demiLongueurDeg =
-          ((PAS_LONGITUDE_BANDE_DEG / 2) * Math.cos((bDeg * Math.PI) / 180))
+        const demiLongueurDeg = (PAS_LONGITUDE_BANDE_DEG / 2) * Math.cos(bDeg * DEG)
         return Object.freeze({
           lDeg,
           centre: depuisGalactique(lDeg, bDeg),

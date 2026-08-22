@@ -9,6 +9,7 @@ import { K } from '../registry/constants.ts'
 import { DOMAINES, SaisieRefuseeError, valide } from '../registry/domains.ts'
 import type { Flag, Traced } from './traced.ts'
 import { trace } from './traced.ts'
+import { DEG } from './mat3.ts'
 
 const ANGLE_DROIT_DEG = 90
 
@@ -170,7 +171,7 @@ export function latitudeAccessibleDeg(decDeg: number, seuilHauteurDeg: number): 
  * résultat tracé par minute d'observation n'apporterait rien et coûterait tout.
  */
 export function masseAirBrute(hauteurDeg: number): number {
-  return 1 / Math.sin((hauteurDeg * Math.PI) / 180)
+  return 1 / Math.sin(hauteurDeg * DEG)
 }
 
 /**

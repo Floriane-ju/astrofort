@@ -10,6 +10,7 @@
 
 import { useEffect, useRef, type RefObject } from 'react'
 import { K } from '../registry/constants.ts'
+import { DEG } from '../core/mat3.ts'
 import { bornesZoom, type BornesZoom } from '../core/projection.ts'
 import { majLectures, majVue, type ActionsScene, type VueScene } from './scene-etat.ts'
 import { decritCible } from './planetarium-selection.ts'
@@ -32,7 +33,6 @@ const POURCENT = 100
 const HAUTEUR_MIN_DEG = -90
 const HAUTEUR_MAX_DEG = 90
 const TOUR_DEG = 360
-const DEG_PAR_RADIAN = 180 / Math.PI
 
 /**
  * Le facteur appliqué au champ pour un `wheel`. La molette avance par crans : facteur fixe. Le
@@ -117,7 +117,7 @@ function angleAutourDuCentre(boite: BoiteCanevas, clientX: number, clientY: numb
     Math.atan2(
       clientY - (boite.top + boite.height / 2),
       clientX - (boite.left + boite.width / 2),
-    ) * DEG_PAR_RADIAN
+    ) / DEG
   )
 }
 

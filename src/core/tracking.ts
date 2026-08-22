@@ -14,8 +14,8 @@ import { K, type ConstantId } from '../registry/constants.ts'
 import { valide } from '../registry/domains.ts'
 import type { Traced } from './traced.ts'
 import { plageOrdreDeGrandeur, trace } from './traced.ts'
+import { DEG } from './mat3.ts'
 
-const RADIAN_PAR_DEG = Math.PI / 180
 const POLE_DEG = 90
 
 export type ModeSuivi = 'AUCUN' | 'SUIVI_APPROX' | 'SUIVI_SOIGNE'
@@ -63,7 +63,7 @@ export function npf(entree: EntreeNpf): Traced<number | null> {
   const numerateur =
     K('NPF_COEF_OUVERTURE') * ouvertureN + K('NPF_COEF_PITCH') * pitchUm
   return trace({
-    value: (K(constanteK) * numerateur) / (focaleMm * Math.cos(decDeg * RADIAN_PAR_DEG)),
+    value: (K(constanteK) * numerateur) / (focaleMm * Math.cos(decDeg * DEG)),
     formula: 'NPF',
     inputs,
     constants,

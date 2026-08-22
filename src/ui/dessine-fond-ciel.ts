@@ -19,7 +19,7 @@
  */
 
 import type { Mat3, Vec3 } from '../core/mat3.ts'
-import { versVecteur } from '../core/mat3.ts'
+import { DEG, versVecteur } from '../core/mat3.ts'
 import type { Projecteur } from '../core/projection.ts'
 import { sousLaHauteur } from '../core/sol.ts'
 import type { GeometrieLune } from '../core/moon.ts'
@@ -32,8 +32,6 @@ import {
 } from '../core/fond-ciel-rendu.ts'
 import { fondRealiste } from './couleurs.ts'
 import { frontiereEcran, remplitRegion, type FinesseBalayage } from './balayage-ecran.ts'
-
-const DEG = Math.PI / 180
 
 /**
  * Balayage allégé pour les paliers du halo : un bord de palier sépare deux teintes voisines,

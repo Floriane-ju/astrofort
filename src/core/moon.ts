@@ -20,8 +20,8 @@ import { observateur, positionCorps, verifieDomaineDesSeries, versDate } from '.
 import type { FenetreNocturne } from './night.ts'
 import type { Traced } from './traced.ts'
 import { trace } from './traced.ts'
+import { DEG } from './mat3.ts'
 
-const DEG = Math.PI / 180
 const ANGLE_DROIT_DEG = 90
 const MS_PAR_MINUTE = 60000
 const MINUTES_PAR_HEURE = 60

@@ -22,8 +22,8 @@ import type { Site } from './ephem.ts'
 import { tempsSideralLocal } from './ephem.ts'
 import type { Traced } from './traced.ts'
 import { trace } from './traced.ts'
+import { DEG } from './mat3.ts'
 
-const DEG = Math.PI / 180
 const HEURES_PAR_TOUR = 24
 const DEG_PAR_HEURE = 360 / HEURES_PAR_TOUR
 

@@ -2,7 +2,7 @@
 {
   "id": "T-0112",
   "titre": "Une seule définition de la conversion degré/radian",
-  "colonne": "pret",
+  "colonne": "fait",
   "priorite": "basse",
   "charge": "s",
   "tags": ["qualite", "refactor"],
@@ -55,6 +55,44 @@ conversion d'unité n'en est pas une. `src/registry/` est l'autre candidat.
 
 ## Critères d'acceptation
 
-- [ ] Une seule définition de la conversion dans tout `src/`
-- [ ] `grep -rn "Math.PI / 180\|180 / Math.PI" src/` ne renvoie que cette définition
-- [ ] `pnpm typecheck && pnpm test` verts, sortie réelle rapportée
+- [x] Une seule définition de la conversion dans tout `src/`
+- [x] `grep -rn "Math.PI / 180\|180 / Math.PI" src/` ne renvoie que cette définition
+- [x] `pnpm typecheck && pnpm test` verts, sortie réelle rapportée
+
+## Réalisé — 22 août 2026
+
+`DEG` reste dans `src/core/mat3.ts`, avec un commentaire qui dit pourquoi : une identité
+mathématique n'a ni source ni tolérance, elle n'a rien à faire dans `src/registry/`, et sept
+moteurs l'importaient déjà de là.
+
+Quatorze définitions locales supprimées, sur seize emplacements — le ticket en listait treize,
+le balayage en a trouvé deux de plus, écrites sous une forme que son grep ne voyait pas :
+
+```
+src/ui/dessine-ciel.ts:264   (bDeg * Math.PI) / 180
+src/core/site.ts:173         (hauteurDeg * Math.PI) / 180
+```
+
+Conversions inversées : `* DEG_PAR_RADIAN` → `/ DEG`, `/ DEG_PAR_RADIAN` → `* DEG`,
+`RADIAN_PAR_DEG` → `DEG`. Les deux `const` reconstruites à chaque appel dans `index-ciel.ts`
+(§3.3, chemin chaud) sont parties.
+
+Vérification :
+
+```
+$ pnpm typecheck
+$ tsc --noEmit
+        (aucune sortie)
+
+$ pnpm test
+ Test Files  54 passed (54)
+      Tests  733 passed (733)
+   Duration  4.34s
+
+$ grep -rn "Math.PI / 180\|180 / Math.PI" src/
+src/core/mat3.ts:31:export const DEG = Math.PI / 180
+```
+
+`src/registry/constants.ts` garde une entrée `DEG_PAR_RADIAN_APPROX` : c'est le facteur 57,296
+de l'approximation petits angles, marqué `deprecie`, qu'aucun moteur ne consomme. Ce n'est pas
+une seconde définition de la conversion — c'est la trace d'une formule écartée par §5.1.

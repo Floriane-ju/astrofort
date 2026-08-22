@@ -182,7 +182,6 @@ export interface RotationSuggeree {
   readonly message: string
 }
 
-const DEG_PAR_RADIAN = 180 / Math.PI
 const DEMI_TOUR_DEG = 180
 
 /** Rapport grand axe / petit axe. `null` quand le catalogue ne donne pas le petit axe. */
@@ -234,7 +233,7 @@ function angleAxeDansCadre(
   const versCadre = matriceVue(cadre.azimutDeg, cadre.hauteurDeg, cadre.rotationDeg)
   const local = applique(versCadre, applique(matriceCiel, axe))
   // Un axe n'a pas de sens : deux directions opposées décrivent la même orientation.
-  const brut = Math.atan2(local.y, local.x) * DEG_PAR_RADIAN
+  const brut = Math.atan2(local.y, local.x) / DEG
   return ((brut % DEMI_TOUR_DEG) + DEMI_TOUR_DEG) % DEMI_TOUR_DEG
 }
 

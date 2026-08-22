@@ -19,7 +19,7 @@
 
 import { K } from '../registry/constants.ts'
 import type { Etoile } from '../data/catalog.ts'
-import { versVecteur, type Vec3 } from './mat3.ts'
+import { DEG, versVecteur, type Vec3 } from './mat3.ts'
 
 export interface CelluleCiel {
   readonly centre: Vec3
@@ -63,8 +63,7 @@ function rayonEnglobant(centre: Vec3, adMinDeg: number, adMaxDeg: number, decMin
     const cos = centre.x * b.x + centre.y * b.y + centre.z * b.z
     if (cos < maxCos) maxCos = cos
   }
-  const DEG_PAR_RADIAN = 180 / Math.PI
-  return Math.acos(Math.max(-1, Math.min(1, maxCos))) * DEG_PAR_RADIAN
+  return Math.acos(Math.max(-1, Math.min(1, maxCos))) / DEG
 }
 
 /**
@@ -82,10 +81,7 @@ export function construitIndex(etoiles: readonly Etoile[]): IndexCiel {
   for (let b = 0; b < bandes; b++) {
     const decMin = -90 + b * hauteurBande
     const decMax = decMin + hauteurBande
-    const cosMax = Math.max(
-      Math.cos((decMin * Math.PI) / 180),
-      Math.cos((decMax * Math.PI) / 180),
-    )
+    const cosMax = Math.max(Math.cos(decMin * DEG), Math.cos(decMax * DEG))
     colonnes.push(Math.max(1, Math.round((360 * cosMax) / taille)))
   }
 
@@ -185,7 +181,6 @@ export function selectionne(
 ): StatistiquesSelection {
   let cellulesRetenues = 0
   let etoilesExaminees = 0
-  const DEG_PAR_RADIAN = 180 / Math.PI
 
   for (const cellule of index.cellules) {
     const cos = Math.max(
@@ -197,7 +192,7 @@ export function selectionne(
           centreJ2000.z * cellule.centre.z,
       ),
     )
-    const separation = Math.acos(cos) * DEG_PAR_RADIAN
+    const separation = Math.acos(cos) / DEG
     if (separation > rayonChampDeg + cellule.rayonDeg) continue
 
     cellulesRetenues++
