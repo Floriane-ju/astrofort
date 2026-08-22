@@ -49,17 +49,45 @@ const LARGEUR = 1920
 const HAUTEUR = 1080
 const IMAGES = 200
 const EMPREINTE = process.argv.includes('--empreinte')
+/**
+ * T-0110 — le champ se choisit. Un défaut de rendu ne se voit pas au même champ pour toutes
+ * les couches : les étoiles dominent en vue serrée, la bande et les frontières en vue large.
+ * Mesurer à un seul champ, c'est ne mesurer qu'une moitié du chemin chaud.
+ */
+const arg = (nom: string, defaut: number): number =>
+  Number(process.argv.find((a) => a.startsWith(`--${nom}=`))?.slice(nom.length + 3) ?? defaut)
+const FOV = arg('fov', 30)
+/** T-0110 — la visée se choisit aussi : un écart peut n'être faux que dans une direction. */
+const AZIMUT = arg('az', 180)
+const HAUTEUR_VISEE = arg('alt', 40)
+/**
+ * T-0110 — `--appels` compte les ORDRES DE PEINTURE, pas les allocations. C'est la mesure qui
+ * manquait à T-0054 : un `stroke()` par élément coûte le pilote graphique, pas le tas, et
+ * aucun compteur d'objets ne le voit passer.
+ */
+const APPELS = process.argv.includes('--appels')
+/**
+ * T-0110 — `--effective` hache la PEINTURE, quand `--empreinte` hache les ORDRES.
+ *
+ * La différence décide d'une optimisation. Supprimer un `stroke()` sur un chemin vide, ou une
+ * écriture de style que rien n'utilise avant d'être réécrite, change le flux d'ordres sans
+ * toucher un pixel : `--empreinte` le signale comme une régression, à tort. Cette empreinte-ci
+ * n'absorbe un ordre qu'au moment où il pose de la couleur, avec l'état de style qui s'y
+ * applique — deux passes qui peignent la même image la partagent, quel que soit le chemin pris
+ * pour y arriver.
+ */
+const EFFECTIVE = process.argv.includes('--effective')
 /** T-0098 — `--realiste` ajoute le fond peint et ses paliers de halo : c'est leur surcoût. */
 const REALISTE = process.argv.includes('--realiste')
 
 /** Scène de référence : plein champ, toutes les couches, le ciel d'un site réel. */
 const VUE: Vue = {
   mode: 'MODE_PLANETARIUM',
-  fovDeg: 30,
+  fovDeg: FOV,
   largeurPx: LARGEUR,
   hauteurPx: HAUTEUR,
-  azimutDeg: 180,
-  hauteurDeg: 40,
+  azimutDeg: AZIMUT,
+  hauteurDeg: HAUTEUR_VISEE,
   rotationDeg: 0,
 }
 const COUCHES: CouchesActives = {
@@ -162,6 +190,143 @@ function empreinteur(): { ctx: CanvasRenderingContext2D; valeur: () => string } 
   return { ctx, valeur: () => h.toString(16).padStart(8, '0') }
 }
 
+/**
+ * Empreinte de la peinture seule : ce qui touche un pixel, et rien d'autre.
+ *
+ * Trois choses sont volontairement invisibles à cette empreinte, parce qu'elles sont
+ * invisibles à l'écran — et c'est ce qui la rend capable de valider une optimisation :
+ *
+ *   - une écriture de style que rien n'utilise avant d'être réécrite ;
+ *   - un `stroke()` sur un chemin vide ;
+ *   - un segment de chemin qui tombe HORS du canevas. C'est le cas décisif : écarter une
+ *     géométrie avant de la projeter supprime des `moveTo`/`lineTo` dont aucun ne posait de
+ *     couleur. Une empreinte qui hache le chemin entier crie à la régression ; celle-ci ne
+ *     retient que les segments dont la boîte, élargie de la demi-épaisseur du trait, croise
+ *     le canevas.
+ *
+ * Deux passes qui peignent la même image la partagent, quel que soit le chemin pris.
+ */
+function empreinteurEffectif(): { ctx: CanvasRenderingContext2D; valeur: () => string } {
+  let h = 0x811c9dc5
+  const avale = (texte: string): void => {
+    for (let i = 0; i < texte.length; i++) {
+      h ^= texte.charCodeAt(i)
+      h = Math.imul(h, 0x01000193) >>> 0
+    }
+  }
+  const nb = (v: unknown): string => (typeof v === 'number' ? v.toFixed(3) : String(v))
+  const etat: Record<string, unknown> = {
+    globalAlpha: 1,
+    fillStyle: '',
+    strokeStyle: '',
+    lineWidth: 1,
+    lineCap: 'butt',
+    lineJoin: 'miter',
+    font: '',
+    textBaseline: 'middle',
+    filter: 'none',
+  }
+  interface Pt {
+    readonly x: number
+    readonly y: number
+  }
+  /** Le chemin en cours, en sous-chemins : `moveTo` en ouvre un, `lineTo` le prolonge. */
+  let sousChemins: Pt[][] = []
+  const courant = (): Pt[] => {
+    const dernier = sousChemins[sousChemins.length - 1]
+    if (dernier !== undefined) return dernier
+    const neuf: Pt[] = []
+    sousChemins.push(neuf)
+    return neuf
+  }
+  /** La boîte élargie de `marge` croise-t-elle le canevas ? */
+  const croise = (x0: number, y0: number, x1: number, y1: number, marge: number): boolean =>
+    Math.max(x0, x1) + marge >= 0 &&
+    Math.min(x0, x1) - marge <= LARGEUR &&
+    Math.max(y0, y1) + marge >= 0 &&
+    Math.min(y0, y1) - marge <= HAUTEUR
+  const styles = (noms: readonly string[]): string =>
+    noms.map((c) => `${c}=${nb(etat[c])}`).join(',')
+  const ctx = {
+    beginPath: () => {
+      sousChemins = []
+    },
+    closePath: () => {
+      const c = sousChemins[sousChemins.length - 1]
+      if (c !== undefined && c.length > 0) c.push(c[0]!)
+    },
+    moveTo: (x: number, y: number) => {
+      sousChemins.push([{ x, y }])
+    },
+    lineTo: (x: number, y: number) => {
+      courant().push({ x, y })
+    },
+    arc: (x: number, y: number, r: number, a0: number, a1: number) => {
+      // L'arc est son propre sous-chemin : il se juge sur son disque englobant.
+      sousChemins.push([{ x: x - r, y: y - r }, { x: x + r, y: y + r }])
+      if (croise(x - r, y - r, x + r, y + r, 0)) avale(`arc(${nb(x)},${nb(y)},${nb(r)},${nb(a0)},${nb(a1)})`)
+    },
+    stroke: () => {
+      const marge = (etat['lineWidth'] as number) / 2
+      let peint = false
+      for (const sous of sousChemins) {
+        for (let i = 1; i < sous.length; i++) {
+          const a = sous[i - 1]!
+          const b = sous[i]!
+          if (!croise(a.x, a.y, b.x, b.y, marge)) continue
+          if (!peint) {
+            avale(`stroke[${styles(['globalAlpha', 'strokeStyle', 'lineWidth', 'lineCap', 'lineJoin'])}]`)
+            peint = true
+          }
+          avale(`${nb(a.x)},${nb(a.y)}>${nb(b.x)},${nb(b.y)};`)
+        }
+      }
+    },
+    fill: () => {
+      let peint = false
+      for (const sous of sousChemins) {
+        if (sous.length === 0) continue
+        const xs = sous.map((p) => p.x)
+        const ys = sous.map((p) => p.y)
+        if (!croise(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys), 0)) continue
+        if (!peint) {
+          avale(`fill[${styles(['globalAlpha', 'fillStyle'])}]`)
+          peint = true
+        }
+        avale(sous.map((p) => `${nb(p.x)},${nb(p.y)}`).join(';'))
+      }
+    },
+    fillText: (t: unknown, x: number, y: number) => {
+      avale(`fillText[${styles(['globalAlpha', 'fillStyle', 'font', 'textBaseline'])}](${String(t)},${nb(x)},${nb(y)})`)
+    },
+    fillRect: (x: number, y: number, w: number, hh: number) => {
+      avale(`fillRect[${styles(['globalAlpha', 'fillStyle', 'filter'])}](${nb(x)},${nb(y)},${nb(w)},${nb(hh)})`)
+    },
+    createRadialGradient: (...a: unknown[]) => {
+      const paliers: string[] = []
+      return {
+        addColorStop: (o: number, c: string) => {
+          paliers.push(`${nb(o)}:${c}`)
+        },
+        toString: () => `grad(${a.map(nb).join(',')};${paliers.join('|')})`,
+      }
+    },
+  }
+  for (const nom of Object.keys(etat)) {
+    Object.defineProperty(ctx, nom, {
+      get: () => etat[nom],
+      set: (v: unknown) => {
+        etat[nom] = v
+      },
+      configurable: true,
+    })
+  }
+  return {
+    ctx: ctx as unknown as CanvasRenderingContext2D,
+    valeur: () => h.toString(16).padStart(8, '0'),
+  }
+}
+
 /** Contexte 2D muet : il absorbe les ordres de peinture, il n'en exécute aucun. */
 function contexteMuet(): CanvasRenderingContext2D {
   const rien = (): void => undefined
@@ -185,6 +350,67 @@ function contexteMuet(): CanvasRenderingContext2D {
     fill: rien,
     createRadialGradient: () => ({ addColorStop: rien }),
   } as unknown as CanvasRenderingContext2D
+}
+
+/**
+ * Contexte 2D qui compte les ordres. Les affectations de style sont comptées deux fois : le
+ * total, et la part REDONDANTE — réécrire `strokeStyle` avec la valeur qu'il porte déjà est
+ * un appel au pilote pour rien, et c'est le symptôme du tracé élément par élément.
+ */
+function contexteCompteur(): {
+  ctx: CanvasRenderingContext2D
+  ordres: () => Record<string, number>
+} {
+  const n: Record<string, number> = {}
+  const compte =
+    (nom: string) =>
+    (): void => {
+      n[nom] = (n[nom] ?? 0) + 1
+    }
+  /** Un accesseur qui compte les écritures, et celles qui ne changent rien. */
+  const style = <T,>(nom: string, initial: T) => {
+    let valeur = initial
+    return {
+      get: () => valeur,
+      set: (v: T) => {
+        n[nom] = (n[nom] ?? 0) + 1
+        if (v === valeur) n[`${nom}~redondant`] = (n[`${nom}~redondant`] ?? 0) + 1
+        valeur = v
+      },
+    }
+  }
+  const ctx = {
+    lineCap: 'butt',
+    filter: 'none',
+    textBaseline: 'middle',
+    ...Object.fromEntries(
+      (
+        [
+          ['globalAlpha', 1],
+          ['fillStyle', ''],
+          ['strokeStyle', ''],
+          ['lineWidth', 1],
+          ['font', ''],
+        ] as const
+      ).map(([nom, initial]) => [nom, style(nom, initial as unknown)]),
+    ),
+    fillRect: compte('fillRect'),
+    fillText: compte('fillText'),
+    beginPath: compte('beginPath'),
+    closePath: compte('closePath'),
+    moveTo: compte('moveTo'),
+    lineTo: compte('lineTo'),
+    arc: compte('arc'),
+    stroke: compte('stroke'),
+    fill: compte('fill'),
+    createRadialGradient: () => ({ addColorStop: (): void => undefined }),
+  }
+  // `Object.fromEntries` produit des descripteurs de données : les convertir en accesseurs.
+  for (const nom of ['globalAlpha', 'fillStyle', 'strokeStyle', 'lineWidth', 'font']) {
+    const acc = (ctx as unknown as Record<string, { get: () => unknown; set: (v: unknown) => void }>)[nom]!
+    Object.defineProperty(ctx, nom, { get: acc.get, set: acc.set, configurable: true })
+  }
+  return { ctx: ctx as unknown as CanvasRenderingContext2D, ordres: () => n }
 }
 
 interface Comptes {
@@ -260,11 +486,50 @@ function image(ctx: CanvasRenderingContext2D): { comptes: Comptes; dessinees: nu
   return { comptes, dessinees: sortie.etoilesDessinees }
 }
 
-if (EMPREINTE) {
+if (EFFECTIVE) {
+  const { ctx, valeur } = empreinteurEffectif()
+  const { dessinees } = image(ctx)
+  console.log(
+    `peinture ${FOV}° ${valeur()}  ${dessinees.toLocaleString('fr-FR')} étoiles dessinées  ` +
+      `mag ${magLimite.toFixed(1)}`,
+  )
+} else if (APPELS) {
+  const { ctx, ordres } = contexteCompteur()
+  const { dessinees } = image(ctx)
+  const n = ordres()
+  const total = (nom: string): number => n[nom] ?? 0
+  const tracés = total('stroke') + total('fill') + total('fillText') + total('fillRect')
+  const styles = (['globalAlpha', 'fillStyle', 'strokeStyle', 'lineWidth', 'font'] as const)
+    .map((s) => total(s))
+    .reduce((a, b) => a + b, 0)
+  const redondants = (['globalAlpha', 'fillStyle', 'strokeStyle', 'lineWidth', 'font'] as const)
+    .map((s) => total(`${s}~redondant`))
+    .reduce((a, b) => a + b, 0)
+  console.log(
+    `${FOV}° de champ — ${dessinees.toLocaleString('fr-FR')} étoiles dessinées, ` +
+      `mag ${magLimite.toFixed(1)}`,
+  )
+  console.log(
+    `${tracés.toString().padStart(7)} tracés/image  ` +
+      `(stroke ${total('stroke')}, fill ${total('fill')}, ` +
+      `fillText ${total('fillText')}, fillRect ${total('fillRect')})`,
+  )
+  console.log(
+    `${styles.toString().padStart(7)} styles/image  ` +
+      `(dont ${redondants} redondants — ` +
+      `alpha ${total('globalAlpha')}, strokeStyle ${total('strokeStyle')}, ` +
+      `fillStyle ${total('fillStyle')}, lineWidth ${total('lineWidth')}, font ${total('font')})`,
+  )
+  console.log(
+    `${(total('beginPath') + total('moveTo') + total('lineTo') + total('arc')).toString().padStart(7)} ` +
+      `ordres de chemin  (beginPath ${total('beginPath')}, moveTo ${total('moveTo')}, ` +
+      `lineTo ${total('lineTo')}, arc ${total('arc')})`,
+  )
+} else if (EMPREINTE) {
   const { ctx, valeur } = empreinteur()
   const { dessinees } = image(ctx)
   console.log(
-    `empreinte ${valeur()}  ${dessinees.toLocaleString('fr-FR')} étoiles dessinées  ` +
+    `empreinte ${FOV}° ${valeur()}  ${dessinees.toLocaleString('fr-FR')} étoiles dessinées  ` +
       `mag ${magLimite.toFixed(1)}`,
   )
 } else {
