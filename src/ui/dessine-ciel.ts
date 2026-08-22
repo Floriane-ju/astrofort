@@ -237,6 +237,9 @@ interface SegmentBande {
   /** Longitude du milieu du segment : c'est elle qui porte sa brillance. */
   readonly lDeg: number
   readonly ligne: readonly Vec3[]
+  /** Milieu du segment, et rayon de la calotte qui le contient : ils servent à l'écarter. */
+  readonly centre: Vec3
+  readonly demiExtensionDeg: number
 }
 
 const TRANCHES_BANDE: readonly {
@@ -253,8 +256,15 @@ const TRANCHES_BANDE: readonly {
     segments: Object.freeze(
       Array.from({ length: SEGMENTS_PAR_TRANCHE }, (_unused, k) => {
         const departDeg = decalageDeg + k * PAS_LONGITUDE_BANDE_DEG
+        const lDeg = departDeg + PAS_LONGITUDE_BANDE_DEG / 2
+        // Un segment couvre PAS_LONGITUDE de longitude — soit un arc rétréci par cos(b), les
+        // méridiens se resserrant vers les pôles — et l'épaisseur d'une tranche en latitude.
+        const demiLongueurDeg =
+          ((PAS_LONGITUDE_BANDE_DEG / 2) * Math.cos((bDeg * Math.PI) / 180))
         return Object.freeze({
-          lDeg: departDeg + PAS_LONGITUDE_BANDE_DEG / 2,
+          lDeg,
+          centre: depuisGalactique(lDeg, bDeg),
+          demiExtensionDeg: Math.hypot(demiLongueurDeg, PAS_LATITUDE_BANDE_DEG / 2),
           // Le dernier point d'un segment est le premier du suivant : les deux traits se
           // rejoignent sur le même sommet, sans recouvrement — un recouvrement se composerait
           // deux fois et laisserait une tache claire.
@@ -272,6 +282,32 @@ const TRANCHES_BANDE: readonly {
 /** T-0091 — le centre galactique : l = 0°, b = 0°, soit δ ≈ −29°. Calculé, jamais recopié. */
 const CENTRE_GALACTIQUE: Vec3 = depuisGalactique(0, 0)
 const NOM_CENTRE_GALACTIQUE = 'Centre galactique'
+
+interface ChampVisible {
+  readonly centre: Vec3
+  readonly rayonDeg: number
+}
+
+/**
+ * La calotte céleste que le canevas montre : sa direction centrale et son rayon, diagonale
+ * comprise. C'est le domaine que partagent la sélection d'étoiles de §3.3 et l'écart des
+ * segments de la bande — un seul calcul, sinon deux définitions du même champ.
+ */
+function champVisible(projecteur: Projecteur): ChampVisible {
+  const { largeurPx, hauteurPx, fovDeg } = projecteur.vue
+  return {
+    centre: projecteur.inverse(largeurPx / 2, hauteurPx / 2),
+    rayonDeg: Math.min(K('FOV_MAX_DEG') / 2, (fovDeg / 2) * Math.hypot(1, hauteurPx / largeurPx)),
+  }
+}
+
+/** Vrai quand la calotte de rayon `demiExtensionDeg` autour de `centre` ne touche pas le champ. */
+function horsDuChamp(champ: ChampVisible, centre: Vec3, demiExtensionDeg: number): boolean {
+  const cos =
+    champ.centre.x * centre.x + champ.centre.y * centre.y + champ.centre.z * centre.z
+  const separationDeg = (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI
+  return separationDeg > champ.rayonDeg + demiExtensionDeg
+}
 
 /** Compose le chemin sans le peindre : au tracé du ciel de le remplir, au cadre de le découper. */
 function cheminLignes(
@@ -427,7 +463,7 @@ function ancreVoieLactee(
 interface TeinteBande {
   readonly couleur: string
   readonly part: number
-  readonly lignes: (readonly Vec3[])[]
+  readonly segments: SegmentBande[]
 }
 
 /**
@@ -461,8 +497,8 @@ function teintesBande(sbCiel: number, modeNuit: boolean): readonly TeinteBande[]
       if (rendu.couleur === fondSeul || Math.round(rendu.deltaPeintOctets) === 0) continue
       const part = Math.round(rendu.part * NIVEAUX_ALPHA) / NIVEAUX_ALPHA
       const cle = `${rendu.couleur}|${part}`
-      const groupe = groupes.get(cle) ?? { couleur: rendu.couleur, part, lignes: [] }
-      groupe.lignes.push(segment.ligne)
+      const groupe = groupes.get(cle) ?? { couleur: rendu.couleur, part, segments: [] }
+      groupe.segments.push(segment)
       groupes.set(cle, groupe)
     }
   }
@@ -485,10 +521,29 @@ function traceBandeVoieLactee(entree: EntreeDessin): void {
   // compose deux fois, donc se voit comme une perle claire à chaque raccord.
   ctx.lineCap = 'butt'
   ctx.lineWidth = (PAS_LATITUDE_BANDE_DEG * projecteur.vue.largeurPx) / projecteur.vue.fovDeg
+  // Même écart que pour les cellules d'étoiles (§3.3) : un produit scalaire par segment plutôt
+  // que sept projections. Au dézoom, la moitié des segments est derrière l'observateur et ne
+  // se rejetait qu'après avoir été projetée point par point.
+  const champ = champVisible(projecteur)
+  const p = pointEcran()
   for (const teinte of bandeMemo.teintes) {
     ctx.globalAlpha = teinte.part
     ctx.strokeStyle = teinte.couleur
-    traceLignes(ctx, projecteur, teinte.lignes)
+    ctx.beginPath()
+    for (const segment of teinte.segments) {
+      if (horsDuChamp(champ, segment.centre, segment.demiExtensionDeg)) continue
+      let enchaine = false
+      for (const point of segment.ligne) {
+        if (!projecteur.projetteEn(point.x, point.y, point.z, p)) {
+          enchaine = false
+          continue
+        }
+        if (enchaine) ctx.lineTo(p.xPx, p.yPx)
+        else ctx.moveTo(p.xPx, p.yPx)
+        enchaine = true
+      }
+    }
+    ctx.stroke()
   }
   ctx.globalAlpha = opaciteInitiale
   ctx.lineWidth = 1
@@ -649,12 +704,8 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
 
   // --- Étoiles ------------------------------------------------------------
   const fovDeg = projecteur.vue.fovDeg
-  const centreJ2000 = projecteur.inverse(largeur / 2, hauteur / 2)
   // Rayon du champ : la diagonale du canevas, exprimée en degrés au centre.
-  const rayonChampDeg = Math.min(
-    K('FOV_MAX_DEG') / 2,
-    (projecteur.vue.fovDeg / 2) * Math.hypot(1, hauteur / largeur),
-  )
+  const { centre: centreJ2000, rayonDeg: rayonChampDeg } = champVisible(projecteur)
   // Un `Path2D` par teinte, réalloué à chaque image : l'API n'offre aucun effacement, et
   // un chemin réutilisé accumulerait les disques des images précédentes. Contrainte de la
   // plateforme, pas négligence — huit objets par image, contre un par étoile évité plus bas.
