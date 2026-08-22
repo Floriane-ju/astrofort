@@ -13,6 +13,7 @@ import { SOURCE_TABLE_FILTRES } from '../registry/filters.ts'
 import { libelleZpSource, type PointZeroSysteme } from '../data/equipment.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, Terme } from './Terme.tsx'
+import { heure } from './horaire.ts'
 import type { Conseils, Resultat } from './fiche-cible-calcul.ts'
 
 export interface VerdictsProps {
@@ -29,11 +30,6 @@ export interface VerdictsProps {
   readonly filtreDualBand: boolean
   readonly surFiltre: (valeur: boolean) => void
   readonly surDeplie: (valeur: boolean) => void
-}
-
-/** L'heure affichée comme partout ailleurs : locale, à la minute. */
-function heure(date: Date): string {
-  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
 export function Verdicts(props: VerdictsProps) {

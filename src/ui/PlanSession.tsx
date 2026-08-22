@@ -15,6 +15,7 @@ import type { FenetreUtile } from '../core/moon.ts'
 import type { Etoile } from '../data/catalog.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, Terme } from './Terme.tsx'
+import { heure } from './horaire.ts'
 
 const DEG_PAR_HEURE = 15
 const POURCENT = 100
@@ -29,10 +30,6 @@ export interface PlanSessionProps {
   readonly fovChercheurDeg?: number
   readonly etoiles: readonly Etoile[]
   readonly enTete: EnTetePlan
-}
-
-function heure(date: Date): string {
-  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
 export function PlanSessionVue(props: PlanSessionProps) {
