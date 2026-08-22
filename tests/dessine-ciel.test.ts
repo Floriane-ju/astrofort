@@ -1107,3 +1107,114 @@ describe('corps mobiles — §3.1', () => {
     ).toBe(false)
   })
 })
+
+/**
+ * T-0110 — l'écart des couches de repérage par calotte englobante.
+ *
+ * Les frontières, les figures et les astérismes sont une géométrie J2000 FIXE : elle ne bouge
+ * ni au zoom ni au défilement. Avant T-0110, la passe projetait ses 1 400 sommets à chaque
+ * image quel que soit le champ, pour n'en garder qu'une poignée en vue serrée — le défaut que
+ * §3.7 avait déjà corrigé sur la bande, resté sur la couche d'à côté.
+ *
+ * Le test tient les deux bouts. Il ne suffit pas d'écarter beaucoup : il faut n'écarter QUE ce
+ * qui ne peint pas. La référence est donc recalculée ici sans aucun écart, et la comparaison
+ * porte sur les seuls segments qui touchent le canevas — ceux qui tombent au-delà du bord ne
+ * posent pas de couleur, et les perdre n'est pas une régression.
+ */
+describe('écart des couches de repérage — T-0110', () => {
+  const SEULES_FRONTIERES: CouchesActives = {
+    figures: false,
+    frontieres: true,
+    asterismes: false,
+    cadre: false,
+    horizon: false,
+    voieLactee: false,
+    sol: false,
+  }
+
+  /** Seules les deux coordonnées écran comptent ici : le reste de `PointEcran` ne sert pas. */
+  interface Sommet {
+    readonly xPx: number
+    readonly yPx: number
+  }
+
+  /** Un segment touche-t-il le canevas ? La demi-épaisseur du trait vaut 0,5 px. */
+  const touche = (a: Sommet, b: Sommet): boolean =>
+    Math.max(a.xPx, b.xPx) + 0.5 >= 0 &&
+    Math.min(a.xPx, b.xPx) - 0.5 <= LARGEUR &&
+    Math.max(a.yPx, b.yPx) + 0.5 >= 0 &&
+    Math.min(a.yPx, b.yPx) - 0.5 <= HAUTEUR
+
+  const cle = (a: Sommet, b: Sommet): string =>
+    `${a.xPx.toFixed(3)},${a.yPx.toFixed(3)}>${b.xPx.toFixed(3)},${b.yPx.toFixed(3)}`
+
+  /** Les segments réellement peints, relus dans les ordres enregistrés par l'espion. */
+  function segmentsPeints(appels: readonly Appel[]): string[] {
+    const segments: string[] = []
+    let precedent: Sommet | null = null
+    for (const appel of appels) {
+      if (appel.nom === 'moveTo') {
+        precedent = { xPx: appel.args[0] as number, yPx: appel.args[1] as number }
+      } else if (appel.nom === 'lineTo') {
+        const point: Sommet = { xPx: appel.args[0] as number, yPx: appel.args[1] as number }
+        if (precedent !== null && touche(precedent, point)) segments.push(cle(precedent, point))
+        precedent = point
+      } else if (appel.nom === 'beginPath') {
+        precedent = null
+      }
+    }
+    return segments.sort()
+  }
+
+  /** La même passe SANS écart : la référence de ce qui aurait dû être peint. */
+  function segmentsAttendus(entree: EntreeDessin): string[] {
+    const segments: string[] = []
+    for (const ligne of entree.frontieres.polylignes) {
+      let precedent: Sommet | null = null
+      for (const point of ligne) {
+        const projete = entree.projecteur.projette(point)
+        if (projete === null) {
+          precedent = null
+          continue
+        }
+        if (precedent !== null && touche(precedent, projete)) segments.push(cle(precedent, projete))
+        precedent = projete
+      }
+    }
+    return segments.sort()
+  }
+
+  const VISEES = [
+    { azimutDeg: 0, hauteurDeg: 20 },
+    { azimutDeg: 90, hauteurDeg: 60 },
+    { azimutDeg: 180, hauteurDeg: 45 },
+    { azimutDeg: 270, hauteurDeg: 5 },
+  ] as const
+
+  for (const fovDeg of [15, 60, 120, 180]) {
+    for (const vise of VISEES) {
+      it(`peint exactement les frontières visibles à ${fovDeg}° vers ${vise.azimutDeg}°/${vise.hauteurDeg}°`, () => {
+        const { ctx, entree } = rend({ couches: SEULES_FRONTIERES, fovDeg, vise })
+        expect(segmentsPeints(ctx.appels)).toEqual(segmentsAttendus(entree))
+      })
+    }
+  }
+
+  it('cesse de projeter la sphère entière dès que le champ se referme', () => {
+    const serre = rend({ couches: SEULES_FRONTIERES, fovDeg: 15 })
+    const sommets = (appels: readonly Appel[]): number =>
+      appels.filter((a) => a.nom === 'moveTo' || a.nom === 'lineTo').length
+    // La référence sans écart projette TOUTE la couche : c'est le coût d'avant T-0110. Le
+    // seuil n'est pas un réglage — c'est le constat qu'un champ serré ne doit plus payer la
+    // sphère entière, et il tomberait à 1 si l'écart disparaissait.
+    const total = entierePolyligne(serre.entree)
+    expect(sommets(serre.ctx.appels)).toBeLessThan(total / 4)
+  })
+
+  /** Le nombre de sommets que la couche entière représente, écart mis à part. */
+  function entierePolyligne(entree: EntreeDessin): number {
+    let n = 0
+    for (const ligne of entree.frontieres.polylignes) n += ligne.length
+    return n
+  }
+})

@@ -26,6 +26,7 @@ import {
 import { depuisGalactique } from '../core/galactique.ts'
 import {
   applique,
+  DEG,
   transpose,
   versSpherique,
   versVecteur,
@@ -301,12 +302,79 @@ function champVisible(projecteur: Projecteur): ChampVisible {
   }
 }
 
+/**
+ * T-0110 — le champ, quand il est légitime de s'en servir pour ÉCARTER. `null` sinon.
+ *
+ * `champVisible` plafonne son rayon à `FOV_MAX_DEG / 2`, ce qui convient à la sélection
+ * d'étoiles — trop d'étoiles n'est pas une faute — mais pas à l'écart : au-delà de ce plafond
+ * la calotte est plus petite que ce que le canevas montre, et rejeter dessus efface de la
+ * géométrie visible. Mesuré : à 170° de champ, l'écart perdait des frontières à l'écran.
+ * Au-dessus du plafond, tout est à peu près dans le champ de toute façon — ne rien écarter
+ * n'y coûte presque rien.
+ */
+function champPourEcart(projecteur: Projecteur): ChampVisible | null {
+  const champ = champVisible(projecteur)
+  return champ.rayonDeg < K('FOV_MAX_DEG') / 2 ? champ : null
+}
+
 /** Vrai quand la calotte de rayon `demiExtensionDeg` autour de `centre` ne touche pas le champ. */
 function horsDuChamp(champ: ChampVisible, centre: Vec3, demiExtensionDeg: number): boolean {
   const cos =
     champ.centre.x * centre.x + champ.centre.y * centre.y + champ.centre.z * centre.z
-  const separationDeg = (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI
+  const separationDeg = Math.acos(Math.max(-1, Math.min(1, cos))) / DEG
   return separationDeg > champ.rayonDeg + demiExtensionDeg
+}
+
+/**
+ * T-0110 — la calotte englobante d'un jeu de points : direction moyenne, et écart angulaire
+ * maximal à cette direction.
+ *
+ * `null` quand la direction moyenne ne veut rien dire — un grand cercle, dont les points
+ * s'annulent deux à deux. Aucune calotte ne borne alors le jeu : il ne se rejette jamais.
+ */
+function calotte(points: readonly Vec3[]): ChampVisible | null {
+  let sx = 0
+  let sy = 0
+  let sz = 0
+  for (const p of points) {
+    sx += p.x
+    sy += p.y
+    sz += p.z
+  }
+  const norme = Math.hypot(sx, sy, sz)
+  if (norme === 0) return null
+  const centre: Vec3 = { x: sx / norme, y: sy / norme, z: sz / norme }
+  let cosMin = 1
+  for (const p of points) {
+    const cos = centre.x * p.x + centre.y * p.y + centre.z * p.z
+    if (cos < cosMin) cosMin = cos
+  }
+  return {
+    centre,
+    rayonDeg: Math.acos(Math.max(-1, Math.min(1, cosMin))) / DEG,
+  }
+}
+
+/**
+ * T-0110 — les calottes des couches de repérage, calculées une fois.
+ *
+ * Frontières, figures et astérismes sont une géométrie J2000 FIXE : elle ne bouge ni au zoom
+ * ni au défilement, et sa calotte non plus. Sans cet écart préalable, une vue à 15° de champ
+ * projetait quand même les 1 400 sommets des 88 frontières pour n'en garder qu'une poignée —
+ * le même défaut que la bande de §3.7, sur la couche d'à côté. La clé est le tableau lui-même :
+ * les couches sont construites une fois au chargement du paquet et ne se réallouent pas.
+ */
+const calottesMemo = new WeakMap<object, readonly (ChampVisible | null)[]>()
+
+function calottesDe<T>(
+  jeu: readonly T[],
+  points: (element: T) => readonly Vec3[],
+): readonly (ChampVisible | null)[] {
+  const connu = calottesMemo.get(jeu)
+  if (connu !== undefined) return connu
+  const calculees = jeu.map((element) => calotte(points(element)))
+  calottesMemo.set(jeu, calculees)
+  return calculees
 }
 
 /** Compose le chemin sans le peindre : au tracé du ciel de le remplir, au cadre de le découper. */
@@ -314,10 +382,19 @@ function cheminLignes(
   ctx: CanvasRenderingContext2D,
   projecteur: Projecteur,
   polylignes: readonly (readonly Vec3[])[],
+  champ?: ChampVisible | null,
 ): void {
   const p = pointEcran()
+  // La calotte n'est calculée que si l'appelant demande l'écart : le contour du cadre est
+  // rebâti à chaque image, mémoriser sa calotte remplirait la table sans rien gagner.
+  const calottes = champ == null ? null : calottesDe(polylignes, (ligne) => ligne)
   ctx.beginPath()
-  for (const ligne of polylignes) {
+  for (let i = 0; i < polylignes.length; i++) {
+    const ligne = polylignes[i]!
+    const englobe = calottes?.[i]
+    if (champ != null && englobe != null && horsDuChamp(champ, englobe.centre, englobe.rayonDeg)) {
+      continue
+    }
     let enchaine = false
     for (const point of ligne) {
       if (!projecteur.projetteEn(point.x, point.y, point.z, p)) {
@@ -335,8 +412,9 @@ function traceLignes(
   ctx: CanvasRenderingContext2D,
   projecteur: Projecteur,
   polylignes: readonly (readonly Vec3[])[],
+  champ?: ChampVisible | null,
 ): void {
-  cheminLignes(ctx, projecteur, polylignes)
+  cheminLignes(ctx, projecteur, polylignes, champ)
   ctx.stroke()
 }
 
@@ -361,11 +439,25 @@ function traceSegments(
   ctx: CanvasRenderingContext2D,
   projecteur: Projecteur,
   couches: readonly CoucheTraces[],
+  champ: ChampVisible | null,
 ): void {
   const a = pointEcran()
   const b = pointEcran()
+  // L'écart se fait par CONSTELLATION, pas par segment : une figure est compacte, et sa
+  // calotte rejette ses vingt segments d'un seul produit scalaire.
+  const calottes =
+    champ === null
+      ? null
+      : calottesDe(couches, (couche) =>
+          couche.segments.flatMap((segment) => [segment.a, segment.b]),
+        )
   ctx.beginPath()
-  for (const couche of couches) {
+  for (let i = 0; i < couches.length; i++) {
+    const couche = couches[i]!
+    const englobe = calottes?.[i]
+    if (champ !== null && englobe != null && horsDuChamp(champ, englobe.centre, englobe.rayonDeg)) {
+      continue
+    }
     for (const segment of couche.segments) {
       if (!projecteur.projetteEn(segment.a.x, segment.a.y, segment.a.z, a)) continue
       if (!projecteur.projetteEn(segment.b.x, segment.b.y, segment.b.z, b)) continue
@@ -527,9 +619,12 @@ function traceBandeVoieLactee(entree: EntreeDessin): void {
   const champ = champVisible(projecteur)
   const p = pointEcran()
   for (const teinte of bandeMemo.teintes) {
-    ctx.globalAlpha = teinte.part
-    ctx.strokeStyle = teinte.couleur
-    ctx.beginPath()
+    // T-0110 — le chemin se construit AVANT que la teinte ne soit posée. Une teinte dont
+    // aucun segment n'atteint le champ ne doit rien coûter : en vue serrée, la bande n'occupe
+    // qu'une fraction du ciel, et l'écrasante majorité des teintes sort vide du test
+    // hors-champ. Poser `globalAlpha`, `strokeStyle` puis `stroke()` sur un chemin vide ne
+    // peint rien — mais chacun de ces ordres traverse quand même le pilote graphique.
+    let tracé = false
     for (const segment of teinte.segments) {
       if (horsDuChamp(champ, segment.centre, segment.demiExtensionDeg)) continue
       let enchaine = false
@@ -538,11 +633,20 @@ function traceBandeVoieLactee(entree: EntreeDessin): void {
           enchaine = false
           continue
         }
+        // Le chemin ne s'ouvre qu'au premier point retenu : une teinte entièrement hors du
+        // champ n'émet plus rien du tout, pas même l'ouverture.
+        if (!tracé) {
+          ctx.beginPath()
+          tracé = true
+        }
         if (enchaine) ctx.lineTo(p.xPx, p.yPx)
         else ctx.moveTo(p.xPx, p.yPx)
         enchaine = true
       }
     }
+    if (!tracé) continue
+    ctx.globalAlpha = teinte.part
+    ctx.strokeStyle = teinte.couleur
     ctx.stroke()
   }
   ctx.globalAlpha = opaciteInitiale
@@ -673,15 +777,19 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   ctx.font = `${HAUTEUR_LABEL_PX}px system-ui, sans-serif`
   ctx.textBaseline = 'middle'
 
+  // T-0110 — le champ se prend sur le projecteur BRUT : c'est une propriété de la vue, pas du
+  // filtrage par le sol. La calotte obtenue englobe donc ce que le projecteur filtré montrera.
+  // `null` au-delà du plafond de `FOV_MAX_DEG` : plus rien ne s'écarte, tout se trace.
+  const champScene = champPourEcart(brut)
   if (entree.couches.frontieres) {
     ctx.strokeStyle = teintes.frontieres
     ctx.lineWidth = 1
-    traceLignes(ctx, projecteur, entree.frontieres.polylignes)
+    traceLignes(ctx, projecteur, entree.frontieres.polylignes, champScene)
   }
   if (entree.couches.figures) {
     ctx.strokeStyle = teintes.figures
     ctx.lineWidth = 1
-    traceSegments(ctx, projecteur, entree.figures)
+    traceSegments(ctx, projecteur, entree.figures, champScene)
   }
   if (entree.couches.asterismes) {
     // Couche distincte des figures IAU par la teinte et l'épaisseur, pas par des tirets :
@@ -690,7 +798,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     // couche paraîtrait alors tracée de deux façons.
     ctx.strokeStyle = teintes.asterismes
     ctx.lineWidth = 2
-    traceSegments(ctx, projecteur, entree.asterismes)
+    traceSegments(ctx, projecteur, entree.asterismes, champScene)
     ctx.lineWidth = 1
   }
   if (entree.couches.horizon) traceHorizon(entree, teintes.horizon, brut)
