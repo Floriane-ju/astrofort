@@ -233,14 +233,21 @@ export function projecteur(vue: Vue, matriceCiel: Mat3): Projecteur {
 // Profondeur du catalogue asservie au zoom
 // ---------------------------------------------------------------------------
 
-/** §3.3 — mag_limite = mag_base + 5 × log10(fov_ref / fov_courant). */
+/**
+ * §3.3 — mag_limite = mag_base + 5 × log10(fov_ref / fov_courant), plancher à mag_base.
+ *
+ * ESSAI — la formule de §3.3 fait disparaître les étoiles au dézoom : à 180° de champ elle
+ * tombe à la magnitude 4,1 et le ciel se vide au moment même où on cherche à se repérer.
+ * Le plancher garde au dézoom la profondeur du champ de référence ; le zoom, lui, continue
+ * d'ouvrir le catalogue. Écart assumé au PRD, à mesurer avant d'être gardé.
+ */
 export function magnitudeLimite(fovDeg: number): Traced<number> {
   // Le « 5 » du PRD est le double du coefficient de Pogson : cinq magnitudes pour un
   // rapport de flux de cent. Il se dérive, il ne s'écrit pas en dur (§2.1).
+  const zoom =
+    K('MAG_BASE_RENDU') + 2 * K('POGSON') * Math.log10(K('FOV_REFERENCE_RENDU_DEG') / fovDeg)
   return trace({
-    value:
-      K('MAG_BASE_RENDU') +
-      2 * K('POGSON') * Math.log10(K('FOV_REFERENCE_RENDU_DEG') / fovDeg),
+    value: Math.max(zoom, K('MAG_BASE_RENDU')),
     formula: 'MAGNITUDE_LIMITE_ZOOM',
     inputs: { fov_deg: fovDeg },
     constants: ['MAG_BASE_RENDU', 'FOV_REFERENCE_RENDU_DEG', 'POGSON'],
