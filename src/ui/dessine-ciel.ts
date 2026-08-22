@@ -455,7 +455,10 @@ function teintesBande(sbCiel: number, modeNuit: boolean): readonly TeinteBande[]
         brillanceVoieLacteeNl(segment.lDeg, tranche.bDeg),
         modeNuit,
       )
-      if (rendu.couleur === fondSeul) continue
+      // Peint sous le demi-niveau d'octet : la tranche recouvre le fond par sa propre
+      // couleur. Deux façons de ne rien changer — une couleur égale à celle du fond, ou une
+      // opacité qui ramène l'écart sous ce que l'écran sait distinguer.
+      if (rendu.couleur === fondSeul || Math.round(rendu.deltaPeintOctets) === 0) continue
       const part = Math.round(rendu.part * NIVEAUX_ALPHA) / NIVEAUX_ALPHA
       const cle = `${rendu.couleur}|${part}`
       const groupe = groupes.get(cle) ?? { couleur: rendu.couleur, part, lignes: [] }

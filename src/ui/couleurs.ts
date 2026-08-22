@@ -242,12 +242,18 @@ const CHROMA_BANDE_NUIT: Composantes = [1, 0, 0]
  * Les deux sont couplées, et c'est ce couplage qui fait le rendu juste — là où la bande domine,
  * la couleur composée est exactement celle du modèle ; là où elle s'efface, sa part multiplie
  * une couleur devenue indiscernable du fond, donc ne se voit pas. Aucun seuil n'est introduit.
+ *
+ * `deltaPeintOctets` dit ce que la tranche CHANGE réellement à l'écran : le canevas compose en
+ * octets, donc le pixel obtenu vaut fond + part × (couleur − fond), et l'écart au fond se lit
+ * en niveaux d'octet. Sous un demi-niveau, la tranche se peint sur elle-même — l'appelant s'en
+ * sert pour ne pas la tracer. Ce n'est pas un seuil de rendu de plus : c'est la résolution de
+ * la cible, et elle se mesure.
  */
 export function bandeRealiste(
   brillanceCielNl: number,
   brillanceBandeNl: number,
   modeNuit: boolean,
-): { readonly couleur: string; readonly part: number } {
+): { readonly couleur: string; readonly part: number; readonly deltaPeintOctets: number } {
   const chroma = modeNuit ? CHROMA_BANDE_NUIT : CHROMA_BANDE
   const yCiel = K('K_EXPOSITION_FOND_CIEL') * brillanceCielNl
   const yBande = K('K_EXPOSITION_FOND_CIEL') * brillanceBandeNl
@@ -260,13 +266,21 @@ export function bandeRealiste(
         yCiel * K('CHROMA_FOND_CIEL_V'),
         yCiel * K('CHROMA_FOND_CIEL_B'),
       ]
+  const composee: Composantes = [
+    fond[0] + yBande * chroma[0],
+    fond[1] + yBande * chroma[1],
+    fond[2] + yBande * chroma[2],
+  ]
+  const part = brillanceBandeNl / (brillanceCielNl + brillanceBandeNl)
+  const ecartOctets = Math.max(
+    Math.abs(versOctet(composee[0]) - versOctet(fond[0])),
+    Math.abs(versOctet(composee[1]) - versOctet(fond[1])),
+    Math.abs(versOctet(composee[2]) - versOctet(fond[2])),
+  )
   return {
-    couleur: css([
-      fond[0] + yBande * chroma[0],
-      fond[1] + yBande * chroma[1],
-      fond[2] + yBande * chroma[2],
-    ]),
-    part: brillanceBandeNl / (brillanceCielNl + brillanceBandeNl),
+    couleur: css(composee),
+    part,
+    deltaPeintOctets: part * ecartOctets,
   }
 }
 
