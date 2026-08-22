@@ -4,7 +4,13 @@
   "title": "Ticket T-0110 — relecture d'optimisation de `src/`",
   "opened": "2026-08-22",
   "closed": null,
-  "commits": []
+  "commits": [
+    {
+      "sha": "000d584",
+      "date": "2026-08-22",
+      "files": []
+    }
+  ]
 }
 ---
 
