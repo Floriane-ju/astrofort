@@ -163,6 +163,10 @@ const RAYON_CLIC_PX = 10
 const PAS_CLE_PIXEL = 65536
 /** Sous ce rayon, l'antialiasing efface le disque : la plus faible étoile reste un point. */
 const RAYON_MIN_ETOILE_PX = 0.7
+/* Niveaux d'opacité distincts que le canevas sait composer : sa couche alpha tient sur un
+   octet. Deux tracés dont les opacités tombent dans le même niveau peignent le même pixel —
+   c'est ce qui autorise à les réunir. Fait de plateforme, pas seuil de rendu. */
+const NIVEAUX_ALPHA = 2 ** 8 - 1
 
 const NOM_VOIE_LACTEE = 'Voie lactée'
 /** Échantillonnage en azimut du cercle d'horizon. */
@@ -420,12 +424,57 @@ function ancreVoieLactee(
  * l'horizon — là où le sol la recouvre et où personne n'image. Le jour où il faudra la
  * composer par direction, c'est un champ 2D à peindre, pas un trait à moduler.
  */
-function traceBandeVoieLactee(entree: EntreeDessin): void {
-  const { ctx, projecteur } = entree
-  const brillanceCiel = nanolamberts(entree.sbCiel)
+interface TeinteBande {
+  readonly couleur: string
+  readonly part: number
+  readonly lignes: (readonly Vec3[])[]
+}
+
+/**
+ * Les 1 660 segments de la bande, regroupés par teinte peinte.
+ *
+ * Un `stroke()` par segment, c'était 1 660 traits larges et translucides étalés sur le canevas
+ * à chaque image — le coût explose au dézoom, où tous tombent dans le champ. La teinte d'un
+ * segment ne dépend QUE de sa position galactique et du fond de ciel du site : elle ne bouge
+ * ni au zoom, ni au défilement. Le regroupement se calcule donc une fois par fond de ciel,
+ * et l'image n'a plus qu'un tracé par teinte distincte.
+ *
+ * L'opacité est quantifiée au 255e, précision de la composition du canevas : deux segments
+ * rangés ensemble s'y peignaient déjà à l'identique.
+ */
+function teintesBande(sbCiel: number, modeNuit: boolean): readonly TeinteBande[] {
+  const brillanceCiel = nanolamberts(sbCiel)
   // Couleur du fond seul : la tranche qui la reproduit n'ajoute rien de visible, à un
   // 255e près. C'est la borne de peinture, et elle se déduit — elle ne se règle pas.
-  const fondSeul = fondRealiste(entree.sbCiel)
+  const fondSeul = fondRealiste(sbCiel)
+  const groupes = new Map<string, TeinteBande>()
+  for (const tranche of TRANCHES_BANDE) {
+    for (const segment of tranche.segments) {
+      const rendu = bandeRealiste(
+        brillanceCiel,
+        brillanceVoieLacteeNl(segment.lDeg, tranche.bDeg),
+        modeNuit,
+      )
+      if (rendu.couleur === fondSeul) continue
+      const part = Math.round(rendu.part * NIVEAUX_ALPHA) / NIVEAUX_ALPHA
+      const cle = `${rendu.couleur}|${part}`
+      const groupe = groupes.get(cle) ?? { couleur: rendu.couleur, part, lignes: [] }
+      groupe.lignes.push(segment.ligne)
+      groupes.set(cle, groupe)
+    }
+  }
+  return [...groupes.values()]
+}
+
+/** Une seule entrée : le fond de ciel change à la main, jamais d'une image à l'autre. */
+let bandeMemo: { readonly cle: string; readonly teintes: readonly TeinteBande[] } | null = null
+
+function traceBandeVoieLactee(entree: EntreeDessin): void {
+  const { ctx, projecteur } = entree
+  const cle = `${entree.sbCiel}|${entree.modeNuit}`
+  if (bandeMemo === null || bandeMemo.cle !== cle) {
+    bandeMemo = { cle, teintes: teintesBande(entree.sbCiel, entree.modeNuit) }
+  }
   const opaciteInitiale = ctx.globalAlpha
   ctx.lineJoin = 'round'
   // Bout franc, et pas arrondi : deux segments de longitude voisins partagent leur sommet, et
@@ -433,18 +482,10 @@ function traceBandeVoieLactee(entree: EntreeDessin): void {
   // compose deux fois, donc se voit comme une perle claire à chaque raccord.
   ctx.lineCap = 'butt'
   ctx.lineWidth = (PAS_LATITUDE_BANDE_DEG * projecteur.vue.largeurPx) / projecteur.vue.fovDeg
-  for (const tranche of TRANCHES_BANDE) {
-    for (const segment of tranche.segments) {
-      const rendu = bandeRealiste(
-        brillanceCiel,
-        brillanceVoieLacteeNl(segment.lDeg, tranche.bDeg),
-        entree.modeNuit,
-      )
-      if (rendu.couleur === fondSeul) continue
-      ctx.globalAlpha = rendu.part
-      ctx.strokeStyle = rendu.couleur
-      traceLignes(ctx, projecteur, [segment.ligne])
-    }
+  for (const teinte of bandeMemo.teintes) {
+    ctx.globalAlpha = teinte.part
+    ctx.strokeStyle = teinte.couleur
+    traceLignes(ctx, projecteur, teinte.lignes)
   }
   ctx.globalAlpha = opaciteInitiale
   ctx.lineWidth = 1
