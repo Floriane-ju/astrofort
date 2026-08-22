@@ -2,10 +2,14 @@
 {
   "id": "T-0111",
   "titre": "L'aperçu du filé bloque le fil principal jusqu'à 786 ms",
-  "colonne": "a-specifier",
+  "colonne": "pret",
   "priorite": "moyenne",
   "charge": "m",
-  "tags": ["performance", "file", "planetarium"],
+  "tags": [
+    "performance",
+    "file",
+    "planetarium"
+  ],
   "cree": "2026-08-22",
   "maj": "2026-08-22",
   "plan": null

@@ -2,7 +2,7 @@
 {
   "id": "T-0110",
   "titre": "Relire tout src/ : coût par image, lignes en trop, défauts",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "l",
   "tags": [
