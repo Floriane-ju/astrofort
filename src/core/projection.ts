@@ -233,14 +233,25 @@ export function projecteur(vue: Vue, matriceCiel: Mat3): Projecteur {
 // Profondeur du catalogue asservie au zoom
 // ---------------------------------------------------------------------------
 
-/** §3.3 — mag_limite = mag_base + 5 × log10(fov_ref / fov_courant). */
+/**
+ * §3.3 — mag_limite = mag_base + 5 × log10(fov_ref / fov_courant), à pente réduite au dézoom.
+ *
+ * ESSAI — la formule de §3.3 vide le ciel au dézoom : à 180° de champ elle tombe à la
+ * magnitude 4,1, soit 212 étoiles à l'écran, au moment même où l'on dézoome pour se repérer.
+ * Un plancher à mag_base en garde 3 335 et coûte trop cher à tracer. Au-delà du champ de
+ * référence la pente passe donc à UN coefficient de Pogson au lieu de deux — 2,5 magnitudes
+ * par décade de champ plutôt que 5 : magnitude 5,3 et 850 étoiles à 180°, quatre fois plus
+ * qu'au PRD, quatre fois moins qu'au plancher. Le zoom, lui, garde la pente de §3.3.
+ *
+ * Écart assumé au PRD, à valider avant d'être gardé.
+ */
 export function magnitudeLimite(fovDeg: number): Traced<number> {
   // Le « 5 » du PRD est le double du coefficient de Pogson : cinq magnitudes pour un
   // rapport de flux de cent. Il se dérive, il ne s'écrit pas en dur (§2.1).
+  const decades = Math.log10(K('FOV_REFERENCE_RENDU_DEG') / fovDeg)
+  const coefficients = decades < 0 ? 1 : 2
   return trace({
-    value:
-      K('MAG_BASE_RENDU') +
-      2 * K('POGSON') * Math.log10(K('FOV_REFERENCE_RENDU_DEG') / fovDeg),
+    value: K('MAG_BASE_RENDU') + coefficients * K('POGSON') * decades,
     formula: 'MAGNITUDE_LIMITE_ZOOM',
     inputs: { fov_deg: fovDeg },
     constants: ['MAG_BASE_RENDU', 'FOV_REFERENCE_RENDU_DEG', 'POGSON'],
