@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from 'vitest'
 import {
+  angleProjete,
   bornesZoom,
   echelleProjection,
   fovMaxSelonMode,
@@ -22,7 +23,7 @@ import {
   rayonEtoilePx,
   type Vue,
 } from '../src/core/projection.ts'
-import { IDENTITE, separationDeg, versVecteur } from '../src/core/mat3.ts'
+import { DEG, IDENTITE, separationDeg, versVecteur } from '../src/core/mat3.ts'
 import { K } from '../src/registry/constants.ts'
 import {
   M_LIM_OEIL_PLAFOND,
@@ -96,7 +97,6 @@ describe('projection unifiée §3.3', () => {
           if (attendu === null) continue
           expect(out.xPx, `${mode} ${lon}/${lat}`).toBe(attendu.xPx)
           expect(out.yPx, `${mode} ${lon}/${lat}`).toBe(attendu.yPx)
-          expect(out.thetaDeg, `${mode} ${lon}/${lat}`).toBe(attendu.thetaDeg)
         }
       }
       // Le centre de visée : c'est là que le fisheye prend sa branche singulière.
@@ -105,7 +105,6 @@ describe('projection unifiée §3.3', () => {
       p.projetteEn(centre.x, centre.y, centre.z, out)
       expect(out.xPx, mode).toBe(attendu.xPx)
       expect(out.yPx, mode).toBe(attendu.yPx)
-      expect(out.thetaDeg, mode).toBe(attendu.thetaDeg)
     }
   })
 
@@ -127,8 +126,17 @@ describe('projection unifiée §3.3', () => {
         const angleA = Math.atan2(a!.yPx - HAUTEUR / 2, a!.xPx - LARGEUR / 2)
         const angleB = Math.atan2(b!.yPx - HAUTEUR / 2, b!.xPx - LARGEUR / 2)
         expect(angleA).toBeCloseTo(angleB, 9)
-        expect(a!.thetaDeg).toBeCloseTo(thetaDeg, 9)
-        expect(b!.thetaDeg).toBeCloseTo(thetaDeg, 9)
+
+        // L'angle au centre de visée se relit dans le rayon projeté, par la réciproque de
+        // §3.3 : c'est ce que le point portait avant T-0111, et la propriété reste vérifiée
+        // là où elle se démontre — sur ce que la projection produit réellement.
+        for (const [p, point] of [
+          [planetarium, a!],
+          [cadre, b!],
+        ] as const) {
+          const rayon = Math.hypot(point.xPx - LARGEUR / 2, point.yPx - HAUTEUR / 2)
+          expect(angleProjete(p.vue.mode, rayon / p.echelle) / DEG).toBeCloseTo(thetaDeg, 9)
+        }
 
         rapports.push(
           Math.hypot(a!.xPx - LARGEUR / 2, a!.yPx - HAUTEUR / 2) /

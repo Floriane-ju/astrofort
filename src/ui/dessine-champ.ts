@@ -129,12 +129,19 @@ export interface SortieDessinChamp {
  */
 function longitudeGalactiqueVisee(projecteur: Projecteur): number {
   const ANTICENTRE_DEG = 180
+  // T-0111 — l'écart au centre se mesure entre directions, plus dans le point projeté : ce
+  // dernier ne porte plus son angle, et le reconstruire depuis les pixels s'effondre à très
+  // grand champ, où l'échelle rend l'écart au centre du canevas plus petit que le dernier
+  // bit de l'abscisse. Soixante séparations par image ne se mesurent pas.
+  const visee = projecteur.inverse(projecteur.vue.largeurPx / 2, projecteur.vue.hauteurPx / 2)
   let meilleure = ANTICENTRE_DEG
   let plusProche = Infinity
   for (let l = 0; l < 360; l += PAS_BANDE_L_DEG) {
-    const point = projecteur.projette(depuisGalactique(l, 0))
-    if (point === null || point.thetaDeg >= plusProche) continue
-    plusProche = point.thetaDeg
+    const direction = depuisGalactique(l, 0)
+    if (projecteur.projette(direction) === null) continue
+    const ecartDeg = separationDeg(visee, direction)
+    if (ecartDeg >= plusProche) continue
+    plusProche = ecartDeg
     meilleure = l
   }
   return meilleure

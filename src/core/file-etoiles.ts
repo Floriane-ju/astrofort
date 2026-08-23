@@ -19,7 +19,7 @@
 
 import { K } from '../registry/constants.ts'
 import { DEG, applique, rotationAutourDe, separationDeg, type Vec3 } from './mat3.ts'
-import type { PointEcran, Projecteur } from './projection.ts'
+import { pointEcran, type PointEcran, type Projecteur } from './projection.ts'
 import { trace, type Traced } from './traced.ts'
 
 const MIN_PAR_H = 60
@@ -146,7 +146,13 @@ const PAS_ARC_PX = 4
 /** Segments du pré-échantillonnage qui estime la longueur projetée avant de la parcourir. */
 const PRE_ECHANTILLONS = 4
 
-/** Longueur projetée approchée de l'arc, ou `null` si l'étoile n'est pas projetable partout. */
+/**
+ * Longueur projetée approchée de l'arc, ou `null` si l'étoile n'est pas projetable partout.
+ *
+ * T-0111 — les longueurs se somment en `sqrt` et non en `Math.hypot` : la mise à l'échelle
+ * anti-dépassement de `hypot` n'a rien à protéger sur une différence de deux abscisses de
+ * canevas, et elle se payait à chaque pas de chaque arc.
+ */
 function longueurApprocheePx(
   projecteur: Projecteur,
   etoile: Vec3,
@@ -162,7 +168,9 @@ function longueurApprocheePx(
     position = applique(rotation, position)
     const point = projecteur.projette(position)
     if (point === null) return null
-    longueur += Math.hypot(point.xPx - precedent.xPx, point.yPx - precedent.yPx)
+    const dx = point.xPx - precedent.xPx
+    const dy = point.yPx - precedent.yPx
+    longueur += Math.sqrt(dx * dx + dy * dy)
     precedent = point
   }
   return longueur
@@ -192,32 +200,60 @@ export function arcEtoile(
       : Math.max(1, Math.min(pasFin, Math.ceil(estimation / PAS_ARC_PX)))
   // Rotation élémentaire autour du pôle céleste de l'époque, appliquée de proche en proche :
   // l'angle horaire croît, donc l'ascension droite apparente décroît d'autant.
-  const rotation = rotationAutourDe(axePoleNord, -balayageDeg / pas)
+  // T-0111 — la matrice est déstructurée ici et le produit écrit à la main dans la boucle :
+  // `applique` alloue un vecteur par pas, soit un objet mort par position de chaque étoile,
+  // et cette seule allocation pesait un quart de la passe. L'ordre des opérations est celui
+  // de `applique`, au terme près : la trajectoire reste bit à bit la même.
+  const [r11, r12, r13, r21, r22, r23, r31, r32, r33] = rotationAutourDe(
+    axePoleNord,
+    -balayageDeg / pas,
+  )
 
   const segments: PointEcran[][] = []
   let courant: PointEcran[] = []
   let longueurPx = 0
   let tronque = false
-  let precedent: PointEcran | null = null
-  let position = etoile
+  let precedentX = 0
+  let precedentY = 0
+  let precedent = false
+  let px = etoile.x
+  let py = etoile.y
+  let pz = etoile.z
+  // Point de travail unique : seules les positions RETENUES deviennent un objet. Les autres
+  // — non projetables — n'en coûtaient un que pour être aussitôt jetées.
+  const out = pointEcran()
 
   for (let i = 0; i <= pas; i++) {
-    if (i > 0) position = applique(rotation, position)
-    const point = projecteur.projette(position)
-    const dedans =
-      point !== null && point.xPx >= 0 && point.yPx >= 0 && point.xPx <= largeur && point.yPx <= hauteur
-    if (point !== null) {
+    if (i > 0) {
+      const x = r11 * px + r12 * py + r13 * pz
+      const y = r21 * px + r22 * py + r23 * pz
+      const z = r31 * px + r32 * py + r33 * pz
+      px = x
+      py = y
+      pz = z
+    }
+    const projetable = projecteur.projetteEn(px, py, pz, out)
+    const xPx = out.xPx
+    const yPx = out.yPx
+    const dedans = projetable && xPx >= 0 && yPx >= 0 && xPx <= largeur && yPx <= hauteur
+    if (projetable) {
       // Le point qui sort est conservé : sans lui, la trace s'arrêterait avant le bord.
-      courant.push(point)
-      if (precedent !== null) longueurPx += Math.hypot(point.xPx - precedent.xPx, point.yPx - precedent.yPx)
+      courant.push({ xPx, yPx })
+      if (precedent) {
+        const dx = xPx - precedentX
+        const dy = yPx - precedentY
+        longueurPx += Math.sqrt(dx * dx + dy * dy)
+      }
     }
     if (!dedans) {
       tronque = true
       if (courant.length > 0) segments.push(courant)
       courant = []
-      precedent = null
+      precedent = false
     } else {
-      precedent = point
+      precedentX = xPx
+      precedentY = yPx
+      precedent = true
     }
   }
   if (courant.length > 0) segments.push(courant)

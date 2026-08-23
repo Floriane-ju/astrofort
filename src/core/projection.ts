@@ -39,8 +39,6 @@ export interface Vue {
 export interface PointEcran {
   readonly xPx: number
   readonly yPx: number
-  /** Distance angulaire au centre de visée, en degrés. */
-  readonly thetaDeg: number
 }
 
 /**
@@ -48,16 +46,20 @@ export interface PointEcran {
  * toute une image : sans lui, `projette` alloue un objet par étoile et par polyligne, et le
  * ramasse-miettes rend l'addition sous forme de saccades pendant un panoramique — invisible
  * sur une moyenne d'images par seconde, visible à l'œil.
+ *
+ * T-0111 — un point projeté ne porte plus que ses pixels. La distance angulaire au centre
+ * de visée y figurait aussi, et son `atan2` coûtait le tiers de la passe de filé pour un
+ * seul lecteur dans tout le code, appelé une fois par image. Cet écart-là se mesure entre
+ * DIRECTIONS, par `separationDeg` : le point projeté n'avait pas à le porter.
  */
 export interface PointEcranMut {
   xPx: number
   yPx: number
-  thetaDeg: number
 }
 
 /** Point de travail d'une passe de rendu, à hisser hors de la boucle qui le remplit. */
 export function pointEcran(): PointEcranMut {
-  return { xPx: 0, yPx: 0, thetaDeg: 0 }
+  return { xPx: 0, yPx: 0 }
 }
 
 /**
@@ -182,11 +184,13 @@ export function projecteur(vue: Vue, matriceCiel: Mat3): Projecteur {
       if (1 + z <= Number.EPSILON) return false
       facteur = 2 / (1 + z)
     } else {
-      const s = Math.hypot(x, y)
+      // `sqrt` et non `hypot` : `Math.hypot` met ses arguments à l'échelle pour survivre à
+      // un dépassement que des directions unitaires ne peuvent pas produire, et ce soin se
+      // payait à chaque point de chaque arc (T-0111).
+      const s = Math.sqrt(x * x + y * y)
       if (s <= Number.EPSILON) {
         out.xPx = centreX
         out.yPx = centreY
-        out.thetaDeg = 0
         return true
       }
       facteur = Math.atan2(s, z) / s
@@ -196,7 +200,6 @@ export function projecteur(vue: Vue, matriceCiel: Mat3): Projecteur {
     if ((xPx - centreX) ** 2 + (yPx - centreY) ** 2 > porteeCarree) return false
     out.xPx = xPx
     out.yPx = yPx
-    out.thetaDeg = Math.atan2(Math.hypot(x, y), z) / DEG
     return true
   }
 
