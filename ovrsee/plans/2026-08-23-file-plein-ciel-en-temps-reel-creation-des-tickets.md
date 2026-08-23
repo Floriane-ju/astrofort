@@ -14,6 +14,11 @@
         "src/ui/dessine-champ.ts",
         "tests/file-etoiles.test.ts"
       ]
+    },
+    {
+      "sha": "77ba895",
+      "date": "2026-08-23",
+      "files": []
     }
   ]
 }
