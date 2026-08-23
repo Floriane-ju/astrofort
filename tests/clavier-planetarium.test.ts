@@ -6,7 +6,7 @@
  * canevas ne fait que brancher ces fonctions pures — c'est pourquoi elles portent le test.
  */
 
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { K } from '../src/registry/constants.ts'
 import { bornesZoom } from '../src/core/projection.ts'
 import {
@@ -16,9 +16,7 @@ import {
   fovBorne,
   viseeApresCommande,
 } from '../src/ui/planetarium-gestes.ts'
-import { signatureGeste } from '../src/ui/planetarium-incrustation.ts'
 import { decritCible } from '../src/ui/planetarium-selection.ts'
-import { renduDiffere } from '../src/ui/rendu-differe.ts'
 import { etatScene, reinitialiseScene, type VueScene } from '../src/ui/scene-etat.ts'
 import type { CibleEcran } from '../src/ui/dessine-ciel.ts'
 import type { ObjetCielProfond } from '../src/data/deepsky.ts'
@@ -47,7 +45,6 @@ function vue(retouche: Partial<VueScene> = {}): VueScene {
 
 afterEach(() => {
   reinitialiseScene()
-  vi.useRealTimers()
 })
 
 describe('T-0069 — quelles touches portent un geste', () => {
@@ -185,41 +182,32 @@ describe('T-0069 — une cible se choisit sans pointeur', () => {
 })
 
 /**
- * T-0025 pour le clavier : un appui maintenu répète la touche des dizaines de fois par
- * seconde. Chaque appui n'écrit que l'azimut, la hauteur ou le champ — donc il change la
- * signature de geste que l'incrustation surveille, et emprunte le report que le panoramique
- * à la souris emprunte déjà. Un rendu par geste, pas un rendu par touche.
+ * T-0117 — il n'y a plus de report de geste : la boucle relit la vue à chaque image et son
+ * plafond d'images borne le travail, quel que soit le rythme de la répétition de touche. Ce
+ * qui reste à garantir côté clavier, c'est qu'un appui n'écrive que la vue — un appui qui
+ * toucherait le temps ou les couches ferait plus que déplacer la visée.
  */
-describe('T-0069 — la répétition de touche ne relance pas le calcul', () => {
-  it('ne touche que les champs de la signature de geste', () => {
+describe('T-0069 — la répétition de touche n’écrit que la vue', () => {
+  it('n’écrit qu’un seul champ de la vue par appui', () => {
     const depart = vue()
     for (const commande of ['VISEE_GAUCHE', 'VISEE_HAUT', 'ZOOM_AVANT'] as const) {
       const retouche = viseeApresCommande(depart, commande, BORNES)
-      const apres = { ...depart, ...retouche }
       expect(Object.keys(retouche).length, commande).toBe(1)
-      expect(signatureGeste(apres, 0), commande).not.toBe(signatureGeste(depart, 0))
+      const [champ] = Object.keys(retouche) as (keyof VueScene)[]
+      expect(champ, commande).toBeDefined()
+      expect(retouche[champ!], commande).not.toBe(depart[champ!])
     }
   })
 
-  it('ramène trente appuis maintenus à un seul rendu', () => {
-    vi.useFakeTimers()
-    let rendus = 0
-    const planificateur = renduDiffere(() => {
-      rendus += 1
-    })
+  it('déplace la visée d’un pas par appui, trente appuis durant', () => {
     let courant = vue()
-    let signature = signatureGeste(courant, 0)
+    const vus = new Set<number>([courant.azimutDeg])
     for (let i = 0; i < 30; i += 1) {
       courant = { ...courant, ...viseeApresCommande(courant, 'VISEE_DROITE', BORNES) }
-      const suivante = signatureGeste(courant, 0)
-      // La logique de l'effet d'incrustation : signature changée, donc geste en cours.
-      if (suivante !== signature) planificateur.bientot()
-      signature = suivante
-      vi.advanceTimersByTime(16)
+      vus.add(courant.azimutDeg)
     }
-    expect(rendus).toBe(0)
-    expect(planificateur.enAttente()).toBe(true)
-    vi.runAllTimers()
-    expect(rendus).toBe(1)
+    // Aucun appui perdu ni fusionné : la vue avance à chaque touche, c'est l'image qui
+    // arbitre le rythme du calcul, pas une minuterie de geste.
+    expect(vus.size).toBe(31)
   })
 })

@@ -139,8 +139,6 @@ export interface SelectionScene {
 export interface LecturesScene {
   readonly diagnostic: DiagnosticRendu
   readonly selection: SelectionScene | null
-  /** §9.3 — une incrustation est demandée mais l'image affichée est la précédente. */
-  readonly fileEnAttente: boolean
 }
 
 export interface EtatScene {
@@ -189,7 +187,6 @@ const ETAT_INITIAL: EtatScene = {
   lectures: {
     diagnostic: { fps: 0, etoilesExaminees: 0, etoilesDessinees: 0, cellules: 0, labels: 0 },
     selection: null,
-    fileEnAttente: false,
   },
   msAffiche: instant.ms,
 }

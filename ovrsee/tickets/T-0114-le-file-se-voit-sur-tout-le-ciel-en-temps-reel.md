@@ -57,9 +57,25 @@ passe de filé est donc cet intervalle moins le coût de la passe du ciel, mesur
 `pnpm bench:ciel`. Ce n'est pas une constante à écrire dans le code : c'est le critère que les
 enfants doivent atteindre, et le chiffre se relit au banc.
 
+Mesure reprise après T-0115, T-0116 et T-0117 — plein ciel, mêmes conditions
+(`pnpm bench:file [--planetarium]`), budget = 33,3 ms d'intervalle moins 0,41 ms de passe du ciel
+(`pnpm bench:ciel`) :
+
+```
+                                        MODE_CADRE   MODE_PLANETARIUM   verdict plein ciel
+pire cas — 180°, 480 min, 50 mm f/1,4      1177 ms         287 ms       ne tient pas
+pire cas — 180°, 480 min, 10 mm f/2,8       131 ms          36 ms       ne tient pas (de peu)
+usuel  —  60°, 120 min, 50 mm f/1,4         249 ms         141 ms       ne tient pas
+usuel  —  60°, 120 min, 10 mm f/2,8          23 ms          13 ms       tient
+```
+
+Le cercle exact de T-0115 vaut un facteur 4,1 sur le pire cas et 1,8 sur le cas usuel rapide
+(MODE_CADRE → MODE_PLANETARIUM). Il ne suffit pas : T-0118 est donc requis, et non plus
+conditionnel.
+
 Cas de référence du budget : le cas **usuel** (60°, 120 min). Le pire cas (180°, 480 min, f/1,4)
-est le cas dégradé — s'il ne tient pas, c'est T-0118 qui prend la suite, jamais un plafond
-silencieux.
+est le cas dégradé — s'il ne tient pas, c'est T-0118 qui prend la suite : un plafond global
+d'étoiles en filé, déclaré à l'écran, jamais posé en silence.
 
 ## Instrument
 
@@ -88,6 +104,8 @@ c'est un test d'écart géométrique qui prend le relais.
 
 ## Ordre recommandé
 
-T-0115 (cercle exact) → T-0116 (plein ciel) → T-0117 (temps réel) → T-0118 **seulement si** le
-budget ne tient pas. T-0118 peut mourir sans être fait ; c'est la mesure qui tranche, pas
-l'intuition.
+T-0115 (cercle exact) → T-0116 (plein ciel) → T-0117 (temps réel) → T-0118 (plafond d'étoiles).
+
+T-0118 était conditionnel ; la mesure l'a rendu **requis** (tableau ci-dessus). Il ferme la marche
+parce que sa valeur de plafond se règle sur ce que les trois premiers ont déjà gagné : la fixer
+avant, ce serait plafonner à l'aveugle un coût qu'on n'a pas encore réduit.

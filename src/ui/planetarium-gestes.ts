@@ -396,9 +396,9 @@ export const RACCOURCIS_CLAVIER =
 /**
  * T-0069 — WCAG 2.1.1 : le pilotage de la scène au clavier, dans les bornes du pointeur.
  *
- * Rien n'est recalculé pendant la répétition de touche : chaque appui n'écrit que l'azimut,
- * la hauteur ou le champ, et c'est précisément la signature que l'incrustation surveille pour
- * reporter sa passe à la fin du geste (T-0025, `signatureGeste`).
+ * Chaque appui n'écrit que l'azimut, la hauteur ou le champ : la boucle de rendu relit la vue
+ * à chaque image, et son plafond d'images borne le travail quel que soit le rythme des touches
+ * (T-0117). Rien à reporter, donc rien à replanifier par touche.
  */
 export function usePilotageClavier(entree: {
   readonly largeurPx: number

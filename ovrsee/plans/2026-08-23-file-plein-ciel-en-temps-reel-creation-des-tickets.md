@@ -1,9 +1,9 @@
 ---
 {
-  "status": "open",
+  "status": "closed",
   "title": "Filé plein ciel, en temps réel — création des tickets",
   "opened": "2026-08-23",
-  "closed": null,
+  "closed": "2026-08-23",
   "commits": [
     {
       "sha": "f042efd",

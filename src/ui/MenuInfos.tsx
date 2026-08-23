@@ -56,7 +56,7 @@ export function MenuInfos(props: MenuInfosProps) {
   const { vue: pointage, rendu, lectures, msAffiche } = useScene()
   const { azimutDeg, hauteurDeg, rotationCadreDeg, fovDeg } = pointage
   const { couches, vueRealiste } = rendu
-  const { diagnostic, selection, fileEnAttente } = lectures
+  const { diagnostic, selection } = lectures
   const { file } = useSeance()
 
   const dateAffichee = useMemo(() => new Date(msAffiche), [msAffiche])
@@ -121,10 +121,6 @@ export function MenuInfos(props: MenuInfosProps) {
   const causes: readonly string[] = [
     ciel.cause ?? null,
     avertissementEpoque(ciel.epoqueAnnee),
-    file.incrustation && !couches.cadre
-      ? 'Incrustation demandée alors que la couche « Cadre matériel » est éteinte : sans ' +
-        'cadre, il n’y a pas de surface où déposer le filé. La rallumer dans l’onglet Explorer.'
-      : null,
     couches.cadre && props.profils.length === 0 ? REFUS_SANS_PROFIL : null,
     couches.cadre ? refusAuDelaDuMaximum(props.profils.length) : null,
   ].filter((c): c is string => c !== null)
@@ -157,8 +153,7 @@ export function MenuInfos(props: MenuInfosProps) {
         <p className="etat">
           {visee} · jusqu’à la magnitude {profondeur.magLimite.value.toFixed(1)} · époque{' '}
           {ciel.epoqueAnnee.toFixed(1)}
-          {file.incrustation && couches.cadre && ' · filé incrusté dans le cadre, temps figé'}
-          {fileEnAttente && ' · filé en cours de recalcul, le cadre montre l’image précédente'}
+          {file.incrustation && ' · filé tracé sur tout le ciel, en direct'}
         </p>
 
         {causes.map((cause) => (

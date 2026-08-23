@@ -2,7 +2,7 @@
 {
   "id": "T-0117",
   "titre": "Le filé se recalcule pendant le geste",
-  "colonne": "pret",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "s",
   "epic": "T-0114",
@@ -53,3 +53,18 @@ interface qui saccade.
 - [ ] Cas dégradé écrit noir sur blanc : si le pire cas (180°, 480 min, f/1,4) ne tient pas, c'est
       T-0118 qui prend la suite — pas un plafond posé en silence
 - [ ] `pnpm typecheck && pnpm test` verts, sortie réelle rapportée
+
+## Protocole d'écran
+
+Le banc mesure le calcul, pas la peinture ni le compteur d'images : ce point-là se constate à
+l'écran, et voici comment.
+
+1. `pnpm dev`, ouvrir la scène, entrer un site et un boîtier chiffrable.
+2. Onglet Filé : cocher l'incrustation, durée totale 120 min, champ de la scène amené à 60°
+   (deux crans de molette depuis le champ de référence, la lecture « champ » du menu fait foi).
+3. Ouvrir le menu Lectures en haut à droite : la ligne « images/s » est la mesure.
+4. Panoramique complet à la souris, bouton maintenu, d'un bord à l'autre de la scène. Lire
+   « images/s » pendant le geste, pas après.
+5. Répéter avec l'objectif rapide (50 mm f/1,4) : c'est le cas que le banc donne perdant.
+
+Verdict attendu du banc : tenu à 10 mm f/2,8 (13 ms sur ~33), perdu à 50 mm f/1,4 (141 ms).
