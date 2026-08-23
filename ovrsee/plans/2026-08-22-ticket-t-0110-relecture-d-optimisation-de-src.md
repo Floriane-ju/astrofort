@@ -1,9 +1,9 @@
 ---
 {
-  "status": "open",
+  "status": "closed",
   "title": "Ticket T-0110 — relecture d'optimisation de `src/`",
   "opened": "2026-08-22",
-  "closed": null,
+  "closed": "2026-08-22",
   "commits": [
     {
       "sha": "000d584",
