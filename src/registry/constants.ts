@@ -1406,6 +1406,34 @@ const GRAND_CHAMP = {
     ordreDeGrandeur: true,
     sections: ['9.2'],
   }),
+  MARGE_ANTIALIASING_PX: entree({
+    ref: 'C-33',
+    libelle: 'Débord d’anticrénelage toléré autour du canevas avant de rejeter un tracé',
+    valeur: 1,
+    unite: 'px',
+    source:
+      '§9.3 — le rejet d’un arc hors canevas doit être CONSERVATEUR : le rasteriseur étale un ' +
+      'trait d’environ un demi-pixel au-delà de sa demi-largeur, et un rejet au ras du bord ' +
+      'effacerait ce débord. Un pixel entier de mou rend le rejet prouvablement invisible.',
+    tolerance: 'convention produit',
+    ordreDeGrandeur: false,
+    sections: ['9.3'],
+  }),
+  BUDGET_ETOILES_FILE: entree({
+    ref: 'C-33',
+    libelle: 'Étoiles lues au plus par la passe de filé, sur tout le champ de la scène',
+    valeur: 1500,
+    unite: '—',
+    source:
+      '§9.3 — budget de rendu, choisi par la mesure (`pnpm bench:file --planetarium`, T-0118) : ' +
+      '26 ms au pire cas contre 32,9 ms d’intervalle de boucle, là où 6 000 en demandait 34 ; ' +
+      'sous cette valeur le plancher n’est plus le semis mais le catalogue réel, qui n’est pas ' +
+      'plafonné ; un plafond de MAGNITUDE ne bornerait pas le coût, le nombre d’étoiles y ' +
+      'suivant l’angle solide du champ',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
+    sections: ['9.3'],
+  }),
   PENTE_COMPTAGE_ETOILES: entree({
     ref: 'C-33',
     libelle: 'Pente du comptage d’étoiles par magnitude',

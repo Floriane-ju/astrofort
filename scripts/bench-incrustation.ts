@@ -13,6 +13,8 @@
  * Usage : `node scripts/bench-incrustation.ts` (le catalogue vient de `public/data/`).
  * `--planetarium` mesure la même passe en projection stéréographique : c'est le seul mode où
  * la primitive de cercle de T-0115 s'applique, et le gain ne se lit que par comparaison.
+ * `--budget=N` rejoue la passe avec un autre plafond d'étoiles que celui du registre (T-0118) ;
+ * `--budget=0` la rejoue sans plafond, comme avant.
  */
 
 import { readFileSync } from 'node:fs'
@@ -83,6 +85,16 @@ const EMPREINTE = process.argv.includes('--empreinte')
 const MODE: ModeProjection = process.argv.includes('--planetarium')
   ? 'MODE_PLANETARIUM'
   : 'MODE_CADRE'
+/**
+ * T-0118 — le levier du plafond, réglable en ligne de commande : c'est la MESURE qui choisit
+ * la valeur du registre, pas l'inverse. `--budget=0` retire le plafond, et c'est ce cas qui
+ * doit reproduire les condensés d'avant T-0118 sous `--empreinte`.
+ */
+const BUDGET = ((): number | null => {
+  const arg = process.argv.find((a) => a.startsWith('--budget='))
+  const n = arg === undefined ? K('BUDGET_ETOILES_FILE') : Number(arg.slice('--budget='.length))
+  return Number.isFinite(n) && n > 0 ? n : null
+})()
 
 function empreinteur(): { ctx: CanvasRenderingContext2D; valeur: () => string } {
   let h = 0x811c9dc5
@@ -219,6 +231,16 @@ const CAS: readonly Cas[] = [
     dMm: 10 / 2.8,
     profil: PROFIL_10MM,
   },
+  // T-0118 — même durée, deux champs : c'est CE couple qui dit si le plafond borne bien un
+  // nombre d'étoiles et non une magnitude. Un plafond de magnitude ferait suivre le coût
+  // l'angle solide, environ 9× d'un champ à l'autre.
+  {
+    nom: 'invariance — 180°, 120 min, 50 mm f/1,4',
+    fovDeg: K('FOV_MAX_DEG'),
+    dureeMin: 120,
+    dMm: 35.7,
+    profil: PROFIL_50MM,
+  },
   {
     nom: 'usuel — 60°, 120 min, 50 mm f/1,4',
     fovDeg: 60,
@@ -273,6 +295,7 @@ function mesure(cas: Cas, indexReel: IndexCiel, indexSemis: IndexCiel): void {
       suiviActif: false,
       sbCiel: 21.0,
       dureeS: cas.dureeMin * S_PAR_MIN,
+      budgetEtoiles: BUDGET,
       latitudeDeg: SITE.latitudeDeg,
       axePoleNord: axePoleDeDate(epoqueAnnee(DATE)),
       modeNuit: false,
@@ -307,6 +330,7 @@ const indexReel = construitIndex(etoilesReelles())
 const indexSemis = construitIndex(semisGeneratif())
 console.log(
   `catalogue réel ${indexReel.nombreEtoiles} étoiles · semis ${indexSemis.nombreEtoiles} · ` +
-    `médiane de ${PASSES} passes · ${MODE}`,
+    `médiane de ${PASSES} passes · ${MODE} · ` +
+    `budget ${BUDGET === null ? 'sans plafond' : `${BUDGET} étoiles`}`,
 )
 for (const cas of CAS) mesure(cas, indexReel, indexSemis)

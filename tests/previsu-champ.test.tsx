@@ -17,6 +17,8 @@ import {
   densiteRelative,
   latitudeGalactiqueDeg,
   magnitudeLimitePrevisu,
+  magnitudePlafondSemis,
+  magnitudeSemis,
   opaciteEtoile,
   vignettageDiaph,
   type EntreeProfondeur,
@@ -24,11 +26,14 @@ import {
 import { construitIndex } from '../src/core/index-ciel.ts'
 import { axePoleDeDate, cielInstantane, epoqueAnnee } from '../src/core/horloges.ts'
 import type { Site } from '../src/core/ephem.ts'
-import { versVecteur } from '../src/core/mat3.ts'
+import { DEG, versVecteur } from '../src/core/mat3.ts'
+import { arcEtoile, arcInvisible, arcsVisibles } from '../src/core/file-etoiles.ts'
 import { projecteur, type Vue } from '../src/core/projection.ts'
 import { dessineChamp, type EntreeDessinChamp } from '../src/ui/dessine-champ.ts'
 import { pointZeroSysteme } from '../src/data/equipment.ts'
-import { PanneauFile } from '../src/ui/PanneauFile.tsx'
+import { PanneauFile, type PanneauFileProps } from '../src/ui/PanneauFile.tsx'
+import { MENTION_PLAFOND_FILE } from '../src/ui/scene-overlay.ts'
+import { majFile, reinitialiseSeance } from '../src/ui/seance-etat.ts'
 import { K } from '../src/registry/constants.ts'
 
 const SITE: Site = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
@@ -113,8 +118,30 @@ const PROFONDEUR: EntreeProfondeur = {
   readNoiseE: 1.5,
 }
 
+/** Le setup grand angle de référence de §9.3, en props du panneau. */
+const PROPS_PANNEAU: PanneauFileProps = {
+  site: SITE,
+  focaleMm: 10,
+  ouvertureN: 2.8,
+  pitchUm: 5.12,
+  capteurLMm: 35.9,
+  capteurHMm: 23.9,
+  fovLDeg: 121.7,
+  fovHDeg: 100.2,
+  echApx: 105.6,
+  tailleRawMo: 33,
+  profondeur: { ...PROFONDEUR, zpEstime: true },
+  tMaxSuiviS: null,
+  autonomieCipa: null,
+  zeroSysteme: pointZeroSysteme(null),
+  modeObjectif: 'MODE_CADRE',
+}
+
 const CIEL = cielInstantane(SITE, DATE)
+/** T-0115 — le cercle exact n'existe qu'en stéréographique : c'est là que le rejet s'applique. */
+const VUE_PLANETARIUM: Vue = { ...VUE, mode: 'MODE_PLANETARIUM', fovDeg: 180 }
 const PROJECTEUR = projecteur(VUE, CIEL.matrice)
+const PROJECTEUR_PLANETARIUM = projecteur(VUE_PLANETARIUM, CIEL.matrice)
 
 /** Étoile placée exactement au centre du cadre, pour vérifier la position rendue. */
 function etoileAuCentre(magV = 2): Etoile {
@@ -138,6 +165,7 @@ function rend(options: Partial<EntreeDessinChamp> = {}) {
     vueRealiste: false,
     sbCiel: 21.0,
     dureeS: 1,
+    budgetEtoiles: null,
     latitudeDeg: SITE.latitudeDeg,
     axePoleNord: AXE_POLE,
     modeNuit: false,
@@ -266,25 +294,7 @@ describe('§9.2 — modulation par les paramètres de capture', () => {
 
 describe('§9 — le panneau du filé', () => {
   it('compose les quatre features sur un seul pointage', () => {
-    const html = renderToStaticMarkup(
-      createElement(PanneauFile, {
-        site: SITE,
-        focaleMm: 10,
-        ouvertureN: 2.8,
-        pitchUm: 5.12,
-        capteurLMm: 35.9,
-        capteurHMm: 23.9,
-        fovLDeg: 121.7,
-        fovHDeg: 100.2,
-        echApx: 105.6,
-        tailleRawMo: 33,
-        profondeur: { ...PROFONDEUR, zpEstime: true },
-        tMaxSuiviS: null,
-        autonomieCipa: null,
-        zeroSysteme: pointZeroSysteme(null),
-        modeObjectif: 'MODE_CADRE',
-      }),
-    )
+    const html = renderToStaticMarkup(createElement(PanneauFile, PROPS_PANNEAU))
     expect(html).toContain('Pose maximale par déclinaison')
     expect(html).toContain('Prévisualisation de champ')
     expect(html).toContain('Filé d’étoiles')
@@ -294,6 +304,245 @@ describe('§9 — le panneau du filé', () => {
     expect(html).toContain('carte-pose')
     // Sans autonomie constructeur, aucun nombre de batteries n'est inventé.
     expect(html).toContain('[DONNÉE MANQUANTE]')
+  })
+})
+
+describe('§9.3 — T-0118, le filé plafonne le nombre d’étoiles', () => {
+  /** Étoiles du semis présentes dans un champ de ce rayon, sous cette magnitude. */
+  const semisDansChamp = (rayonDeg: number, magPlafond: number): number => {
+    const fractionCiel = (1 - Math.cos(rayonDeg * DEG)) / 2
+    const seuil = K('SEUIL_MAG_ETOILES_REELLES')
+    const pente = K('PENTE_COMPTAGE_ETOILES')
+    // Inverse de la loi de tirage : fraction du semis sous `magPlafond`.
+    const fractionSemis =
+      (10 ** (pente * (magPlafond - seuil)) - 1) / (10 ** (pente * (K('SEMIS_MAG_MAX') - seuil)) - 1)
+    return K('SEMIS_ETOILES_TOTAL') * fractionCiel * fractionSemis
+  }
+
+  it('partage la loi de comptage avec le tirage du semis', () => {
+    // Les deux bornes du tirage : rien sous le seuil catalographié, rien au-delà du semis.
+    expect(magnitudeSemis(0)).toBeCloseTo(K('SEUIL_MAG_ETOILES_REELLES'), 9)
+    expect(magnitudeSemis(1)).toBeCloseTo(K('SEMIS_MAG_MAX'), 9)
+  })
+
+  it('convertit un budget d’étoiles en magnitude, et le tient à tout rayon de champ', () => {
+    const budget = K('BUDGET_ETOILES_FILE')
+    // Rayons où le semis présent dans le champ dépasse le budget : c'est là que le plafond
+    // mord, et le comptage doit alors tomber exactement sur lui, quel que soit le champ.
+    for (const rayonDeg of [20, 34, 60, 90]) {
+      expect(semisDansChamp(rayonDeg, magnitudePlafondSemis(budget, rayonDeg))).toBeCloseTo(
+        budget,
+        6,
+      )
+    }
+  })
+
+  it('descend plus profond dans un champ étroit que sur tout le ciel', () => {
+    // C'est ce qui distingue un budget d'étoiles d'un plafond de magnitude : à magnitude
+    // fixe, le nombre d'étoiles suivrait l'angle solide du champ.
+    const budget = K('BUDGET_ETOILES_FILE')
+    expect(magnitudePlafondSemis(budget, 10)).toBeGreaterThan(magnitudePlafondSemis(budget, 90))
+  })
+
+  it('ne plafonne rien quand le budget dépasse le semis présent dans le champ', () => {
+    expect(magnitudePlafondSemis(K('SEMIS_ETOILES_TOTAL'), 90)).toBeCloseTo(K('SEMIS_MAG_MAX'), 9)
+  })
+
+  it('lit moins d’étoiles avec un budget qu’à profondeur pleine', () => {
+    // C'est `etoilesVisitees` que le plafond vise : ce qui est LU, donc ce qui est payé.
+    const sansPlafond = rend({ magLimite: K('SEMIS_MAG_MAX'), budgetEtoiles: null })
+    const plafonne = rend({ magLimite: K('SEMIS_MAG_MAX'), budgetEtoiles: 500 })
+    expect(plafonne.sortie.etoilesVisitees).toBeLessThan(sansPlafond.sortie.etoilesVisitees)
+  })
+
+  it('ne touche pas au catalogue réel : le ciel reconnaissable reste entier', () => {
+    const sansPlafond = rend({ magLimite: K('SEMIS_MAG_MAX'), budgetEtoiles: null })
+    // Budget quasi nul : il ne reste presque plus rien du semis, et pourtant le catalogue
+    // réel est tracé à l'identique — le plafond ne porte que sur la couche générative.
+    const plafonne = rend({ magLimite: K('SEMIS_MAG_MAX'), budgetEtoiles: 1 })
+    expect(plafonne.sortie.etoilesReelles).toBe(sansPlafond.sortie.etoilesReelles)
+    expect(plafonne.sortie.etoilesVisitees).toBeLessThan(sansPlafond.sortie.etoilesVisitees)
+  })
+
+  it('laisse l’aperçu de champ intact — même image sans budget', () => {
+    const premier = rend({ magLimite: K('SEMIS_MAG_MAX'), budgetEtoiles: null }).ctx.appels
+    const second = rend({ magLimite: K('SEMIS_MAG_MAX'), budgetEtoiles: null }).ctx.appels
+    expect(JSON.stringify(second)).toBe(JSON.stringify(premier))
+  })
+
+  it('déclare le plafond tant que le filé est actif, et se taît sinon', () => {
+    const html = () => renderToStaticMarkup(createElement(PanneauFile, PROPS_PANNEAU))
+    try {
+      majFile({ apercu: 'CHAMP' })
+      expect(html()).not.toContain(MENTION_PLAFOND_FILE)
+      majFile({ apercu: 'FILE' })
+      expect(html()).toContain(MENTION_PLAFOND_FILE)
+    } finally {
+      reinitialiseSeance()
+    }
+  })
+})
+
+describe('§9.3 — un arc hors du canevas n’est pas peint', () => {
+  /** Balayage échantillonné très finement : aucun point ne doit tomber dans le canevas. */
+  const aucunPointVisible = (
+    cercle: { xPx: number; yPx: number; rayonPx: number; debutRad: number; balayageRad: number },
+    margePx: number,
+  ): boolean => {
+    const pas = 4000
+    for (let i = 0; i <= pas; i++) {
+      const a = cercle.debutRad + (cercle.balayageRad * i) / pas
+      const x = cercle.xPx + cercle.rayonPx * Math.cos(a)
+      const y = cercle.yPx + cercle.rayonPx * Math.sin(a)
+      if (
+        x >= -margePx &&
+        y >= -margePx &&
+        x <= VUE_PLANETARIUM.largeurPx + margePx &&
+        y <= VUE_PLANETARIUM.hauteurPx + margePx
+      ) {
+        return false
+      }
+    }
+    return true
+  }
+
+  it('ne rejette que des arcs dont aucun point ne touche le canevas', () => {
+    // Le rejet se fonde sur la boîte englobante, donc sur une PREUVE ; ce test le confronte à
+    // un échantillonnage dense du balayage. Un seul point visible dans un arc rejeté serait
+    // une trace effacée à l'écran.
+    let rejetes = 0
+    let gardes = 0
+    for (const etoile of SEMIS.slice(0, 4000)) {
+      const v = versVecteur(etoile.adDeg, etoile.decDeg)
+      const arc = arcEtoile(PROJECTEUR_PLANETARIUM, v, 480, AXE_POLE)
+      if (arc.cercle === null) continue
+      const marge = 2
+      if (arcInvisible(arc, VUE_PLANETARIUM, marge)) {
+        rejetes++
+        expect(aucunPointVisible(arc.cercle, marge)).toBe(true)
+      } else {
+        gardes++
+      }
+    }
+    // Le test ne vaut que s'il a effectivement rejeté et gardé des arcs.
+    expect(rejetes).toBeGreaterThan(0)
+    expect(gardes).toBeGreaterThan(0)
+  })
+
+  it('ne rejette jamais une polyligne : elle se borne déjà elle-même', () => {
+    // En projection rectilinéaire l'arc n'est pas un cercle : il rompt son tracé au bord du
+    // canevas, et n'a donc pas de boîte à tester.
+    const arc = arcEtoile(PROJECTEUR, versVecteur(0, 80), 480, AXE_POLE)
+    expect(arc.cercle).toBeNull()
+    expect(arc.boite).toBeNull()
+    expect(arcInvisible(arc, VUE, 1)).toBe(false)
+  })
+})
+
+describe('§9.3 — le balayage est découpé sur le bord du canevas', () => {
+  const MARGE = 2
+  const dedans = (x: number, y: number, marge: number): boolean =>
+    x >= -marge &&
+    y >= -marge &&
+    x <= VUE_PLANETARIUM.largeurPx + marge &&
+    y <= VUE_PLANETARIUM.hauteurPx + marge
+
+  /** Tous les cercles exacts d'un échantillon d'étoiles, en projection stéréographique. */
+  const cercles = () => {
+    const sortie = []
+    for (const etoile of SEMIS.slice(0, 800)) {
+      const arc = arcEtoile(
+        PROJECTEUR_PLANETARIUM,
+        versVecteur(etoile.adDeg, etoile.decDeg),
+        480,
+        AXE_POLE,
+      )
+      if (arc.cercle !== null) sortie.push(arc.cercle)
+    }
+    return sortie
+  }
+
+  it('garde tout ce qui est visible : aucune trace n’est effacée', () => {
+    // Le sens du test : pour chaque point du balayage qui tombe DANS le canevas, une portion
+    // gardée doit le couvrir. Un point visible non couvert serait une trace disparue.
+    // Le comptage est cumulé et vérifié une fois : un `expect` par échantillon coûterait des
+    // millions d'appels et ferait expirer le test au lieu de le faire échouer.
+    const pas = 600
+    let visibles = 0
+    let manques = 0
+    for (const c of cercles()) {
+      const portions = arcsVisibles(c, VUE_PLANETARIUM, MARGE)
+      for (let i = 0; i <= pas; i++) {
+        const t = (c.balayageRad * i) / pas
+        const a = c.debutRad + t
+        if (!dedans(c.xPx + c.rayonPx * Math.cos(a), c.yPx + c.rayonPx * Math.sin(a), 0)) continue
+        visibles++
+        const avancee = Math.abs(t)
+        const couvert = portions.some((p) => {
+          const debut = Math.abs(p.debutRad - c.debutRad)
+          return avancee >= debut - 1e-9 && avancee <= debut + Math.abs(p.balayageRad) + 1e-9
+        })
+        if (!couvert) manques++
+      }
+    }
+    expect(visibles).toBeGreaterThan(0)
+    expect(manques).toBe(0)
+  })
+
+  it('ne garde rien d’invisible : la marge du demi-trait est la seule tolérance', () => {
+    const pas = 200
+    let verifies = 0
+    let fautifs = 0
+    for (const c of cercles()) {
+      for (const p of arcsVisibles(c, VUE_PLANETARIUM, MARGE)) {
+        for (let i = 1; i < pas; i++) {
+          const a = p.debutRad + (p.balayageRad * i) / pas
+          const x = c.xPx + c.rayonPx * Math.cos(a)
+          const y = c.yPx + c.rayonPx * Math.sin(a)
+          // Le découpage est exact aux franchissements ; entre eux, un point gardé est dedans.
+          if (!dedans(x, y, MARGE)) fautifs++
+          verifies++
+        }
+      }
+    }
+    expect(verifies).toBeGreaterThan(0)
+    expect(fautifs).toBe(0)
+  })
+
+  it('ne sort jamais du balayage demandé, et ne se chevauche pas', () => {
+    for (const c of cercles()) {
+      const portions = arcsVisibles(c, VUE_PLANETARIUM, MARGE)
+      let avanceePrecedente = -1
+      for (const p of portions) {
+        const debut = (p.debutRad - c.debutRad) / (c.balayageRad < 0 ? -1 : 1)
+        expect(debut).toBeGreaterThanOrEqual(-1e-9)
+        expect(debut + Math.abs(p.balayageRad)).toBeLessThanOrEqual(Math.abs(c.balayageRad) + 1e-9)
+        // Même sens de rotation que le balayage : une portion inversée tracerait à l'envers.
+        expect(Math.sign(p.balayageRad)).toBe(Math.sign(c.balayageRad))
+        expect(debut).toBeGreaterThan(avanceePrecedente)
+        avanceePrecedente = debut
+      }
+    }
+  })
+
+  it('rend le balayage entier, en un seul ordre, quand le cercle tient dans le canevas', () => {
+    // Un petit cercle au centre du canevas : rien à découper.
+    const c = {
+      xPx: VUE_PLANETARIUM.largeurPx / 2,
+      yPx: VUE_PLANETARIUM.hauteurPx / 2,
+      rayonPx: 40,
+      debutRad: 0.3,
+      balayageRad: 2,
+    }
+    const portions = arcsVisibles(c, VUE_PLANETARIUM, MARGE)
+    expect(portions).toHaveLength(1)
+    expect(portions[0]!.debutRad).toBeCloseTo(c.debutRad, 9)
+    expect(portions[0]!.balayageRad).toBeCloseTo(c.balayageRad, 9)
+  })
+
+  it('ne rend rien quand le cercle est tout entier hors du canevas', () => {
+    const c = { xPx: -9000, yPx: -9000, rayonPx: 40, debutRad: 0, balayageRad: 2 }
+    expect(arcsVisibles(c, VUE_PLANETARIUM, MARGE)).toHaveLength(0)
   })
 })
 

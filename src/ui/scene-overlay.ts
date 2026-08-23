@@ -7,6 +7,7 @@
  * ce que le capteur enregistrerait — un écart qui se déclare, il ne se corrige pas en douce.
  */
 
+import { K } from '../registry/constants.ts'
 import type { ModeProjection } from '../core/projection.ts'
 
 /**
@@ -17,6 +18,18 @@ import type { ModeProjection } from '../core/projection.ts'
 export const MENTION_VIGNETTAGE_FILE =
   'Vignettage non peint sur la scène : il appartient au cadre du capteur, pas au ciel. ' +
   'Son atténuation en diaphragmes reste chiffrée ci-dessus.'
+
+/**
+ * §9.3 — T-0118 : le plafond du filé est déclaré, jamais silencieux. Sans cette phrase, un ciel
+ * plafonné se lit comme un ciel pauvre, donc comme un bug de rendu. Elle reste affichée tant
+ * que l'aperçu est en filé, puisque le plafond, lui, ne bouge pas — ni sous la main, ni au
+ * repos.
+ */
+export const MENTION_PLAFOND_FILE =
+  `L’aperçu du filé lit au plus ${K('BUDGET_ETOILES_FILE').toLocaleString('fr-FR')} étoiles ` +
+  'sur tout le champ : le capteur en enregistrerait davantage, mais à cette profondeur les ' +
+  'étoiles faibles ne laissent pas de trace lisible — elles ne coûteraient que du temps de ' +
+  'calcul. Les compteurs disent ce qui est peint, pas ce que la pose atteindrait.'
 
 /** §5.1 — la projection de la scène n'est pas toujours celle que l'objectif produirait. */
 export function mentionProjection(

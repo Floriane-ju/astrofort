@@ -19,9 +19,17 @@
  */
 
 import { K } from '../registry/constants.ts'
-import { arcEtoile, poseParPixelS, positionPole, type PositionPole } from '../core/file-etoiles.ts'
+import {
+  arcEtoile,
+  arcInvisible,
+  arcsVisibles,
+  poseParPixelS,
+  positionPole,
+  type PositionPole,
+} from '../core/file-etoiles.ts'
 import {
   magnitudeLimitePrevisu,
+  magnitudePlafondSemis,
   opaciteEtoile,
   type EntreeProfondeur,
 } from '../core/galactique.ts'
@@ -64,6 +72,13 @@ export interface ParametresFile {
   readonly suiviActif: boolean
   /** Durée d'accumulation dessinée : pose unitaire en prévisualisation, durée totale en filé. */
   readonly dureeS: number
+  /**
+   * T-0118 — budget d'étoiles LUES accordé à la couche du semis, ou `null` quand la passe
+   * n'est pas plafonnée. En filé, la profondeur atteinte ne produit pas de trace lisible :
+   * elle produit du temps de calcul. L'aperçu de champ, lui, reste sans plafond — les arcs y
+   * sont courts, et la profondeur du capteur y est justement le propos de l'écran.
+   */
+  readonly budgetEtoiles: number | null
 }
 
 export interface EntreeDessinChamp extends ParametresFile {
@@ -101,6 +116,19 @@ interface Compteur {
   visitees: number
 }
 
+/**
+ * T-0116 — la sélection couvre tout le champ de la scène : les traces s'y voient partout, le
+ * cadre ne les borne plus, il dit seulement lesquelles le capteur enregistrerait. Le budget
+ * d'étoiles du filé se convertit sur CE rayon : même champ, même image, même coût.
+ */
+function rayonChampDeg(projecteur: Projecteur): number {
+  return Math.min(
+    K('FOV_MAX_DEG') / 2,
+    (projecteur.vue.fovDeg / 2) *
+      Math.hypot(1, projecteur.vue.hauteurPx / projecteur.vue.largeurPx),
+  )
+}
+
 /** Une étoile : un arc balayé pendant la durée d'accumulation, ponctuel quand elle est brève. */
 function dessineCouche(
   entree: EntreeDessinChamp,
@@ -113,18 +141,15 @@ function dessineCouche(
   const largeur = projecteur.vue.largeurPx
   const hauteur = projecteur.vue.hauteurPx
   const centreJ2000 = projecteur.inverse(largeur / 2, hauteur / 2)
-  // T-0116 — la sélection couvre tout le champ de la scène : les traces s'y voient partout,
-  // le cadre ne les borne plus, il dit seulement lesquelles le capteur enregistrerait.
-  const rayonChampDeg = Math.min(
-    K('FOV_MAX_DEG') / 2,
-    (projecteur.vue.fovDeg / 2) * Math.hypot(1, hauteur / largeur),
-  )
   // Avec suivi, l'étoile ne se déplace pas sur le capteur : ni trace, ni étalement du flux.
   const dureeMin = entree.suiviActif ? 0 : entree.dureeS / S_PAR_MIN
 
-  const stats = selectionne(index, centreJ2000, rayonChampDeg, magMax, (x, y, z, magV, bv) => {
+  const stats = selectionne(index, centreJ2000, rayonChampDeg(projecteur), magMax, (x, y, z, magV, bv) => {
     if (magV < magMin) return
     const rayon = Math.max(RAYON_MIN_ETOILE_PX, rayonEtoilePx(magV))
+    // Marge du rejet et du découpage : la demi-largeur du trait, plus le débord
+    // d'anticrénelage. Rejeter au ras du bord effacerait ce débord — un pixel de trace.
+    const margeTrace = rayon + K('MARGE_ANTIALIASING_PX')
 
     // La brillance d'une trace se juge sur la pose vue PAR PIXEL, pas sur la durée totale :
     // c'est pour cela qu'un filé de deux heures ne montre que les étoiles brillantes, là où
@@ -148,6 +173,14 @@ function dessineCouche(
 
     const arc = arcEtoile(projecteur, { x, y, z }, dureeMin, entree.axePoleNord)
     if (arc.segments.length === 0) return
+    // T-0115 avait remplacé la polyligne — qui rompait son tracé au bord du canevas — par un
+    // cercle exact, confié en UN ordre à `ctx.arc`, balayage entier. Le calcul y a gagné un
+    // facteur quatre, le raster l'a reperdu : un cercle de dix-sept mille pixels de rayon dont
+    // rien ne touche l'écran se peignait intégralement. Au cas usuel, 3 600 arcs sur 4 600
+    // étaient dans ce cas — quatre cinquièmes de la longueur peinte, invisible par
+    // construction. La boîte les rejette avant l'ordre de tracé.
+    if (arcInvisible(arc, projecteur.vue, margeTrace)) return
+    const cercle = arc.cercle
     const couleur = couleurTeinte(teinte(bv), entree.modeNuit)
     ctx.globalAlpha = opacite
 
@@ -163,18 +196,33 @@ function dessineCouche(
       ctx.lineWidth = rayon * 2
       ctx.lineCap = 'round'
       ctx.beginPath()
-      if (arc.cercle !== null) {
+      if (cercle !== null) {
         // T-0115 — en stéréographique l'arc EST un cercle : la primitive du canevas le trace
-        // exactement, là où la polyligne l'approchait en centaines de cordes.
-        const c = arc.cercle
-        ctx.arc(
-          c.xPx,
-          c.yPx,
-          c.rayonPx,
-          c.debutRad,
-          c.debutRad + c.balayageRad,
-          c.balayageRad < 0,
-        )
+        // exactement, là où la polyligne l'approchait en centaines de cordes. Mais elle trace
+        // TOUT ce qu'on lui donne : le balayage est donc découpé sur le bord du canevas, comme
+        // la polyligne le faisait d'elle-même. Quatre cinquièmes de la longueur peinte au
+        // plein ciel tombaient hors de l'écran.
+        const c = cercle
+        // Portions du balayage qui touchent le canevas. Le découpage se fait ICI, dans la
+        // seule branche qui trace un long arc : le disque, lui, se juge sur la boîte, et une
+        // trace sous-pixel qui effleure le bord ne doit pas disparaître sur un découpage.
+        for (const portion of arcsVisibles(c, projecteur.vue, margeTrace)) {
+          // `moveTo` sur le départ de la portion AVANT l'arc : sans lui, `ctx.arc` relie la
+          // fin de la portion précédente au début de celle-ci par une corde, et deux traces
+          // séparées par un passage hors écran se retrouveraient jointes par un trait droit.
+          ctx.moveTo(
+            c.xPx + c.rayonPx * Math.cos(portion.debutRad),
+            c.yPx + c.rayonPx * Math.sin(portion.debutRad),
+          )
+          ctx.arc(
+            c.xPx,
+            c.yPx,
+            c.rayonPx,
+            portion.debutRad,
+            portion.debutRad + portion.balayageRad,
+            portion.balayageRad < 0,
+          )
+        }
       } else {
         for (const segment of arc.segments) {
           segment.forEach((p, i) => {
@@ -204,9 +252,21 @@ export function dessineChamp(entree: EntreeDessinChamp): SortieDessinChamp {
   const seuilReel = K('SEUIL_MAG_ETOILES_REELLES')
   const reelles: Compteur = { dessinees: 0, tronques: 0, visitees: 0 }
   const generees: Compteur = { dessinees: 0, tronques: 0, visitees: 0 }
+  // T-0118 — seule la couche du semis est plafonnée. Le catalogue réel vaut environ
+  // 15 000 étoiles sur toute la sphère : c'est le ciel reconnaissable, et ce n'est pas lui qui
+  // coûte. Le plafond ne doit donc jamais être « complété » sur lui.
+  const magSemis =
+    entree.budgetEtoiles === null
+      ? entree.magLimite
+      : Math.min(
+          entree.magLimite,
+          magnitudePlafondSemis(entree.budgetEtoiles, rayonChampDeg(projecteur)),
+        )
   dessineCouche(entree, entree.indexReel, -Infinity, Math.min(entree.magLimite, seuilReel), reelles)
-  if (entree.magLimite > seuilReel) {
-    dessineCouche(entree, entree.indexSemis, seuilReel, entree.magLimite, generees)
+  // La couche est coupée quand le plafond retombe sous le seuil catalographié : il ne reste
+  // alors rien à générer que le catalogue ne montre déjà.
+  if (magSemis > seuilReel) {
+    dessineCouche(entree, entree.indexSemis, seuilReel, magSemis, generees)
   }
 
   // Centre de rotation : marqué s'il tombe dans le champ, jamais ramené dedans s'il n'y est pas.

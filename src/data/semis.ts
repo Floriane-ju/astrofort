@@ -18,7 +18,7 @@
  */
 
 import { K } from '../registry/constants.ts'
-import { latitudeGalactiqueDeg } from '../core/galactique.ts'
+import { latitudeGalactiqueDeg, magnitudeSemis } from '../core/galactique.ts'
 import { DEG, versVecteur } from '../core/mat3.ts'
 import type { Etoile } from './catalog.ts'
 
@@ -35,17 +35,6 @@ function generateur(graine: number): () => number {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
-}
-
-/**
- * Magnitude tirée selon le comptage euclidien N(<m) ∝ 10^(0,6 m) entre le seuil
- * catalographié et la borne du semis : les étoiles faibles dominent, comme dans le ciel.
- */
-function magnitudeTiree(u: number): number {
-  const seuil = K('SEUIL_MAG_ETOILES_REELLES')
-  const pente = K('PENTE_COMPTAGE_ETOILES')
-  const etendue = K('SEMIS_MAG_MAX') - seuil
-  return seuil + Math.log10(1 + u * (10 ** (pente * etendue) - 1)) / pente
 }
 
 /** Indices de couleur plausibles pour des étoiles faibles : majorité jaune à rouge. */
@@ -73,7 +62,7 @@ export function semisGeneratif(): readonly Etoile[] {
     etoiles.push({
       adDeg,
       decDeg,
-      magV: magnitudeTiree(alea()),
+      magV: magnitudeSemis(alea()),
       bv: BV_MIN + alea() * BV_ETENDUE,
     })
   }

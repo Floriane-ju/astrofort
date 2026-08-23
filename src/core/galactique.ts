@@ -67,6 +67,41 @@ export function densiteRelative(bDeg: number): Traced<number> {
   })
 }
 
+/**
+ * §9.2 — magnitude sous laquelle la fraction `u` du semis génératif est tirée, selon le
+ * comptage euclidien N(<m) ∝ 10^(PENTE × m) entre le seuil catalographié et la borne du semis.
+ *
+ * Le tirage du semis (couche 2) et le plafond du filé (§9.3, T-0118) lisent la MÊME loi : deux
+ * écritures dériveraient l'une de l'autre, et le plafond ne bornerait plus ce que le tirage
+ * produit.
+ */
+export function magnitudeSemis(u: number): number {
+  const seuil = K('SEUIL_MAG_ETOILES_REELLES')
+  const pente = K('PENTE_COMPTAGE_ETOILES')
+  const etendue = K('SEMIS_MAG_MAX') - seuil
+  // La base est celle de l'échelle des magnitudes : la loi de comptage et l'échelle des
+  // brillances ne peuvent pas reposer sur deux bases différentes.
+  return seuil + Math.log10(1 + u * (K('BASE_MAGNITUDE') ** (pente * etendue) - 1)) / pente
+}
+
+/**
+ * §9.3 — T-0118 : magnitude plafond de la couche du semis, pour un budget d'étoiles LUES sur
+ * un champ de rayon donné.
+ *
+ * Un plafond de magnitude fixe ne bornerait pas le coût : à magnitude égale, le nombre
+ * d'étoiles suit l'angle solide du champ — environ 9× entre un champ de 60° et le plein ciel.
+ * C'est donc le budget d'étoiles qui est fixé, et la magnitude qui s'en déduit : le coût de la
+ * passe reste le même à 10° comme à 180°, et l'image garde la même densité partout.
+ */
+export function magnitudePlafondSemis(budgetEtoiles: number, rayonChampDeg: number): number {
+  const fractionCiel = (1 - Math.cos(rayonChampDeg * DEG)) / 2
+  if (fractionCiel <= 0) return K('SEMIS_MAG_MAX')
+  // Au-delà de la totalité du semis présent dans le champ, il n'y a plus rien à plafonner.
+  return magnitudeSemis(
+    Math.min(1, budgetEtoiles / (K('SEMIS_ETOILES_TOTAL') * fractionCiel)),
+  )
+}
+
 /** §9.2 — assombrissement des coins, en diaphragmes, pour un rayon relatif au coin du cadre. */
 export function vignettageDiaph(rayonRelatif: number): Traced<number> {
   const borne = Math.max(0, Math.min(1, rayonRelatif))

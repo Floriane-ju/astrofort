@@ -6,7 +6,8 @@
  * qui vient du matériel et du panneau, et qui ne dépend donc d'aucune image en particulier.
  *
  * Les paramètres s'écrivent PENDANT le rendu React, comme l'état de boucle de `Planetarium` :
- * la boucle les relit à chaque image, et un panoramique n'a donc rien à replanifier.
+ * la boucle les relit à chaque image, et un panoramique n'a donc rien à replanifier. T-0117 a
+ * retiré le dernier report de geste : plus de signature à surveiller, plus d'attente à annoncer.
  */
 
 import { useMemo, useRef, type RefObject } from 'react'
@@ -15,7 +16,6 @@ import { semisGeneratif } from '../data/semis.ts'
 import { magnitudeLimitePrevisu } from '../core/galactique.ts'
 import { construitIndex, type IndexCiel } from '../core/index-ciel.ts'
 import type { Etoile } from '../data/catalog.ts'
-import type { VueScene } from './scene-etat.ts'
 import type { ReglagesFile } from './seance-etat.ts'
 import type { ParametresFile } from './dessine-champ.ts'
 import type { MaterielFile } from './planetarium-materiel.ts'
@@ -37,17 +37,6 @@ export function useIndexReel(etoiles: readonly Etoile[]): IndexCiel {
     () => construitIndex(etoiles.filter((e) => e.magV <= K('SEUIL_MAG_ETOILES_REELLES'))),
     [etoiles],
   )
-}
-
-/**
- * T-0025 — la signature d'un geste en cours : le pointage, le champ et la durée.
- *
- * Elle ne pilote plus le filé, qui se recalcule maintenant par image (T-0116). Elle reste le
- * critère de « une répétition de touche ne relance pas le calcul » (T-0069) : un pas au
- * clavier n'écrit que ces champs-là. T-0117 tranchera ce qu'il reste de report à supprimer.
- */
-export function signatureGeste(vue: VueScene, dureeTotaleMin: number): string {
-  return `${vue.azimutDeg}|${vue.hauteurDeg}|${vue.rotationCadreDeg}|${vue.fovDeg}|${dureeTotaleMin}`
 }
 
 /**
@@ -79,6 +68,10 @@ export function useParametresFile(
     suiviActif: file.apercu === 'CHAMP' && materiel.tMaxSuiviS !== null,
     dureeS:
       file.apercu === 'FILE' ? file.dureeTotaleMin * S_PAR_MIN : materiel.profondeur.tPoseS,
+    // T-0118 — le plafond suit le MODE, pas le geste : immobile comme en panoramique, le filé
+    // lit le même nombre d'étoiles. Une passe qui changerait de profondeur sous la main
+    // donnerait deux images pour une même scène, et une mention qui clignote avec le geste.
+    budgetEtoiles: file.apercu === 'FILE' ? K('BUDGET_ETOILES_FILE') : null,
   }
   return parametres
 }

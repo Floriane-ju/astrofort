@@ -25,7 +25,7 @@
 
 import { K } from '../registry/constants.ts'
 import { DEG, applique, rotationAutourDe, separationDeg, type Vec3 } from './mat3.ts'
-import { pointEcran, porteeUtilePx, type PointEcran, type Projecteur } from './projection.ts'
+import { pointEcran, porteeUtilePx, type PointEcran, type Projecteur, type Vue } from './projection.ts'
 import { trace, type Traced } from './traced.ts'
 
 const MIN_PAR_H = 60
@@ -139,6 +139,14 @@ export interface ArcCercle {
   readonly balayageRad: number
 }
 
+/** Boîte englobante d'un tracé, en pixels du canevas. */
+export interface BoiteEcran {
+  readonly minX: number
+  readonly minY: number
+  readonly maxX: number
+  readonly maxY: number
+}
+
 export interface ArcFile {
   /** Polylignes en pixels — plusieurs dès que l'étoile sort du cadre puis y revient. */
   readonly segments: readonly (readonly PointEcran[])[]
@@ -150,6 +158,130 @@ export interface ArcFile {
   readonly longueurPx: number
   /** Vrai quand l'étoile entre ou sort du champ pendant la séquence. */
   readonly tronque: boolean
+  /**
+   * Boîte englobante exacte de l'arc de cercle, `null` pour la polyligne.
+   *
+   * La polyligne se borne déjà elle-même : elle rompt son segment dès qu'un point sort du
+   * canevas. Le cercle exact de T-0115, lui, part chez `ctx.arc` en un seul ordre, balayage
+   * entier — un cercle de dix-sept mille pixels de rayon dont rien ne touche l'écran se
+   * peignait donc intégralement. C'est cette boîte qui permet de le rejeter avant.
+   */
+  readonly boite: BoiteEcran | null
+}
+
+/**
+ * L'arc ne touche pas le canevas, demi-trait compris : il n'y a rien à peindre.
+ *
+ * Le test porte sur la boîte, jamais sur un échantillonnage du balayage : une boîte disjointe
+ * du canevas PROUVE que l'arc en est absent, là où des points espacés pourraient rater un
+ * coin. Un arc dont la boîte recouvre l'écran sans le traverser sera peint pour rien — c'est
+ * le prix de la certitude, et il est bien moindre que celui qu'on retire.
+ */
+export function arcInvisible(arc: ArcFile, vue: Vue, demiTraitPx: number): boolean {
+  const b = arc.boite
+  if (b === null) return false
+  return (
+    b.maxX < -demiTraitPx ||
+    b.maxY < -demiTraitPx ||
+    b.minX > vue.largeurPx + demiTraitPx ||
+    b.minY > vue.hauteurPx + demiTraitPx
+  )
+}
+
+/** Sous-arc du balayage, exprimé comme `ArcCercle` : prêt à partir chez `ctx.arc`. */
+export interface SousArc {
+  readonly debutRad: number
+  readonly balayageRad: number
+}
+
+/** Ce point du cercle tombe-t-il dans le canevas élargi du demi-trait ? */
+function dansCanevas(
+  cercle: ArcCercle,
+  angleRad: number,
+  vue: Vue,
+  margePx: number,
+): boolean {
+  const x = cercle.xPx + cercle.rayonPx * Math.cos(angleRad)
+  const y = cercle.yPx + cercle.rayonPx * Math.sin(angleRad)
+  return (
+    x >= -margePx &&
+    y >= -margePx &&
+    x <= vue.largeurPx + margePx &&
+    y <= vue.hauteurPx + margePx
+  )
+}
+
+/**
+ * Portions du balayage dont le tracé touche réellement le canevas.
+ *
+ * T-0115 confie l'arc à `ctx.arc` en un seul ordre, balayage entier. C'est exact et c'est
+ * rapide à CALCULER — cinq projections au lieu de centaines — mais le rasteriseur, lui, parcourt
+ * tout ce qu'on lui donne : un cercle de dix-sept mille pixels de rayon dont un dixième traverse
+ * l'écran se peignait en entier. La polyligne qu'il a remplacée, elle, rompait son tracé au
+ * bord. Cette fonction rend au cercle ce que la polyligne faisait gratuitement.
+ *
+ * Le découpage est EXACT, jamais échantillonné. Un cercle ne franchit le bord du canevas qu'aux
+ * angles où il coupe l'une des quatre droites qui le portent : entre deux franchissements
+ * consécutifs, il est tout entier dedans ou tout entier dehors, et le point milieu tranche. La
+ * portion gardée est donc bornée par de vrais points de franchissement, pas par le pas d'un
+ * échantillonnage qui pourrait raser un coin.
+ */
+export function arcsVisibles(
+  cercle: ArcCercle,
+  vue: Vue,
+  margePx: number,
+): readonly SousArc[] {
+  const { rayonPx: r, xPx: cx, yPx: cy, debutRad, balayageRad } = cercle
+  const etendue = Math.abs(balayageRad)
+  if (etendue === 0 || r <= 0) return []
+  const sens = balayageRad < 0 ? -1 : 1
+
+  // Angles de franchissement des quatre droites du canevas élargi, ramenés dans le balayage.
+  // `coupures` est exprimé en AVANCÉE le long du balayage, pas en angle absolu : le sens et
+  // les tours multiples s'y résorbent, et le tri suffit ensuite.
+  const coupures: number[] = [0, etendue]
+  const ajoute = (angleRad: number): void => {
+    let t = ((angleRad - debutRad) * sens) % TOUR_RAD
+    if (t < 0) t += TOUR_RAD
+    for (; t < etendue; t += TOUR_RAD) coupures.push(t)
+  }
+  for (const x of [-margePx, vue.largeurPx + margePx]) {
+    const cos = (x - cx) / r
+    if (cos >= -1 && cos <= 1) {
+      const a = Math.acos(cos)
+      ajoute(a)
+      ajoute(-a)
+    }
+  }
+  for (const y of [-margePx, vue.hauteurPx + margePx]) {
+    const sin = (y - cy) / r
+    if (sin >= -1 && sin <= 1) {
+      const a = Math.asin(sin)
+      ajoute(a)
+      ajoute(Math.PI - a)
+    }
+  }
+  coupures.sort((a, b) => a - b)
+
+  const gardes: SousArc[] = []
+  for (let i = 0; i < coupures.length - 1; i++) {
+    const debut = coupures[i]!
+    const fin = coupures[i + 1]!
+    if (fin - debut <= 0) continue
+    if (!dansCanevas(cercle, debutRad + sens * (debut + fin) / 2, vue, margePx)) continue
+    const precedent = gardes[gardes.length - 1]
+    // Deux portions gardées qui se touchent forment un seul ordre de tracé : sans cette
+    // fusion, un cercle qui traverse l'écran de part en part partirait en quatre `ctx.arc`.
+    if (precedent !== undefined && Math.abs(precedent.debutRad + precedent.balayageRad - (debutRad + sens * debut)) < Number.EPSILON * TOUR_RAD) {
+      gardes[gardes.length - 1] = {
+        debutRad: precedent.debutRad,
+        balayageRad: precedent.balayageRad + sens * (fin - debut),
+      }
+    } else {
+      gardes.push({ debutRad: debutRad + sens * debut, balayageRad: sens * (fin - debut) })
+    }
+  }
+  return gardes
 }
 
 /**
@@ -333,6 +465,7 @@ function arcStereographique(
     longueurPx: rayonPx * Math.abs(balayageRad),
     tronque:
       minX < 0 || minY < 0 || maxX > projecteur.vue.largeurPx || maxY > projecteur.vue.hauteurPx,
+    boite: { minX, minY, maxX, maxY },
   }
 }
 
@@ -422,7 +555,9 @@ export function arcEtoile(
   }
   if (courant.length > 0) segments.push(courant)
 
-  return { segments, cercle: null, longueurPx, tronque }
+  // Pas de boîte : la polyligne s'est bornée elle-même, segment par segment, en rompant dès
+  // qu'un point sortait du canevas.
+  return { segments, cercle: null, longueurPx, tronque, boite: null }
 }
 
 /**
