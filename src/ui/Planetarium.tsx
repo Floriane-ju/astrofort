@@ -33,12 +33,12 @@ import type { LuneEcran } from './dessine-fond-ciel.ts'
 import { etatProfondeur, type ModeProjection } from '../core/projection.ts'
 import { majVue, resolutionRendu, useScene } from './scene-etat.ts'
 import { useSeance } from './seance-etat.ts'
-import type { Cadre, ProfilCadre } from '../core/cadre.ts'
+import type { ProfilCadre } from '../core/cadre.ts'
 import { positionCorps, type Site } from '../core/ephem.ts'
 import type { MasqueHorizon } from '../core/site.ts'
 import type { SurvolEcran } from './dessine-ciel.ts'
 import { useBoucleRendu, type EtatBoucle } from './planetarium-boucle.ts'
-import { useIncrustationFile } from './planetarium-incrustation.ts'
+import { useParametresFile } from './planetarium-incrustation.ts'
 import {
   RACCOURCIS_CLAVIER,
   useGestesZoom,
@@ -226,30 +226,12 @@ export function Planetarium(props: PlanetariumProps) {
     [props.site, dateAffichee],
   )
 
-  const cadrePrincipal: Cadre | null =
-    props.profils.length === 0
-      ? null
-      : {
-          profil: props.profils[0]!,
-          azimutDeg: pointage.azimutDeg,
-          hauteurDeg: pointage.hauteurDeg,
-          rotationDeg: pointage.rotationCadreDeg,
-        }
-
-  const incrustation = useIncrustationFile({
-    vue: pointage,
-    ciel,
-    cadre: cadrePrincipal,
+  // T-0116 — le filé se peint dans la boucle, sur toute la scène : ce hook ne fournit plus que
+  // ce qu'il tient du matériel et du panneau. La vue, le fond et le pôle viennent de l'image.
+  const parametresFile = useParametresFile({
     etoiles: props.etoiles,
     file,
     materiel: props.file,
-    site: props.site,
-    modeNuit: props.modeNuit,
-    profils: props.profils,
-    vueRealiste: rendu.vueRealiste,
-    // §9.5 — l'aperçu prend le fond de ciel de la direction du cadre, pas celui du zénith :
-    // deux fonds différents dans une même image se verraient comme un rectangle.
-    sbFond: sbEffectif,
   })
 
   useResolutionSuitLaBoite(canevas)
@@ -283,7 +265,7 @@ export function Planetarium(props: PlanetariumProps) {
     anime: temps.modeTemps === 'DEFILEMENT' && !props.modeNuit,
   }
 
-  const cibles = useBoucleRendu({ canevas, etat: etatBoucle, instant, incrustation, survol })
+  const cibles = useBoucleRendu({ canevas, etat: etatBoucle, instant, parametresFile, survol })
   const souris = usePointageSouris({
     largeurPx,
     fovDeg,

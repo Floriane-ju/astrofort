@@ -23,7 +23,12 @@ import {
 } from '../src/core/constellations.ts'
 import { construitIndex } from '../src/core/index-ciel.ts'
 import { cielInstantane } from '../src/core/horloges.ts'
-import { magnitudeLimite, projecteur, type Vue } from '../src/core/projection.ts'
+import {
+  magnitudeLimite,
+  projecteur,
+  type Projecteur,
+  type Vue,
+} from '../src/core/projection.ts'
 import type { PositionCorps, Site } from '../src/core/ephem.ts'
 import { applique, transpose, versSpherique, versVecteur } from '../src/core/mat3.ts'
 import { depuisGalactique } from '../src/core/galactique.ts'
@@ -165,7 +170,7 @@ function rend(
     couches?: CouchesActives
     etoiles?: readonly Etoile[]
     objets?: readonly ObjetCielProfond[]
-    surLeFond?: (ctx: CanvasRenderingContext2D) => void
+    passeFile?: (ctx: CanvasRenderingContext2D, projecteur: Projecteur) => void
     sbCiel?: number
     latitudeDeg?: number
     vise?: { azimutDeg: number; hauteurDeg: number }
@@ -226,7 +231,7 @@ function rend(
     latitudeDeg: options.latitudeDeg ?? SITE.latitudeDeg,
     modeNuit: options.modeNuit ?? false,
     survol: options.survol,
-    surLeFond: options.surLeFond,
+    passeFile: options.passeFile,
   }
   return { ctx, sortie: dessineCiel(entree), entree }
 }
@@ -278,13 +283,13 @@ describe('passe de rendu §3.3', () => {
    * T-0042 — l'aperçu incrusté se dépose par ce crochet. S'il partait après la passe, il
    * recouvrirait les repères ; s'il partait avant le fond, le fond l'effacerait.
    */
-  it('appelle surLeFond après le fond et avant le premier tracé', () => {
+  it('appelle la passe de filé après le fond et avant le premier tracé', () => {
     let rang = -1
     const { ctx } = rend({
       // Couche Voie lactée éteinte : sa bande fait partie du fond (§3.7) et s'intercale
       // légitimement entre le remplissage et l'aperçu. Le voisinage exact se lit sans elle.
       couches: { ...COUCHES, voieLactee: false },
-      surLeFond: (c) => {
+      passeFile: (c) => {
         rang = (c as unknown as ReturnType<typeof contexteEspion>).appels.length
       },
     })
@@ -388,7 +393,7 @@ describe('passe de rendu §3.3', () => {
   it('peint la bande avec le fond, avant l’aperçu incrusté de §9.5', () => {
     let rang = -1
     const { ctx } = rend({
-      surLeFond: (c) => {
+      passeFile: (c) => {
         rang = (c as unknown as ReturnType<typeof contexteEspion>).appels.length
       },
     })
@@ -855,6 +860,38 @@ describe('libellés d’un même astre T-0109', () => {
   })
 })
 
+/**
+ * T-0116 — le filé couvre tout le planétarium, et il REMPLACE la couche d'étoiles ponctuelles.
+ * Sinon chaque trace porterait un point net à une extrémité, ce qu'aucune pose ne produit. Les
+ * étoiles continuent en revanche d'alimenter les cibles et les noms : sans cela le survol et le
+ * clic les perdraient (T-0085, T-0107 à T-0109).
+ */
+describe('T-0116 — la passe de filé remplace les étoiles ponctuelles', () => {
+  /** Les disques d'étoiles sont les seuls remplissages qui portent un `Path2D`. */
+  const disques = (ctx: ReturnType<typeof contexteEspion>): readonly Appel[] =>
+    ctx.appels.filter((a) => a.nom === 'fill' && a.args[0] instanceof Path2DEspion)
+
+  it('ne peint plus aucun disque d’étoile', () => {
+    const sans = rend()
+    const avec = rend({ passeFile: () => undefined })
+    // Sans filé, les disques sont bien là — le critère ne se vérifie pas sur une scène vide.
+    expect(disques(sans.ctx).length).toBeGreaterThan(0)
+    expect(
+      disques(sans.ctx).flatMap((a) => (a.args[0] as Path2DEspion).arcs).length,
+    ).toBeGreaterThan(0)
+    expect(disques(avec.ctx)).toHaveLength(0)
+  })
+
+  it('garde les cibles cliquables et les noms d’étoiles', () => {
+    const sans = rend()
+    const avec = rend({ passeFile: () => undefined })
+    expect(avec.sortie.cibles.length).toBe(sans.sortie.cibles.length)
+    expect(avec.sortie.cibles.filter((c) => c.type === 'ETOILE').length).toBeGreaterThan(0)
+    expect(avec.sortie.etoilesDessinees).toBe(sans.sortie.etoilesDessinees)
+    expect(avec.sortie.labels.map((l) => l.texte)).toEqual(sans.sortie.labels.map((l) => l.texte))
+  })
+})
+
 describe('couche Sol — §4.1', () => {
   const SOL: CouchesActives = { ...COUCHES, sol: true }
   /** Une crête relevée à l'est, l'horizon dégagé au nord. */
@@ -872,6 +909,34 @@ describe('couche Sol — §4.1', () => {
     // Rien de dessiné, rien de cliquable : les cibles naissent après la projection.
     expect(masque.sortie.cibles).toHaveLength(0)
     expect(sans.sortie.cibles.length).toBeGreaterThan(0)
+  })
+
+  it('ne remet à la passe de filé qu’un projecteur aveugle au sol (T-0116)', () => {
+    // Visée plongeante : tout ce que le canevas montre est sous le sol. Aucune direction ne
+    // doit se projeter, donc aucune trace ne peut y être peinte — le relief la masque avant
+    // même qu'elle soit calculée.
+    const refus = (couches: CouchesActives): { testes: number; refuses: number } => {
+      let testes = 0
+      let refuses = 0
+      rend({
+        couches,
+        vise: { azimutDeg: 180, hauteurDeg: -60 },
+        passeFile: (_ctx, proj) => {
+          for (let xPx = 0; xPx <= LARGEUR; xPx += LARGEUR / 8) {
+            for (let yPx = 0; yPx <= HAUTEUR; yPx += HAUTEUR / 8) {
+              testes++
+              if (proj.projette(proj.inverse(xPx, yPx)) === null) refuses++
+            }
+          }
+        },
+      })
+      return { testes, refuses }
+    }
+    const avecSol = refus(SOL)
+    expect(avecSol.testes).toBeGreaterThan(0)
+    expect(avecSol.refuses).toBe(avecSol.testes)
+    // Couche Sol éteinte, les mêmes directions se projettent : le test n'est pas vide.
+    expect(refus(COUCHES).refuses).toBe(0)
   })
 
   it('coupe le ciel à l’horizon quand la visée le longe', () => {

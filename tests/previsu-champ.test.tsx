@@ -27,7 +27,6 @@ import type { Site } from '../src/core/ephem.ts'
 import { versVecteur } from '../src/core/mat3.ts'
 import { projecteur, type Vue } from '../src/core/projection.ts'
 import { dessineChamp, type EntreeDessinChamp } from '../src/ui/dessine-champ.ts'
-import { fondRealiste, palette } from '../src/ui/couleurs.ts'
 import { pointZeroSysteme } from '../src/data/equipment.ts'
 import { PanneauFile } from '../src/ui/PanneauFile.tsx'
 import { K } from '../src/registry/constants.ts'
@@ -141,8 +140,6 @@ function rend(options: Partial<EntreeDessinChamp> = {}) {
     dureeS: 1,
     latitudeDeg: SITE.latitudeDeg,
     axePoleNord: AXE_POLE,
-    voieLactee: true,
-    vignettage: true,
     modeNuit: false,
     ...options,
   })
@@ -204,7 +201,7 @@ describe('§9.2 — semis génératif', () => {
 
 describe('§9.2 — les trois couches', () => {
   it('trace l’étoile réelle à la position exacte du catalogue', () => {
-    const { ctx, sortie } = rend({ voieLactee: false, vignettage: false })
+    const { ctx, sortie } = rend()
     expect(sortie.etoilesReelles).toBe(1)
     const arcs = ctx.appels.filter((a) => a.nom === 'arc')
     const centre = arcs.find(
@@ -226,30 +223,6 @@ describe('§9.2 — les trois couches', () => {
     expect(sortie.etoilesGenerees).toBe(0)
   })
 
-  it('efface la Voie lactée quand le fond de ciel est celui d’une ville', () => {
-    // T-0104 — la bande n'est plus éteinte par un seuil : sa PART de la brillance totale
-    // s'effondre. « Effacée » se constate donc sur l'opacité des surfaces peintes, pas sur
-    // leur absence — et c'est exactement ce que l'œil voit d'un ciel de ville.
-    const parts = (sbCiel: number): number[] =>
-      rend({ sbCiel, vignettage: false })
-        .ctx.couleurs.map((c) => /^rgb\([\d ]+ \/ ([\d.]+)\)$/.exec(c))
-        .filter((m) => m !== null)
-        .map((m) => Number(m![1]))
-
-    // Ce que « ne déplace plus le fond » veut dire se chiffre en magnitudes, pas en opacité :
-    // une part p élève le fond de −2,5 log10(1 − p). C'est le MÊME critère que le moteur
-    // (`tests/voie-lactee.test.ts`), et il ne dépend donc pas de la direction visée — depuis
-    // T-0105 la bande est une demi-magnitude plus brillante vers le bulbe, et un seuil posé
-    // sur l'opacité aurait fait dire à ce test que le rendu a changé de comportement.
-    const elevationMag = (part: number): number => -K('POGSON') * Math.log10(1 - part)
-
-    const ville = parts(18.4)
-    const montagne = parts(21.5)
-    expect(montagne.length).toBeGreaterThan(0)
-    expect(Math.max(...montagne)).toBeGreaterThan(0.5)
-    // En ville, la bande est encore composée, mais elle ne déplace plus le fond.
-    expect(elevationMag(Math.max(...ville))).toBeLessThan(0.15)
-  })
 })
 
 describe('§9.2 — modulation par les paramètres de capture', () => {
@@ -276,8 +249,8 @@ describe('§9.2 — modulation par les paramètres de capture', () => {
   })
 
   it('ovalise les étoiles quand la pose est longue : la trace devient une polyligne', () => {
-    const ponctuel = rend({ dureeS: 1, voieLactee: false, vignettage: false })
-    const file = rend({ dureeS: 600, voieLactee: false, vignettage: false })
+    const ponctuel = rend({ dureeS: 1 })
+    const file = rend({ dureeS: 600 })
     expect(ponctuel.ctx.appels.filter((a) => a.nom === 'arc').length).toBeGreaterThan(0)
     expect(file.ctx.appels.filter((a) => a.nom === 'lineTo').length).toBeGreaterThan(0)
     expect(file.ctx.appels.filter((a) => a.nom === 'stroke').length).toBeGreaterThan(0)
@@ -334,8 +307,6 @@ describe('§9.3 — une trace est moins brillante qu’un point', () => {
         echApx,
         indexReel: construitIndex([etoileAuCentre(7)]),
         indexSemis: construitIndex([]),
-        voieLactee: false,
-        vignettage: false,
       }).ctx.alphas
 
     const grandAngle = seule(105.6)
@@ -358,23 +329,22 @@ describe('§9.3 — une trace est moins brillante qu’un point', () => {
 })
 
 /**
- * T-0097 — l'aperçu incrusté (§9.5) et le planétarium montrent le MÊME fond. Deux fonds
- * différents dans une seule image se verraient comme un rectangle posé sur la scène.
+ * T-0116 — la passe ne peint plus son propre fond. Le planétarium a déjà peint le vrai fond de
+ * ciel du site — pollution lumineuse, halo d'horizon, halo lunaire, crépuscule (§3.7) — et un
+ * aplat par-dessus l'effacerait. Ce que la passe ajoute, ce sont les traces, rien d'autre.
  */
-describe('fond de ciel réaliste de l’aperçu §9.5', () => {
-  it('prend la teinte du fond de ciel effectif de la direction du cadre', () => {
-    const sbFond = 19.4
-    const { ctx } = rend({ vueRealiste: true, sbFond })
-    expect(ctx.couleurs[0]).toBe(fondRealiste(sbFond))
+describe('T-0116 — la passe de filé n’a pas de fond à elle', () => {
+  it('ne remplit aucune surface pleine, vue réaliste comprise', () => {
+    for (const vueRealiste of [false, true]) {
+      const { ctx } = rend({ vueRealiste, sbCiel: 19.4 })
+      expect(ctx.appels.some((a) => a.nom === 'fillRect')).toBe(false)
+    }
   })
 
-  it('retombe sur le fond du site quand aucun fond effectif n’est fourni', () => {
-    const { ctx } = rend({ vueRealiste: true, sbCiel: 20.6 })
-    expect(ctx.couleurs[0]).toBe(fondRealiste(20.6))
-  })
-
-  it('laisse le fond inchangé quand la vue réaliste est décochée', () => {
-    const { ctx } = rend({})
-    expect(ctx.couleurs[0]).toBe(palette(false).fond)
+  it('ne peint aucune bande galactique : celle du planétarium reste la seule', () => {
+    // La bande se peignait en polygones translucides — des surfaces remplies dont la couleur
+    // porte une part d'opacité. Plus aucune couleur de cette forme ne sort de la passe.
+    const { ctx } = rend({ sbCiel: 21.5 })
+    expect(ctx.couleurs.filter((c) => /^rgb\([\d ]+ \/ [\d.]+\)$/.test(c))).toHaveLength(0)
   })
 })

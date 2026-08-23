@@ -11,7 +11,6 @@ import { describe, expect, it } from 'vitest'
 import {
   arcEtoile,
   diagnosticFile,
-  filtreArcCadre,
   poseParPixelS,
   longueurArcDeg,
   positionPole,
@@ -274,50 +273,6 @@ describe('T-0024 — pas d’échantillonnage dérivé de la longueur projetée'
   })
 })
 
-describe('T-0023 — écarter une étoile dont l’arc ne peut pas toucher le cadre', () => {
-  const CENTRE = versVecteur(90, 20)
-  const RAYON_DEG = 12
-
-  /** Vérité de référence : l'arc entre-t-il réellement dans la calotte du cadre ? */
-  function toucheVraiment(etoile: Vec3, balayageDeg: number): boolean {
-    const pas = 720
-    for (let i = 0; i <= pas; i++) {
-      if (separationDeg(apres(etoile, (balayageDeg * i) / pas), CENTRE) <= RAYON_DEG) return true
-    }
-    return false
-  }
-
-  it('n’écarte jamais une étoile dont la trace entre dans le cadre', () => {
-    for (const balayageDeg of [0, 30, 120]) {
-      const filtre = filtreArcCadre(CENTRE, RAYON_DEG, AXE_POLE, balayageDeg)
-      let retenues = 0
-      let total = 0
-      // Semis régulier de toute la sphère : le filtre est jugé sur le ciel entier, pas sur
-      // quelques cas choisis.
-      for (let ad = 0; ad < 360; ad += 3) {
-        for (let dec = -87; dec <= 87; dec += 3) {
-          const etoile = versVecteur(ad, dec)
-          total++
-          const garde = filtre(etoile.x, etoile.y, etoile.z)
-          if (garde) retenues++
-          // Aucun faux négatif : c'est cette propriété qui garantit l'image inchangée.
-          if (toucheVraiment(etoile, balayageDeg)) expect(garde).toBe(true)
-        }
-      }
-      // Et il trie vraiment : sans cela, le filtre ne servirait à rien.
-      expect(retenues).toBeLessThan(total / 2)
-    }
-  })
-
-  it('ne retient que la bande de déclinaison du cadre quand rien ne balaie', () => {
-    const filtre = filtreArcCadre(CENTRE, RAYON_DEG, AXE_POLE, 0)
-    expect(filtre(CENTRE.x, CENTRE.y, CENTRE.z)).toBe(true)
-    // Même angle horaire, déclinaison très différente : le cercle passe loin du cadre.
-    const loin = versVecteur(90, -60)
-    expect(filtre(loin.x, loin.y, loin.z)).toBe(false)
-  })
-})
-
 describe('T-0115 — un arc de filé est un cercle exact en projection stéréographique', () => {
   const DUREES_MIN = [5, 30, 120, 240, 480] as const
 
@@ -383,7 +338,10 @@ describe('T-0115 — un arc de filé est un cercle exact en projection stéréog
     }
     expect(cerclesJuges).toBeGreaterThan(1000)
     expect(pireEcartPx).toBeLessThan(1)
-  })
+    // Un millier de cercles confrontés à leur trajectoire au dixième du pas de §9.3 : le
+    // balayage est délibérément exhaustif et frôle le délai par défaut de Vitest sous charge.
+    // Le délai est donc déclaré, plutôt que laissé au hasard de l'ordonnancement.
+  }, 20_000)
 
   it('couvre le balayage entier, sens compris, même au-delà du demi-tour', () => {
     // L'étendue du cercle doit contenir toute la trajectoire : un balayage replié d'un tour

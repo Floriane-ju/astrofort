@@ -18,10 +18,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
 import type { ObjetCielProfond } from '../src/data/deepsky.ts'
 import type { Site } from '../src/core/ephem.ts'
-import type { Cadre } from '../src/core/cadre.ts'
 import { cielInstantane } from '../src/core/horloges.ts'
-import type { Vue } from '../src/core/projection.ts'
-import { incrusteDansLeCadre, mentionProjection } from '../src/ui/scene-overlay.ts'
+import { mentionProjection } from '../src/ui/scene-overlay.ts'
 import {
   HAUTEUR_SCENE_PX,
   LARGEUR_SCENE_PX,
@@ -42,7 +40,9 @@ import {
   choisisOnglet,
   etatSeance,
   ouvreCible,
+  publicateurRenduFile,
   reinitialiseSeance,
+  type RenduFile,
 } from '../src/ui/seance-etat.ts'
 
 const M31: ObjetCielProfond = {
@@ -164,70 +164,45 @@ describe('§9.3 — l’incrustation fige le temps', () => {
   })
 })
 
-describe('§9.3 — le filé se dépose dans le cadre, pas ailleurs', () => {
-  const SITE: Site = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
-  const VUE: Vue = {
-    mode: 'MODE_PLANETARIUM',
-    fovDeg: 60,
-    largeurPx: 1920,
-    hauteurPx: 1080,
-    azimutDeg: 180,
-    hauteurDeg: 40,
-    rotationDeg: 0,
-  }
-  const CADRE: Cadre = {
-    profil: {
-      libelle: '120 mm f/2.8',
-      fovLDeg: 17,
-      fovHDeg: 11.4,
-      echApx: 8.8,
-      capteurHMm: 24,
-      tPoseS: 2.1,
-    },
-    azimutDeg: 180,
-    hauteurDeg: 40,
-    rotationDeg: 0,
-  }
+/**
+ * T-0116 — le filé se peint par image ; ses compteurs ne se publient pas au même rythme.
+ * `poseRenduFile` écrit dans le magasin de séance, donc déclenche un rendu React : publiés à
+ * chaque peinture, ils en feraient trente par seconde (T-0056). La boucle n'appelle donc ce
+ * publicateur qu'au rythme du diagnostic, et il coupe tout ce qui n'a pas bougé.
+ */
+describe('T-0116 — les compteurs du filé ne rendent pas par image', () => {
+  const RENDU: RenduFile = { reelles: 12, generees: 340, tronques: 5 }
 
-  /** Contexte 2D instrumenté : il enregistre l'ordre des opérations, il ne peint pas. */
-  function contexteEspion() {
-    const appels: string[] = []
-    const enregistre =
-      (nom: string) =>
-      (): void => {
-        appels.push(nom)
-      }
-    return {
-      appels,
-      lineWidth: 1,
-      strokeStyle: '',
-      save: enregistre('save'),
-      restore: enregistre('restore'),
-      clip: enregistre('clip'),
-      drawImage: enregistre('drawImage'),
-      beginPath: enregistre('beginPath'),
-      moveTo: () => undefined,
-      lineTo: () => undefined,
-      stroke: enregistre('stroke'),
-    }
-  }
-
-  it('découpe sur le contour du cadre et dépose l’image, sans retracer le liseré', () => {
-    const ctx = contexteEspion()
-    const ciel = cielInstantane(SITE, new Date('2026-08-15T22:00:00Z'))
-    incrusteDansLeCadre(
-      ctx as unknown as CanvasRenderingContext2D,
-      VUE,
-      ciel.matrice,
-      CADRE,
-      {} as CanvasImageSource,
-    )
-    // L'ordre est le fond du critère : dessiner hors du clip déborderait sur le ciel.
-    expect(ctx.appels.join(' ')).toBe('save beginPath clip drawImage restore')
-    // T-0042 — le liseré appartient à la couche Cadre matériel, tracée en fin de passe.
-    expect(ctx.appels).not.toContain('stroke')
+  it('ne publie qu’une fois tant que les compteurs ne bougent pas', () => {
+    const publies: (RenduFile | null)[] = []
+    const publie = publicateurRenduFile((r) => publies.push(r))
+    // Une période de diagnostic entière de passes identiques : un seul rendu React.
+    for (let i = 0; i < 30; i++) publie({ ...RENDU })
+    expect(publies).toHaveLength(1)
+    expect(publies[0]).toEqual(RENDU)
   })
 
+  it('publie dès qu’un compteur change, et une seule fois à l’extinction', () => {
+    const publies: (RenduFile | null)[] = []
+    const publie = publicateurRenduFile((r) => publies.push(r))
+    publie(RENDU)
+    publie({ ...RENDU, tronques: RENDU.tronques + 1 })
+    publie(null)
+    publie(null)
+    expect(publies).toHaveLength(3)
+    expect(publies[2]).toBeNull()
+  })
+
+  it('publie le premier état même quand le filé est éteint dès le départ', () => {
+    // Sans amorce, un `null` initial serait pris pour « rien n'a changé » et des compteurs
+    // laissés par une séance précédente resteraient affichés sur un cadre vide.
+    const publies: (RenduFile | null)[] = []
+    publicateurRenduFile((r) => publies.push(r))(null)
+    expect(publies).toEqual([null])
+  })
+})
+
+describe('§5.1 — la scène déclare l’écart de projection avec l’objectif', () => {
   it('annonce quand la projection de la scène n’est pas celle de l’objectif', () => {
     expect(mentionProjection('MODE_CADRE', 'MODE_CADRE')).toBeNull()
     expect(mentionProjection('MODE_PLANETARIUM', 'MODE_CADRE')).toMatch(/gnomonique/)

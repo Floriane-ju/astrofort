@@ -14,6 +14,7 @@ import type { CoucheFrontieres, CoucheTraces } from '../core/constellations.ts'
 import type { IndexCiel } from '../core/index-ciel.ts'
 import {
   avanceEphemerides,
+  axePoleDeDate,
   cielInstantane,
   pasEphemeridesMs,
   positionsInterpolees,
@@ -24,8 +25,9 @@ import type { Cadre, ProfilCadre } from '../core/cadre.ts'
 import type { MasqueHorizon } from '../core/site.ts'
 import type { Site } from '../core/ephem.ts'
 import { afficheInstant, vuePlanetarium, type VueScene } from './scene-etat.ts'
+import { poseRenduFile, publicateurRenduFile } from './seance-etat.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
-import { incrusteDansLeCadre } from './scene-overlay.ts'
+import { dessineChamp, type ParametresFile, type SortieDessinChamp } from './dessine-champ.ts'
 import { dessineCiel, type CibleEcran, type SurvolEcran } from './dessine-ciel.ts'
 import type { LuneEcran } from './dessine-fond-ciel.ts'
 
@@ -84,11 +86,12 @@ export function useBoucleRendu(entree: {
   readonly canevas: RefObject<HTMLCanvasElement | null>
   readonly etat: RefObject<EtatBoucle>
   readonly instant: { ms: number }
-  readonly incrustation: RefObject<CanvasImageSource | null>
+  /** §9.3 — les paramètres de la passe de filé, ou `null` quand elle est éteinte. */
+  readonly parametresFile: RefObject<ParametresFile | null>
   /** T-0085 — l'élément désigné par le curseur, relu par image plutôt qu'à chaque rendu React. */
   readonly survol: RefObject<SurvolEcran | null>
 }): RefObject<readonly CibleEcran[]> {
-  const { canevas, etat, instant, incrustation, survol } = entree
+  const { canevas, etat, instant, parametresFile, survol } = entree
   const cibles = useRef<readonly CibleEcran[]>([])
   const ephemerides = useRef<EtatEphemerides | null>(null)
 
@@ -100,6 +103,12 @@ export function useBoucleRendu(entree: {
     let dernierTs: number | null = null
     let dernierDiag = 0
     let images = 0
+    // T-0116 — les compteurs du filé se publient au rythme du diagnostic, jamais par image :
+    // `poseRenduFile` passe par le magasin de séance, donc par un rendu React.
+    const publieFile = publicateurRenduFile(poseRenduFile)
+    // Boîte réécrite par image plutôt qu'une variable locale : la passe de filé écrit depuis
+    // une fermeture, et le flux de contrôle ne la suit pas jusque-là.
+    const derniereFile: { sortie: SortieDessinChamp | null } = { sortie: null }
     // T-0065 — une seule `Date`, réécrite par image. `cielInstantane` la lit sans la
     // garder : rien ne survit à l'appel, donc rien ne justifie d'en allouer une neuve.
     const instantDate = new Date(0)
@@ -148,12 +157,13 @@ export function useBoucleRendu(entree: {
             }),
           )
         : []
-      // §9.3 — le filé, déposé dans le premier cadre. Rien n'est recalculé ici : l'image
-      // se glisse juste au-dessus du fond, sous les repères et les noms du planétarium.
-      const cadre = cadres[0]
-      const apercu = incrustation.current
+      // §9.3 / T-0116 — le filé couvre tout le planétarium, pas le seul cadre : il se calcule
+      // ici, avec la vue de CETTE image, et se peint sous les repères et les noms. Le contour
+      // du cadre reste tracé par-dessus, en fin de passe : c'est lui, et lui seul, qui dit ce
+      // que le capteur enregistrerait quand tout le ciel file.
+      const params = parametresFile.current
       // Ce qui reste alloué par image — le projecteur et sa fermeture, le littéral d'entrée
-      // de `dessineCiel`, la fermeture `surLeFond`, les cadres — dépend de la vue de cette
+      // de `dessineCiel`, la fermeture `passeFile`, les cadres — dépend de la vue de cette
       // image et ne se hisse donc pas. C'est une poignée d'objets, contre les milliers que
       // la boucle par étoile n'alloue plus (T-0065).
       const sortie = dessineCiel({
@@ -180,12 +190,24 @@ export function useBoucleRendu(entree: {
         masque: courant.masque,
         modeNuit: courant.modeNuit,
         survol: survol.current ?? undefined,
-        surLeFond:
-          apercu !== null && cadre !== undefined
-            ? (ctx) => {
-                incrusteDansLeCadre(ctx, vueSansRoulis, ciel.matrice, cadre, apercu)
-              }
-            : undefined,
+        passeFile:
+          params === null
+            ? undefined
+            : (ctx, proj) => {
+                derniereFile.sortie = dessineChamp({
+                  ...params,
+                  ctx,
+                  // Le projecteur de la scène, filtré du sol : les arcs tombent sur les
+                  // mêmes étoiles que le ciel qui les entoure, et rien ne se peint sous
+                  // l'horizon (§4.1).
+                  projecteur: proj,
+                  axePoleNord: axePoleDeDate(ciel.epoqueAnnee),
+                  latitudeDeg: courant.site.latitudeDeg,
+                  sbCiel: courant.sbCiel,
+                  vueRealiste: courant.vueRealiste,
+                  modeNuit: courant.modeNuit,
+                })
+              },
       })
       cibles.current = sortie.cibles
 
@@ -198,6 +220,17 @@ export function useBoucleRendu(entree: {
           cellules: sortie.stats.cellulesRetenues,
           labels: sortie.labels.length,
         })
+        // `params` fait foi sur l'extinction : la boîte, elle, garde la dernière passe.
+        const rendu = params === null ? null : derniereFile.sortie
+        publieFile(
+          rendu === null
+            ? null
+            : {
+                reelles: rendu.etoilesReelles,
+                generees: rendu.etoilesGenerees,
+                tronques: rendu.arcsTronques,
+              },
+        )
         images = 0
         dernierDiag = ts
       }
@@ -209,7 +242,7 @@ export function useBoucleRendu(entree: {
       actif = false
       cancelAnimationFrame(id)
     }
-  }, [canevas, etat, instant, incrustation, survol])
+  }, [canevas, etat, instant, parametresFile, survol])
 
   return cibles
 }

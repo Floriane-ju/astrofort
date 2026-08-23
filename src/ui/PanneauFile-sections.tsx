@@ -13,7 +13,7 @@ import type { CartePoseMax } from '../core/grand-champ.ts'
 import type { ModeProjection } from '../core/projection.ts'
 import type { ActionsScene } from './scene-etat.ts'
 import { activeIncrustation, majFile, type ModeApercu, type ReglagesFile, type RenduFile } from './seance-etat.ts'
-import { MENTION_VIGNETTAGE_INCRUSTATION } from './scene-overlay.ts'
+import { MENTION_VIGNETTAGE_FILE } from './scene-overlay.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette } from './Terme.tsx'
 import type { LecturesFile } from './panneau-file-lectures.ts'
@@ -98,7 +98,7 @@ export function CadrageDuFile({
             checked={file.incrustation}
             onChange={(e) => activeIncrustation(e.target.checked)}
           />
-          Incruster dans le cadre, sur la scène
+          Peindre le filé sur toute la scène
         </label>
         <label>
           Aperçu
@@ -124,14 +124,6 @@ export function CadrageDuFile({
             onChange={(e) => actions.majVue({ rotationCadreDeg: Number(e.target.value) })}
           />
         </label>
-        <label className="interrupteur">
-          <input
-            type="checkbox"
-            checked={file.voieLactee}
-            onChange={(e) => majFile({ voieLactee: e.target.checked })}
-          />
-          <Etiquette cle="voie_lactee" />
-        </label>
       </div>
 
       {file.incrustation && (
@@ -140,7 +132,7 @@ export function CadrageDuFile({
             Le temps de la scène est figé : un filé est une composition fixe, la vue animée
             reste le planétarium de §3.
           </p>
-          <p className="cause">{MENTION_VIGNETTAGE_INCRUSTATION}</p>
+          <p className="cause">{MENTION_VIGNETTAGE_FILE}</p>
           {lectures.mentionProj !== null && (
             <>
               <p className="cause">{lectures.mentionProj}</p>

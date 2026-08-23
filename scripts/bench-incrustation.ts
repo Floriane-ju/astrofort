@@ -1,11 +1,14 @@
 /**
- * T-0021 — coût d'une passe d'incrustation du filé, chiffré.
+ * T-0021 — coût d'une passe de filé, chiffré.
  *
  * L'epic porte la mesure : « ça semble plus fluide » n'est pas un critère. Ce script rejoue
- * hors navigateur exactement ce que `rendIncrustation` fait — même `dessineChamp`, même
- * projecteur, même catalogue réel, même semis — sur un contexte 2D muet. Ce qui est mesuré
- * est donc le calcul (sélection, tri, arcs, projections), jamais la peinture : c'est le
- * calcul qui bloque le fil principal pendant un panoramique.
+ * hors navigateur exactement ce que la boucle fait — même `dessineChamp`, même projecteur,
+ * même catalogue réel, même semis — sur un contexte 2D muet. Ce qui est mesuré est donc le
+ * calcul (sélection, tri, arcs, projections), jamais la peinture : c'est le calcul qui doit
+ * tenir dans une image de la boucle.
+ *
+ * T-0116 — la passe couvre tout le champ de la scène : la sélection resserrée sur le cadre a
+ * disparu du code, et `--champ-scene` avec elle. Ce qui est mesuré ici est le plein ciel.
  *
  * Usage : `node scripts/bench-incrustation.ts` (le catalogue vient de `public/data/`).
  * `--planetarium` mesure la même passe en projection stéréographique : c'est le seul mode où
@@ -21,7 +24,7 @@ import { semisGeneratif } from '../src/data/semis.ts'
 import { construitIndex, type IndexCiel } from '../src/core/index-ciel.ts'
 import { axePoleDeDate, cielInstantane, epoqueAnnee } from '../src/core/horloges.ts'
 import { magnitudeLimitePrevisu, type EntreeProfondeur } from '../src/core/galactique.ts'
-import { etendueCadre, type Cadre, type ProfilCadre } from '../src/core/cadre.ts'
+import type { ProfilCadre } from '../src/core/cadre.ts'
 import {
   projecteur,
   type ModeProjection,
@@ -73,8 +76,6 @@ const PROFIL_50MM: ProfilCadre = {
  * versions du code (T-0022 et T-0023 promettent l'identité, T-0024 non).
  */
 const EMPREINTE = process.argv.includes('--empreinte')
-/** Sélection sur le champ de la scène, comme avant T-0023 : sert à chiffrer le gain. */
-const CHAMP_SCENE = process.argv.includes('--champ-scene')
 /**
  * T-0115 — axe « mode de projection ». `MODE_CADRE` reste le défaut, c'est celui de
  * l'incrustation ; `MODE_PLANETARIUM` est celui où l'arc devient un cercle exact.
@@ -250,7 +251,6 @@ function mesure(cas: Cas, indexReel: IndexCiel, indexSemis: IndexCiel): void {
     hauteurDeg: 40,
     rotationDeg: 0,
   }
-  const cadre: Cadre = { profil: cas.profil, azimutDeg: 180, hauteurDeg: 40, rotationDeg: 0 }
   const profondeur: EntreeProfondeur = { ...PROFONDEUR, dMm: cas.dMm }
   const magLimite = magnitudeLimitePrevisu(profondeur).value
   const durees: number[] = []
@@ -275,11 +275,7 @@ function mesure(cas: Cas, indexReel: IndexCiel, indexSemis: IndexCiel): void {
       dureeS: cas.dureeMin * S_PAR_MIN,
       latitudeDeg: SITE.latitudeDeg,
       axePoleNord: axePoleDeDate(epoqueAnnee(DATE)),
-      voieLactee: true,
-      vignettage: false,
       modeNuit: false,
-      // `--champ-scene` rejoue la sélection d'avant T-0023 : c'est la mesure « avant ».
-      ...(CHAMP_SCENE ? {} : { cadreSelection: etendueCadre(cadre, ciel.matrice) }),
     })
     durees.push(performance.now() - debut)
     empreinte = trace?.valeur() ?? ''

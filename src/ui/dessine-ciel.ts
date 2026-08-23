@@ -138,10 +138,17 @@ export interface EntreeDessin {
   readonly lune?: LuneEcran | undefined
   readonly modeNuit: boolean
   /**
-   * Peint entre le fond et tout le reste. C'est là que l'aperçu incrusté se dépose : sous les
-   * repères, les étoiles et les noms, jamais par-dessus.
+   * §9.3 / T-0116 — la passe de filé, peinte entre le sol et les repères, avec le PROJECTEUR
+   * FILTRÉ de la scène : les traces tombent donc sur les mêmes étoiles que le ciel qui les
+   * entoure, et rien ne se peint sous le relief (§4.1).
+   *
+   * Sa présence REMPLACE la couche d'étoiles ponctuelles : une trace surmontée d'un point net
+   * à une extrémité n'existe sur aucune pose. Les étoiles continuent d'alimenter `cibles` et
+   * les noms — sans quoi le survol et le clic les perdraient (T-0085, T-0107 à T-0109).
    */
-  readonly surLeFond?: ((ctx: CanvasRenderingContext2D) => void) | undefined
+  readonly passeFile?:
+    | ((ctx: CanvasRenderingContext2D, projecteur: Projecteur) => void)
+    | undefined
   /** §3.4 / T-0085 — absent : rien n'est survolé, la scène ne révèle aucun nom. */
   readonly survol?: SurvolEcran | undefined
 }
@@ -770,9 +777,9 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   if (entree.couches.sol) {
     dessineSol(ctx, brut, entree.matriceCiel, entree.masque, teintes.sol, teintes.horizon)
   }
-  // §9.5 — l'aperçu incrusté passe APRÈS le sol : le cadrage montre ce que le matériel
-  // capturerait, y compris pointé bas, et un masque de terrain n'a pas à l'effacer.
-  entree.surLeFond?.(ctx)
+  // §9.5 — la passe de filé passe APRÈS le sol, mais avec le projecteur qui l'ignore : le sol
+  // reste peint par-dessus le fond, et aucune trace ne se calcule sous l'horizon (§4.1).
+  entree.passeFile?.(ctx, projecteur)
   ctx.font = `${HAUTEUR_LABEL_PX}px system-ui, sans-serif`
   ctx.textBaseline = 'middle'
 
@@ -817,6 +824,9 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   // un chemin réutilisé accumulerait les disques des images précédentes. Contrainte de la
   // plateforme, pas négligence — huit objets par image, contre un par étoile évité plus bas.
   const chemins = Array.from({ length: TEINTES }, () => new Path2D())
+  // T-0116 — filé actif : les traces remplacent les points. La sélection tourne quand même,
+  // elle alimente `cibles` et les noms ; seule la PEINTURE des disques est suspendue.
+  const peintEtoiles = entree.passeFile === undefined
   const cibles: CibleEcran[] = []
   const candidats: CandidatLabel[] = []
   let etoilesDessinees = 0
@@ -833,10 +843,12 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     (x, y, z, magV, bv, source) => {
       if (!projecteur.projetteEn(x, y, z, p)) return
       if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) return
-      const rayon = Math.max(RAYON_MIN_ETOILE_PX, rayonEtoilePx(magV))
-      const chemin = chemins[teinte(bv)]!
-      chemin.moveTo(p.xPx + rayon, p.yPx)
-      chemin.arc(p.xPx, p.yPx, rayon, 0, TOUR_RAD)
+      if (peintEtoiles) {
+        const rayon = Math.max(RAYON_MIN_ETOILE_PX, rayonEtoilePx(magV))
+        const chemin = chemins[teinte(bv)]!
+        chemin.moveTo(p.xPx + rayon, p.yPx)
+        chemin.arc(p.xPx, p.yPx, rayon, 0, TOUR_RAD)
+      }
       etoilesDessinees++
       const etoile = entree.etoiles[source]
       if (etoile !== undefined && magV <= K('MAG_LABEL_BAYER_MAX')) {
@@ -844,9 +856,11 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
       }
     },
   )
-  for (let t = 0; t < TEINTES; t++) {
-    ctx.fillStyle = couleurTeinte(t, entree.modeNuit)
-    ctx.fill(chemins[t]!)
+  if (peintEtoiles) {
+    for (let t = 0; t < TEINTES; t++) {
+      ctx.fillStyle = couleurTeinte(t, entree.modeNuit)
+      ctx.fill(chemins[t]!)
+    }
   }
 
   // --- Étoiles nommées : labels et identification au clic -----------------

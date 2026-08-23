@@ -40,12 +40,11 @@ export interface ReglagesFile {
   readonly autonomieSaisie: string
   readonly espaceLibreGo: string
   readonly reductionBruit: boolean
-  readonly voieLactee: boolean
-  /** §9.2/§9.3 rendus dans le cadre matériel, sur la scène, plutôt que dans un canevas à part. */
+  /** T-0116 — §9.2/§9.3 peints sur toute la scène, sous les repères, plutôt qu'à part. */
   readonly incrustation: boolean
 }
 
-/** Ce que la dernière incrustation a effectivement tracé. `null` tant qu'aucune n'a eu lieu. */
+/** Ce que la dernière passe de filé a effectivement tracé. `null` tant qu'aucune n'a eu lieu. */
 export interface RenduFile {
   readonly reelles: number
   readonly generees: number
@@ -71,7 +70,6 @@ const ETAT_INITIAL: EtatSeance = {
     autonomieSaisie: '',
     espaceLibreGo: '',
     reductionBruit: false,
-    voieLactee: true,
     incrustation: false,
   },
   renduFile: null,
@@ -112,9 +110,32 @@ export function majFile(retouche: Partial<ReglagesFile>): void {
   pose({ ...etat, file: { ...etat.file, ...retouche } })
 }
 
-/** `null` quand l'incrustation s'éteint : des compteurs périmés mentiraient sur ce qui est tracé. */
+/** `null` quand le filé s'éteint : des compteurs périmés mentiraient sur ce qui est tracé. */
 export function poseRenduFile(rendu: RenduFile | null): void {
   pose({ ...etat, renduFile: rendu })
+}
+
+/**
+ * T-0116 — la passe de filé se peint par image ; ses compteurs, non.
+ *
+ * `poseRenduFile` écrit dans le magasin, donc déclenche un rendu React. Publiés à chaque
+ * peinture, ils en feraient trente par seconde — le défaut de T-0056. La boucle appelle donc
+ * ce publicateur au rythme du diagnostic, et il ne laisse passer que ce qui a CHANGÉ : un filé
+ * stable, ou éteint, ne coûte alors plus aucun rendu.
+ */
+export function publicateurRenduFile(
+  publie: (rendu: RenduFile | null) => void,
+): (rendu: RenduFile | null) => void {
+  let cle: string | null = null
+  let amorce = false
+  return (rendu) => {
+    const suivante =
+      rendu === null ? null : `${rendu.reelles}|${rendu.generees}|${rendu.tronques}`
+    if (amorce && suivante === cle) return
+    amorce = true
+    cle = suivante
+    publie(rendu)
+  }
 }
 
 /**
