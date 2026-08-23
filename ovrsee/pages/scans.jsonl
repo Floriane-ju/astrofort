@@ -63,3 +63,4 @@
 {"date":"2026-08-22","commit":"b6655c8","ok":true,"pages":1}
 {"date":"2026-08-23","commit":"74329c7","ok":true,"pages":1}
 {"date":"2026-08-23","commit":"f042efd","ok":false,"error":"http://localhost:5173 répond déjà — un autre serveur occupe le port. Arrêtez-le, ou donnez un baseUrl libre dans ovrsee.config.json."}
+{"date":"2026-08-23","commit":"9ff4982","ok":false,"error":"http://localhost:5173 répond déjà — un autre serveur occupe le port. Arrêtez-le, ou donnez un baseUrl libre dans ovrsee.config.json."}

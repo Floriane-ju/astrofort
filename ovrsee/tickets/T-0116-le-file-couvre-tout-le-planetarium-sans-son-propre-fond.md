@@ -2,7 +2,7 @@
 {
   "id": "T-0116",
   "titre": "Le filé couvre tout le planétarium, sans son propre fond",
-  "colonne": "revue",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "m",
   "epic": "T-0114",
