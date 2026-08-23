@@ -8,6 +8,8 @@
  * calcul qui bloque le fil principal pendant un panoramique.
  *
  * Usage : `node scripts/bench-incrustation.ts` (le catalogue vient de `public/data/`).
+ * `--planetarium` mesure la même passe en projection stéréographique : c'est le seul mode où
+ * la primitive de cercle de T-0115 s'applique, et le gain ne se lit que par comparaison.
  */
 
 import { readFileSync } from 'node:fs'
@@ -20,7 +22,13 @@ import { construitIndex, type IndexCiel } from '../src/core/index-ciel.ts'
 import { axePoleDeDate, cielInstantane, epoqueAnnee } from '../src/core/horloges.ts'
 import { magnitudeLimitePrevisu, type EntreeProfondeur } from '../src/core/galactique.ts'
 import { etendueCadre, type Cadre, type ProfilCadre } from '../src/core/cadre.ts'
-import { projecteur, type PointEcran, type Projecteur, type Vue } from '../src/core/projection.ts'
+import {
+  projecteur,
+  type ModeProjection,
+  type PointEcran,
+  type Projecteur,
+  type Vue,
+} from '../src/core/projection.ts'
 import type { Site } from '../src/core/ephem.ts'
 import { dessineChamp } from '../src/ui/dessine-champ.ts'
 
@@ -67,6 +75,13 @@ const PROFIL_50MM: ProfilCadre = {
 const EMPREINTE = process.argv.includes('--empreinte')
 /** Sélection sur le champ de la scène, comme avant T-0023 : sert à chiffrer le gain. */
 const CHAMP_SCENE = process.argv.includes('--champ-scene')
+/**
+ * T-0115 — axe « mode de projection ». `MODE_CADRE` reste le défaut, c'est celui de
+ * l'incrustation ; `MODE_PLANETARIUM` est celui où l'arc devient un cercle exact.
+ */
+const MODE: ModeProjection = process.argv.includes('--planetarium')
+  ? 'MODE_PLANETARIUM'
+  : 'MODE_CADRE'
 
 function empreinteur(): { ctx: CanvasRenderingContext2D; valeur: () => string } {
   let h = 0x811c9dc5
@@ -227,7 +242,7 @@ function mediane(valeurs: readonly number[]): number {
 function mesure(cas: Cas, indexReel: IndexCiel, indexSemis: IndexCiel): void {
   const ciel = cielInstantane(SITE, DATE)
   const vue: Vue = {
-    mode: 'MODE_CADRE',
+    mode: MODE,
     fovDeg: cas.fovDeg,
     largeurPx: LARGEUR,
     hauteurPx: HAUTEUR,
@@ -296,6 +311,6 @@ const indexReel = construitIndex(etoilesReelles())
 const indexSemis = construitIndex(semisGeneratif())
 console.log(
   `catalogue réel ${indexReel.nombreEtoiles} étoiles · semis ${indexSemis.nombreEtoiles} · ` +
-    `médiane de ${PASSES} passes`,
+    `médiane de ${PASSES} passes · ${MODE}`,
 )
 for (const cas of CAS) mesure(cas, indexReel, indexSemis)

@@ -26,6 +26,7 @@ import {
   type Vec3,
 } from '../src/core/mat3.ts'
 import {
+  porteeUtilePx,
   projecteur,
   type ModeProjection,
   type PointEcran,
@@ -314,5 +315,198 @@ describe('T-0023 — écarter une étoile dont l’arc ne peut pas toucher le ca
     // Même angle horaire, déclinaison très différente : le cercle passe loin du cadre.
     const loin = versVecteur(90, -60)
     expect(filtre(loin.x, loin.y, loin.z)).toBe(false)
+  })
+})
+
+describe('T-0115 — un arc de filé est un cercle exact en projection stéréographique', () => {
+  const DUREES_MIN = [5, 30, 120, 240, 480] as const
+
+  it('ne sort une primitive de cercle qu’en MODE_PLANETARIUM', () => {
+    const etoileVue = versVecteur(0, 20)
+    const modes: readonly ModeProjection[] = ['MODE_PLANETARIUM', 'MODE_CADRE', 'MODE_FISHEYE']
+    for (const mode of modes) {
+      const arc = arcEtoile(
+        proj({ mode, azimutDeg: 0, hauteurDeg: SITE.latitudeDeg, fovDeg: 90 }),
+        etoileVue,
+        240,
+        AXE_POLE,
+      )
+      if (mode === 'MODE_PLANETARIUM') {
+        expect(arc.cercle).not.toBeNull()
+      } else {
+        // Conique en rectilinéaire, courbe transcendante en équidistante : la polyligne reste.
+        expect(arc.cercle).toBeNull()
+        expect(arc.segments.flat().length).toBeGreaterThan(1)
+      }
+    }
+  })
+
+  it('reste sous le pixel de la trajectoire réelle, du pôle sud au pôle nord', () => {
+    // La référence n'est PAS une valeur recopiée : c'est la trajectoire reprojetée point par
+    // point, au dixième du pas de §9.3, et confrontée au cercle sorti par le moteur.
+    let pireEcartPx = 0
+    let cerclesJuges = 0
+    for (const azimutDeg of [0, 120, 250]) {
+      for (const hauteurDeg of [10, SITE.latitudeDeg, 80]) {
+        const projecteurVue = proj({
+          mode: 'MODE_PLANETARIUM',
+          azimutDeg,
+          hauteurDeg,
+          fovDeg: K('FOV_MAX_DEG'),
+        })
+        // Écart au pôle jusqu'à 180° : la déclinaison balaie d'un pôle à l'autre, et les
+        // ascensions droites couvrent le tour, donc les deux côtés du pôle projeté.
+        for (let decDeg = -89; decDeg <= 89; decDeg += 2) {
+          for (const raDeg of [0, 47, 133, 250, 310]) {
+            for (const dureeMin of DUREES_MIN) {
+              const etoileVue = versVecteur(raDeg, decDeg)
+              const arc = arcEtoile(projecteurVue, etoileVue, dureeMin, AXE_POLE)
+              if (arc.cercle === null) continue
+              cerclesJuges++
+              const cercle = arc.cercle
+              const balayageDeg = K('ROTATION_CIEL_DEG_H') * (dureeMin / 60)
+              const references = Math.ceil(balayageDeg / (K('PAS_ANGLE_HORAIRE_FILE_DEG') / 10))
+              for (let i = 0; i <= references; i++) {
+                const point = projecteurVue.projette(
+                  apres(etoileVue, (balayageDeg * i) / references),
+                )
+                if (point === null) continue
+                const ecart = Math.abs(
+                  Math.hypot(point.xPx - cercle.xPx, point.yPx - cercle.yPx) - cercle.rayonPx,
+                )
+                if (ecart > pireEcartPx) pireEcartPx = ecart
+              }
+            }
+          }
+        }
+      }
+    }
+    expect(cerclesJuges).toBeGreaterThan(1000)
+    expect(pireEcartPx).toBeLessThan(1)
+  })
+
+  it('couvre le balayage entier, sens compris, même au-delà du demi-tour', () => {
+    // L'étendue du cercle doit contenir toute la trajectoire : un balayage replié d'un tour
+    // laisserait des positions réelles hors de l'arc tracé, sans que le rayon bouge d'un
+    // pixel. C'est l'angle, pas la distance au centre, qui l'atteste.
+    let balayagesLongs = 0
+    for (const hauteurDeg of [10, 80]) {
+      const projecteurVue = proj({
+        mode: 'MODE_PLANETARIUM',
+        azimutDeg: 0,
+        hauteurDeg,
+        fovDeg: K('FOV_MAX_DEG'),
+      })
+      for (let decDeg = -85; decDeg <= 85; decDeg += 5) {
+        for (const raDeg of [0, 47, 133, 250, 310]) {
+          const etoileVue = versVecteur(raDeg, decDeg)
+          const arc = arcEtoile(projecteurVue, etoileVue, 480, AXE_POLE)
+          if (arc.cercle === null) continue
+          const cercle = arc.cercle
+          if (Math.abs(cercle.balayageRad) > Math.PI) balayagesLongs++
+          const balayageDeg = K('ROTATION_CIEL_DEG_H') * 8
+          const sens = cercle.balayageRad < 0 ? -1 : 1
+          for (let i = 0; i <= 200; i++) {
+            const point = projecteurVue.projette(apres(etoileVue, (balayageDeg * i) / 200))
+            if (point === null) continue
+            const angle = Math.atan2(point.yPx - cercle.yPx, point.xPx - cercle.xPx)
+            const depuisDebut =
+              (((((angle - cercle.debutRad) * sens) % (2 * Math.PI)) + 2 * Math.PI) %
+                (2 * Math.PI))
+            // Tolérance angulaire : un pixel vu du centre, jamais une marge choisie à vue.
+            const unPixelRad = 1 / Math.max(cercle.rayonPx, 1)
+            expect(depuisDebut).toBeLessThanOrEqual(Math.abs(cercle.balayageRad) + unPixelRad)
+          }
+        }
+      }
+    }
+    // Sans au moins un balayage de plus d'un demi-tour, le cas que le vote protège n'a pas
+    // été exercé et le test ne prouve rien.
+    expect(balayagesLongs).toBeGreaterThan(0)
+  })
+
+  it('retombe sur la polyligne quand le cercle dégénère près de l’antipode de la visée', () => {
+    const projecteurVue = proj({
+      mode: 'MODE_PLANETARIUM',
+      azimutDeg: 0,
+      hauteurDeg: SITE.latitudeDeg,
+      fovDeg: K('FOV_MAX_DEG'),
+    })
+    // Visée sur le pôle : le cercle de déclinaison qui passe par l'antipode de la visée est
+    // celui de l'équateur du repère de vue, soit une distance polaire de 90°.
+    const visee = projecteurVue.inverse(LARGEUR / 2, HAUTEUR / 2)
+    const separationPoleDeg = separationDeg(visee, AXE_POLE)
+    let degeneres = 0
+    for (const raDeg of [0, 60, 140, 220, 300]) {
+      // Déclinaison telle que le cercle de déclinaison frôle l'antipode de la visée.
+      const decDeg = 90 - (180 - separationPoleDeg)
+      const arc = arcEtoile(projecteurVue, versVecteur(raDeg, decDeg), 480, AXE_POLE)
+      if (arc.cercle !== null) continue
+      degeneres++
+      // La trace ne traverse pas l'image : aucun sommet retenu au-delà de la portée utile,
+      // donc aucune corde fantôme d'un bord à l'autre.
+      const portee = porteeUtilePx(projecteurVue.vue)
+      for (const point of arc.segments.flat()) {
+        expect(Math.hypot(point.xPx - LARGEUR / 2, point.yPx - HAUTEUR / 2)).toBeLessThanOrEqual(
+          portee,
+        )
+      }
+    }
+    expect(degeneres).toBeGreaterThan(0)
+  })
+
+  it('garde une longueur cohérente : trop courte, la trace reste un disque', () => {
+    const projecteurVue = proj({
+      mode: 'MODE_PLANETARIUM',
+      azimutDeg: 0,
+      hauteurDeg: SITE.latitudeDeg,
+      fovDeg: 60,
+    })
+    // Référence : longueur de la polyligne fine de la MÊME trajectoire, sommée en cordes.
+    const longueurReferencePx = (etoileVue: Vec3, dureeMin: number): number => {
+      const balayageDeg = K('ROTATION_CIEL_DEG_H') * (dureeMin / 60)
+      const pas = 2000
+      let total = 0
+      let precedent = projecteurVue.projette(etoileVue)
+      for (let i = 1; i <= pas; i++) {
+        const point = projecteurVue.projette(apres(etoileVue, (balayageDeg * i) / pas))
+        if (point !== null && precedent !== null) {
+          total += Math.hypot(point.xPx - precedent.xPx, point.yPx - precedent.yPx)
+        }
+        precedent = point
+      }
+      return total
+    }
+    for (const decDeg of [0, 40, 75]) {
+      for (const dureeMin of DUREES_MIN) {
+        const etoileVue = versVecteur(0, decDeg)
+        const arc = arcEtoile(projecteurVue, etoileVue, dureeMin, AXE_POLE)
+        if (arc.cercle === null) continue
+        // La corde sous-estime l'arc : l'écart relatif reste sous le millième à 2 000 pas.
+        expect(arc.longueurPx).toBeCloseTo(longueurReferencePx(etoileVue, dureeMin), 1)
+      }
+    }
+    // Étoile presque sur le pôle : huit heures durant, sa trace tient sous le pixel. C'est
+    // `longueurPx` qui la fait dessiner en disque plutôt qu'en trait (§9.3), et `segments`
+    // doit alors porter la position de départ que le disque utilise.
+    // Étoile posée à un millième de tour du pôle DE LA DATE — pas du pôle J2000, dont la
+    // précession l'écarte déjà de plus d'un dixième de degré.
+    const ecart = 1e-4
+    const vers = versVecteur(0, 0)
+    const norme = Math.hypot(
+      AXE_POLE.x + ecart * vers.x,
+      AXE_POLE.y + ecart * vers.y,
+      AXE_POLE.z + ecart * vers.z,
+    )
+    const quasiPolaire: Vec3 = {
+      x: (AXE_POLE.x + ecart * vers.x) / norme,
+      y: (AXE_POLE.y + ecart * vers.y) / norme,
+      z: (AXE_POLE.z + ecart * vers.z) / norme,
+    }
+    const courte = arcEtoile(projecteurVue, quasiPolaire, 480, AXE_POLE)
+    expect(courte.cercle).not.toBeNull()
+    expect(courte.longueurPx).toBeLessThan(1)
+    expect(courte.longueurPx).toBeCloseTo(longueurReferencePx(quasiPolaire, 480), 2)
+    expect(courte.segments[0]?.[0]).toBeDefined()
   })
 })

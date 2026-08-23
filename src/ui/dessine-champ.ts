@@ -314,11 +314,25 @@ function dessineCouche(
       ctx.lineWidth = rayon * 2
       ctx.lineCap = 'round'
       ctx.beginPath()
-      for (const segment of arc.segments) {
-        segment.forEach((p, i) => {
-          if (i === 0) ctx.moveTo(p.xPx, p.yPx)
-          else ctx.lineTo(p.xPx, p.yPx)
-        })
+      if (arc.cercle !== null) {
+        // T-0115 — en stéréographique l'arc EST un cercle : la primitive du canevas le trace
+        // exactement, là où la polyligne l'approchait en centaines de cordes.
+        const c = arc.cercle
+        ctx.arc(
+          c.xPx,
+          c.yPx,
+          c.rayonPx,
+          c.debutRad,
+          c.debutRad + c.balayageRad,
+          c.balayageRad < 0,
+        )
+      } else {
+        for (const segment of arc.segments) {
+          segment.forEach((p, i) => {
+            if (i === 0) ctx.moveTo(p.xPx, p.yPx)
+            else ctx.lineTo(p.xPx, p.yPx)
+          })
+        }
       }
       ctx.stroke()
     }
