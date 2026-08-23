@@ -2,7 +2,7 @@
 {
   "id": "T-0113",
   "titre": "Mise à jour UI et UX",
-  "colonne": "pret",
+  "colonne": "a-specifier",
   "priorite": "moyenne",
   "tags": [],
   "cree": "2026-08-23",
