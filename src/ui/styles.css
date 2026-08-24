@@ -6,18 +6,31 @@
 
    Le mode nuit n'est pas un filtre de teinte posé sur une interface claire — la luminance
    globale resterait trop élevée. La palette est CONÇUE en rouge sur noir, canaux vert et
-   bleu strictement nuls. */
+   bleu strictement nuls.
+
+   T-0113 — LANGAGE VISUEL. La palette de jour est verte-menthe sur noir profond, pas grise
+   sur gris : un instrument de terrain se lit à la lampe frontale, et une interface déjà
+   sombre et déjà monochrome le jour rend le basculement au rouge continu au lieu d'être une
+   rupture. Les angles sont vifs, les traits font un pixel, les micro-libellés sont en
+   capitales espacées : cette grammaire distingue une ÉTIQUETTE d'une VALEUR sans recourir à
+   la luminance, qui est justement ce que §11.1 confisque. Les jetons de forme — familles,
+   suivis, épaisseur de trait — vivent dans le second bloc `:root`, avec les couleurs que le
+   navigateur peint tout seul : ce ne sont pas des couleurs, ils n'ont rien à repeindre. */
 
 :root {
   color-scheme: dark;
-  --fond: #101014;
-  --surface: #17171d;
-  --surface-haute: #1f1f28;
-  --texte: #e8e8ea;
-  --attenue: #9a9aa4;
-  --bordure: #2c2c34;
-  --alerte: #d98b5f;
-  --fond-alerte: #1a1720;
+  --fond: #050807;
+  --surface: #0a0f0e;
+  --surface-haute: #101817;
+  --texte: #eafff5;
+  --attenue: #9db3a9;
+  --accent: #a9ecc9;
+  --avertissement: #f4c76a;
+  --bordure: #2b3a34;
+  --bordure-faible: #18211d;
+  --alerte: #ff6f5e;
+  --fond-alerte: #1a0f0d;
+  --fond-accent: #0f1a16;
   /* Hauteur minimale d'une cible de clic : usage ganté sur écran tactile (§11.2). */
   --cible-clic: 44px;
 }
@@ -29,11 +42,16 @@
    luminance », https://www.w3.org/TR/WCAG22/#dfn-contrast-ratio) : pour un canal c dans
    [0, 1], lin(c) = c/12,92 si c ≤ 0,03928, sinon ((c + 0,055)/1,055)^2,4 ; la luminance
    relative vaut L = 0,2126·lin(R) + 0,7152·lin(V) + 0,0722·lin(B) — donc L = 0,2126·lin(R)
-   ici, puisque V et B sont nuls ; le ratio est (L_clair + 0,05)/(L_sombre + 0,05).
+   en mode nuit, puisque V et B y sont nuls ; le ratio est (L_clair + 0,05)/(L_sombre + 0,05).
    Seuil AA texte courant : 4,5:1 (3:1 seulement à ≥ 18,66 px ou en gras — aucun texte
-   d'information n'est dans ce cas ici, les libellés sont à 0,85 rem ≈ 12,75 px).
+   d'information n'est dans ce cas ici, les libellés sont sous 12,75 px).
 
-   Au facteur nominal, avec les valeurs ci-dessous — le pire fond est --fond-alerte :
+   MODE JOUR — T-0113. Le pire couple de la palette est --alerte sur --fond-accent, à 6,5:1 ;
+   --attenue plancher à 8,0:1, --texte à 17:1. La marge vient de ce que les fonds sont
+   presque noirs — la même raison qui rend le passage au rouge continu plutôt que brutal.
+
+   MODE NUIT — au facteur nominal, avec les valeurs ci-dessous ; le pire fond est
+   --fond-alerte :
 
      --texte    : 5,06:1 sur --fond … 4,85:1 sur --fond-alerte
      --attenue  : 4,78:1 sur --fond … 4,57:1 sur --fond-alerte
@@ -54,17 +72,22 @@
 
    HIÉRARCHIE — 5,25:1 de plafond ne laisse pas de place pour étager la luminance : --texte
    et --attenue se touchent presque. Ce qui sépare le texte secondaire du principal passe
-   donc par la taille (0,85 rem contre 15 px) et par la graisse (`.onglet.actif`, `th`), pas
-   par la couleur. */
+   donc par la taille (0,7 rem contre 0,95 rem), par la casse et par le suivi — pas par la
+   couleur. --accent et --avertissement, qui se lisent à leur teinte le jour, ne se
+   distinguent plus que par la place qu'ils occupent une fois passés au rouge. */
 :root[data-mode-nuit='true'] {
   --fond: #000000;
   --surface: rgb(calc(var(--luminance-nuit) * 8) 0 0);
   --surface-haute: rgb(calc(var(--luminance-nuit) * 18) 0 0);
   --texte: rgb(calc(var(--luminance-nuit) * 250) 0 0);
   --attenue: rgb(calc(var(--luminance-nuit) * 242) 0 0);
+  --accent: rgb(calc(var(--luminance-nuit) * 246) 0 0);
+  --avertissement: rgb(calc(var(--luminance-nuit) * 250) 0 0);
   --bordure: rgb(calc(var(--luminance-nuit) * 90) 0 0);
+  --bordure-faible: rgb(calc(var(--luminance-nuit) * 45) 0 0);
   --alerte: rgb(calc(var(--luminance-nuit) * 255) 0 0);
   --fond-alerte: rgb(calc(var(--luminance-nuit) * 26) 0 0);
+  --fond-accent: rgb(calc(var(--luminance-nuit) * 20) 0 0);
 }
 
 /* Passage progressif, jamais un basculement brutal ni un flash (§11.1). */
@@ -98,11 +121,29 @@ body {
    sélection, le caret, la couleur d'accent et les ascenseurs sont peints par le navigateur
    avec les siennes — bleues — et `color-scheme: dark` ne fait que les assombrir. N'étant
    écrites nulle part, elles échappent au basculement de palette ET au test qui le vérifie.
-   Les déclarer les rend rouges en mode nuit, et inspectables. */
+   Les déclarer les rend rouges en mode nuit, et inspectables.
+
+   T-0113 — les jetons de FORME logent ici plutôt qu'avec la palette : le mode nuit repeint
+   des couleurs, il ne redessine pas la grammaire. Un jeton de forme placé dans le premier
+   bloc obligerait à en déclarer un équivalent rouge, qui n'existe pas.
+
+   Les deux familles du dessin sont nommées avant leurs substituts système. Les fichiers ne
+   sont pas embarqués : §12.2 interdit d'aller les chercher sur le réseau et §13.1 le bloque.
+   La pile de repli porte donc le rendu réel tant que les polices ne sont pas installées, et
+   c'est voulu — ce qui porte l'identité est la casse, le suivi et le trait, pas le dessin
+   des lettres. */
 :root {
   accent-color: var(--alerte);
   caret-color: var(--texte);
   scrollbar-color: var(--bordure) var(--fond);
+  --police-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --police-titre: 'Barlow Condensed', 'Roboto Condensed', 'Archivo Narrow', ui-sans-serif,
+    system-ui, sans-serif;
+  /* Suivi des capitales : un micro-libellé, un titre de rubrique, la marque. */
+  --suivi-micro: 0.14em;
+  --suivi-titre: 0.24em;
+  --suivi-marque: 0.4em;
+  --trait: 1px;
 }
 
 ::selection {
@@ -132,11 +173,15 @@ body {
 }
 
 
+/* T-0113 — chasse fixe pour tout le texte courant. Un relevé se compare en colonne : le
+   chasse fixe aligne les chiffres, `tabular-nums` le garantit encore sous une police de
+   repli dont les chiffres seraient proportionnels. */
 body {
   margin: 0;
   background: var(--fond);
   color: var(--texte);
-  font: 15px/1.5 system-ui, sans-serif;
+  font: 0.95rem/1.6 var(--police-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 /* §11.2 — la coque. Trois colonnes sur la hauteur du viewport : le matériel, la scène,
@@ -153,33 +198,38 @@ body {
     'topbar topbar topbar'
     'materiel scene seance';
   height: 100dvh;
+  background: var(--fond);
 }
 
+/* T-0113 — la barre est une réglette, pas un bandeau : un seul trait la sépare de la scène
+   et son fond descend en dégradé, pour que le regard passe de l'interface au ciel sans
+   buter sur une arête franche. */
 .coque-topbar {
   grid-area: topbar;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid var(--bordure);
-  background: var(--surface);
+  gap: 0.75rem;
+  padding: 0.4rem 0.9rem;
+  border-bottom: var(--trait) solid var(--bordure);
+  background: linear-gradient(var(--surface-haute), var(--surface));
 }
 
 .coque-panneau {
   min-height: 0;
   overflow-y: auto;
-  padding: 0.5rem 1rem 3rem;
+  padding: 0.5rem 0.9rem 3rem;
+  background: var(--surface);
 }
 
 .coque-materiel {
   grid-area: materiel;
-  border-right: 1px solid var(--bordure);
+  border-right: var(--trait) solid var(--bordure);
 }
 
 .coque-seance {
   grid-area: seance;
-  border-left: 1px solid var(--bordure);
+  border-left: var(--trait) solid var(--bordure);
 }
 
 /* Au-dessus du repli, les panneaux sont dépliés en permanence : l'accordéon n'a de sens que
@@ -231,13 +281,17 @@ body {
    n'était pas en 16/9 — c'est-à-dire presque toujours.
 
    `display: block` : un canevas est en ligne par défaut, et l'interligne réservé sous sa
-   ligne de base suffit à faire défiler la page de quelques pixels. */
+   ligne de base suffit à faire défiler la page de quelques pixels.
+
+   T-0113 — pas de bordure ici : la scène touche déjà les traits des deux panneaux, un
+   troisième doublerait le filet. */
 .coque-scene .planetarium {
   display: block;
   width: 100%;
   height: 100%;
   min-height: 0;
   aspect-ratio: auto;
+  border: 0;
 }
 
 /* Repli sous 1100 px : une seule colonne, les panneaux redeviennent des accordéons sous la
@@ -260,16 +314,21 @@ body {
     align-items: center;
     min-height: var(--cible-clic);
     padding: 0.5rem 0;
-    border-bottom: 1px solid var(--bordure);
+    border-bottom: var(--trait) solid var(--bordure);
     cursor: pointer;
+    font-family: var(--police-titre);
+    font-size: 0.85rem;
     font-weight: 600;
+    letter-spacing: var(--suivi-titre);
+    text-transform: uppercase;
+    color: var(--accent);
   }
 
   .coque-materiel,
   .coque-seance {
     border-right: 0;
     border-left: 0;
-    border-top: 1px solid var(--bordure);
+    border-top: var(--trait) solid var(--bordure);
     overflow-y: visible;
   }
 
@@ -288,55 +347,52 @@ body {
 
   /* Le tiroir d'information reste à portée : plafonné à la hauteur du viewport, il défile
      chez lui plutôt que d'allonger la page. */
-  /* T-0038 — le menu d'information ferme la barre : il se pousse à droite et y reste, quelle
-   que soit la largeur des éléments qui le précèdent. */
-.tiroir.tiroir-infos {
-  margin-left: auto;
-}
-
-/* T-0041 — un tiroir fermé cache ce qu'il contient. Le bouton change d'aspect quand il a
-   quelque chose à dire ; le compte, lui, est écrit en toutes lettres dans le libellé — le
-   rouge ne porte jamais seul une information (§11.1). */
-.tiroir[data-alerte='true'] > summary {
-  border-color: var(--alerte);
-  color: var(--alerte);
-  background: var(--fond-alerte);
-  font-weight: 700;
-}
-
-.tiroir[open] > .tiroir-contenu {
+  .tiroir[open] > .tiroir-contenu {
     max-height: 70dvh;
   }
 }
 
 /* §11.2 — les onglets d'intention du panneau droit. Un seul jeu de réglages à l'écran ; la
-   cible de clic garde sa hauteur d'usage ganté. */
+   cible de clic garde sa hauteur d'usage ganté.
+
+   T-0113 — la rangée est un bandeau plein, séparé du contenu par un unique filet : l'onglet
+   actif se pose dessus au lieu de flotter au-dessus d'un liseré. */
 .onglets {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
+  gap: 0;
   margin: 1.5rem 0 0;
-  border-bottom: 1px solid var(--bordure);
+  border-bottom: var(--trait) solid var(--bordure);
 }
 
 .onglet {
   flex: 1 1 auto;
   min-height: var(--cible-clic);
   padding: 0.45rem 0.6rem;
-  background: var(--surface);
+  background: transparent;
   color: var(--attenue);
-  border: 1px solid var(--bordure);
-  border-bottom: 0;
-  border-radius: 4px 4px 0 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
   cursor: pointer;
+  font-family: var(--police-mono);
+  font-size: 0.7rem;
+  letter-spacing: var(--suivi-micro);
+  text-transform: uppercase;
+}
+
+.onglet:hover {
+  background: var(--fond-accent);
+  color: var(--texte);
 }
 
 /* L'onglet actif ne se signale pas que par sa teinte : il porte aussi le trait et la graisse. */
 .onglet.actif {
-  background: var(--surface-haute);
-  color: var(--texte);
+  background: var(--fond-accent);
+  color: var(--accent);
   font-weight: 700;
-  box-shadow: inset 0 -3px 0 0 var(--alerte);
+  border-bottom-color: var(--accent);
+  box-shadow: none;
 }
 
 /* Le plan de session échappe aux onglets : masqué à l'écran hors de l'onglet Nuit, il reste
@@ -346,7 +402,10 @@ body {
 }
 
 /* Tiroirs de la barre haute : mode nuit et vérification du socle. L'élément natif porte
-   l'état ouvert/fermé, le clavier et l'annonce — aucun état React n'est nécessaire. */
+   l'état ouvert/fermé, le clavier et l'annonce — aucun état React n'est nécessaire.
+
+   T-0113 — un tiroir fermé est une pastille : angles vifs, filet d'un pixel, capitales
+   espacées. Ouvert, il prend le trait d'accent et le fond teinté, comme un onglet actif. */
 .tiroir {
   position: relative;
   margin-left: auto;
@@ -360,12 +419,27 @@ body {
   display: flex;
   align-items: center;
   min-height: var(--cible-clic);
-  padding: 0.45rem 0.9rem;
-  background: var(--surface-haute);
-  color: var(--texte);
-  border: 1px solid var(--bordure);
-  border-radius: 4px;
+  padding: 0.35rem 0.7rem;
+  background: transparent;
+  color: var(--attenue);
+  border: var(--trait) solid var(--bordure);
+  border-radius: 0;
   cursor: pointer;
+  font-size: 0.7rem;
+  letter-spacing: var(--suivi-micro);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tiroir > summary:hover {
+  color: var(--texte);
+  border-color: var(--accent);
+}
+
+.tiroir[open] > summary {
+  background: var(--fond-accent);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* T-0038 — le menu d'information ferme la barre : il se pousse à droite et y reste, quelle
@@ -392,52 +466,84 @@ body {
   width: min(52rem, 92vw);
   max-height: 75vh;
   overflow-y: auto;
-  padding: 0 1rem 1rem;
+  padding: 0 0.9rem 0.9rem;
   background: var(--surface);
-  border: 1px solid var(--bordure);
-  border-radius: 4px;
+  border: var(--trait) solid var(--accent);
+  border-radius: 0;
 }
 
+/* T-0113 — la marque est le seul endroit où le suivi s'ouvre à ce point : elle se lit comme
+   le cartouche d'un instrument, pas comme un titre de page. */
 h1 {
-  font-size: 1.5rem;
   margin: 0;
+  font-family: var(--police-titre);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: var(--suivi-marque);
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
+/* Un titre de rubrique est une étiquette, pas un poids : capitales condensées, filet
+   dessous. Il n'a pas à peser plus que la valeur qu'il annonce. */
 h2 {
-  font-size: 1.05rem;
-  margin: 2rem 0 0.75rem;
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid var(--bordure);
+  margin: 1.75rem 0 0.6rem;
+  padding-bottom: 0.3rem;
+  border-bottom: var(--trait) solid var(--bordure);
+  font-family: var(--police-titre);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: var(--suivi-titre);
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 h3 {
-  font-size: 0.95rem;
-  margin: 1rem 0 0.5rem;
+  margin: 1rem 0 0.4rem;
+  font-family: var(--police-titre);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: var(--suivi-micro);
+  text-transform: uppercase;
+  color: var(--texte);
 }
 
 .champs {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
+/* Un libellé est une ÉTIQUETTE : petit, en capitales, espacé. Ce qui le sépare de la valeur
+   n'est pas sa luminance — §11.1 n'en laisse pas assez — mais sa casse et son suivi. */
 label {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  font-size: 0.85rem;
+  font-size: 0.7rem;
+  letter-spacing: var(--suivi-micro);
+  text-transform: uppercase;
   color: var(--attenue);
 }
 
+/* Une saisie garde la casse de ce qu'on y tape : `text-transform` héritée d'un libellé
+   parent afficherait en capitales une valeur qui n'en est pas. */
 input,
 select {
   min-height: var(--cible-clic);
   padding: 0.4rem 0.5rem;
-  background: var(--surface);
+  background: var(--fond-accent);
   color: var(--texte);
-  border: 1px solid var(--bordure);
-  border-radius: 4px;
-  font: inherit;
+  border: var(--trait) solid var(--bordure);
+  border-radius: 0;
+  font: 0.85rem/1.4 var(--police-mono);
+  letter-spacing: 0.05em;
+  text-transform: none;
+}
+
+input:hover,
+select:hover {
+  border-color: var(--accent);
 }
 
 input[type='checkbox'] {
@@ -448,40 +554,53 @@ input[type='checkbox'] {
 
 input[type='range'] {
   min-height: var(--cible-clic);
+  padding: 0;
+  background: transparent;
+  border: 0;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
 
 th,
 td {
   text-align: left;
   padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid var(--bordure);
+  border-bottom: var(--trait) solid var(--bordure-faible);
   vertical-align: top;
 }
 
+/* L'en-tête de colonne est un micro-libellé, pas une cellule en gras. */
 th {
   color: var(--attenue);
+  font-size: 0.68rem;
   font-weight: 500;
+  letter-spacing: var(--suivi-micro);
+  text-transform: uppercase;
 }
 
+/* T-0113 — un état porte des PHRASES, pas des étiquettes : il reste en casse normale.
+   Les capitales espacées sont réservées à ce qui nomme un champ ou une colonne ; appliquées
+   à une explication, elles la rendent illisible et lui donnent un poids qu'elle n'a pas. */
 .etat {
   margin: 0.25rem 0;
   color: var(--attenue);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
 }
 
 .cause,
 .erreur {
   margin: 0.5rem 0;
-  padding: 0.6rem 0.75rem;
-  border-left: 3px solid var(--alerte);
+  padding: 0.55rem 0.7rem;
+  border: var(--trait) solid var(--alerte);
+  border-left-width: 3px;
   background: var(--fond-alerte);
-  font-size: 0.9rem;
+  color: var(--alerte);
+  font-size: 0.78rem;
+  line-height: 1.55;
 }
 
 /* §11.1 — le rouge ne porte jamais seul une information : l'alerte se distingue aussi par
@@ -492,44 +611,62 @@ th {
   font-weight: 700;
 }
 
+/* Une phrase avec un champ dedans : même règle que `.etat`, casse normale. */
 .niveau {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   color: var(--attenue);
-  font-size: 0.85rem;
+  font-size: 0.75rem;
 }
 
+/* Un interrupteur porte la phrase qui dit ce qu'il fait, pas le nom d'un champ. */
 .interrupteur {
   flex-direction: row;
   align-items: center;
+  gap: 0.5rem;
   color: var(--texte);
-  font-size: 0.9rem;
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: none;
   min-height: var(--cible-clic);
 }
 
 /* §10.1 — la glose est au survol pour tous, et visible en plus au niveau débutant.
    Aucune information critique ne dépend du survol : tout s'ouvre aussi au clic (§11.2). */
 .terme abbr {
-  text-decoration: underline dotted var(--bordure);
+  text-decoration: underline dotted var(--accent);
+  text-underline-offset: 3px;
   cursor: help;
 }
 
+/* La glose est une phrase logée dans une étiquette : elle doit échapper aux capitales du
+   libellé qui la contient, sans quoi §10.1 rendrait le jargon moins lisible que le terme. */
 .terme-glose {
   display: block;
   color: var(--attenue);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-style: italic;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .terme-detail summary {
   cursor: pointer;
   min-height: var(--cible-clic);
   padding: 0.35rem 0;
+  color: var(--accent);
+  font-size: 0.78rem;
 }
 
 .glossaire {
+  letter-spacing: 0;
+  text-transform: none;
   margin: 0 0 0.75rem;
-  padding: 0.6rem 0.75rem;
+  padding: 0.55rem 0.7rem;
   border-left: 3px solid var(--bordure);
-  font-size: 0.85rem;
+  background: var(--fond-accent);
+  font-size: 0.78rem;
   color: var(--attenue);
 }
 
@@ -549,11 +686,13 @@ th {
 .tracee-plage {
   color: var(--attenue);
   font-size: 0.85em;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .tracee {
-  border-bottom: 1px solid var(--bordure);
-  padding: 0.35rem 0;
+  border-bottom: var(--trait) solid var(--bordure-faible);
+  padding: 0.3rem 0;
 }
 
 .tracee summary {
@@ -563,15 +702,31 @@ th {
   min-height: var(--cible-clic);
   align-items: center;
   cursor: pointer;
+  font-size: 0.72rem;
+  letter-spacing: var(--suivi-micro);
+  text-transform: uppercase;
+  color: var(--attenue);
 }
 
+.tracee summary:hover {
+  color: var(--texte);
+}
+
+/* La valeur est ce qu'on vient lire : elle garde sa casse, monte en taille et prend le
+   jeton le plus lumineux. L'étiquette qui la précède fait l'inverse. */
 .tracee-valeur {
   font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--texte);
 }
 
 .tracee-detail {
   padding: 0.5rem 0 0.75rem 1rem;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--attenue);
 }
 
@@ -613,34 +768,54 @@ th {
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.5rem;
   margin-top: 1rem;
   align-items: center;
 }
 
+/* T-0113 — un bouton est un cadre, pas un relief : filet d'un pixel, fond transparent, et
+   l'aplat teinté ne vient qu'au survol. Rien ne brille tant qu'on ne le désigne pas — sur
+   un écran regardé dans le noir, un aplat permanent est une lampe permanente. */
 button,
 .bouton-fichier {
   min-height: var(--cible-clic);
-  padding: 0.45rem 0.9rem;
-  background: var(--surface-haute);
-  color: var(--texte);
-  border: 1px solid var(--bordure);
-  border-radius: 4px;
-  font: inherit;
+  padding: 0.4rem 0.85rem;
+  background: transparent;
+  color: var(--accent);
+  border: var(--trait) solid var(--bordure);
+  border-radius: 0;
+  font: 0.72rem/1.4 var(--police-mono);
+  letter-spacing: var(--suivi-micro);
+  text-transform: uppercase;
   cursor: pointer;
+}
+
+button:hover,
+.bouton-fichier:hover {
+  background: var(--fond-accent);
+  border-color: var(--accent);
+  color: var(--texte);
+}
+
+button:disabled {
+  color: var(--attenue);
+  border-color: var(--bordure-faible);
+  cursor: default;
 }
 
 .bouton-fichier input {
   display: none;
 }
 
-/* §8.3 — plan de session */
+/* §8.3 — plan de session. T-0113 — une étape est une ligne d'horaire, pas une carte : un
+   filet dessous, pas de cadre complet. La séquence se lit comme un tableau de départs. */
 .etape {
-  margin: 0.75rem 0;
-  padding: 0.75rem;
-  border: 1px solid var(--bordure);
-  border-radius: 6px;
-  background: var(--surface);
+  margin: 0;
+  padding: 0.6rem 0;
+  border: 0;
+  border-bottom: var(--trait) solid var(--bordure-faible);
+  border-radius: 0;
+  background: transparent;
 }
 
 .etape-titre {
@@ -648,13 +823,20 @@ button,
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 0.5rem;
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.35rem;
+  font-family: var(--police-titre);
+  font-size: 0.95rem;
   font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--texte);
 }
 
 .etape-horaire {
+  font-family: var(--police-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--attenue);
+  letter-spacing: 0.08em;
+  color: var(--accent);
 }
 
 .score-detail {
@@ -662,7 +844,9 @@ button,
   flex-wrap: wrap;
   gap: 0.75rem;
   margin: 0.35rem 0;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
+  letter-spacing: var(--suivi-micro);
+  text-transform: uppercase;
   color: var(--attenue);
   font-variant-numeric: tabular-nums;
 }
@@ -671,11 +855,11 @@ button,
   width: 100%;
   min-height: 20rem;
   padding: 0.75rem;
-  background: var(--surface);
+  background: var(--fond);
   color: var(--texte);
-  border: 1px solid var(--bordure);
-  border-radius: 4px;
-  font: 12px/1.45 ui-monospace, monospace;
+  border: var(--trait) solid var(--bordure);
+  border-radius: 0;
+  font: 0.72rem/1.5 var(--police-mono);
   white-space: pre;
 }
 
@@ -686,15 +870,16 @@ button,
   max-width: 22rem;
   aspect-ratio: 3 / 2;
   margin: 0.5rem 0;
-  border: 1px solid var(--bordure);
+  border: var(--trait) solid var(--bordure);
   background: var(--fond);
 }
 
 .schema-astre {
   position: absolute;
   transform: translate(-50%, -50%);
-  color: var(--texte);
-  font-size: 0.7rem;
+  color: var(--attenue);
+  font-size: 0.65rem;
+  letter-spacing: var(--suivi-micro);
   line-height: 1;
 }
 
@@ -711,8 +896,8 @@ button,
   max-width: 100%;
   height: auto;
   aspect-ratio: 16 / 9;
-  border: 1px solid var(--bordure);
-  border-radius: 4px;
+  border: var(--trait) solid var(--bordure);
+  border-radius: 0;
   touch-action: none;
   cursor: grab;
 }
@@ -725,15 +910,15 @@ button,
    cadre, cellule par cellule. */
 .carte-pose {
   border-collapse: collapse;
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   margin: 0.5rem 0 1rem;
 }
 
 .carte-pose td {
-  border: 1px solid var(--bordure);
+  border: var(--trait) solid var(--bordure);
   padding: 0.2rem 0.4rem;
   text-align: center;
-  background: var(--surface);
+  background: var(--surface-haute);
 }
 
 .carte-pose-dec {
@@ -749,7 +934,7 @@ button,
 }
 
 .carte-pose .pose-pole {
-  background: var(--surface-haute);
+  background: var(--fond-accent);
 }
 
 @media print {
@@ -795,6 +980,7 @@ button,
 input[readonly],
 select:disabled {
   color: var(--attenue);
+  background: transparent;
   border-style: dashed;
   cursor: default;
 }
@@ -807,7 +993,7 @@ select:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
 }
 
 .masque-releves li {
@@ -815,14 +1001,17 @@ select:disabled {
   align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem;
+  padding: 0.15rem 0;
+  border-bottom: var(--trait) solid var(--bordure-faible);
 }
 
 /* T-0087 — les cinq poids C-15 dans le tiroir des réglages. Le poids effectif se lit au bout
    de la ligne du critère : c'est lui que le plan utilise, pas la position brute du curseur. */
 .poids-scoring {
-  border: 1px solid var(--bordure);
-  border-radius: 4px;
+  border: var(--trait) solid var(--bordure);
+  border-radius: 0;
   padding: 0.5rem 0.75rem 0.75rem;
+  background: var(--fond-accent);
 }
 
 .poids-scoring > label > span:first-child {
