@@ -25,6 +25,7 @@ import {
   type Mat3,
   type Vec3,
 } from './mat3.ts'
+import { poseParPixelS } from './file-etoiles.ts'
 import { trace, type Traced } from './traced.ts'
 
 const DEMI_TOUR = 180
@@ -84,24 +85,6 @@ export function magnitudeSemis(u: number): number {
   return seuil + Math.log10(1 + u * (K('BASE_MAGNITUDE') ** (pente * etendue) - 1)) / pente
 }
 
-/**
- * §9.3 — T-0118 : magnitude plafond de la couche du semis, pour un budget d'étoiles LUES sur
- * un champ de rayon donné.
- *
- * Un plafond de magnitude fixe ne bornerait pas le coût : à magnitude égale, le nombre
- * d'étoiles suit l'angle solide du champ — environ 9× entre un champ de 60° et le plein ciel.
- * C'est donc le budget d'étoiles qui est fixé, et la magnitude qui s'en déduit : le coût de la
- * passe reste le même à 10° comme à 180°, et l'image garde la même densité partout.
- */
-export function magnitudePlafondSemis(budgetEtoiles: number, rayonChampDeg: number): number {
-  const fractionCiel = (1 - Math.cos(rayonChampDeg * DEG)) / 2
-  if (fractionCiel <= 0) return K('SEMIS_MAG_MAX')
-  // Au-delà de la totalité du semis présent dans le champ, il n'y a plus rien à plafonner.
-  return magnitudeSemis(
-    Math.min(1, budgetEtoiles / (K('SEMIS_ETOILES_TOTAL') * fractionCiel)),
-  )
-}
-
 /** §9.2 — assombrissement des coins, en diaphragmes, pour un rayon relatif au coin du cadre. */
 export function vignettageDiaph(rayonRelatif: number): Traced<number> {
   const borne = Math.max(0, Math.min(1, rayonRelatif))
@@ -127,6 +110,49 @@ export function vignettageDiaph(rayonRelatif: number): Traced<number> {
 export function opaciteEtoile(magV: number, magLimite: number): number {
   const snr = K('SNR_DETECTION_PREVISU') * K('BASE_MAGNITUDE') ** (-(magV - magLimite) / K('POGSON'))
   return Math.min(1, Math.sqrt(snr / K('SNR_RENDU_SATURATION')))
+}
+
+export interface EntreeTableProfondeur {
+  readonly profondeur: EntreeProfondeur
+  /** Durée d'accumulation, en secondes. */
+  readonly dureeS: number
+  /** Échantillonnage du capteur, en secondes d'arc par pixel. */
+  readonly echApx: number
+  /** Suivi actif : le pixel reçoit toute la pose, la déclinaison n'y change rien. */
+  readonly suiviActif: boolean
+}
+
+/**
+ * §9.3 — T-0119 : profondeur atteinte PAR PIXEL, tabulée par sinus de déclinaison.
+ *
+ * La pose vue par un pixel ne dépend que de la déclinaison (`poseParPixelS`), donc la profondeur
+ * atteinte aussi. La recalculer par étoile était le premier poste de la passe — 134 ms pour deux
+ * cent mille étoiles, contre 2 ms par lecture de table. Et l'index est le SINUS de la déclinaison,
+ * pas la déclinaison : c'est la composante polaire de la direction, déjà lue par la sélection, ce
+ * qui retire aussi un arc sinus par étoile.
+ *
+ * Table plate quand le suivi est actif : le pixel reçoit toute la pose, où que pointe l'instrument.
+ */
+export function tableProfondeurParPixel(entree: EntreeTableProfondeur): Float64Array {
+  const cases = K('CASES_TABLE_PROFONDEUR_TRACE')
+  const table = new Float64Array(cases)
+  for (let i = 0; i < cases; i++) {
+    const z = -1 + (2 * (i + 1 / 2)) / cases
+    const decDeg = (Math.asin(z) * DEMI_TOUR) / Math.PI
+    table[i] = magnitudeLimitePrevisu({
+      ...entree.profondeur,
+      tPoseS: entree.suiviActif
+        ? entree.dureeS
+        : poseParPixelS(entree.dureeS, entree.echApx, decDeg),
+    }).value
+  }
+  return table
+}
+
+/** Lecture de la table : `z` est la composante polaire de la direction, dans [−1, 1]. */
+export function profondeurPourZ(table: Float64Array, z: number): number {
+  const indice = ((z + 1) * table.length) / 2
+  return table[Math.max(0, Math.min(table.length - 1, indice | 0))]!
 }
 
 export interface EntreeProfondeur {

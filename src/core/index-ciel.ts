@@ -39,6 +39,19 @@ export interface IndexCiel {
   readonly nombreEtoiles: number
   /** Magnitude la plus faible présente : c'est la profondeur réelle du paquet chargé. */
   readonly profondeurMag: number
+  /**
+   * Comptage cumulé par pas de magnitude : `cumulMag[i]` = nombre d'étoiles de l'index dont la
+   * magnitude ne dépasse pas `magMin + i * PAS_COMPTAGE_CUMULE_MAG`.
+   *
+   * T-0119 — c'est ce qui permet de convertir un budget de traces en plafond de magnitude. La loi
+   * de comptage du semis (§9.2, `SEMIS_ETOILES_TOTAL` à `SEMIS_MAG_MAX`) ne peut pas servir ici :
+   * prolongée vers les étoiles brillantes elle donne quelques centaines d'étoiles au seuil
+   * catalographié, là où le paquet réel en compte des dizaines de milliers. Elle décrit le semis,
+   * pas le catalogue. Le comptage exact ne peut donc venir que du catalogue lui-même.
+   */
+  readonly cumulMag: Float32Array
+  /** Magnitude la plus brillante présente : origine du comptage cumulé, lue dans les données. */
+  readonly magMin: number
 }
 
 interface Accumulateur {
@@ -146,11 +159,57 @@ export function construitIndex(etoiles: readonly Etoile[]): IndexCiel {
     }
   }
 
+  let magMin = Infinity
+  for (const e of etoiles) if (e.magV < magMin) magMin = e.magV
+
   return {
     cellules,
     nombreEtoiles: etoiles.length,
     profondeurMag: Number.isFinite(profondeur) ? profondeur : 0,
+    cumulMag: construitCumulMag(etoiles, magMin, Number.isFinite(profondeur) ? profondeur : 0),
+    magMin: Number.isFinite(magMin) ? magMin : 0,
   }
+}
+
+/**
+ * Comptage cumulé des magnitudes, construit une fois avec l'index : par image, l'inversion n'est
+ * plus qu'une lecture. Quelques centaines d'octets pour un catalogue de dizaines de milliers
+ * d'étoiles — le tableau est indexé par magnitude, pas par étoile.
+ */
+function construitCumulMag(
+  etoiles: readonly Etoile[],
+  magMin: number,
+  profondeurMag: number,
+): Float32Array {
+  const pas = K('PAS_COMPTAGE_CUMULE_MAG')
+  const cases = Math.max(1, Math.ceil((profondeurMag - magMin) / pas) + 1)
+  const cumul = new Float32Array(cases)
+  for (const e of etoiles) {
+    const i = Math.ceil((e.magV - magMin) / pas)
+    cumul[Math.min(cases - 1, Math.max(0, i))]! += 1
+  }
+  for (let i = 1; i < cases; i++) cumul[i]! += cumul[i - 1]!
+  return cumul
+}
+
+/**
+ * T-0119 — magnitude la plus faible telle que l'index ne contienne pas plus de `effectif` étoiles
+ * sur toute la sphère. `+Infinity` quand l'effectif demandé dépasse ce que l'index porte : il n'y
+ * a alors rien à plafonner, et l'appelant ne doit pas confondre « tout le catalogue » avec « le
+ * catalogue coupé à sa dernière magnitude ».
+ *
+ * Le seuil rendu est celui de la case atteinte, jamais interpolé au-delà : rendre une magnitude
+ * plus profonde que la case laisserait passer plus d'étoiles que le budget.
+ */
+export function magnitudePourEffectif(index: IndexCiel, effectif: number): number {
+  const cumul = index.cumulMag
+  if (effectif >= index.nombreEtoiles) return Infinity
+  if (effectif < 1) return -Infinity
+  const pas = K('PAS_COMPTAGE_CUMULE_MAG')
+  for (let i = 0; i < cumul.length; i++) {
+    if (cumul[i]! > effectif) return index.magMin + (i - 1) * pas
+  }
+  return Infinity
 }
 
 export interface StatistiquesSelection {

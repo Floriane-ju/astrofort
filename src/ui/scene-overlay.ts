@@ -7,7 +7,6 @@
  * ce que le capteur enregistrerait — un écart qui se déclare, il ne se corrige pas en douce.
  */
 
-import { K } from '../registry/constants.ts'
 import type { ModeProjection } from '../core/projection.ts'
 
 /**
@@ -21,15 +20,31 @@ export const MENTION_VIGNETTAGE_FILE =
 
 /**
  * §9.3 — T-0118 : le plafond du filé est déclaré, jamais silencieux. Sans cette phrase, un ciel
- * plafonné se lit comme un ciel pauvre, donc comme un bug de rendu. Elle reste affichée tant
- * que l'aperçu est en filé, puisque le plafond, lui, ne bouge pas — ni sous la main, ni au
- * repos.
+ * plafonné se lit comme un ciel pauvre, donc comme un bug de rendu.
+ *
+ * T-0119 — la phrase perd son nombre. Le plafond n'est plus un effectif fixe : il se déduit du
+ * champ et de la durée, donc il varie d'une scène à l'autre. Un nombre gravé dans le texte
+ * mentirait sur toutes les scènes sauf une ; la mention énonce donc la règle, et les compteurs du
+ * panneau disent l'effectif — ils le disent déjà.
  */
+/**
+ * §9.2 — T-0119 : l'aperçu de champ est plafonné lui aussi, mais pour une autre raison, et la
+ * phrase ne peut donc pas être la même. Ses étoiles sont des points : rien ne se recouvre, la
+ * lisibilité n'est pas en jeu. Ce qui coûtait était de LIRE le catalogue à pleine profondeur —
+ * cent quatre-vingt mille étoiles par image au plein ciel. Un écran de profondeur qui rogne la
+ * profondeur doit le dire, sinon il annonce un capteur moins bon qu'il n'est.
+ */
+export const MENTION_PLAFOND_CHAMP =
+  'L’aperçu borne le nombre d’étoiles lues par image : au plein ciel, la profondeur atteinte en ' +
+  'demanderait plus que le rendu n’en peut peindre à l’image. Le capteur descend donc plus bas ' +
+  'que ce qui est peint — la profondeur chiffrée ci-dessus, elle, est celle du capteur. Resserrer ' +
+  'le champ rend l’aperçu plus profond.'
+
 export const MENTION_PLAFOND_FILE =
-  `L’aperçu du filé lit au plus ${K('BUDGET_ETOILES_FILE').toLocaleString('fr-FR')} étoiles ` +
-  'sur tout le champ : le capteur en enregistrerait davantage, mais à cette profondeur les ' +
-  'étoiles faibles ne laissent pas de trace lisible — elles ne coûteraient que du temps de ' +
-  'calcul. Les compteurs disent ce qui est peint, pas ce que la pose atteindrait.'
+  'L’aperçu du filé ne peint que les traces qui restent lisibles : au-delà, elles se recouvrent ' +
+  'et la longueur du filé cesse d’être visible. Plus le filé est long, moins il montre ' +
+  'd’étoiles — le capteur, lui, en enregistrerait davantage. Les compteurs disent ce qui est ' +
+  'peint, pas ce que la pose atteindrait.'
 
 /** §5.1 — la projection de la scène n'est pas toujours celle que l'objectif produirait. */
 export function mentionProjection(

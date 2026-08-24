@@ -17,8 +17,6 @@ import {
   densiteRelative,
   latitudeGalactiqueDeg,
   magnitudeLimitePrevisu,
-  magnitudePlafondSemis,
-  magnitudeSemis,
   opaciteEtoile,
   vignettageDiaph,
   type EntreeProfondeur,
@@ -26,13 +24,13 @@ import {
 import { construitIndex } from '../src/core/index-ciel.ts'
 import { axePoleDeDate, cielInstantane, epoqueAnnee } from '../src/core/horloges.ts'
 import type { Site } from '../src/core/ephem.ts'
-import { DEG, versVecteur } from '../src/core/mat3.ts'
+import { versVecteur } from '../src/core/mat3.ts'
 import { arcEtoile, arcInvisible, arcsVisibles } from '../src/core/file-etoiles.ts'
 import { projecteur, type Vue } from '../src/core/projection.ts'
 import { dessineChamp, type EntreeDessinChamp } from '../src/ui/dessine-champ.ts'
 import { pointZeroSysteme } from '../src/data/equipment.ts'
 import { PanneauFile, type PanneauFileProps } from '../src/ui/PanneauFile.tsx'
-import { MENTION_PLAFOND_FILE } from '../src/ui/scene-overlay.ts'
+import { MENTION_PLAFOND_CHAMP, MENTION_PLAFOND_FILE } from '../src/ui/scene-overlay.ts'
 import { majFile, reinitialiseSeance } from '../src/ui/seance-etat.ts'
 import { K } from '../src/registry/constants.ts'
 
@@ -51,6 +49,48 @@ interface Appel {
 }
 
 /** Contexte 2D instrumenté : il enregistre, il ne peint pas. */
+/** `Path2D` n'existe pas hors navigateur : la passe n'en attend que `moveTo` et `arc`. */
+class Path2DEspion {
+  readonly arcs: unknown[][] = []
+  /** Sommets d'une polyligne : `moveTo` ouvre, `lineTo` prolonge. */
+  readonly sommets: unknown[][] = []
+  moveTo(...args: unknown[]): void {
+    this.sommets.push(args)
+  }
+  arc(...args: unknown[]): void {
+    this.arcs.push(args)
+  }
+  lineTo(...args: unknown[]): void {
+    this.sommets.push(args)
+  }
+}
+;(globalThis as unknown as { Path2D: unknown }).Path2D = Path2DEspion
+
+/** Les disques d'étoiles sont les arcs déposés dans les `Path2D` remplis par la passe (T-0119). */
+function arcsDeDisques(ctx: { appels: Appel[] }): unknown[][] {
+  return ctx.appels
+    .filter((a) => a.nom === 'fill' && a.args[0] instanceof Path2DEspion)
+    .flatMap((a) => (a.args[0] as Path2DEspion).arcs)
+}
+
+/** Les traces sont les sommets déposés dans les `Path2D` TRACÉS, largeur de trait par chemin. */
+function traces(ctx: { appels: Appel[] }): Path2DEspion[] {
+  return ctx.appels
+    .filter((a) => a.nom === 'stroke' && a.args[0] instanceof Path2DEspion)
+    .map((a) => a.args[0] as Path2DEspion)
+}
+
+/**
+ * Opacités appliquées, lues dans les couleurs : depuis T-0119 l'opacité est DANS la couleur, pour
+ * qu'une étoile puisse rejoindre un chemin partagé au lieu d'exiger son propre ordre de tracé.
+ */
+function opacites(ctx: { couleurs: string[] }): number[] {
+  return ctx.couleurs.map((c) => {
+    const trouve = /\/ ([\d.]+)\)$/.exec(c)
+    return trouve === null ? 1 : Number(trouve[1])
+  })
+}
+
 function contexteEspion() {
   const appels: Appel[] = []
   const enregistre =
@@ -165,7 +205,8 @@ function rend(options: Partial<EntreeDessinChamp> = {}) {
     vueRealiste: false,
     sbCiel: 21.0,
     dureeS: 1,
-    budgetEtoiles: null,
+    couvertureMax: null,
+    effectifMax: null,
     latitudeDeg: SITE.latitudeDeg,
     axePoleNord: AXE_POLE,
     modeNuit: false,
@@ -231,11 +272,10 @@ describe('§9.2 — les trois couches', () => {
   it('trace l’étoile réelle à la position exacte du catalogue', () => {
     const { ctx, sortie } = rend()
     expect(sortie.etoilesReelles).toBe(1)
-    const arcs = ctx.appels.filter((a) => a.nom === 'arc')
-    const centre = arcs.find(
+    const centre = arcsDeDisques(ctx).find(
       (a) =>
-        Math.abs((a.args[0] as number) - LARGEUR / 2) < 1 &&
-        Math.abs((a.args[1] as number) - HAUTEUR / 2) < 1,
+        Math.abs((a[0] as number) - LARGEUR / 2) < 1 &&
+        Math.abs((a[1] as number) - HAUTEUR / 2) < 1,
     )
     expect(centre).toBeDefined()
   })
@@ -279,9 +319,10 @@ describe('§9.2 — modulation par les paramètres de capture', () => {
   it('ovalise les étoiles quand la pose est longue : la trace devient une polyligne', () => {
     const ponctuel = rend({ dureeS: 1 })
     const file = rend({ dureeS: 600 })
-    expect(ponctuel.ctx.appels.filter((a) => a.nom === 'arc').length).toBeGreaterThan(0)
-    expect(file.ctx.appels.filter((a) => a.nom === 'lineTo').length).toBeGreaterThan(0)
-    expect(file.ctx.appels.filter((a) => a.nom === 'stroke').length).toBeGreaterThan(0)
+    expect(arcsDeDisques(ponctuel.ctx).length).toBeGreaterThan(0)
+    const tracees = traces(file.ctx)
+    expect(tracees.length).toBeGreaterThan(0)
+    expect(tracees.flatMap((t) => t.sommets).length).toBeGreaterThan(0)
   })
 
   it('assombrit les coins et laisse le centre intact', () => {
@@ -307,76 +348,132 @@ describe('§9 — le panneau du filé', () => {
   })
 })
 
-describe('§9.3 — T-0118, le filé plafonne le nombre d’étoiles', () => {
-  /** Étoiles du semis présentes dans un champ de ce rayon, sous cette magnitude. */
-  const semisDansChamp = (rayonDeg: number, magPlafond: number): number => {
-    const fractionCiel = (1 - Math.cos(rayonDeg * DEG)) / 2
-    const seuil = K('SEUIL_MAG_ETOILES_REELLES')
-    const pente = K('PENTE_COMPTAGE_ETOILES')
-    // Inverse de la loi de tirage : fraction du semis sous `magPlafond`.
-    const fractionSemis =
-      (10 ** (pente * (magPlafond - seuil)) - 1) / (10 ** (pente * (K('SEMIS_MAG_MAX') - seuil)) - 1)
-    return K('SEMIS_ETOILES_TOTAL') * fractionCiel * fractionSemis
-  }
+describe('§9.3 — T-0119, le filé plafonne la surface peinte', () => {
+  /** Longue durée : c'est elle qui distingue un plafond de surface d'un plafond d'effectif. */
+  const FILE_LONG = { dureeS: K('DUREE_FILE_SPECTACULAIRE_MIN') * 60, magLimite: K('SEMIS_MAG_MAX') }
 
-  it('partage la loi de comptage avec le tirage du semis', () => {
-    // Les deux bornes du tirage : rien sous le seuil catalographié, rien au-delà du semis.
-    expect(magnitudeSemis(0)).toBeCloseTo(K('SEUIL_MAG_ETOILES_REELLES'), 9)
-    expect(magnitudeSemis(1)).toBeCloseTo(K('SEMIS_MAG_MAX'), 9)
+  /**
+   * La cible est une CONSIGNE, pas une borne dure : le plafond l'atteint par une estimation —
+   * densité moyenne du ciel, largeur de trait plancher, recouvrements non comptés. Ce qui doit
+   * être vrai est que la couverture reste du même ordre que la consigne, quelle que soit la
+   * scène. Ce facteur est la marge dans laquelle l'estimation doit tenir.
+   */
+  const MARGE_CIBLE = 2
+
+  it('borne la surface peinte, pas l’effectif : le plafond ramène la couverture à la consigne', () => {
+    // Le critère de T-0119. Sans plafond la passe peint plusieurs fois le canevas ; avec, elle
+    // revient à l'ordre de la consigne — et c'est vrai d'un filé long, là où un budget d'étoiles
+    // lâchait.
+    const sansPlafond = rend({ ...FILE_LONG, couvertureMax: null })
+    expect(sansPlafond.sortie.couverturePeinte).toBeGreaterThan(1)
+    const cible = K('COUVERTURE_TRACES_MAX')
+    const plafonne = rend({ ...FILE_LONG, couvertureMax: cible })
+    expect(plafonne.sortie.couverturePeinte).toBeLessThan(cible * MARGE_CIBLE)
+    expect(plafonne.sortie.couverturePeinte).toBeLessThan(sansPlafond.sortie.couverturePeinte)
   })
 
-  it('convertit un budget d’étoiles en magnitude, et le tient à tout rayon de champ', () => {
-    const budget = K('BUDGET_ETOILES_FILE')
-    // Rayons où le semis présent dans le champ dépasse le budget : c'est là que le plafond
-    // mord, et le comptage doit alors tomber exactement sur lui, quel que soit le champ.
-    for (const rayonDeg of [20, 34, 60, 90]) {
-      expect(semisDansChamp(rayonDeg, magnitudePlafondSemis(budget, rayonDeg))).toBeCloseTo(
-        budget,
-        6,
-      )
+  it('tient la même surface peinte quelle que soit la durée du filé', () => {
+    // L'invariance que le budget d'étoiles de T-0118 ne tenait pas : à effectif plafonné, la
+    // surface peinte croît avec la durée, donc l'image se referme sur elle-même au filé long.
+    const cible = K('COUVERTURE_TRACES_MAX')
+    const durees = [K('DUREE_FILE_LISIBLE_MIN'), K('DUREE_FILE_SPECTACULAIRE_MIN'), 480]
+    for (const dureeMin of durees) {
+      const sortie = rend({ ...FILE_LONG, dureeS: dureeMin * 60, couvertureMax: cible }).sortie
+      expect(sortie.couverturePeinte).toBeLessThan(cible * MARGE_CIBLE)
     }
   })
 
-  it('descend plus profond dans un champ étroit que sur tout le ciel', () => {
-    // C'est ce qui distingue un budget d'étoiles d'un plafond de magnitude : à magnitude
-    // fixe, le nombre d'étoiles suivrait l'angle solide du champ.
-    const budget = K('BUDGET_ETOILES_FILE')
-    expect(magnitudePlafondSemis(budget, 10)).toBeGreaterThan(magnitudePlafondSemis(budget, 90))
+  it('tient la même surface peinte quelle que soit l’inclinaison de la visée', () => {
+    // Le pôle est le cas qui piège : la trace du CENTRE y est minuscule, cos δ tendant vers zéro,
+    // alors que le champ contient tout le reste du ciel. Un plafond qui lit la longueur d'arc au
+    // centre du champ s'y effondre — 1 241 % de couverture mesurés — et la même scène visée près
+    // de l'horizon reste, elle, correctement plafonnée.
+    const cible = K('COUVERTURE_TRACES_MAX')
+    const visee = (hauteurDeg: number, azimutDeg: number) =>
+      rend({
+        ...FILE_LONG,
+        couvertureMax: cible,
+        projecteur: projecteur({ ...VUE_PLANETARIUM, hauteurDeg, azimutDeg }, CIEL.matrice),
+      }).sortie.couverturePeinte
+    // Pôle céleste au centre, puis l'équateur céleste à l'est, puis une visée intermédiaire.
+    for (const [hauteurDeg, azimutDeg] of [
+      [SITE.latitudeDeg, 0],
+      [10, 90],
+      [40, 180],
+    ] as const) {
+      expect(visee(hauteurDeg, azimutDeg)).toBeLessThan(cible * MARGE_CIBLE)
+    }
   })
 
-  it('ne plafonne rien quand le budget dépasse le semis présent dans le champ', () => {
-    expect(magnitudePlafondSemis(K('SEMIS_ETOILES_TOTAL'), 90)).toBeCloseTo(K('SEMIS_MAG_MAX'), 9)
-  })
-
-  it('lit moins d’étoiles avec un budget qu’à profondeur pleine', () => {
+  it('lit moins d’étoiles plafonné qu’à profondeur pleine', () => {
     // C'est `etoilesVisitees` que le plafond vise : ce qui est LU, donc ce qui est payé.
-    const sansPlafond = rend({ magLimite: K('SEMIS_MAG_MAX'), budgetEtoiles: null })
-    const plafonne = rend({ magLimite: K('SEMIS_MAG_MAX'), budgetEtoiles: 500 })
+    const sansPlafond = rend({ ...FILE_LONG, couvertureMax: null })
+    const plafonne = rend({ ...FILE_LONG, couvertureMax: K('COUVERTURE_TRACES_MAX') })
     expect(plafonne.sortie.etoilesVisitees).toBeLessThan(sansPlafond.sortie.etoilesVisitees)
   })
 
-  it('ne touche pas au catalogue réel : le ciel reconnaissable reste entier', () => {
-    const sansPlafond = rend({ magLimite: K('SEMIS_MAG_MAX'), budgetEtoiles: null })
-    // Budget quasi nul : il ne reste presque plus rien du semis, et pourtant le catalogue
-    // réel est tracé à l'identique — le plafond ne porte que sur la couche générative.
-    const plafonne = rend({ magLimite: K('SEMIS_MAG_MAX'), budgetEtoiles: 1 })
-    expect(plafonne.sortie.etoilesReelles).toBe(sansPlafond.sortie.etoilesReelles)
-    expect(plafonne.sortie.etoilesVisitees).toBeLessThan(sansPlafond.sortie.etoilesVisitees)
+  it('écarte le semis avant le catalogue réel : le ciel reconnaissable part en dernier', () => {
+    // L'ordre de dépense. Un plafond serré coupe tout le semis et garde encore le catalogue.
+    const serre = rend({ ...FILE_LONG, couvertureMax: 1e-6 })
+    expect(serre.sortie.etoilesGenerees).toBe(0)
+    const large = rend({ ...FILE_LONG, couvertureMax: null })
+    expect(large.sortie.etoilesGenerees).toBeGreaterThan(0)
   })
 
-  it('laisse l’aperçu de champ intact — même image sans budget', () => {
-    const premier = rend({ magLimite: K('SEMIS_MAG_MAX'), budgetEtoiles: null }).ctx.appels
-    const second = rend({ magLimite: K('SEMIS_MAG_MAX'), budgetEtoiles: null }).ctx.appels
+  it('borne aussi ce que la passe LIT, pas seulement ce qu’elle peint', () => {
+    // Deuxième plafond, deuxième grandeur. Un filé court peint peu par trace : la couverture
+    // seule en autorise des dizaines de milliers, et le coût repart. Le plafond de coût borne
+    // l'effectif lu, quelle que soit la couverture que l'image aurait tolérée.
+    const bref = rend({
+      magLimite: K('SEMIS_MAG_MAX'),
+      dureeS: K('DUREE_FILE_LISIBLE_MIN'),
+      couvertureMax: K('COUVERTURE_TRACES_MAX'),
+      effectifMax: K('EFFECTIF_CIEL_MAX_APERCU'),
+    })
+    expect(bref.sortie.etoilesVisitees).toBeLessThanOrEqual(K('EFFECTIF_CIEL_MAX_APERCU'))
+  })
+
+  it('borne l’aperçu de champ par le coût seul, jamais par la couverture', () => {
+    // §9.2 — l'aperçu de pose montre des POINTS : rien ne se recouvre, aucune longueur ne se lit,
+    // donc aucune couverture à borner. Ce qui coûtait était de LIRE le catalogue à pleine
+    // profondeur, et c'est cela seul que le plafond d'effectif retire.
+    const sansPlafond = rend({ magLimite: K('SEMIS_MAG_MAX'), effectifMax: null })
+    const champ = rend({
+      magLimite: K('SEMIS_MAG_MAX'),
+      effectifMax: K('EFFECTIF_CIEL_MAX_APERCU'),
+    })
+    expect(sansPlafond.sortie.etoilesVisitees).toBeGreaterThan(K('EFFECTIF_CIEL_MAX_APERCU'))
+    expect(champ.sortie.etoilesVisitees).toBeLessThanOrEqual(K('EFFECTIF_CIEL_MAX_APERCU'))
+    // La couverture, elle, n'a jamais mordu : les points ne remplissent pas le canevas.
+    expect(sansPlafond.sortie.couverturePeinte).toBeLessThan(K('COUVERTURE_TRACES_MAX'))
+  })
+
+  it('ne plafonne rien du tout sans aucune consigne', () => {
+    // Les deux à `null` : le cas de référence du banc, celui qui doit reproduire l'image d'avant.
+    const sansConsigne = rend({ ...FILE_LONG, couvertureMax: null, effectifMax: null })
+    const plafonne = rend({ ...FILE_LONG, couvertureMax: K('COUVERTURE_TRACES_MAX') })
+    expect(sansConsigne.sortie.etoilesVisitees).toBeGreaterThan(K('EFFECTIF_CIEL_MAX_APERCU'))
+    expect(plafonne.sortie.etoilesVisitees).toBeLessThan(sansConsigne.sortie.etoilesVisitees)
+  })
+
+  it('laisse l’aperçu de champ intact — même image deux fois', () => {
+    const premier = rend({ magLimite: K('SEMIS_MAG_MAX'), couvertureMax: null }).ctx.appels
+    const second = rend({ magLimite: K('SEMIS_MAG_MAX'), couvertureMax: null }).ctx.appels
     expect(JSON.stringify(second)).toBe(JSON.stringify(premier))
   })
 
-  it('déclare le plafond tant que le filé est actif, et se taît sinon', () => {
+  it('déclare le plafond dans les deux aperçus, avec la raison de chacun', () => {
     const html = () => renderToStaticMarkup(createElement(PanneauFile, PROPS_PANNEAU))
     try {
+      // Les deux aperçus sont plafonnés, pour deux raisons : un plafond muet se lit comme un ciel
+      // pauvre, donc comme un bug de rendu. Mais la raison n'est pas la même, donc la phrase non
+      // plus — lisibilité pour le filé, coût de lecture pour l'aperçu de champ.
       majFile({ apercu: 'CHAMP' })
+      expect(html()).toContain(MENTION_PLAFOND_CHAMP)
       expect(html()).not.toContain(MENTION_PLAFOND_FILE)
       majFile({ apercu: 'FILE' })
       expect(html()).toContain(MENTION_PLAFOND_FILE)
+      expect(html()).not.toContain(MENTION_PLAFOND_CHAMP)
     } finally {
       reinitialiseSeance()
     }
@@ -556,10 +653,10 @@ describe('§9.3 — une trace est moins brillante qu’un point', () => {
         echApx,
         indexReel: construitIndex([etoileAuCentre(7)]),
         indexSemis: construitIndex([]),
-      }).ctx.alphas
+      })
 
-    const grandAngle = seule(105.6)
-    const teleobjectif = seule(8.8)
+    const grandAngle = opacites(seule(105.6).ctx)
+    const teleobjectif = opacites(seule(8.8).ctx)
     expect(grandAngle.length).toBeGreaterThan(0)
     expect(teleobjectif[0]!).toBeLessThan(grandAngle[0]!)
   })
@@ -591,9 +688,14 @@ describe('T-0116 — la passe de filé n’a pas de fond à elle', () => {
   })
 
   it('ne peint aucune bande galactique : celle du planétarium reste la seule', () => {
-    // La bande se peignait en polygones translucides — des surfaces remplies dont la couleur
-    // porte une part d'opacité. Plus aucune couleur de cette forme ne sort de la passe.
+    // La bande se peignait en polygones remplis — un remplissage du chemin COURANT, et un
+    // `fillRect` pour le fond. Depuis T-0119 les étoiles remplissent un `Path2D` partagé, et leur
+    // couleur porte l'opacité : c'est donc la FORME de l'ordre qui distingue les deux, pas la
+    // couleur. Aucun remplissage sans chemin nommé ne sort plus de la passe.
     const { ctx } = rend({ sbCiel: 21.5 })
-    expect(ctx.couleurs.filter((c) => /^rgb\([\d ]+ \/ [\d.]+\)$/.test(c))).toHaveLength(0)
+    const surfaces = ctx.appels.filter(
+      (a) => a.nom === 'fillRect' || (a.nom === 'fill' && !(a.args[0] instanceof Path2DEspion)),
+    )
+    expect(surfaces).toHaveLength(0)
   })
 })

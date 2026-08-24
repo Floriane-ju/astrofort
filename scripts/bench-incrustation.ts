@@ -13,8 +13,9 @@
  * Usage : `node scripts/bench-incrustation.ts` (le catalogue vient de `public/data/`).
  * `--planetarium` mesure la même passe en projection stéréographique : c'est le seul mode où
  * la primitive de cercle de T-0115 s'applique, et le gain ne se lit que par comparaison.
- * `--budget=N` rejoue la passe avec un autre plafond d'étoiles que celui du registre (T-0118) ;
- * `--budget=0` la rejoue sans plafond, comme avant.
+ * `--couverture=F` rejoue la passe avec une autre cible de surface peinte que celle du registre
+ * (T-0119), `--effectif=N` avec un autre plafond de coût ; les mettre tous deux à 0 rejoue la
+ * passe sans aucun plafond, comme avant T-0119.
  */
 
 import { readFileSync } from 'node:fs'
@@ -86,15 +87,42 @@ const MODE: ModeProjection = process.argv.includes('--planetarium')
   ? 'MODE_PLANETARIUM'
   : 'MODE_CADRE'
 /**
- * T-0118 — le levier du plafond, réglable en ligne de commande : c'est la MESURE qui choisit
- * la valeur du registre, pas l'inverse. `--budget=0` retire le plafond, et c'est ce cas qui
- * doit reproduire les condensés d'avant T-0118 sous `--empreinte`.
+ * T-0119 — le levier du plafond, réglable en ligne de commande : c'est la MESURE qui choisit la
+ * valeur du registre, pas l'inverse. `--couverture=0` retire le plafond, et c'est ce cas qui doit
+ * reproduire les compteurs et les condensés d'avant T-0119 sous `--empreinte`.
  */
-const BUDGET = ((): number | null => {
-  const arg = process.argv.find((a) => a.startsWith('--budget='))
-  const n = arg === undefined ? K('BUDGET_ETOILES_FILE') : Number(arg.slice('--budget='.length))
+function levier(nom: string, defaut: number): number | null {
+  const arg = process.argv.find((a) => a.startsWith(`--${nom}=`))
+  const n = arg === undefined ? defaut : Number(arg.slice(nom.length + 3))
   return Number.isFinite(n) && n > 0 ? n : null
-})()
+}
+const COUVERTURE = levier('couverture', K('COUVERTURE_TRACES_MAX'))
+/** T-0119 — le plafond de coût, second levier : `--effectif=0` le retire. */
+const EFFECTIF = levier('effectif', K('EFFECTIF_CIEL_MAX_APERCU'))
+
+/**
+ * `Path2D` n'existe pas hors navigateur : la passe n'en attend que `moveTo`, `lineTo` et `arc`.
+ *
+ * T-0119 — les étoiles se déposent dans des chemins partagés, donc la géométrie de l'image passe
+ * par ICI et non plus par le contexte. Un condensé qui n'écouterait que le contexte ne verrait
+ * plus que quelques dizaines d'ordres de remplissage : il faut que le chemin parle au condensé.
+ * `avaleur` est le point d'écoute courant, posé par `empreinteur`.
+ */
+let avaleur: ((texte: string) => void) | null = null
+class Path2DMuet {
+  moveTo(...args: number[]): void {
+    avaleur?.(`p.moveTo(${args.map((a) => a.toFixed(3)).join(',')})`)
+  }
+  lineTo(...args: number[]): void {
+    avaleur?.(`p.lineTo(${args.map((a) => a.toFixed(3)).join(',')})`)
+  }
+  arc(...args: unknown[]): void {
+    avaleur?.(
+      `p.arc(${args.map((a) => (typeof a === 'number' ? a.toFixed(3) : String(a))).join(',')})`,
+    )
+  }
+}
+;(globalThis as unknown as { Path2D: unknown }).Path2D = Path2DMuet
 
 function empreinteur(): { ctx: CanvasRenderingContext2D; valeur: () => string } {
   let h = 0x811c9dc5
@@ -115,6 +143,7 @@ function empreinteur(): { ctx: CanvasRenderingContext2D; valeur: () => string } 
           .join(',')})`,
       )
     }
+  avaleur = avale
   const ctx = {
     set globalAlpha(v: number) {
       avale(`alpha=${v.toFixed(4)}`)
@@ -276,7 +305,7 @@ function mesure(cas: Cas, indexReel: IndexCiel, indexSemis: IndexCiel): void {
   const profondeur: EntreeProfondeur = { ...PROFONDEUR, dMm: cas.dMm }
   const magLimite = magnitudeLimitePrevisu(profondeur).value
   const durees: number[] = []
-  let derniere = { visitees: 0, tracees: 0, projections: 0 }
+  let derniere = { visitees: 0, tracees: 0, projections: 0, couverture: 0 }
   let empreinte = ''
 
   for (let i = 0; i < (EMPREINTE ? 1 : PASSES); i++) {
@@ -295,7 +324,8 @@ function mesure(cas: Cas, indexReel: IndexCiel, indexSemis: IndexCiel): void {
       suiviActif: false,
       sbCiel: 21.0,
       dureeS: cas.dureeMin * S_PAR_MIN,
-      budgetEtoiles: BUDGET,
+      couvertureMax: COUVERTURE,
+      effectifMax: EFFECTIF,
       latitudeDeg: SITE.latitudeDeg,
       axePoleNord: axePoleDeDate(epoqueAnnee(DATE)),
       modeNuit: false,
@@ -306,6 +336,7 @@ function mesure(cas: Cas, indexReel: IndexCiel, indexSemis: IndexCiel): void {
       visitees: sortie.etoilesVisitees,
       tracees: sortie.etoilesReelles + sortie.etoilesGenerees,
       projections: projections(),
+      couverture: sortie.couverturePeinte,
     }
   }
 
@@ -322,6 +353,7 @@ function mesure(cas: Cas, indexReel: IndexCiel, indexSemis: IndexCiel): void {
     `${cas.nom.padEnd(38)} mag ${magLimite.toFixed(1)}  ${ms.toFixed(0).padStart(6)} ms  ` +
       `${derniere.visitees.toLocaleString('fr-FR').padStart(10)} visitées  ` +
       `${derniere.tracees.toLocaleString('fr-FR').padStart(8)} tracées  ` +
+      `${`${(derniere.couverture * 100).toFixed(0)} %`.padStart(7)} peints  ` +
       `${derniere.projections.toLocaleString('fr-FR').padStart(12)} projections`,
   )
 }
@@ -331,6 +363,7 @@ const indexSemis = construitIndex(semisGeneratif())
 console.log(
   `catalogue réel ${indexReel.nombreEtoiles} étoiles · semis ${indexSemis.nombreEtoiles} · ` +
     `médiane de ${PASSES} passes · ${MODE} · ` +
-    `budget ${BUDGET === null ? 'sans plafond' : `${BUDGET} étoiles`}`,
+    `couverture ${COUVERTURE === null ? 'sans plafond' : `≤ ${(COUVERTURE * 100).toFixed(0)} % du canevas`} · ` +
+    `effectif ${EFFECTIF === null ? 'sans plafond' : `≤ ${EFFECTIF.toLocaleString('fr-FR')} étoiles`}`,
 )
 for (const cas of CAS) mesure(cas, indexReel, indexSemis)

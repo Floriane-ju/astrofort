@@ -80,9 +80,16 @@ magnitudes avec exactement cette loi** — les deux la partagent, elles ne la r�
 - La borne effective de la couche du semis devient `min(magLimite, magPlafond)`.
 - La couche du semis est **coupée** si `magPlafond` retombe sous `SEUIL_MAG_ETOILES_REELLES` :
   c'est la garde déjà en place à `src/ui/dessine-champ.ts:208`, elle suffit.
-- **Le catalogue réel n'est pas plafonné.** Il vaut environ 15 000 étoiles sur toute la sphère,
-  c'est le ciel reconnaissable, et ce n'est pas lui qui coûte. Écrit ici pour qu'on ne « complète »
-  pas le plafond dessus plus tard.
+- **Le catalogue réel n'est pas plafonné.** ~~Il vaut environ 15 000 étoiles sur toute la sphère,
+  c'est le ciel reconnaissable, et ce n'est pas lui qui coûte.~~ Écrit ici pour qu'on ne
+  « complète » pas le plafond dessus plus tard.
+
+  **Corrigé le 24 août 2026 (T-0119) — cette prémisse était fausse.** `public/data/hyg-1.bin`
+  contient **25 791** étoiles à mag ≤ 7,5, pas ~15 000 : ~12 900 tombent dans le champ en plein
+  ciel, et c'est cette couche laissée sans plafond qui rend le filé illisible. Le coût mesuré ici
+  ne portait que sur le CALCUL, jamais sur la peinture ; la surface peinte atteint 535 % du
+  canevas au pire cas. T-0119 remplace ce budget d'étoiles par un plafond de surface peinte, qui
+  s'applique aux deux couches.
 
 ### Ce que l'écran dit
 

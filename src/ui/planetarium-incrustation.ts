@@ -68,10 +68,16 @@ export function useParametresFile(
     suiviActif: file.apercu === 'CHAMP' && materiel.tMaxSuiviS !== null,
     dureeS:
       file.apercu === 'FILE' ? file.dureeTotaleMin * S_PAR_MIN : materiel.profondeur.tPoseS,
-    // T-0118 — le plafond suit le MODE, pas le geste : immobile comme en panoramique, le filé
-    // lit le même nombre d'étoiles. Une passe qui changerait de profondeur sous la main
-    // donnerait deux images pour une même scène, et une mention qui clignote avec le geste.
-    budgetEtoiles: file.apercu === 'FILE' ? K('BUDGET_ETOILES_FILE') : null,
+    // T-0119 — deux plafonds, deux portées. La LISIBILITÉ ne concerne que le filé : l'aperçu de
+    // champ montre des points, qui ne se recouvrent pas et dont aucune longueur ne se lit. Le
+    // COÛT concerne les deux : l'aperçu de champ lisait le catalogue à pleine profondeur, soit
+    // cent quatre-vingt mille étoiles et 160 ms par image au plein ciel.
+    //
+    // Ce que T-0118 exigeait tient dans les deux cas : aucun des deux plafonds ne dépend du
+    // geste. Ils suivent le champ et la durée, donc ils bougent au zoom comme le champ lui-même,
+    // jamais sous un panoramique.
+    couvertureMax: file.apercu === 'FILE' ? K('COUVERTURE_TRACES_MAX') : null,
+    effectifMax: K('EFFECTIF_CIEL_MAX_APERCU'),
   }
   return parametres
 }

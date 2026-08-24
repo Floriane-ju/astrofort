@@ -576,6 +576,82 @@ export function poseParPixelS(dureeS: number, echApx: number, decDeg: number): n
   return Math.min(dureeS, traverseeS)
 }
 
+export interface EntreeCouvertureFile {
+  readonly projecteur: Projecteur
+  /** Durée d'accumulation dessinée, en minutes. Nulle avec suivi : il n'y a pas de trace. */
+  readonly dureeMin: number
+  /** Fraction du canevas que les traces peuvent peindre (§9.3). */
+  readonly couvertureMax: number
+  /** Largeur de trait de référence, en pixels. */
+  readonly largeurTraceRefPx: number
+}
+
+/**
+ * §9.3 — T-0119 : combien d'étoiles le ciel peut porter sans que le filé cesse d'être lisible.
+ *
+ * Ce qui doit être borné n'est PAS le nombre d'étoiles, c'est la SURFACE PEINTE. Au-delà d'une
+ * couverture de 1, chaque pixel du ciel est repeint plusieurs fois : la trace n'a plus de longueur
+ * visible, le fond de ciel du planétarium disparaît dessous, et le temps de peinture est dépensé à
+ * effacer ce qui vient d'être peint.
+ *
+ * Le raisonnement ne compte pas des étoiles, il compte des TRAVERSÉES. Un pixel donné est peint
+ * autant de fois qu'il voit passer une étoile pendant la séquence. Le nombre de passages sur un
+ * pixel vaut donc `densité d'étoiles × largeur angulaire de la trace × chemin parcouru`, soit
+ * `n · w · ωT·cos δ` — et la couverture moyenne du canevas est la moyenne de cette quantité sur
+ * le canevas. Inversée, elle donne l'effectif du ciel que la couverture visée autorise.
+ *
+ * Cette forme est ce qui rend le plafond STABLE. Trois écueils tombent d'eux-mêmes :
+ *
+ *   - **L'inclinaison de la visée.** Un plafond fondé sur la longueur d'arc au centre du champ
+ *     s'effondre en visant le pôle, où cos δ tend vers zéro : la trace centrale est minuscule,
+ *     mais le champ contient tout le reste du ciel. Ici cos δ est moyenné SUR LE CANEVAS, donc
+ *     la visée polaire compte les longues traces de son bord au lieu de les ignorer.
+ *   - **L'étirement de la projection.** La largeur angulaire d'une trace se lit par l'échelle
+ *     LOCALE, mesurée en chaque échantillon : en stéréographique plein ciel le facteur radial
+ *     diverge vers le bord, et une échelle unique se tromperait d'un facteur trois.
+ *   - **Les étoiles hors du champ.** Compter des traversées, c'est compter ce qui passe, et non
+ *     ce qui est là au premier instant. La moitié des traces d'un filé de huit heures vient
+ *     d'étoiles qui n'étaient pas encore dans le champ ; un modèle d'appartenance les oublie.
+ *
+ * Rend `+Infinity` quand il n'y a pas de trace à borner — suivi actif, ou pose si brève que la
+ * couverture est négligeable. L'appelant lit alors « aucun plafond », pas « plafond énorme ».
+ */
+export function effectifCielPourCouverture(entree: EntreeCouvertureFile): number {
+  const balayageRad = longueurArcDeg(entree.dureeMin, 0).value * DEG
+  if (balayageRad <= 0 || entree.largeurTraceRefPx <= 0) return Infinity
+
+  const { projecteur } = entree
+  const cotes = K('ECHANTILLONS_COUVERTURE_FILE')
+  let somme = 0
+  let retenus = 0
+  for (let i = 0; i < cotes; i++) {
+    for (let j = 0; j < cotes; j++) {
+      // Échantillons au CENTRE des cellules d'une grille : les bords du canevas ne comptent pas
+      // double, et le coin — où l'échelle stéréographique diverge le plus — ne domine pas la
+      // moyenne à lui seul.
+      const xPx = ((i + 1 / 2) / cotes) * projecteur.vue.largeurPx
+      const yPx = ((j + 1 / 2) / cotes) * projecteur.vue.hauteurPx
+      const direction = projecteur.inverse(xPx, yPx)
+      // Échelle LOCALE, en radians par pixel : la séparation angulaire entre deux directions
+      // distantes d'un pixel. Elle donne la largeur angulaire de la trace à cet endroit.
+      const radParPx = separationDeg(direction, projecteur.inverse(xPx + 1, yPx)) * DEG
+      if (!Number.isFinite(radParPx) || radParPx <= 0) continue
+      // `z` est la composante polaire de la direction J2000 — le même repère que la pose par
+      // pixel : son arc sinus est la déclinaison, donc `cos δ` vaut la norme de la part
+      // équatoriale. La précession depuis J2000 vaut quelques minutes d'arc, sans effet sur une
+      // moyenne qui règle un plafond de rendu.
+      const cosDec = Math.hypot(direction.x, direction.y)
+      somme += cosDec * radParPx * entree.largeurTraceRefPx
+      retenus++
+    }
+  }
+  if (retenus === 0) return Infinity
+  const solideMoyenParEtoile = (somme / retenus) * balayageRad
+  if (solideMoyenParEtoile <= 0) return Infinity
+  // `couverture = (N / 4π) × solide balayé par étoile`, inversée sur N.
+  return (entree.couvertureMax * 2 * TOUR_RAD) / solideMoyenParEtoile
+}
+
 export interface EntreeDiagnosticFile {
   readonly projecteur: Projecteur
   readonly latitudeDeg: number

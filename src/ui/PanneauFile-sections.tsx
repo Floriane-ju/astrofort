@@ -13,7 +13,11 @@ import type { CartePoseMax } from '../core/grand-champ.ts'
 import type { ModeProjection } from '../core/projection.ts'
 import type { ActionsScene } from './scene-etat.ts'
 import { activeIncrustation, majFile, type ModeApercu, type ReglagesFile, type RenduFile } from './seance-etat.ts'
-import { MENTION_PLAFOND_FILE, MENTION_VIGNETTAGE_FILE } from './scene-overlay.ts'
+import {
+  MENTION_PLAFOND_CHAMP,
+  MENTION_PLAFOND_FILE,
+  MENTION_VIGNETTAGE_FILE,
+} from './scene-overlay.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette } from './Terme.tsx'
 import type { LecturesFile } from './panneau-file-lectures.ts'
@@ -90,7 +94,9 @@ export function CadrageDuFile({
           ` · ${renduFile.reelles} étoiles réelles et ${renduFile.generees} générées tracées`}
       </p>
       <p className="etat">{MENTION_SEMIS}</p>
-      {file.apercu === 'FILE' && <p className="etat">{MENTION_PLAFOND_FILE}</p>}
+      <p className="etat">
+        {file.apercu === 'FILE' ? MENTION_PLAFOND_FILE : MENTION_PLAFOND_CHAMP}
+      </p>
 
       <div className="champs">
         <label className="interrupteur">

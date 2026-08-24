@@ -1419,20 +1419,127 @@ const GRAND_CHAMP = {
     ordreDeGrandeur: false,
     sections: ['9.3'],
   }),
-  BUDGET_ETOILES_FILE: entree({
+  COUVERTURE_TRACES_MAX: entree({
     ref: 'C-33',
-    libelle: 'Étoiles lues au plus par la passe de filé, sur tout le champ de la scène',
-    valeur: 1500,
+    libelle: 'Part du canevas que les traces du filé peuvent peindre',
+    valeur: 0.4,
     unite: '—',
     source:
-      '§9.3 — budget de rendu, choisi par la mesure (`pnpm bench:file --planetarium`, T-0118) : ' +
-      '26 ms au pire cas contre 32,9 ms d’intervalle de boucle, là où 6 000 en demandait 34 ; ' +
-      'sous cette valeur le plancher n’est plus le semis mais le catalogue réel, qui n’est pas ' +
-      'plafonné ; un plafond de MAGNITUDE ne bornerait pas le coût, le nombre d’étoiles y ' +
-      'suivant l’angle solide du champ',
+      '§9.3 — budget de rendu, réglé par la mesure (`pnpm bench:file --planetarium`, T-0119). ' +
+      'C’est la SURFACE peinte qui se plafonne, pas le nombre d’étoiles : la surface vaut ' +
+      'nombre × longueur × largeur, donc à budget d’étoiles constant elle croît avec la durée du ' +
+      'filé et avec le champ. Au-delà d’une couverture de 1, chaque pixel est repeint plusieurs ' +
+      'fois : la trace n’a plus de longueur lisible. Sans plafond, le pire cas mesuré peint ' +
+      '535 % du canevas ; à 0,4 visé, la couverture obtenue tient dans 25–33 % de 60° à 180° et ' +
+      'de 60 min à 480 min',
+    tolerance: 'convention produit',
+    ordreDeGrandeur: true,
+    sections: ['9.3'],
+  }),
+  EFFECTIF_CIEL_MAX_APERCU: entree({
+    ref: 'C-33',
+    libelle: 'Étoiles du ciel entier au plus retenues par un aperçu de la scène',
+    valeur: 45000,
+    unite: '—',
+    source:
+      '§9.2 et §9.3 — T-0119 : plafond de COÛT, distinct du plafond de lisibilité, et commun aux ' +
+      'deux aperçus. La couverture peinte borne ce que l’image montre, pas ce que la passe lit : ' +
+      'un filé court, ou un champ étroit, peint peu par trace et en autorise donc des centaines ' +
+      'de milliers ; l’aperçu de champ, lui, n’a pas de couverture à borner du tout et lisait le ' +
+      'catalogue à pleine profondeur. Choisi par la mesure : filé 30 ms au pire cas et aperçu de ' +
+      'champ 25 ms au plein ciel, contre ~33 ms d’intervalle de boucle — là où 60 000 mettait ' +
+      'l’aperçu de champ à 32 ms, et l’absence de plafond à 181. Au-dessus du catalogue réel ' +
+      '(25 791 étoiles) : le ciel reconnaissable n’est jamais écarté par le COÛT, seulement par ' +
+      'la lisibilité',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
+    sections: ['9.2', '9.3'],
+  }),
+  CASES_TABLE_PROFONDEUR_TRACE: entree({
+    ref: 'C-34',
+    libelle: 'Cases de la table de profondeur atteinte par pixel, en sinus de déclinaison',
+    valeur: 128,
+    unite: '—',
+    source:
+      '§9.3 — T-0119 : la profondeur atteinte par un pixel ne dépend que de la déclinaison, par ' +
+      'la pose par pixel. La recalculer par étoile coûtait 134 ms pour deux cent mille étoiles, ' +
+      'contre 2 ms par lecture de table. Cent vingt-huit cases en sinus de déclinaison : la ' +
+      'quantité tabulée est plate vers les pôles, où la pose par pixel sature sur la durée de la ' +
+      'séquence, et lisse à l’équateur céleste',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
+    sections: ['9.2', '9.3'],
+  }),
+  NIVEAUX_OPACITE_ETOILE: entree({
+    ref: 'C-34',
+    libelle: 'Paliers d’opacité distincts dans le rendu d’une étoile',
+    valeur: 16,
+    unite: '—',
+    source:
+      '§9.2 — T-0119 : les étoiles se peignent par chemin partagé, un par couple ' +
+      '(teinte, palier d’opacité), au lieu d’un ordre de tracé par étoile. Le nombre de paliers ' +
+      'est donc le nombre d’ordres de peinture — seize paliers valent 5 % d’écart d’opacité ' +
+      'entre deux voisins, sous le seuil de perception sur un champ d’étoiles, où la magnitude ' +
+      'se lit d’abord au rayon',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
+    sections: ['9.2', '9.3'],
+  }),
+  NIVEAUX_RAYON_ETOILE: entree({
+    ref: 'C-34',
+    libelle: 'Paliers de rayon distincts dans le rendu d’une étoile',
+    valeur: 24,
+    unite: '—',
+    source:
+      '§9.2 — T-0119 : une trace se peint au trait, et un chemin partagé ne porte qu’une largeur ' +
+      'de trait. Les rayons se rangent donc par paliers géométriques entre le plancher ' +
+      'd’antialiasing et l’étoile la plus brillante du paquet — vingt-quatre paliers valent moins ' +
+      'de 12 % d’écart de rayon entre deux voisins, soit un dixième de pixel là où les étoiles ' +
+      'sont nombreuses',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
+    sections: ['9.2', '9.3'],
+  }),
+  ECHANTILLONS_COUVERTURE_FILE: entree({
+    ref: 'C-33',
+    libelle: 'Échantillons par côté du canevas pour estimer la couverture des traces',
+    valeur: 5,
+    unite: '—',
+    source:
+      '§9.3 — T-0119 : la couverture s’estime en moyennant `cos δ × échelle locale` sur une ' +
+      'grille du canevas. Cinq par côté suffisent : la quantité moyennée varie doucement, et ' +
+      'l’écart de plafond entre 5 et 17 échantillons par côté reste sous le pas du comptage ' +
+      'cumulé de magnitudes',
     tolerance: 'ordre de grandeur',
     ordreDeGrandeur: true,
     sections: ['9.3'],
+  }),
+  PAS_COMPTAGE_CUMULE_MAG: entree({
+    ref: 'C-33',
+    libelle: 'Pas du comptage cumulé de magnitudes d’un index de ciel',
+    valeur: 0.1,
+    unite: 'mag',
+    source:
+      '§9.3 — T-0119 : résolution avec laquelle un budget de traces se convertit en plafond de ' +
+      'magnitude. Le plafond n’est jamais rendu plus profond que la case atteinte, donc le pas ' +
+      'borne la générosité du plafond, pas sa justesse ; un dixième de magnitude vaut moins de ' +
+      '3 % d’écart d’effectif à la pente de comptage du ciel',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
+    sections: ['9.3'],
+  }),
+  OPACITE_TRACE_MIN: entree({
+    ref: 'C-34',
+    libelle: 'Opacité sous laquelle une étoile ne laisse plus de trace peinte',
+    valeur: 0.2,
+    unite: '—',
+    source:
+      '§9.3 — sous cette opacité, l’étoile est trop loin sous le seuil d’enregistrement pour ' +
+      'laisser une trace : sans ce plancher, des milliers de traces sous-liminaires s’additionnent ' +
+      'et blanchissent une image qui, en vrai, resterait noire',
+    tolerance: 'ordre de grandeur',
+    ordreDeGrandeur: true,
+    sections: ['9.2', '9.3'],
   }),
   PENTE_COMPTAGE_ETOILES: entree({
     ref: 'C-33',

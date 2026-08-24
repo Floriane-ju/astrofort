@@ -71,6 +71,20 @@ export function couleurTeinte(index: number, modeNuit: boolean): string {
   return `rgb(${luminance} 0 0)`
 }
 
+/**
+ * Couleur d'une teinte, à opacité donnée.
+ *
+ * T-0119 — l'opacité entre dans la COULEUR au lieu de passer par `globalAlpha`. Le résultat est
+ * le même en composition source-over, mais un disque dont l'opacité est dans sa couleur peut
+ * rejoindre un chemin partagé, là où `globalAlpha` impose un ordre de tracé par étoile. C'est ce
+ * qui permet de peindre seize mille étoiles en quelques dizaines d'ordres.
+ */
+export function couleurTeinteOpacite(index: number, opacite: number, modeNuit: boolean): string {
+  const opaque = couleurTeinte(index, modeNuit)
+  if (opacite >= 1) return opaque
+  return `${opaque.slice(0, -1)} / ${opacite.toFixed(3)})`
+}
+
 export interface PaletteCiel {
   readonly fond: string
   readonly figures: string
