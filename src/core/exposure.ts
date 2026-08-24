@@ -123,7 +123,7 @@ export function fluxObjetReel(
   masseAirCible: Traced<number | null>,
 ): FluxObjetReel {
   const x = masseAirCible.value
-  const inputs = { masse_air: x ?? Number.NaN, e_obj: eObj.value }
+  const inputs = { masse_air: x, e_obj: eObj.value }
   const constants = ['EXTINCTION_V_MAG_PAR_MASSE_AIR', 'POGSON', 'BASE_MAGNITUDE'] as const
 
   if (x === null) {
@@ -308,7 +308,7 @@ export function poseUnitaire(entree: EntreePose): PoseUnitaire {
     tRecommandeS: trace({
       value: tRecommande,
       formula: 'POSE_RETENUE',
-      inputs: { t_opt_s: tOpt, t_max_suivi_s: tMax ?? Number.NaN },
+      inputs: { t_opt_s: tOpt, t_max_suivi_s: tMax },
       flags,
     }),
     tAfficheeS: arrondiObturateur(tRecommande),
@@ -484,7 +484,7 @@ export function planIntegration(entree: EntreeIntegration): PlanIntegration {
           nNuits: trace({
             value: nNuitsValeur,
             formula: 'NOMBRE_NUITS',
-            inputs: { t_requis_s: tRequis, duree_creneau_s: creneau ?? Number.NaN },
+            inputs: { t_requis_s: tRequis, duree_creneau_s: creneau },
           }),
         }),
     horsDePortee,

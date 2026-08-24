@@ -21,6 +21,9 @@ interface TracedValueProps {
   readonly suffixe?: string
 }
 
+/** Une seule formulation de l'absence, pour la sortie comme pour ses entrées (§6.3). */
+const DONNEE_MANQUANTE = '[DONNÉE MANQUANTE]'
+
 function formate(valeur: number | null, decimales: number, unite?: string): string | null {
   if (valeur === null) return null
   return `${valeur.toFixed(decimales)}${unite === undefined ? '' : ` ${unite}`}`
@@ -44,7 +47,7 @@ export function TracedValue({ terme, trace, decimales = 2, unite, suffixe }: Tra
           {suffixe !== undefined && <span className="tracee-suffixe"> — {suffixe}</span>}
         </span>
         <span className="tracee-valeur">
-          {valeur ?? '[DONNÉE MANQUANTE]'}
+          {valeur ?? DONNEE_MANQUANTE}
           {plage !== null && <span className="tracee-plage"> (ordre de grandeur : {plage})</span>}
           {plage === null && approximatif ? ' (ordre de grandeur)' : ''}
         </span>
@@ -61,7 +64,7 @@ export function TracedValue({ terme, trace, decimales = 2, unite, suffixe }: Tra
             {Object.entries(trace.inputs).map(([nom, valeurEntree]) => (
               <div key={nom}>
                 <dt>{nom}</dt>
-                <dd>{valeurEntree}</dd>
+                <dd>{valeurEntree ?? DONNEE_MANQUANTE}</dd>
               </div>
             ))}
           </dl>

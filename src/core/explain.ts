@@ -36,7 +36,7 @@ export interface EtapeChaine {
   readonly section: string
   readonly valeur: number | null
   readonly unite: string
-  readonly entrees: Readonly<Record<string, number>>
+  readonly entrees: Readonly<Record<string, number | null>>
   readonly constantes: readonly ConstantRef[]
   readonly note?: string
 }

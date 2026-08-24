@@ -23,7 +23,11 @@ export type Flag = 'ESTIME' | 'HYP' | 'DONNEE_MANQUANTE' | 'HORS_DOMAINE'
 export interface Traced<T> {
   readonly value: T
   readonly formula: FormulaEntry & { readonly id: FormulaId }
-  readonly inputs: Readonly<Record<string, number>>
+  /**
+   * `null` dit « grandeur absente », comme `Traced<number | null>` le dit pour la sortie :
+   * un appelant qui n'a pas l'entrée n'a pas à inventer un nombre pour la déclarer.
+   */
+  readonly inputs: Readonly<Record<string, number | null>>
   readonly constants: readonly ConstantRef[]
   /**
    * Plage utile, remplie dès qu'une constante consommée est un ordre de grandeur : la
@@ -38,7 +42,7 @@ export interface Traced<T> {
 export interface TraceOptions<T> {
   readonly value: T
   readonly formula: FormulaId
-  readonly inputs?: Readonly<Record<string, number>>
+  readonly inputs?: Readonly<Record<string, number | null>>
   readonly constants?: readonly ConstantId[]
   readonly range?: readonly [number, number]
   readonly flags?: readonly Flag[]
@@ -50,7 +54,7 @@ export function trace<T>(options: TraceOptions<T>): Traced<T> {
   const result: {
     value: T
     formula: FormulaEntry & { id: FormulaId }
-    inputs: Readonly<Record<string, number>>
+    inputs: Readonly<Record<string, number | null>>
     constants: readonly ConstantRef[]
     range?: readonly [number, number]
     flags?: readonly Flag[]

@@ -210,7 +210,7 @@ export function detectabilite(entree: EntreeDetectabilite): Detectabilite {
   const mLimInstr = trace({
     value: mLimOeil === null ? null : mLimOeil + gain,
     formula: 'MAGNITUDE_LIMITE_INSTRUMENT',
-    inputs: { m_lim_oeil: mLimOeil ?? Number.NaN, gain_mag: gain, d_mm: dMm },
+    inputs: { m_lim_oeil: mLimOeil, gain_mag: gain, d_mm: dMm },
     constants: ['PUPILLE_OEIL_ADAPTE_MM', 'POGSON'],
     ...(mLimOeil === null
       ? {
