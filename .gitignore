@@ -10,12 +10,6 @@ dev-dist/
 .claude/settings.local.json
 .DS_Store
 
-# Captures d'écran ovrsee : régénérées à chaque commit, purge auto côté
-# disque (30j puis 1/semaine) — inutile de les suivre dans git.
-ovrsee/pages/shots/
-
-# État de travail des sessions Claude (ovrsee) : local à une machine, jamais
-# versionné.
-ovrsee/.active/
-ovrsee/.active-plan
-ovrsee/.active-ticket
+# Suivi de projet ovrsee (tickets, plans, carte des pages, captures) : local
+# à une machine, jamais versionné.
+ovrsee/
