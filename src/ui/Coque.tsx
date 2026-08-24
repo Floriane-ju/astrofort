@@ -23,7 +23,9 @@
  * puisque la position est la seule chose qui change.
  */
 
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
+
+import { ancreTiroirs } from './tiroir-ancrage.ts'
 
 export interface CoqueProps {
   /** Barre haute : identité, visée, bascules de panneau. */
@@ -39,6 +41,10 @@ export interface CoqueProps {
 }
 
 export function Coque(props: CoqueProps) {
+  // T-0121 — les fenêtres de tiroir s'ouvrent sous leur bouton et se recalent sur l'écran.
+  // C'est de la mise en page, donc de la coque ; l'écoute est unique et couvre les deux barres.
+  useEffect(ancreTiroirs, [])
+
   return (
     <div className="coque">
       <header className="coque-topbar">{props.topbar}</header>

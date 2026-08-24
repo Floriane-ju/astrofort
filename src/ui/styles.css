@@ -325,10 +325,11 @@ body {
 
 .coque-barrebas .tiroir[open] > .tiroir-contenu {
   top: auto;
-  bottom: calc(100% + 0.25rem);
-  left: 0;
+  bottom: calc(var(--barre-bas) + 0.25rem);
+  left: 0.75rem;
   right: auto;
-  width: min(32rem, 92vw);
+  width: min(32rem, calc(100vw - 1.5rem));
+  max-height: calc(100dvh - var(--barre-bas) - 1rem);
 }
 
 /* Le tiroir du temps ferme la barre : il se pousse à droite et y reste. */
@@ -338,7 +339,7 @@ body {
 
 .tiroir.tiroir-temps[open] > .tiroir-contenu {
   left: auto;
-  right: 0;
+  right: 0.75rem;
 }
 
 .coque-scene {
@@ -617,8 +618,15 @@ body {
     overflow-y: visible;
   }
 
-  /* Ancrée à la barre basse, la fenêtre de tiroir n'a plus de haut d'écran où remonter. */
-  .coque-barrebas .tiroir[open] > .tiroir-contenu {
+  /* Sous 1100 px plus rien ne flotte : une fenêtre de tiroir se pose dans le flux, sous son
+     bouton. T-0121 — le tiroir ouvert est alors un élément flexible dimensionné par son
+     contenu : sans bornage, il élargit la barre au-delà de l'écran. */
+  .tiroir {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .coque .tiroir[open] > .tiroir-contenu {
     position: static;
     width: auto;
   }
@@ -638,7 +646,7 @@ body {
 
   /* Le tiroir d'information reste utilisable : son contenu défile plutôt que d'allonger la
      page. */
-  .tiroir[open] > .tiroir-contenu {
+  .coque .tiroir[open] > .tiroir-contenu {
     max-height: 70dvh;
   }
 }
@@ -756,13 +764,19 @@ body {
   font-weight: 700;
 }
 
+/* T-0121 — la fenêtre est fixée à l'ÉCRAN, pas au flux : la verticale s'ancre à la barre,
+   qui ne bouge pas, et la largeur est bornée par les deux marges. L'horizontale est calée à
+   l'ouverture par `tiroir-ancrage.ts`, qui pose la fenêtre sous SON bouton et la fait
+   glisser quand elle toucherait un bord — ce que le CSS ne sait pas faire. Les valeurs ci-
+   dessous sont donc le repli : bord droit de l'écran, jamais hors champ. */
 .tiroir[open] > .tiroir-contenu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 0.25rem);
+  position: fixed;
+  right: 0.75rem;
+  left: auto;
+  top: calc(var(--barre-haut) + 0.25rem);
   z-index: 5;
-  width: min(52rem, 92vw);
-  max-height: 75vh;
+  width: min(52rem, calc(100vw - 1.5rem));
+  max-height: calc(100dvh - var(--barre-haut) - 1rem);
   overflow-y: auto;
   padding: 0 0.9rem 0.9rem;
   background: var(--surface);
