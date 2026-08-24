@@ -2,7 +2,7 @@
 {
   "id": "T-0119",
   "titre": "Le filé plafonne la surface peinte, pas le nombre d'étoiles",
-  "colonne": "pret",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "m",
   "epic": "T-0114",
