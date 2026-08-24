@@ -167,7 +167,7 @@ export function MenuInfos(props: MenuInfosProps) {
             {props.profils.length > 1 && (
               <p className="etat">
                 L’échantillonnage est identique dans les deux cadres : un recadrage de capteur
-                ne change ni le pitch ni la focale, donc ni la résolution (§5.1).
+                ne change ni le pitch ni la focale, donc ni la résolution.
               </p>
             )}
             {dominante !== null && cadrage !== null && (

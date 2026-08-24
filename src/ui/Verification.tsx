@@ -90,7 +90,6 @@ export function Verification(props: VerificationProps) {
             <thead>
               <tr>
                 <th>Fonction</th>
-                <th>Sections</th>
                 <th>Hors réseau</th>
                 <th>Dégradation</th>
               </tr>
@@ -99,7 +98,6 @@ export function Verification(props: VerificationProps) {
               {MATRICE_DEGRADATION.map((ligne) => (
                 <tr key={ligne.fonction}>
                   <td>{ligne.fonction}</td>
-                  <td>{ligne.sections}</td>
                   <td>{ligne.horsReseau}</td>
                   <td>{ligne.degradation}</td>
                 </tr>

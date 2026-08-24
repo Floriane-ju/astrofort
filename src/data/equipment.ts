@@ -313,7 +313,7 @@ export function resoutBoitier(saisie: SaisieBoitier): BoitierResolu {
     )
   }
   if (autonomieCipa === null) {
-    estimations.push('autonomie CIPA : inconnue — le budget batterie de §9.4 n’est pas chiffré.')
+    estimations.push('autonomie CIPA : inconnue — le budget batterie n’est pas chiffré.')
   }
 
   return {
@@ -333,7 +333,7 @@ export function resoutBoitier(saisie: SaisieBoitier): BoitierResolu {
       ...(zpSys === null ? {} : { zpSys }),
       tailleRawMo: tailleRawMo ?? K('TAILLE_RAW_MO_GENERIQUE'),
       ...(autonomieCipa === null ? {} : { autonomieCipa }),
-      source: 'saisie utilisateur — §5.1 mode custom',
+      source: 'saisie utilisateur — mode custom',
     }),
     estimations,
   }

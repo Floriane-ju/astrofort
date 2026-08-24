@@ -9,6 +9,7 @@
 import type { Traced } from '../core/traced.ts'
 import { dependDUnOrdreDeGrandeur } from '../core/traced.ts'
 import type { TermeGlossaire } from '../registry/glossaire.ts'
+import { sansSection } from './sans-section.ts'
 import { Etiquette, Glose } from './Terme.tsx'
 
 interface TracedValueProps {
@@ -56,9 +57,10 @@ export function TracedValue({ terme, trace, decimales = 2, unite, suffixe }: Tra
         <Glose cle={terme} contexte={valeur ?? undefined} />
         <p className="tracee-formule">
           <code>{trace.formula.expression}</code>
-          <span className="tracee-section"> — §{trace.formula.section}</span>
         </p>
-        {trace.formula.note !== undefined && <p className="tracee-note">{trace.formula.note}</p>}
+        {trace.formula.note !== undefined && (
+          <p className="tracee-note">{sansSection(trace.formula.note)}</p>
+        )}
         {Object.keys(trace.inputs).length > 0 && (
           <dl className="tracee-entrees">
             {Object.entries(trace.inputs).map(([nom, valeurEntree]) => (
@@ -76,8 +78,10 @@ export function TracedValue({ terme, trace, decimales = 2, unite, suffixe }: Tra
                 <strong>{c.ref}</strong> {c.libelle} = {c.valeur} {c.unite}
                 <br />
                 <span className="tracee-source">
-                  source : {c.source}
-                  {c.tolerance !== null ? ` · tolérance : ${c.tolerance}` : ' · valeur exacte'}
+                  source : {sansSection(c.source)}
+                  {c.tolerance !== null
+                    ? ` · tolérance : ${sansSection(c.tolerance)}`
+                    : ' · valeur exacte'}
                 </span>
               </li>
             ))}
@@ -86,7 +90,7 @@ export function TracedValue({ terme, trace, decimales = 2, unite, suffixe }: Tra
         {trace.flags !== undefined && (
           <p className="tracee-flags">{trace.flags.map((f) => `[${f}]`).join(' ')}</p>
         )}
-        {trace.note !== undefined && <p className="tracee-note">{trace.note}</p>}
+        {trace.note !== undefined && <p className="tracee-note">{sansSection(trace.note)}</p>}
       </div>
     </details>
   )

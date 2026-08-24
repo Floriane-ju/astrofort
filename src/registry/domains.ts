@@ -140,14 +140,14 @@ export function valide(champ: DomaineId, valeur: number): number {
   if (!Number.isFinite(valeur)) {
     throw new SaisieRefuseeError(
       champ,
-      `Saisie refusée : ${d.champ} doit être un nombre (§${d.section}).`,
+      `Saisie refusée : ${d.champ} doit être un nombre.`,
     )
   }
   if (valeur < d.min || valeur > d.max) {
     throw new SaisieRefuseeError(
       champ,
       `Saisie refusée : ${d.champ} vaut ${valeur} ${d.unite}, hors de la plage ${d.min} à ` +
-        `${d.max} ${d.unite} (§${d.section}).`,
+        `${d.max} ${d.unite}.`,
     )
   }
   return valeur

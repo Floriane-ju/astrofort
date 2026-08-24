@@ -31,7 +31,7 @@ export function RegionNuit(props: RegionNuitProps) {
       <FondDeCielVue ciel={props.ciel} />
       {props.planIndisponible && (
         <section>
-          <h2>Plan de session — §8.3</h2>
+          <h2>Plan de session</h2>
           <p className="cause">
             Les catalogues ne sont pas encore vérifiés : aucun plan n’est produit tant qu’un
             binaire non validé pourrait l’alimenter. Les moteurs de cadrage, de pose et

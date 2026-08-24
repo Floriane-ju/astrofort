@@ -59,7 +59,7 @@ export class BortleHorsTableError extends Error {
   constructor(bortle: number) {
     super(
       `Bortle ${bortle} hors de la table [${BORTLE_MIN} ; ${BORTLE_MAX}] : ` +
-        'aucune extrapolation n’est produite hors de ces bornes (§2.2).',
+        'aucune extrapolation n’est produite hors de ces bornes.',
     )
     this.name = 'BortleHorsTableError'
     this.bortle = bortle

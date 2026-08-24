@@ -32,7 +32,7 @@ export function ReglagesTemps(props: ReglagesTempsProps) {
 
   return (
     <section>
-      <h2>Temps — §3.2</h2>
+      <h2>Temps</h2>
       <div className="champs">
         <label>
           Mode de temps
@@ -111,7 +111,7 @@ export function ReglagesTemps(props: ReglagesTempsProps) {
           {props.modeNuit && (
             <p className="cause">
               Mode nuit actif : le défilement est en pause. Aucune animation non sollicitée
-              n’est jouée en mode nuit (§11.1) — la vue reste manipulable.
+              n’est jouée en mode nuit — la vue reste manipulable.
             </p>
           )}
         </>

@@ -57,7 +57,7 @@ export function Glose({ cle, contexte }: GloseProps) {
       <p>{entree.explication}</p>
       <p className="glossaire-contexte">
         {contexte === undefined
-          ? `Valeur non calculée : compléter le profil (§${entree.sections.join(', §')}) pour l’obtenir.`
+          ? 'Valeur non calculée : compléter le profil pour l’obtenir.'
           : `Ta valeur : ${contexte}`}
       </p>
       <p className="glossaire-consequence">{entree.consequence}</p>

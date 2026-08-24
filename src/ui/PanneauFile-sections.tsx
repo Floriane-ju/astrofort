@@ -84,7 +84,7 @@ export function CadrageDuFile({
 }: CadrageProps) {
   return (
     <section>
-      <h2>Grand champ et filé — §9</h2>
+      <h2>Grand champ et filé</h2>
 
       <p className="etat">
         visée {lectures.visee.longitudeDeg.toFixed(2)}° AD /{' '}
@@ -118,7 +118,7 @@ export function CadrageDuFile({
           </select>
         </label>
         {/* Azimut et hauteur n'ont pas de curseur ici : le pointage se fait à la scène,
-            en faisant glisser le planétarium (§3). Ce panneau les lit, il ne les commande
+            en faisant glisser le planétarium. Ce panneau les lit, il ne les commande
             pas — la visée courante se relit en tête de section. */}
         <label>
           Rotation du boîtier : {rotationDeg.toFixed(0)}°
@@ -137,7 +137,7 @@ export function CadrageDuFile({
         <>
           <p className="etat">
             Le temps de la scène est figé : un filé est une composition fixe, la vue animée
-            reste le planétarium de §3.
+            reste celui du planétarium.
           </p>
           <p className="cause">{MENTION_VIGNETTAGE_FILE}</p>
           {lectures.mentionProj !== null && (
@@ -159,7 +159,7 @@ export function PoseMaximale({ lectures }: { readonly lectures: LecturesFile }) 
   const { carte } = lectures
   return (
     <section>
-      <h3>Pose maximale par déclinaison — §9.1</h3>
+      <h3>Pose maximale par déclinaison</h3>
       <CartePose carte={carte} />
       <TracedValue terme="pose_max_cadre" trace={carte.tMaxCadreS} decimales={1} unite="s" />
       <TracedValue terme="regle_500" trace={carte.t500S} decimales={1} unite="s" />
@@ -193,7 +193,7 @@ export function ProfondeurDUnePose({
   const { carte, trainee, poseDepassee } = lectures
   return (
     <section>
-      <h3>Prévisualisation de champ — §9.2</h3>
+      <h3>Prévisualisation de champ</h3>
       <div className="champs">
         <label>
           Pose unitaire : {file.tPoseS.toFixed(0)} s
@@ -263,7 +263,7 @@ export function ArcsDuFile({
   const { diagnostic } = lectures
   return (
     <section>
-      <h3>Filé d’étoiles — §9.3</h3>
+      <h3>Filé d’étoiles</h3>
       <div className="champs">
         <label>
           <Etiquette cle="duree_file" /> : {file.dureeTotaleMin.toFixed(0)} min
@@ -323,7 +323,7 @@ export function SequenceDePrises({
   const { sequence } = lectures
   return (
     <section>
-      <h3>Séquence de filé — §9.4</h3>
+      <h3>Séquence de filé</h3>
       <div className="champs">
         <label>
           <Etiquette cle="intervalle_file" />

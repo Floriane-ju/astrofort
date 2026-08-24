@@ -125,7 +125,7 @@ export function ModeNuit({ etat, surChangement }: ModeNuitProps) {
 
   return (
     <section>
-      <h2>Mode nuit — §11</h2>
+      <h2>Mode nuit</h2>
       <Terme cle="mode_nuit" contexte={etat.actif ? 'actif' : 'inactif'} />
       <div className="champs">
         <label className="interrupteur">

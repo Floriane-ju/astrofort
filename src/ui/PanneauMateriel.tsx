@@ -183,7 +183,7 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
             <p className="etat">
               Dimensions et pitch sont exigés : sans eux, ni champ ni échantillonnage
               n’existent. Le reste peut rester vide — le registre fournit son repli, et les
-              sorties qui en dépendent portent [ESTIMÉ] (§2.3).
+              sorties qui en dépendent portent [ESTIMÉ].
             </p>
             <div className="champs">
               <ChampCapteur
@@ -287,7 +287,7 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
             checked={props.comparerRecadrage}
             onChange={(e) => props.surComparerRecadrage(e.target.checked)}
           />
-          Superposer les deux cadres, plein format et recadrage APS-C (§3.5)
+          Superposer les deux cadres, plein format et recadrage APS-C
         </label>
         {lectures?.noteRecadrage !== undefined && (
           <p className="cause">{lectures.noteRecadrage}</p>

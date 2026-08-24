@@ -13,7 +13,7 @@ import type { SaisieCible } from './fiche-cible-calcul.ts'
  * — choisir M33 dans la liste remplace ces valeurs par celles d'OpenNGC.
  */
 const CIBLE_REFERENCE = {
-  designation: 'M33 (valeurs de référence §6.3)',
+  designation: 'M33 (valeurs de référence)',
   typeObjet: 'GALAXIE' as TypeObjet,
   mInt: '5.7',
   aArcmin: '71',

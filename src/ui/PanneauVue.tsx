@@ -61,7 +61,7 @@ export function PanneauVue(props: PanneauVueProps) {
   return (
     <>
       <section>
-        <h2>Vue — §3.3</h2>
+        <h2>Vue</h2>
         <div className="champs">
           <label>
             Projection
@@ -123,7 +123,7 @@ export function PanneauVue(props: PanneauVueProps) {
               (Krisciunas &amp; Schaefer 1991). Hors périmètre, et dit plutôt que supposé : le
               sol ne s’éclaircit pas ; le halo du site reste symétrique en azimut — le dôme
               lumineux d’une ville est plus clair de son côté, mais l’atlas qui le donnerait
-              exige le réseau (§4.1) ; et la teinte du crépuscule ne vire pas vers l’azimut du
+              exige le réseau ; et la teinte du crépuscule ne vire pas vers l’azimut du
               Soleil, alors que le vrai ciel y est plus clair et plus jaune.
             </p>
           )}
@@ -139,7 +139,7 @@ export function PanneauVue(props: PanneauVueProps) {
       </section>
 
       <section>
-        <h2>Couches — §3.4</h2>
+        <h2>Couches</h2>
         <div className="champs">
           {COUCHES.map(([cle, libelle]) => (
             <label className="interrupteur" key={cle}>

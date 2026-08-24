@@ -48,7 +48,7 @@ export function PlanSessionVue(props: PlanSessionProps) {
   return (
     <>
       <section>
-        <h2>Fenêtre utile — §8.1</h2>
+        <h2>Fenêtre utile</h2>
         <Terme
           cle="fenetre_utile"
           contexte={`${props.fenetreUtile.dureeH.toFixed(2)} h sans Lune sur ${props.fenetreUtile.dureeNuitH.toFixed(2)} h de nuit`}
@@ -63,7 +63,7 @@ export function PlanSessionVue(props: PlanSessionProps) {
       </section>
 
       <section>
-        <h2>Plan de session — §8.3</h2>
+        <h2>Plan de session</h2>
         <Terme cle="plan_session" contexte={`${plan.etapes.length} cibles`} />
         <p className="etat">{plan.message}</p>
         {plan.contrainteDominante !== undefined && (
@@ -81,7 +81,7 @@ export function PlanSessionVue(props: PlanSessionProps) {
       </section>
 
       <section>
-        <h2>Budget de nuit — §8.3</h2>
+        <h2>Budget de nuit</h2>
         <Terme cle="budget_nuit" contexte={`${plan.budget.totalMin.value.toFixed(0)} min`} />
         <table>
           <tbody>
@@ -154,7 +154,7 @@ export function PlanSessionVue(props: PlanSessionProps) {
       )}
 
       <section>
-        <h2>Export imprimable — §11.2</h2>
+        <h2>Export imprimable</h2>
         <p className="etat">
           Un plan qui exige un écran allumé trois heures est un plan qui vide la batterie :
           l’export est du texte brut, imprimable et lisible hors de l’application.

@@ -63,7 +63,7 @@ export function Verdicts(props: VerdictsProps) {
 function CeQueLeSetupCadre({ r }: { readonly r: Resultat }) {
   return (
     <section>
-      <h2>Ce que ce setup cadre — §6.1</h2>
+      <h2>Ce que ce setup cadre</h2>
       <p className="etat">domaine : {r.domaine.domaine}</p>
       <p>{r.domaine.phrase}</p>
       <TracedValue terme="fenetre_cadrage" suffixe="taille minimale" trace={r.domaine.tailleMinDeg} unite="°" />
@@ -88,7 +88,7 @@ function CeQueLeSetupCadre({ r }: { readonly r: Resultat }) {
 function CadrageDeLaCible({ r }: { readonly r: Resultat }) {
   return (
     <section>
-      <h2>Cadrage de la cible — §6.2</h2>
+      <h2>Cadrage de la cible</h2>
       <p className="etat">verdict : {r.cadrage.verdict}</p>
       <TracedValue terme="remplissage" trace={r.cadrage.remplissage} decimales={3} />
       <TracedValue terme="diametre_pixels" trace={r.cadrage.diamPx} decimales={0} unite="px" />
@@ -116,7 +116,7 @@ function CielSousLaLune({ r }: { readonly r: Resultat }) {
     <>
       <p className="etat">
         Lune évaluée à {heure(r.lune.instant)}, l’instant affiché par le planétarium, avec la
-        cible prise à sa culmination — la convention du plan de séance (§8.1).
+        cible prise à sa culmination — la convention du plan de séance.
       </p>
       <TracedValue terme="degradation_lunaire" trace={r.lune.ciel.delta} unite="mag/as²" />
     </>
@@ -127,7 +127,7 @@ function CielSousLaLune({ r }: { readonly r: Resultat }) {
 function Detectabilite({ r }: { readonly r: Resultat }) {
   return (
     <section>
-      <h2>Détectabilité — §6.3</h2>
+      <h2>Détectabilité</h2>
       <p className="etat">verdict : {r.detect.verdict ?? '[DONNÉE MANQUANTE]'}</p>
       <CielSousLaLune r={r} />
       <TracedValue terme="brillance_surface" trace={r.detect.sbObj} unite="mag/as²" />
@@ -159,7 +159,7 @@ function PoseUnitaire({
 }) {
   return (
     <section>
-      <h2>Pose — §7.1 et §7.2</h2>
+      <h2>Pose</h2>
       {/* §7.1 — zp_source doit être affiché partout où une pose l'est. */}
       <p className={zeroSysteme.estime ? 'cause' : 'etat'}>{libelleZpSource(zeroSysteme)}</p>
       {zeroSysteme.note !== undefined && <p className="cause">{zeroSysteme.note}</p>}
@@ -258,14 +258,14 @@ function CombienDePhotos({
     // n'a pas été demandé, alors qu'il a été refusé, et pour une raison nommable.
     return refus === undefined ? null : (
       <section>
-        <h2>Combien de photos — §7.3</h2>
+        <h2>Combien de photos</h2>
         <p className="cause">{refus}</p>
       </section>
     )
   }
   return (
     <section>
-      <h2>Combien de photos — §7.3</h2>
+      <h2>Combien de photos</h2>
       <label>
         <Etiquette cle="snr_cible" />
         <select value={snrCible} onChange={(e) => surSnr(Number(e.target.value))}>
@@ -300,7 +300,7 @@ function PlanDeCalibration({ r }: { readonly r: Resultat }) {
   if (calibration === null) return null
   return (
     <section>
-      <h2>Plan de calibration — §7.4</h2>
+      <h2>Plan de calibration</h2>
       <Terme cle="plan_calibration" />
       <table>
         <thead>
@@ -364,7 +364,7 @@ function PourquoiCeVerdict({
   if (explique === null) return null
   return (
     <section>
-      <h2>Pourquoi ce verdict — §10.2</h2>
+      <h2>Pourquoi ce verdict</h2>
       <p className="etat">{explique.n1}</p>
       <label className="interrupteur">
         <input
@@ -461,7 +461,6 @@ function ChaineDeCalcul({
             <strong>{etape.libelle}</strong> = {etape.valeur?.toFixed(3) ?? '—'} {etape.unite}
             <br />
             <code>{etape.expression}</code>
-            <span className="tracee-section"> — §{etape.section}</span>
             {etape.constantes.length > 0 && (
               <span className="tracee-source">
                 {' '}

@@ -34,7 +34,7 @@ export function decritCible(cible: CibleEcran): SelectionScene {
       lignes: [
         `ascension droite ${c.adH.toFixed(3)} h · déclinaison ${c.decDeg.toFixed(2)}°`,
         `azimut ${c.azimutDeg.toFixed(1)}° · hauteur ${c.hauteurDeg.toFixed(1)}°`,
-        'Position interpolée entre deux échantillons d’éphémérides (§3.1).',
+        'Position interpolée entre deux échantillons d’éphémérides.',
       ],
       objet: null,
     }

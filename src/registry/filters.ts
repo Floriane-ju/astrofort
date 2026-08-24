@@ -78,4 +78,4 @@ export function ligneFiltre(famille: FamilleFiltre): LigneFiltre {
 
 export const SOURCE_TABLE_FILTRES =
   'Largeurs de bande usuelles par famille de filtres. Aucune donnée commerciale, aucune ' +
-  'marque, aucun prix (§10.3).'
+  'marque, aucun prix.'
