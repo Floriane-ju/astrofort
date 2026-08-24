@@ -25,8 +25,18 @@ const SENSIBILITE_PINCEMENT = 0.01
 const DOM_DELTA_PIXEL = 0
 /** Un cran de molette vaut ±120 en `wheelDeltaY`, hérité de Windows et repris partout. */
 const CRAN_WHEEL_DELTA = 120
-/** Faute de mieux, la hauteur en pixels d'un cran de molette. À retoucher si un pavé s'y trompe. */
-const SEUIL_CRAN_PX = 40
+/**
+ * Le plancher, en pixels, d'un cran de molette — mesuré à 12–13 px sur une molette libre. Un pavé
+ * démarre plus doucement, 1 à 3 px sur ses premiers événements : en dessous de ce plancher, un
+ * `wheel` ambigu se lit comme un début de rafale de pavé, pas comme un cran.
+ */
+const SEUIL_CRAN_PX = 10
+/**
+ * Combien de temps un pavé reconnu garde la main sur les `wheel` ambigus. La rafale entretient
+ * elle-même cette mémoire : le délai n'a qu'à couvrir l'écart entre deux de ses événements
+ * — 15 ms mesurés — pas la durée du geste. Court exprès, pour que reprendre la souris rezoome.
+ */
+const MEMOIRE_PAVE_MS = 400
 /** T-0069 — pas d'une touche fléchée, en fraction du champ affiché (§3.3, registre). */
 const PAS_VISEE_FRACTION = K('PAS_VISEE_CLAVIER_FRACTION')
 const POURCENT = 100
@@ -53,30 +63,47 @@ export function fovBorne(fovDeg: number, bornes: BornesZoom): number {
 /** Ce qu'un `wheel` doit déclencher sur la scène. */
 export type SourceGeste = 'PINCEMENT' | 'MOLETTE' | 'DEFILEMENT'
 
-/**
- * Un `wheel` sur macOS peut venir de trois gestes qui ne doivent pas faire la même chose : le
- * pincement zoome, le défilement à deux doigts promène la visée, la molette zoome. Aucun
- * navigateur ne dit lequel c'est ; il faut le déduire de trois signaux, du plus sûr au moins sûr.
- */
-export function sourceMolette(e: {
+/** Ce qu'un `wheel` porte, indépendamment du geste qui l'a produit. */
+interface DeltasMolette {
   readonly ctrlKey: boolean
   readonly deltaMode: number
   readonly deltaX: number
   readonly deltaY: number
   readonly wheelDeltaY?: number
-}): SourceGeste {
+}
+
+/**
+ * La marque d'un pavé, sans ambiguïté : le pincement, que le navigateur signale par `ctrlKey`, le
+ * doigt qui dérive de côté, ou des deltas fractionnaires. Une molette, même à haute résolution,
+ * ne fait rien de tout cela — ses crans sont entiers et strictement verticaux.
+ */
+export function signaturePave(e: DeltasMolette): boolean {
+  if (e.ctrlKey) return true
+  if (e.deltaMode !== DOM_DELTA_PIXEL) return false
+  return e.deltaX !== 0 || !Number.isInteger(e.deltaY)
+}
+
+/**
+ * Un `wheel` sur macOS peut venir de trois gestes qui ne doivent pas faire la même chose : le
+ * pincement zoome, le défilement à deux doigts promène la visée, la molette zoome. Aucun
+ * navigateur ne dit lequel c'est ; il faut le déduire de signaux, du plus sûr au moins sûr.
+ *
+ * Reste un cas indécidable : un delta entier, strictement vertical — une molette à haute
+ * résolution en produit autant que la phase d'inertie d'un pavé. Deux indices le tranchent :
+ * l'amplitude, un cran pesant plus qu'un début de rafale, et `paveRecent`, vrai tant que le pavé
+ * vient de se signaler. Hors de ces deux cas on zoome, ce qu'on attend d'une souris.
+ */
+export function sourceMolette(e: DeltasMolette, paveRecent = false): SourceGeste {
   // Le pincement au pavé, seul geste que le navigateur signale lui-même — par `ctrlKey`.
   if (e.ctrlKey) return 'PINCEMENT'
   // Un delta en lignes plutôt qu'en pixels : Firefox ne le fait que pour une vraie molette.
   if (e.deltaMode !== DOM_DELTA_PIXEL) return 'MOLETTE'
-  // WebKit et Blink : un cran de molette vaut un multiple de 120 en `wheelDeltaY`. Le pavé, lui,
-  // renvoie −3 × `deltaY`, qui tombe rarement juste.
-  if (e.wheelDeltaY !== undefined && e.wheelDeltaY !== 0) {
-    return e.wheelDeltaY % CRAN_WHEEL_DELTA === 0 ? 'MOLETTE' : 'DEFILEMENT'
-  }
-  // Faute de `wheelDeltaY` (Firefox en pixels) : un cran est gros, entier et strictement vertical.
-  const cran = e.deltaX === 0 && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= SEUIL_CRAN_PX
-  return cran ? 'MOLETTE' : 'DEFILEMENT'
+  // Un pavé reconnu, ou un événement sans amplitude verticale : rien à zoomer.
+  if (signaturePave(e) || e.deltaY === 0) return 'DEFILEMENT'
+  // WebKit et Blink : un cran de molette vaut un multiple de 120 en `wheelDeltaY`.
+  if (e.wheelDeltaY !== undefined && e.wheelDeltaY % CRAN_WHEEL_DELTA === 0) return 'MOLETTE'
+  if (Math.abs(e.deltaY) < SEUIL_CRAN_PX) return 'DEFILEMENT'
+  return paveRecent ? 'DEFILEMENT' : 'MOLETTE'
 }
 
 /**
@@ -242,9 +269,17 @@ export function useGestesZoom(
     // projection courante (T-0095), et la projection change sans démonter l'écouteur.
     const borne = (v: VueScene, fov: number): number => fovBorne(fov, bornesZoom(gaiaCharge, v.mode))
 
+    // Le dernier instant où le pavé s'est signalé. La rafale entretient cette date d'elle-même :
+    // tant qu'elle dure, ses événements ambigus restent du défilement, inertie comprise. Une
+    // mémoire qui expire, et non un drapeau définitif : sinon reprendre la souris ne rezoome plus.
+    let dernierPaveMs = Number.NEGATIVE_INFINITY
+
     function surMolette(e: WheelEvent): void {
       e.preventDefault()
-      const source = sourceMolette(e as EvenementMolette)
+      const molette = e as EvenementMolette
+      if (signaturePave(molette)) dernierPaveMs = e.timeStamp
+      const source = sourceMolette(molette, e.timeStamp - dernierPaveMs < MEMOIRE_PAVE_MS)
+      if (source !== 'MOLETTE') dernierPaveMs = e.timeStamp
       if (source === 'DEFILEMENT') {
         // Deux doigts sur le pavé promènent le ciel comme le ferait un glisser : le ciel suit les
         // doigts, donc le signe des deltas s'inverse. Le champ est lu dans l'état, pas capturé.

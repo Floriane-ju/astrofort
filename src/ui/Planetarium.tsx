@@ -50,6 +50,7 @@ import { ligneVisee } from './scene-lecture.ts'
 export {
   facteurZoom,
   roulisApresGlisser,
+  signaturePave,
   sourceMolette,
   type SourceGeste,
 } from './planetarium-gestes.ts'

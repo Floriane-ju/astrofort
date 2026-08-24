@@ -7,7 +7,12 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { facteurZoom, roulisApresGlisser, sourceMolette } from '../src/ui/Planetarium.tsx'
+import {
+  facteurZoom,
+  roulisApresGlisser,
+  signaturePave,
+  sourceMolette,
+} from '../src/ui/Planetarium.tsx'
 
 describe('facteur de zoom — un cran de molette, un geste continu', () => {
   it('garde le cran fixe de la molette, dans les deux sens', () => {
@@ -63,6 +68,49 @@ describe('source d’un `wheel` — pincement, molette, défilement', () => {
       'DEFILEMENT',
     )
     expect(sourceMolette({ ctrlKey: false, deltaMode: 0, deltaX: 0, deltaY: 120 })).toBe('MOLETTE')
+  })
+
+  it('zoome sur une molette libre, dont les crans sont fins et hors des multiples de 120', () => {
+    // T-0124 — relevé sur le poste : −13 px par cran, `wheelDeltaY` à 39, jamais multiple de 120.
+    const moletteLibre = { ctrlKey: false, deltaMode: 0, deltaX: 0, deltaY: -13, wheelDeltaY: 39 }
+    expect(sourceMolette(moletteLibre)).toBe('MOLETTE')
+    // Un cran franc garde le zoom, même pendant qu'un pavé a la main.
+    expect(sourceMolette(moletteChrome, true)).toBe('MOLETTE')
+    // Un `wheel` sans amplitude verticale ne zoome jamais.
+    expect(sourceMolette({ ...moletteLibre, deltaY: 0, wheelDeltaY: 0 })).toBe('DEFILEMENT')
+  })
+
+  it('laisse la rafale du pavé défiler, y compris pendant son inertie', () => {
+    // T-0124 — la rampe relevée : le doigt dérive d'abord, puis l'inertie retombe droit et fine.
+    const rampe = [
+      { deltaX: 0, deltaY: 1 },
+      { deltaX: 2, deltaY: 3 },
+      { deltaX: 3, deltaY: 8 },
+      { deltaX: 0, deltaY: 2 },
+      { deltaX: 0, deltaY: 1 },
+    ]
+    for (const { deltaX, deltaY } of rampe) {
+      const e = { ctrlKey: false, deltaMode: 0, deltaX, deltaY, wheelDeltaY: -3 * deltaY }
+      // `paveRecent` vaut vrai dès le deuxième événement d'une rafale — le hook le datant.
+      expect(sourceMolette(e, true)).toBe('DEFILEMENT')
+    }
+  })
+
+  it('rend le zoom à la souris dès que la rafale du pavé s’est tue', () => {
+    // Le même cran, selon que le pavé vient de parler ou non : c'est tout le bug de T-0124.
+    const cran = { ctrlKey: false, deltaMode: 0, deltaX: 0, deltaY: -13, wheelDeltaY: 39 }
+    expect(sourceMolette(cran, true)).toBe('DEFILEMENT')
+    expect(sourceMolette(cran, false)).toBe('MOLETTE')
+  })
+
+  it('reconnaît le pavé à sa dérive, ses fractions et son pincement — jamais une molette', () => {
+    expect(signaturePave(paveDefile)).toBe(true)
+    expect(signaturePave(pavePince)).toBe(true)
+    expect(signaturePave({ ctrlKey: false, deltaMode: 0, deltaX: 0, deltaY: 6.25 })).toBe(true)
+    expect(signaturePave(moletteChrome)).toBe(false)
+    expect(signaturePave({ ctrlKey: false, deltaMode: 0, deltaX: 0, deltaY: -13 })).toBe(false)
+    // Firefox compte la molette en lignes : un delta fractionnaire n'y trahit aucun pavé.
+    expect(signaturePave({ ctrlKey: false, deltaMode: 1, deltaX: 0, deltaY: 0.5 })).toBe(false)
   })
 })
 
