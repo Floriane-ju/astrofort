@@ -6,9 +6,9 @@
  * question ; T-0053 lui donne son champ.
  *
  * Ce qui se cherche est ce que `libelleObjet` affiche déjà : la désignation et chacun des
- * noms communs. Ni horizon ni verdict n'entrent ici — c'est la question de `ciblesVisibles`,
- * et elle a son chemin dans l'onglet Cible. Chercher dans le catalogue, c'est chercher dans
- * le catalogue entier, y compris sous l'horizon.
+ * noms communs. Ni horizon ni verdict n'entrent ici — c'est la question de `lignesCatalogue`,
+ * qui les porte colonne par colonne dans l'onglet Cibles. Chercher dans le catalogue, c'est
+ * chercher dans le catalogue entier, y compris sous l'horizon.
  *
  * La portée n'est jamais plafonnée : `maxRendus` borne le nombre de résultats rendus, pas
  * l'étendue de la recherche. Aucun objet du catalogue n'est hors d'atteinte.
@@ -40,7 +40,7 @@ function rangDe(objet: ObjetCielProfond, recherche: string): number {
 /**
  * Les objets du catalogue dont la désignation ou l'un des noms communs contient la saisie :
  * les préfixes d'abord, puis du plus brillant au plus faible — l'ordre dans lequel un
- * observateur pense au ciel, le même que celui de `ciblesVisibles`.
+ * observateur pense au ciel, le même que celui de `lignesCatalogue`.
  *
  * Une saisie vide ne rend rien : proposer 14 000 entrées avant la première frappe est le
  * défaut qu'on corrige, pas un état par défaut.
