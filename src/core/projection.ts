@@ -117,6 +117,25 @@ export function echelleProjection(vue: Vue): number {
 }
 
 /**
+ * Rayon, en degrés au centre de visée, de la calotte céleste que le canevas montre — coin
+ * compris. C'est le domaine que partagent la sélection d'étoiles (§3.3), l'écart des segments
+ * de la Voie lactée (§3.7) et le budget du filé (§9.3) : un seul calcul, sinon trois
+ * définitions du même champ.
+ *
+ * Le rayon passe par R(θ) et sa réciproque, jamais par `(fov / 2) × diagonale` : cette
+ * approximation petit-angle SOUS-ESTIME le champ dès qu'il s'ouvre, et un écart qui rejette
+ * sur une calotte trop petite efface de la géométrie visible — mesuré à 170° de champ, les
+ * frontières disparaissaient du bord (T-0110). Elle demandait un plafond arbitraire pour ne
+ * pas dépasser le ciel entier ; la réciproque exacte n'en a pas besoin, aucune des trois
+ * fonctions radiales ne dépasse 180° dans son domaine.
+ */
+export function rayonChampDeg(vue: Vue): number {
+  const rayonCoin =
+    rayonProjete(vue.mode, (vue.fovDeg / 2) * DEG) * Math.hypot(1, vue.hauteurPx / vue.largeurPx)
+  return angleProjete(vue.mode, rayonCoin) / DEG
+}
+
+/**
  * Portée utile d'un point projeté, en diagonales de canevas.
  *
  * Au-delà, une position n'est plus une position : c'est le voisinage de la singularité de la
@@ -310,11 +329,17 @@ export interface BornesZoom {
  *
  * En gnomonique, R = tan(θ) : l'échelle pixel est (largeur/2) / R(fov/2), donc elle tend vers
  * zéro quand fov tend vers 180° et tout le ciel s'effondre sur le pixel central. Rien ne
- * plante — c'est exactement ce qui rend le défaut coûteux. Stéréographique (2·tan(θ/2)) et
- * équidistante (θ) restent finies à 180° et gardent le plafond de §3.3.
+ * plante — c'est exactement ce qui rend le défaut coûteux.
+ *
+ * La stéréographique, elle, ne diverge qu'à 360° : son plafond n'a jamais été celui de §3.3,
+ * il était celui de la gnomonique appliqué aux trois modes. Elle va donc à 300°, où le ciel
+ * entier moins une calotte de 60° tient à l'écran. L'équidistante garde 180° : au-delà, un
+ * fisheye n'a plus de sens physique (§5.1).
  */
 export function fovMaxSelonMode(mode: ModeProjection): number {
-  return mode === 'MODE_CADRE' ? K('FOV_MAX_GNOMONIQUE_DEG') : K('FOV_MAX_DEG')
+  if (mode === 'MODE_CADRE') return K('FOV_MAX_GNOMONIQUE_DEG')
+  if (mode === 'MODE_PLANETARIUM') return K('FOV_MAX_STEREOGRAPHIQUE_DEG')
+  return K('FOV_MAX_DEG')
 }
 
 /** §3.3 — sans le paquet Gaia, l'application plafonne à 15° de champ et le déclare. */

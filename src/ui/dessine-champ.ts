@@ -36,7 +36,7 @@ import {
 } from '../core/galactique.ts'
 import type { IndexCiel } from '../core/index-ciel.ts'
 import { magnitudePourEffectif, selectionne } from '../core/index-ciel.ts'
-import { rayonEtoilePx, type Projecteur } from '../core/projection.ts'
+import { rayonChampDeg, rayonEtoilePx, type Projecteur } from '../core/projection.ts'
 import { separationDeg } from '../core/mat3.ts'
 import type { Vec3 } from '../core/mat3.ts'
 import { TEINTES, couleurTeinteOpacite, paletteScene, teinte } from './couleurs.ts'
@@ -233,19 +233,6 @@ interface Compteur {
   surfacePx: number
 }
 
-/**
- * T-0116 — la sélection couvre tout le champ de la scène : les traces s'y voient partout, le
- * cadre ne les borne plus, il dit seulement lesquelles le capteur enregistrerait. Le budget
- * d'étoiles du filé se convertit sur CE rayon : même champ, même image, même coût.
- */
-function rayonChampDeg(projecteur: Projecteur): number {
-  return Math.min(
-    K('FOV_MAX_DEG') / 2,
-    (projecteur.vue.fovDeg / 2) *
-      Math.hypot(1, projecteur.vue.hauteurPx / projecteur.vue.largeurPx),
-  )
-}
-
 /** Ce que les deux couches partagent de l'image en cours : calculé une fois, jamais deux. */
 interface Scene {
   readonly centreJ2000: Vec3
@@ -289,7 +276,10 @@ function sceneCourante(entree: EntreeDessinChamp): Scene {
   const hauteur = projecteur.vue.hauteurPx
   const dureeMin = entree.suiviActif ? 0 : entree.dureeS / S_PAR_MIN
   const centreJ2000 = projecteur.inverse(largeur / 2, hauteur / 2)
-  const rayonChamp = rayonChampDeg(projecteur)
+  // T-0116 — la sélection couvre tout le champ de la scène : les traces s'y voient partout, le
+  // cadre ne les borne plus, il dit seulement lesquelles le capteur enregistrerait. Le budget
+  // d'étoiles du filé se convertit sur CE rayon : même champ, même image, même coût.
+  const rayonChamp = rayonChampDeg(projecteur.vue)
   // Marge du test, en degrés : un cercle tangent au champ à moins d'une demi-largeur de trait y
   // peint encore. L'échelle du centre de visée est la plus grossière de la scène — en
   // stéréographique le facteur radial croît vers le bord — donc c'est elle qui rend la marge

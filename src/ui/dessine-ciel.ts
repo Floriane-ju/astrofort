@@ -35,6 +35,7 @@ import {
 } from '../core/mat3.ts'
 import {
   pointEcran,
+  rayonChampDeg,
   rayonEtoilePx,
   type PointEcranMut,
   type Projecteur,
@@ -301,26 +302,11 @@ interface ChampVisible {
  * segments de la bande — un seul calcul, sinon deux définitions du même champ.
  */
 function champVisible(projecteur: Projecteur): ChampVisible {
-  const { largeurPx, hauteurPx, fovDeg } = projecteur.vue
+  const { largeurPx, hauteurPx } = projecteur.vue
   return {
     centre: projecteur.inverse(largeurPx / 2, hauteurPx / 2),
-    rayonDeg: Math.min(K('FOV_MAX_DEG') / 2, (fovDeg / 2) * Math.hypot(1, hauteurPx / largeurPx)),
+    rayonDeg: rayonChampDeg(projecteur.vue),
   }
-}
-
-/**
- * T-0110 — le champ, quand il est légitime de s'en servir pour ÉCARTER. `null` sinon.
- *
- * `champVisible` plafonne son rayon à `FOV_MAX_DEG / 2`, ce qui convient à la sélection
- * d'étoiles — trop d'étoiles n'est pas une faute — mais pas à l'écart : au-delà de ce plafond
- * la calotte est plus petite que ce que le canevas montre, et rejeter dessus efface de la
- * géométrie visible. Mesuré : à 170° de champ, l'écart perdait des frontières à l'écran.
- * Au-dessus du plafond, tout est à peu près dans le champ de toute façon — ne rien écarter
- * n'y coûte presque rien.
- */
-function champPourEcart(projecteur: Projecteur): ChampVisible | null {
-  const champ = champVisible(projecteur)
-  return champ.rayonDeg < K('FOV_MAX_DEG') / 2 ? champ : null
 }
 
 /** Vrai quand la calotte de rayon `demiExtensionDeg` autour de `centre` ne touche pas le champ. */
@@ -785,8 +771,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
 
   // T-0110 — le champ se prend sur le projecteur BRUT : c'est une propriété de la vue, pas du
   // filtrage par le sol. La calotte obtenue englobe donc ce que le projecteur filtré montrera.
-  // `null` au-delà du plafond de `FOV_MAX_DEG` : plus rien ne s'écarte, tout se trace.
-  const champScene = champPourEcart(brut)
+  const champScene = champVisible(brut)
   if (entree.couches.frontieres) {
     ctx.strokeStyle = teintes.frontieres
     ctx.lineWidth = 1

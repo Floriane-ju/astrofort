@@ -1041,6 +1041,24 @@ const RENDU = {
     ordreDeGrandeur: false,
     sections: ['3.3'],
   }),
+  FOV_MAX_STEREOGRAPHIQUE_DEG: entree({
+    ref: 'C-26',
+    libelle: 'Champ maximal en projection stéréographique',
+    valeur: 300,
+    unite: '°',
+    source:
+      '§3.3 — convention produit : R = 2·tan(θ/2) ne diverge qu’à θ = 180°, donc à 360° de ' +
+      'champ. Le plafond de 180° du PRD n’était pas une limite de la projection mais celle ' +
+      'de la gnomonique appliquée aux trois modes. À 300°, le bord est à θ = 150° et R = 7,46 ' +
+      '— fini, monotone, inversible ; le ciel entier moins une calotte de 60° tient à l’écran, ' +
+      'ce que le dézoom cherche. Au-delà, l’échelle s’effondre vers le point antipodal : à ' +
+      '340° R = 22,9, soit un tiers du canevas pour les 20 derniers degrés de ciel.',
+    tolerance:
+      'convention produit — pilote le confort d’une vue, jamais un verdict. Écart assumé au ' +
+      'plafond de 180° du PRD, comme FOV_MAX_GNOMONIQUE_DEG l’est en sens inverse (T-0095).',
+    ordreDeGrandeur: false,
+    sections: ['3.3'],
+  }),
   FOV_MAX_GNOMONIQUE_DEG: entree({
     ref: 'C-26',
     libelle: 'Champ maximal en projection gnomonique',

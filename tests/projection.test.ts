@@ -20,6 +20,7 @@ import {
   pointEcran,
   porteeUtilePx,
   projecteur,
+  rayonChampDeg,
   rayonEtoilePx,
   type Vue,
 } from '../src/core/projection.ts'
@@ -259,10 +260,14 @@ describe('profondeur asservie au zoom §3.3', () => {
     expect(avec.cause).toBeUndefined()
   })
 
-  it('plafonne le champ de la gnomonique et laisse les autres projections à 180°', () => {
+  it('donne à chaque projection le plafond que sa fonction radiale supporte', () => {
     expect(fovMaxSelonMode('MODE_CADRE')).toBe(K('FOV_MAX_GNOMONIQUE_DEG'))
-    expect(fovMaxSelonMode('MODE_PLANETARIUM')).toBe(K('FOV_MAX_DEG'))
+    expect(fovMaxSelonMode('MODE_PLANETARIUM')).toBe(K('FOV_MAX_STEREOGRAPHIQUE_DEG'))
     expect(fovMaxSelonMode('MODE_FISHEYE')).toBe(K('FOV_MAX_DEG'))
+    // Le plafond stéréographique passe 180° : c'est ce que 2·tan(θ/2) autorise, et le seul
+    // mode qui le peut. La gnomonique reste dessous, l'équidistante au plafond du PRD.
+    expect(fovMaxSelonMode('MODE_PLANETARIUM')).toBeGreaterThan(K('FOV_MAX_DEG'))
+    expect(fovMaxSelonMode('MODE_CADRE')).toBeLessThan(K('FOV_MAX_DEG'))
     // Le plancher lié au catalogue et le plafond lié à la projection sont indépendants : le
     // paquet Gaia ne change pas ce que tan(θ) fait au bord du champ.
     expect(bornesZoom(true, 'MODE_CADRE').fovMaxDeg).toBe(K('FOV_MAX_GNOMONIQUE_DEG'))
@@ -282,6 +287,32 @@ describe('profondeur asservie au zoom §3.3', () => {
     for (const mode of ['MODE_PLANETARIUM', 'MODE_FISHEYE'] as const) {
       expect(echelleProjection(vue(mode, K('FOV_MAX_DEG')))).toBeGreaterThan(auPlafond * 1e-9)
     }
+  })
+
+  it('couvre le coin du canevas, à tout champ et dans les trois modes', () => {
+    // Le rayon de calotte sert à ÉCARTER : s'il sous-estime le champ, il efface de la
+    // géométrie visible. Le coin du canevas est le point le plus éloigné du centre de visée —
+    // sa séparation angulaire réelle doit tenir dans le rayon annoncé, y compris là où
+    // l'approximation petit-angle (fov / 2) × diagonale se trompait le plus : au grand champ.
+    for (const mode of ['MODE_PLANETARIUM', 'MODE_CADRE', 'MODE_FISHEYE'] as const) {
+      for (const part of [0.02, 0.25, 0.6, 1]) {
+        const v = vue(mode, fovMaxSelonMode(mode) * part)
+        const p = projecteur(v, IDENTITE)
+        const centre = p.inverse(LARGEUR / 2, HAUTEUR / 2)
+        const coin = separationDeg(centre, p.inverse(0, 0))
+        const rayon = rayonChampDeg(v)
+        expect(rayon).toBeCloseTo(coin, 6)
+        // Une calotte reste une calotte : jamais plus que le ciel entier.
+        expect(rayon).toBeLessThan(K('FOV_MAX_DEG'))
+      }
+    }
+  })
+
+  it('voit au-delà de l’hémisphère au plafond stéréographique', () => {
+    // Le plafond de la calotte valait FOV_MAX_DEG / 2 = 90° : au plafond stéréographique le
+    // coin est plus loin que cela, et tout ce qui s'y trouve était écarté de la sélection.
+    const auPlafond = rayonChampDeg(vue('MODE_PLANETARIUM', K('FOV_MAX_STEREOGRAPHIQUE_DEG')))
+    expect(auPlafond).toBeGreaterThan(K('FOV_MAX_DEG') / 2)
   })
 
   it('refuse un point projeté hors de portée, singularité comprise', () => {
