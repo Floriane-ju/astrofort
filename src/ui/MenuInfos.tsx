@@ -144,7 +144,7 @@ export function MenuInfos(props: MenuInfosProps) {
       <summary>
         <span aria-live="polite">
           {aLire === 0
-            ? 'ℹ Lectures'
+            ? 'Lectures'
             : `⚠ Lectures — ${aLire} message${aLire > 1 ? 's' : ''} à lire`}
         </span>
       </summary>

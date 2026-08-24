@@ -175,7 +175,7 @@ export function MenuReglages(props: MenuReglagesProps) {
         if (e.key === 'Escape') e.currentTarget.removeAttribute('open')
       }}
     >
-      <summary>⚙ Réglages</summary>
+      <summary>Réglages</summary>
 
       <div className="tiroir-contenu">
         {/* T-0113 — le niveau d'explication rejoint les réglages. Il était dans la barre

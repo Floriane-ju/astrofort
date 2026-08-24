@@ -29,6 +29,18 @@ non-négociables.
   `*-saisie.ts`, sous-composants).
 - Un test par comportement dans `tests/`, nommé d'après le module (`visibles.test.ts`).
 
+## Icônes
+
+- Toute icône passe par `<Icone nom="..." />` (`src/ui/Icone.tsx`) et la police Material
+  Symbols Sharp livrée dans `src/fonts/`. Pas de SVG inline, pas de caractère Unicode
+  décoratif (`✕`, `→`, `●`) posé à la place d'un glyphe.
+- `nom` est la ligature Material Symbols, en anglais — c'est l'identifiant de la police, pas
+  un libellé.
+- Le style commun vit dans `.icone` (`styles.css`) : c'est le seul endroit à modifier pour
+  changer l'épaisseur, la taille ou la famille de toutes les icônes.
+- Dans un contrôle qui porte déjà un `aria-label`, ne pas passer `libelle` : la ligature est
+  du texte, elle serait annoncée deux fois.
+
 ## Style
 
 - Métier en français (`creneaux`, `cadre`, `pose`), technique en anglais (`mat3`, `projection`).

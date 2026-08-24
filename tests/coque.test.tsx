@@ -559,7 +559,7 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
   it('monte un tiroir de réglages dans la barre haute', () => {
     const ecran = renderToStaticMarkup(<App />)
     expect(ecran).toContain('tiroir tiroir-reglages')
-    expect(ecran).toContain('⚙ Réglages')
+    expect(ecran).toContain('Réglages')
   })
 
   it('le place avant le menu des lectures, qui ferme la barre', () => {

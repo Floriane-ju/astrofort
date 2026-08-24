@@ -14,6 +14,7 @@
 
 import type { ReactNode } from 'react'
 import { fermePanneau, type PanneauLateral as ClePanneau } from './coque-etat.ts'
+import { Icone } from './Icone.tsx'
 
 /** Le titre de chaque panneau : il nomme ce qu'on lit, pas l'onglet d'où l'on vient. */
 export const TITRES_PANNEAU: Readonly<Record<ClePanneau, string>> = Object.freeze({
@@ -50,7 +51,7 @@ export function PanneauLateral(props: PanneauLateralProps) {
               onClick={fermePanneau}
               aria-label={`Fermer le panneau ${TITRES_PANNEAU[panneau].toLowerCase()}`}
             >
-              ✕
+              <Icone nom="close" />
             </button>
           </div>
           <div className="lateral-corps">{props.contenus[panneau]}</div>

@@ -66,7 +66,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,woff2,png}', 'data/**/*.{bin,json}'],
+        // `ttf` : la police d'icônes de T-0122 est la seule police livrée, et c'est la seule
+        // qui n'a pas de repli — hors précache, un démarrage hors réseau afficherait le nom
+        // des ligatures en clair à la place des glyphes.
+        globPatterns: ['**/*.{js,css,html,woff2,ttf,png}', 'data/**/*.{bin,json}'],
         // Les paquets binaires dépassent la limite par défaut de 2 Mo (§12.2 : HYG ≈ 1,7 Mo,
         // OpenNGC ≈ 1,2 Mo, paquet Gaia différé ≈ 12 Mo).
         maximumFileSizeToCacheInBytes: 16 * 1024 * 1024,
