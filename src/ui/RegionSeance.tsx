@@ -1,20 +1,29 @@
 /**
- * Le panneau de droite : la séance, ses quatre onglets et le plan imprimable.
+ * Ce que la coque pose sur la scène, et ce qu'elle ouvre à côté.
  *
- * Un seul onglet est monté à la fois — Explorer, Cible, Nuit, Filé. Le plan de session, lui,
- * est rendu en permanence : c'est la seule région qui survit à l'impression (§11.2).
+ * T-0113 — le panneau droit à quatre onglets est démonté. Les quatre intentions n'avaient pas
+ * la même nature : deux se règlent EN regardant le ciel — la vue et la cible — et deux se
+ * lisent de haut en bas — le plan de nuit et le filé. Les premières sont devenues des cartes
+ * posées sur la scène, repliables et déplaçables ; les secondes, un panneau latéral qui
+ * s'ouvre et se ferme.
+ *
+ * Le partage n'est pas esthétique : une carte qu'on replie libère la scène sans perdre son
+ * état, là où un onglet forçait à en abandonner un pour en lire un autre.
  */
 
+import type { ReactNode } from 'react'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { Etoile } from '../data/catalog.ts'
 import { libelleZpSource } from '../data/equipment.ts'
-import { PanneauExplorer } from './PanneauExplorer.tsx'
-import { PanneauSeance } from './PanneauSeance.tsx'
+import { Carte } from './Carte.tsx'
+import { PanneauVue } from './PanneauVue.tsx'
+import { PanneauLateral } from './PanneauLateral.tsx'
 import { PanneauFile } from './PanneauFile.tsx'
 import { FicheCible } from './FicheCible.tsx'
 import { PlanSessionVue } from './PlanSession.tsx'
 import { RegionNuit } from './RegionNuit.tsx'
 import { modeObjectif } from './PanneauMateriel.tsx'
+import { useCoque } from './coque-etat.ts'
 import type { SaisieLieu, SaisieMateriel } from './app-saisie.ts'
 import type { ChaineCalcul } from './app-calcul.ts'
 
@@ -31,31 +40,62 @@ export interface RegionSeanceProps {
   readonly modeNuitActif: boolean
 }
 
-export function RegionSeance(props: RegionSeanceProps) {
-  const { chaine, lieu, materiel, catalogue } = props
+export interface CartesSeanceProps extends RegionSeanceProps {
+  /** Le panneau matériel, assemblé par l'application : la carte ne fait que l'encadrer. */
+  readonly materielRendu: ReactNode
+}
+
+/**
+ * Les trois cartes de la scène.
+ *
+ * Le corps d'une carte repliée n'est PAS monté : replier la carte Vue ne la cache pas, elle
+ * cesse d'exister — donc de s'abonner au magasin de scène et d'y recalculer une profondeur à
+ * chaque geste de visée. C'est ce qui rend le repli utile et pas seulement discret.
+ */
+export function CartesSeance(props: CartesSeanceProps) {
+  const { chaine, materiel } = props
   const { calcul } = chaine
   const sbCiel = calcul.ok ? calcul.ciel.sbCiel.value : null
 
-  const contenus = {
-    EXPLORER: (
-      <PanneauExplorer
-        modeObjectif={modeObjectif(materiel.typeObjectif)}
-        gaiaCharge={props.gaiaCharge}
-        profondeurMag={chaine.index.profondeurMag}
-        sbCiel={sbCiel}
-        epoqueAnnee={props.epoqueAnnee}
-        modeNuit={props.modeNuitActif}
-        masque={chaine.masque}
-      />
-    ),
-    CIBLE:
-      chaine.contexteFiche === null ? null : (
-        <FicheCible
-          {...chaine.contexteFiche}
-          objetSelectionne={props.cibleDuCiel}
-          site={chaine.site}
+  return (
+    <>
+      <Carte cle="MATERIEL" titre="Matériel">
+        {props.materielRendu}
+      </Carte>
+
+      <Carte cle="VUE" titre="Vue">
+        <PanneauVue
+          modeObjectif={modeObjectif(materiel.typeObjectif)}
+          gaiaCharge={props.gaiaCharge}
+          profondeurMag={chaine.index.profondeurMag}
+          sbCiel={sbCiel}
+          epoqueAnnee={props.epoqueAnnee}
+          masque={chaine.masque}
         />
-      ),
+      </Carte>
+
+      <Carte cle="CIBLE" titre="Cible" accent="cible">
+        {chaine.contexteFiche === null ? (
+          <p className="etat">Aucune cible : cliquez un objet sur la scène.</p>
+        ) : (
+          <FicheCible
+            {...chaine.contexteFiche}
+            objetSelectionne={props.cibleDuCiel}
+            site={chaine.site}
+          />
+        )}
+      </Carte>
+    </>
+  )
+}
+
+/** Le panneau latéral et son plan imprimable. */
+export function LateralSeance(props: RegionSeanceProps) {
+  const { chaine, lieu, materiel, catalogue } = props
+  const { calcul } = chaine
+  const { panneau } = useCoque()
+
+  const contenus = {
     NUIT: calcul.ok ? (
       <RegionNuit
         nuit={calcul.nuit}
@@ -88,13 +128,5 @@ export function RegionSeance(props: RegionSeanceProps) {
       />
     ) : null
 
-  return (
-    <PanneauSeance
-      {...lieu}
-      masque={chaine.masque}
-      {...(calcul.ok ? { seuils: calcul.seuils } : {})}
-      contenus={contenus}
-      plan={planImprimable}
-    />
-  )
+  return <PanneauLateral panneau={panneau} contenus={contenus} plan={planImprimable} />
 }

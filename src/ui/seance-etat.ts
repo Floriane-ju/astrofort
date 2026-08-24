@@ -1,10 +1,10 @@
 /**
  * §9 + §11.2 — l'intention de séance : ce qu'on veut faire, tenu une seule fois.
  *
- * Le panneau droit est à onglets, et trois choses doivent traverser l'écran de part en part :
+ * Trois choses doivent traverser l'écran de part en part :
  *
- *   1. un clic sur un objet DANS LA SCÈNE doit ouvrir l'onglet Cible, garni ;
- *   2. les réglages du filé se règlent à droite mais se dessinent au centre, dans le cadre ;
+ *   1. un clic sur un objet DANS LA SCÈNE doit ouvrir sa fiche, garnie ;
+ *   2. les réglages du filé se règlent au panneau mais se dessinent dans le cadre ;
  *   3. activer l'incrustation fige le temps de la scène — un filé est une composition fixe.
  *
  * Aucun de ces trois chemins ne remonte à un ancêtre commun autre que l'application. Comme
@@ -15,17 +15,8 @@
 import { useSyncExternalStore } from 'react'
 import { K } from '../registry/constants.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
+import { ouvreCarte } from './coque-etat.ts'
 import { majTemps } from './scene-etat.ts'
-
-/** Les quatre intentions du panneau droit. Le groupe « Séance » les surplombe toutes. */
-export type Onglet = 'EXPLORER' | 'CIBLE' | 'NUIT' | 'FILE'
-
-export const ONGLETS: readonly { readonly cle: Onglet; readonly libelle: string }[] = [
-  { cle: 'EXPLORER', libelle: 'Explorer' },
-  { cle: 'CIBLE', libelle: 'Cible' },
-  { cle: 'NUIT', libelle: 'Nuit' },
-  { cle: 'FILE', libelle: 'Filé' },
-]
 
 /** §9.2 aperçu d'une pose, §9.3 filé d'une durée accumulée : même moteur, durée différente. */
 export type ModeApercu = 'CHAMP' | 'FILE'
@@ -52,14 +43,12 @@ export interface RenduFile {
 }
 
 export interface EtatSeance {
-  readonly onglet: Onglet
   readonly cible: ObjetCielProfond | null
   readonly file: ReglagesFile
   readonly renduFile: RenduFile | null
 }
 
 const ETAT_INITIAL: EtatSeance = {
-  onglet: 'EXPLORER',
   cible: null,
   file: {
     apercu: 'CHAMP',
@@ -94,16 +83,17 @@ function pose(suivant: EtatSeance): void {
   for (const notifie of abonnes) notifie()
 }
 
-export function choisisOnglet(onglet: Onglet): void {
-  pose({ ...etat, onglet })
-}
-
 /**
  * §3.4 — un objet cliqué dans la scène ouvre sa fiche. Le geste ne se termine pas sur une
- * boîte de dialogue au milieu du ciel : il garnit le panneau droit et l'amène sous les yeux.
+ * boîte de dialogue au milieu du ciel : il garnit la carte Cible et la déplie sous les yeux.
+ *
+ * T-0113 — la fiche est passée d'un onglet du panneau droit à une carte posée sur la scène.
+ * Le contrat est le même et c'est lui qui compte : cliquer un objet DOIT le faire lire sans
+ * autre geste. Déplier plutôt que basculer un onglet ne change que le chemin.
  */
 export function ouvreCible(cible: ObjetCielProfond): void {
-  pose({ ...etat, cible, onglet: 'CIBLE' })
+  pose({ ...etat, cible })
+  ouvreCarte('CIBLE')
 }
 
 export function majFile(retouche: Partial<ReglagesFile>): void {

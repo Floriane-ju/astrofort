@@ -29,7 +29,7 @@ import type { ObjetCielProfond } from '../data/deepsky.ts'
 import { libelleObjet } from './libelles-objet.ts'
 import { ouvreCible } from './seance-etat.ts'
 import { CRITERES_SCORING, type CritereScoring, type SaisiePoids } from './app-saisie.ts'
-import { Etiquette } from './Terme.tsx'
+import { Etiquette, type NiveauUtilisateur } from './Terme.tsx'
 
 /**
  * Combien de résultats le `<datalist>` porte à la fois. Ce n'est pas une fenêtre sur le
@@ -147,6 +147,9 @@ function ReglagePoids(props: SaisiePoids) {
 export interface MenuReglagesProps {
   readonly catalogue: readonly ObjetCielProfond[]
   readonly poids: SaisiePoids
+  /** §10.1 — le niveau ne change QUE la densité d'explication, jamais un calcul. */
+  readonly niveau: NiveauUtilisateur
+  readonly surNiveau: (niveau: NiveauUtilisateur) => void
 }
 
 export function MenuReglages(props: MenuReglagesProps) {
@@ -175,6 +178,19 @@ export function MenuReglages(props: MenuReglagesProps) {
       <summary>⚙ Réglages</summary>
 
       <div className="tiroir-contenu">
+        {/* T-0113 — le niveau d'explication rejoint les réglages. Il était dans la barre
+            haute, où il occupait une ligne entière pour un choix qu'on fait une fois. */}
+        <p className="niveau">
+          Niveau d’explication :{' '}
+          <select
+            value={props.niveau}
+            onChange={(e) => props.surNiveau(e.target.value as NiveauUtilisateur)}
+          >
+            <option value="DEBUTANT">Débutant — gloses visibles</option>
+            <option value="CONFIRME">Confirmé — gloses au survol</option>
+          </select>
+        </p>
+
         {props.catalogue.length === 0 ? (
           <p className="etat">
             Les catalogues ne sont pas encore vérifiés : aucune entrée n’est proposée tant

@@ -2,8 +2,9 @@
  * L'application : un lieu, un matériel, une intention, et la scène au centre.
  *
  * Ce fichier ne dessine plus rien et ne calcule plus rien. Il tient les magasins partagés,
- * appelle la chaîne de calcul (`app-calcul.ts`) et distribue ses sorties aux quatre régions
- * de la coque : la barre haute, le matériel à gauche, la scène au centre, la séance à droite.
+ * appelle la chaîne de calcul (`app-calcul.ts`) et distribue ses sorties aux cinq régions de
+ * la coque : la barre haute, la scène, les cartes posées dessus, le panneau latéral et la
+ * barre basse.
  *
  * Chaque nombre affiché reste dépliable jusqu'à sa formule, et chaque terme technique porte
  * sa définition au contact (§1.5.2, §10.1) — c'est le contrat, pas la mise en page.
@@ -19,7 +20,8 @@ import { PanneauMateriel, modeObjectif } from './ui/PanneauMateriel.tsx'
 import { useTrancheScene, type EtatScene } from './ui/scene-etat.ts'
 import { ouvreCible, useSeance } from './ui/seance-etat.ts'
 import { BarreHaut } from './ui/BarreHaut.tsx'
-import { RegionSeance } from './ui/RegionSeance.tsx'
+import { BarreBas } from './ui/BarreBas.tsx'
+import { CartesSeance, LateralSeance } from './ui/RegionSeance.tsx'
 import { useSaisieLieu, useSaisieMateriel, useSaisiePoids } from './ui/app-saisie.ts'
 import {
   useCatalogues,
@@ -177,23 +179,49 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
     <p className="erreur">{calcul.erreur}</p>
   )
 
-  const seance = (
-    <RegionSeance
-      chaine={chaine}
-      lieu={lieu}
-      materiel={materiel}
-      catalogue={catalogues.objets}
-      etoiles={catalogues.etoiles}
-      cibleDuCiel={cibleDuCiel ?? null}
-      gaiaCharge={gaia}
-      epoqueAnnee={anneeEpoque}
-      modeNuitActif={modeNuit.actif}
+  const regions = {
+    chaine,
+    lieu,
+    materiel,
+    catalogue: catalogues.objets,
+    etoiles: catalogues.etoiles,
+    cibleDuCiel: cibleDuCiel ?? null,
+    gaiaCharge: gaia,
+    epoqueAnnee: anneeEpoque,
+    modeNuitActif: modeNuit.actif,
+  }
+
+  const barrebas = (
+    <BarreBas
+      latitude={lieu.latitude}
+      surLatitude={lieu.surLatitude}
+      longitude={lieu.longitude}
+      surLongitude={lieu.surLongitude}
+      altitude={lieu.altitude}
+      surAltitude={lieu.surAltitude}
+      bortle={lieu.bortle}
+      surBortle={lieu.surBortle}
+      sqm={lieu.sqm}
+      surSqm={lieu.surSqm}
+      dateIso={lieu.dateIso}
+      surDateIso={lieu.surDateIso}
+      masque={chaine.masque}
+      pointsMasque={lieu.pointsMasque}
+      surPointsMasque={lieu.surPointsMasque}
+      {...(calcul.ok ? { seuils: calcul.seuils } : {})}
+      modeNuit={modeNuit.actif}
     />
   )
 
   return (
     <NiveauContext value={niveau}>
-      <Coque topbar={topbar} materiel={panneauMateriel} scene={scene} seance={seance} />
+      <Coque
+        topbar={topbar}
+        scene={scene}
+        cartes={<CartesSeance {...regions} materielRendu={panneauMateriel} />}
+        lateral={<LateralSeance {...regions} />}
+        barrebas={barrebas}
+      />
     </NiveauContext>
   )
 }

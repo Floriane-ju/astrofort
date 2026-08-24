@@ -15,6 +15,7 @@ import { App } from '../src/App.tsx'
 import { K } from '../src/registry/constants.ts'
 import { etatScene, majVue, reinitialiseScene } from '../src/ui/scene-etat.ts'
 import { reinitialiseSeance } from '../src/ui/seance-etat.ts'
+import { ouvreCarte, reinitialiseCoque } from '../src/ui/coque-etat.ts'
 
 const DOSSIER_UI = join(import.meta.dirname, '..', 'src', 'ui')
 
@@ -32,6 +33,7 @@ function baliseCanevas(html: string): string {
 afterEach(() => {
   reinitialiseSeance()
   reinitialiseScene()
+  reinitialiseCoque()
 })
 
 describe('T-0068 — le canevas porte un rôle et un nom', () => {
@@ -76,10 +78,13 @@ describe('T-0068 — la description dit ce que la vue montre en ce moment', () =
   })
 
   it('énonce les raccourcis du clavier, que le code seul ne dirait à personne (T-0069)', () => {
+    // T-0113 — la carte Vue démarre repliée, et son corps n'est alors pas monté : les
+    // raccourcis s'y lisent une fois dépliée, comme le reste des réglages de scène.
+    ouvreCarte('VUE')
     const html = ecran()
     expect(description(html)).toMatch(/← ↑ ↓ →/)
-    // Et pas seulement pour les lecteurs d'écran : le panneau Explorer les affiche aussi.
-    expect(html.slice(html.indexOf('coque-seance'))).toMatch(/← ↑ ↓ →/)
+    // Et pas seulement pour les lecteurs d'écran : la carte Vue les affiche aussi.
+    expect(html.slice(html.indexOf('carte-vue'))).toMatch(/← ↑ ↓ →/)
   })
 
   it('emprunte les mots de la lecture affichée : une seule phrase, deux endroits', () => {
@@ -90,7 +95,7 @@ describe('T-0068 — la description dit ce que la vue montre en ce moment', () =
     )
     expect(commune).not.toBeNull()
     // Le menu d'information de la barre haute porte la même phrase, au caractère près.
-    const barre = html.slice(0, html.indexOf('coque-materiel'))
+    const barre = html.slice(0, html.indexOf('coque-scene'))
     expect(barre.replaceAll('<!-- -->', '')).toContain(commune![1]!.trim())
   })
 })

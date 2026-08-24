@@ -14,7 +14,7 @@ import type { Site } from '../src/core/ephem.ts'
 import { masquePlat } from '../src/core/site.ts'
 import { pointZeroSysteme } from '../src/data/equipment.ts'
 import { PanneauFile } from '../src/ui/PanneauFile.tsx'
-import { PanneauExplorer } from '../src/ui/PanneauExplorer.tsx'
+import { PanneauVue } from '../src/ui/PanneauVue.tsx'
 import { modeObjectif } from '../src/ui/PanneauMateriel.tsx'
 import {
   afficheInstant,
@@ -125,17 +125,16 @@ describe('§5.1 — le type d’objectif pilote la projection de la scène', () 
   })
 
   it('n’offre à la scène que la projection de l’objectif déclaré', () => {
-    // Le choix de projection est passé au panneau Explorer avec le reste des réglages de
+    // Le choix de projection est porté par la carte Vue avec le reste des réglages de
     // scène ; ce qu'il propose reste dicté par l'objectif déclaré au panneau matériel.
     const html = renderToStaticMarkup(
-      createElement(PanneauExplorer, {
+      createElement(PanneauVue, {
         modeObjectif: modeObjectif('FISHEYE'),
         gaiaCharge: false,
         profondeurMag: 6.5,
         sbCiel: 20.6,
         epoqueAnnee: 2026.6,
         masque: masquePlat(),
-        modeNuit: false,
       }),
     )
     expect(html).toContain('MODE_FISHEYE')

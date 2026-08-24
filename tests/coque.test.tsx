@@ -1,14 +1,14 @@
 /**
- * Lot 6 — la coque planétarium : la scène au centre, les réglages sur les côtés.
+ * T-0113 — la coque planétarium : la scène occupe tout, le reste se pose dessus.
  *
- * Ce qui est vérifié ici n'est pas une apparence, c'est la structure : trois régions
- * existent, un seul jeu de réglages est monté à la fois, un objet cliqué dans la scène ouvre
- * l'onglet Cible garni, l'incrustation du filé fige le temps, et le plan de session reste
- * imprimable depuis n'importe quel onglet.
+ * Ce qui est vérifié ici n'est pas une apparence, c'est la structure : les cinq régions
+ * existent, un seul contenu de panneau est monté à la fois, une carte repliée ne monte pas
+ * son corps, un objet cliqué dans la scène déplie sa fiche, l'incrustation du filé fige le
+ * temps, et le plan de session reste imprimable panneau fermé.
  *
  * Le rendu statique suffit : chaque bascule d'écran passe par un magasin de module, appelable
- * sans DOM. C'est précisément pourquoi l'onglet actif et la cible y vivent plutôt que dans
- * l'état local d'un composant.
+ * sans DOM. C'est précisément pourquoi l'état de la coque et la cible y vivent plutôt que
+ * dans l'état local d'un composant.
  */
 
 import { readFileSync } from 'node:fs'
@@ -37,13 +37,21 @@ import { versSpherique } from '../src/core/mat3.ts'
 import type { ProfilCadre } from '../src/core/cadre.ts'
 import {
   activeIncrustation,
-  choisisOnglet,
   etatSeance,
   ouvreCible,
   publicateurRenduFile,
   reinitialiseSeance,
   type RenduFile,
 } from '../src/ui/seance-etat.ts'
+import {
+  basculeCarte,
+  basculePanneau,
+  borne,
+  bornesDeplacement,
+  etatCoque,
+  ouvreCarte,
+  reinitialiseCoque,
+} from '../src/ui/coque-etat.ts'
 
 const M31: ObjetCielProfond = {
   designation: 'M31',
@@ -63,9 +71,12 @@ function ecran(): string {
   return renderToStaticMarkup(<App />)
 }
 
+const CSS_COQUE = readFileSync(join(import.meta.dirname, '..', 'src', 'ui', 'styles.css'), 'utf8')
+
 afterEach(() => {
   reinitialiseSeance()
   reinitialiseScene()
+  reinitialiseCoque()
 })
 
 /** Les réglages de poids n'ont pas d'état dans un rendu statique : commandes inertes. */
@@ -75,68 +86,189 @@ const POIDS_INERTES = {
   surDefaut: () => undefined,
 }
 
-describe('§11.2 — les trois régions', () => {
-  it('place le matériel à gauche, la scène au centre, la séance à droite', () => {
+/** Le tiroir des réglages porte aussi le niveau d'explication depuis T-0113. */
+const REGLAGES_INERTES = {
+  poids: POIDS_INERTES,
+  niveau: 'DEBUTANT',
+  surNiveau: () => undefined,
+} as const
+
+/** La barre haute : tout ce qui précède la scène dans le document. */
+function barreHaute(html: string): string {
+  return html.slice(0, html.indexOf('coque-scene'))
+}
+
+describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
+  it('monte les cinq régions : deux barres, la scène, les cartes, le panneau', () => {
     const html = ecran()
-    expect(html).toContain('coque-materiel')
+    expect(html).toContain('coque-topbar')
     expect(html).toContain('coque-scene')
-    expect(html).toContain('coque-seance')
+    expect(html).toContain('coque-cartes')
+    expect(html).toContain('coque-lateral')
+    expect(html).toContain('coque-barrebas')
     // La scène est bien le canevas du planétarium, pas une pile de sections.
     expect(html).toContain('class="planetarium"')
   })
 
-  it('garde le groupe Séance visible quel que soit l’onglet actif', () => {
-    for (const onglet of ['EXPLORER', 'CIBLE', 'NUIT', 'FILE'] as const) {
-      choisisOnglet(onglet)
+  it('pose les trois cartes sur la scène, matériel compris', () => {
+    const html = ecran()
+    for (const carte of ['carte-materiel', 'carte-vue', 'carte-cible']) {
+      expect(html, carte).toContain(carte)
+    }
+    // Le matériel n'est plus une colonne : c'est une carte, avec les deux autres.
+    expect(html).not.toContain('coque-materiel')
+    expect(html).not.toContain('coque-seance')
+  })
+
+  it('garde le lieu lisible et réglable quel que soit le panneau ouvert', () => {
+    // Les six champs du site sont descendus dans la barre basse : ce qui devait survivre au
+    // déménagement n'est pas leur dépliement permanent, c'est leur accessibilité constante.
+    for (const panneau of [null, 'NUIT', 'FILE'] as const) {
+      if (panneau !== null) basculePanneau(panneau)
       const html = ecran()
-      expect(html, onglet).toContain('Bortle')
-      expect(html, onglet).toContain('horizon plat')
+      const barre = html.slice(html.indexOf('coque-barrebas'))
+      expect(barre, `${panneau}`).toContain('Bortle')
+      expect(barre, `${panneau}`).toContain('horizon plat')
+      if (panneau !== null) basculePanneau(panneau)
     }
   })
 
-  it('porte le mode nuit et la vérification du socle dans la barre du haut', () => {
+  it('affiche les valeurs du site sans ouvrir le tiroir', () => {
+    // Une pastille qui n'afficherait rien rendrait le déménagement coûteux : il faudrait
+    // ouvrir un tiroir pour savoir sous quel ciel on calcule.
     const html = ecran()
-    const topbar = html.slice(0, html.indexOf('coque-materiel'))
+    const resume = html.slice(html.indexOf('barrebas-lieu'))
+    expect(resume.slice(0, resume.indexOf('</summary>'))).toMatch(/Bortle/)
+  })
+
+  it('porte le mode nuit et la vérification du socle dans la barre du haut', () => {
+    const topbar = barreHaute(ecran())
     expect(topbar).toContain('Activer le mode nuit')
     expect(topbar).toContain('Vérification')
     expect(topbar).toContain('Registre de constantes')
     // Fermé par défaut : le tiroir n'est pas déplié à l'ouverture de l'application.
     expect(topbar).not.toMatch(/<details class="tiroir tiroir-verification" open/)
   })
+
+  it('dit où pointe la vue, que plus aucun bandeau ne porte sous le canevas', () => {
+    expect(barreHaute(ecran()).replaceAll('<!-- -->', '')).toMatch(/az \d+° · h \d+°/)
+  })
 })
 
 describe('§11.2 — un seul jeu de réglages à la fois', () => {
-  it('ne monte que le contenu de l’onglet actif', () => {
-    choisisOnglet('EXPLORER')
-    const explorer = ecran()
-    expect(explorer).toContain('Mode de temps')
-    expect(explorer).not.toContain('Séquence de filé')
+  it('ne monte aucun contenu de panneau tant qu’aucun n’est ouvert', () => {
+    const ferme = ecran()
+    expect(ferme).not.toContain('Séquence de filé')
+    // Le titre, pas le mot : « Fenêtre nocturne » est aussi une ligne de la matrice de
+    // dégradation, qui vit dans le tiroir de vérification et ne bouge pas d'ici.
+    expect(ferme).not.toContain('<h2>Fenêtre nocturne</h2>')
+    // La coquille reste dans le document : c'est elle qui porte le plan imprimable.
+    expect(ferme).toMatch(/<aside class="coque-lateral" id="panneau-lateral" hidden/)
+  })
 
-    choisisOnglet('FILE')
+  it('ne monte que le contenu du panneau ouvert', () => {
+    basculePanneau('NUIT')
+    const nuit = ecran()
+    expect(nuit).toContain('<h2>Fenêtre nocturne</h2>')
+    expect(nuit).not.toContain('Séquence de filé')
+
+    basculePanneau('FILE')
     const file = ecran()
     expect(file).toContain('Séquence de filé')
-    expect(file).not.toContain('Mode de temps')
+    expect(file).not.toContain('<h2>Fenêtre nocturne</h2>')
   })
 
-  it('marque l’onglet actif autrement que par la seule couleur', () => {
-    choisisOnglet('NUIT')
-    const html = ecran()
-    expect(html).toMatch(/aria-selected="true"[^>]*class="onglet actif"/)
-    expect(html).toContain('Fenêtre nocturne')
+  it('ne monte pas le corps d’une carte repliée', () => {
+    // La carte Vue démarre repliée : ses réglages ne s'abonnent pas au magasin de scène, et
+    // n'y recalculent donc aucune profondeur à chaque geste de visée.
+    expect(ecran()).not.toContain('Vue réaliste')
+    ouvreCarte('VUE')
+    expect(ecran()).toContain('Vue réaliste')
   })
 
-  it('survit à un changement de matériel : l’onglet reste celui qu’on avait ouvert', () => {
-    choisisOnglet('FILE')
+  it('marque le bouton du panneau ouvert autrement que par la seule couleur', () => {
+    basculePanneau('NUIT')
+    expect(ecran()).toMatch(/class="onglet actif"[^>]*aria-expanded="true"/)
+  })
+
+  it('referme le panneau quand on represse son bouton', () => {
+    basculePanneau('NUIT')
+    expect(etatCoque().panneau).toBe('NUIT')
+    basculePanneau('NUIT')
+    expect(etatCoque().panneau).toBeNull()
+  })
+
+  it('survit à un changement de matériel : le panneau reste celui qu’on avait ouvert', () => {
+    basculePanneau('FILE')
     ecran()
-    expect(etatSeance().onglet).toBe('FILE')
+    expect(etatCoque().panneau).toBe('FILE')
+  })
+})
+
+/**
+ * T-0113 — une carte se replie et se déplace.
+ *
+ * Le bornage est une fonction pure : il se vérifie sans pointeur ni DOM, sur des rectangles
+ * mesurés. C'est tout ce qui doit l'être — le reste est le comportement natif du navigateur.
+ */
+describe('T-0113 — les cartes posées sur la scène', () => {
+  const HOTE = { left: 0, top: 0, width: 1400, height: 800 }
+  const MARGES = { haut: 44, bas: 48, droite: 0 }
+
+  it('replie et déplie une carte sans toucher aux autres', () => {
+    expect(etatCoque().cartes.MATERIEL.ouverte).toBe(true)
+    basculeCarte('MATERIEL')
+    expect(etatCoque().cartes.MATERIEL.ouverte).toBe(false)
+    expect(etatCoque().cartes.VUE.ouverte).toBe(false)
+    basculeCarte('VUE')
+    expect(etatCoque().cartes.VUE.ouverte).toBe(true)
+    expect(etatCoque().cartes.MATERIEL.ouverte).toBe(false)
+  })
+
+  /** Un geste plus ample que la coque : c'est le bornage qui doit l'arrêter, pas sa taille. */
+  const LOIN = 1e6
+
+  it('garde une carte entièrement dans la coque, barres déduites', () => {
+    const carte = { left: 12, top: 56, width: 300, height: 400 }
+    const bornes = bornesDeplacement(carte, HOTE, MARGES, 10)
+    // Vers la gauche : la carte s'arrête à la marge, elle ne sort pas.
+    expect(carte.left + borne(-LOIN, bornes.x)).toBe(10)
+    // Vers la droite : son bord droit s'arrête à la marge opposée.
+    expect(carte.left + carte.width + borne(LOIN, bornes.x)).toBe(HOTE.width - 10)
+    // Vers le haut : elle ne passe pas sous la barre haute.
+    expect(carte.top + borne(-LOIN, bornes.y)).toBe(MARGES.haut + 10)
+    // Vers le bas : ni sous la barre basse.
+    expect(carte.top + carte.height + borne(LOIN, bornes.y)).toBe(HOTE.height - MARGES.bas - 10)
+  })
+
+  it('déduit la largeur du panneau ouvert : une carte ne se cache pas dessous', () => {
+    const carte = { left: 12, top: 56, width: 300, height: 400 }
+    const avec = bornesDeplacement(carte, HOTE, { ...MARGES, droite: 350 }, 10)
+    expect(carte.left + carte.width + borne(LOIN, avec.x)).toBe(HOTE.width - 350 - 10)
+  })
+
+  it('laisse glisser une carte plus haute que la place, sans la projeter', () => {
+    // Bornes inversées : la carte déborde forcément d'une barre ou de l'autre. Elle doit
+    // pouvoir choisir laquelle — sans le garde de `borne`, tout mouvement la renverrait au
+    // même bord et elle deviendrait immobile.
+    const geante = { left: 12, top: 56, width: 300, height: 900 }
+    const bornes = bornesDeplacement(geante, HOTE, MARGES, 10)
+    expect(bornes.y.max).toBeLessThan(bornes.y.min)
+    // Vers le bas : elle s'aligne sous la barre haute. Vers le haut : au-dessus de la basse.
+    expect(geante.top + borne(LOIN, bornes.y)).toBe(MARGES.haut + 10)
+    expect(geante.top + geante.height + borne(-LOIN, bornes.y)).toBe(
+      HOTE.height - MARGES.bas - 10,
+    )
   })
 })
 
 describe('§3.4 — un objet cliqué ouvre sa fiche', () => {
-  it('bascule sur l’onglet Cible et le garnit', () => {
-    expect(etatSeance().onglet).toBe('EXPLORER')
+  it('déplie la carte Cible et la garnit', () => {
+    // Repliée tant qu'aucun objet n'a été désigné : le clic sur la scène doit la déplier,
+    // sinon le geste se termine sans que rien ne se voie.
+    expect(etatCoque().cartes.CIBLE.ouverte).toBe(false)
     ouvreCible(M31)
-    expect(etatSeance().onglet).toBe('CIBLE')
+    expect(etatCoque().cartes.CIBLE.ouverte).toBe(true)
     expect(etatSeance().cible?.designation).toBe('M31')
     // C'est bien la fiche §6.2 / §6.3 / §7 qui s'ouvre, pas un simple nom affiché.
     // (Le garnissage des champs par l'objet est posé par un effet de montage : il ne joue
@@ -211,11 +343,15 @@ describe('§5.1 — la scène déclare l’écart de projection avec l’objecti
 })
 
 describe('§11.2 — le plan reste imprimable', () => {
-  it('rend le plan de session hors de l’onglet Nuit, masqué à l’écran seulement', () => {
-    choisisOnglet('EXPLORER')
+  it('rend le plan de session panneau fermé, masqué à l’écran seulement', () => {
     expect(ecran()).toContain('plan-session hors-onglet')
-    choisisOnglet('NUIT')
+    basculePanneau('NUIT')
     expect(ecran()).toMatch(/class="plan-session"/)
+  })
+
+  it('rouvre le panneau à l’impression, sans quoi le plan sortirait blanc', () => {
+    const impression = CSS_COQUE.slice(CSS_COQUE.indexOf('@media print'))
+    expect(impression).toMatch(/\.coque-lateral\[hidden\]/)
   })
 })
 
@@ -227,7 +363,7 @@ describe('§11.2 — le plan reste imprimable', () => {
  */
 describe('T-0039 — le menu d’information porte les lectures', () => {
   function barre(html: string): string {
-    return html.slice(0, html.indexOf('coque-materiel'))
+    return barreHaute(html)
   }
 
   it('pose un tiroir fermé en fin de barre haute, pas une bande sous le canevas', () => {
@@ -421,7 +557,6 @@ describe('T-0041 — le bouton du menu dit qu’il a quelque chose à lire', () 
 
 describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', () => {
   it('monte un tiroir de réglages dans la barre haute', () => {
-    choisisOnglet('CIBLE')
     const ecran = renderToStaticMarkup(<App />)
     expect(ecran).toContain('tiroir tiroir-reglages')
     expect(ecran).toContain('⚙ Réglages')
@@ -432,12 +567,20 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
     expect(ecran.indexOf('tiroir-reglages')).toBeLessThan(ecran.indexOf('tiroir-infos'))
   })
 
-  it('porte l’accès au catalogue, que l’onglet Cible n’a plus', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} poids={POIDS_INERTES} />)
+  it('porte l’accès au catalogue, que la carte Cible n’a pas', () => {
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} {...REGLAGES_INERTES} />)
     expect(rendu).toContain('Chercher dans le catalogue')
+    ouvreCarte('CIBLE')
+    const ecranComplet = renderToStaticMarkup(<App />)
+    expect(ecranComplet.slice(ecranComplet.indexOf('carte-cible'))).not.toContain(
+      'Chercher dans le catalogue',
+    )
+  })
 
-    choisisOnglet('CIBLE')
-    expect(renderToStaticMarkup(<App />)).not.toContain('Chercher dans le catalogue')
+  it('T-0113 — porte aussi le niveau d’explication, qui a quitté la barre haute', () => {
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} {...REGLAGES_INERTES} />)
+    expect(rendu).toContain('Niveau d’explication')
+    expect(rendu).toContain('Débutant — gloses visibles')
   })
 
   it('lit une entrée du catalogue comme la liste des visibles la lit', () => {
@@ -446,7 +589,7 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
   })
 
   it('T-0087 — porte les cinq poids C-15 et le retour aux valeurs du registre', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} poids={POIDS_INERTES} />)
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} {...REGLAGES_INERTES} />)
     expect(rendu.match(/type="range"/g)).toHaveLength(5)
     expect(rendu).toContain('Revenir aux poids C-15')
     // Le poids effectif s'affiche : c'est lui que le plan utilise, pas la position brute.
@@ -454,13 +597,13 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
   })
 
   it('T-0087 — dit que le score arbitre les conflits, sans ordonner la nuit', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} poids={POIDS_INERTES} />)
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} {...REGLAGES_INERTES} />)
     expect(rendu).toMatch(/chronologie suit les culminations/)
     expect(rendu).toMatch(/Rien n’est appris/)
   })
 
   it('garde la cible de clic de §11.2 : le tiroir est un `.tiroir` comme les autres', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[]} poids={POIDS_INERTES} />)
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[]} {...REGLAGES_INERTES} />)
     expect(rendu).toMatch(/class="tiroir tiroir-reglages"/)
     const styles = readFileSync(
       join(import.meta.dirname, '..', 'src', 'ui', 'styles.css'),
@@ -496,10 +639,13 @@ describe('T-0053 — le tiroir cherche le catalogue au lieu de le dérouler', ()
   }
 
   it('porte un champ de saisie relié à un `datalist`, plus un `select` déroulant', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31, M45]} poids={POIDS_INERTES} />)
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31, M45]} {...REGLAGES_INERTES} />)
     expect(rendu).toContain('<datalist')
     expect(rendu).toMatch(/<input[^>]+list="/)
-    expect(rendu).not.toContain('<select')
+    // T-0113 — le seul `select` du tiroir est le niveau d'explication, arrivé de la barre
+    // haute. Le catalogue, lui, se cherche : le dérouler reste hors de question (T-0053).
+    expect(rendu.match(/<select/g)).toHaveLength(1)
+    expect(rendu).toContain('Débutant — gloses visibles')
   })
 
   it('ne rend aucune option avant la première frappe : le catalogue n’est pas une liste', () => {
@@ -537,7 +683,7 @@ describe('T-0053 — le tiroir cherche le catalogue au lieu de le dérouler', ()
   })
 
   it('garde le message d’attente d’intégrité quand le catalogue n’est pas vérifié', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[]} poids={POIDS_INERTES} />)
+    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[]} {...REGLAGES_INERTES} />)
     expect(rendu).toContain('contrôle d’intégrité')
     // Le champ de recherche disparaît ; les poids de scoring restent, ils ne dépendent
     // d'aucun paquet (T-0087).

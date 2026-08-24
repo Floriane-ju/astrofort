@@ -144,6 +144,15 @@ body {
   --suivi-titre: 0.24em;
   --suivi-marque: 0.4em;
   --trait: 1px;
+  /* T-0113 — les gabarits de la coque. Les deux barres et le panneau sont posés en absolu
+     sur la scène : leur encombrement doit être connu d'ailleurs — le panneau part sous la
+     barre haute, les cartes s'ancrent entre les deux. Un seul endroit le déclare, et le
+     bornage du déplacement (`Carte.tsx`) le MESURE plutôt que de le recopier. */
+  --barre-haut: 2.75rem;
+  --barre-bas: 3rem;
+  --lateral: 22rem;
+  --carte-large: 19rem;
+  --jour-carte: 0.75rem;
 }
 
 ::selection {
@@ -184,62 +193,158 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* §11.2 — la coque. Trois colonnes sur la hauteur du viewport : le matériel, la scène,
-   la séance. Les deux panneaux défilent chacun de leur côté ; la page, jamais.
+/* §11.2 — la coque : la scène occupe tout, le reste se pose dessus.
 
-   `minmax(0, 1fr)` sur la rangée basse et `min-height: 0` sur les colonnes ne sont pas des
-   précautions décoratives : sans eux, une piste de grille prend la hauteur intrinsèque de son
-   contenu — le canevas pousse la grille au-delà du viewport et le défilement de page revient. */
+   T-0113 — les trois colonnes du lot 6 tenaient la promesse « la scène au centre » mais lui
+   laissaient la moitié de l'écran. Ici la scène est le fond, et chaque région se pose en
+   absolu par-dessus : deux barres sur toute la largeur, des cartes déplaçables, un panneau
+   qui s'ouvre à droite.
+
+   `overflow: hidden` sur la coque : une carte traînée jusqu'au bord ne doit pas faire
+   apparaître d'ascenseur de page — le bornage du déplacement l'en empêche déjà, ce filet ne
+   couvre que le premier rendu, avant que quoi que ce soit ait été mesuré. */
 .coque {
-  display: grid;
-  grid-template-columns: 20rem minmax(0, 1fr) 24rem;
-  grid-template-rows: auto minmax(0, 1fr);
-  grid-template-areas:
-    'topbar topbar topbar'
-    'materiel scene seance';
+  position: relative;
   height: 100dvh;
+  overflow: hidden;
   background: var(--fond);
 }
 
 /* T-0113 — la barre est une réglette, pas un bandeau : un seul trait la sépare de la scène
    et son fond descend en dégradé, pour que le regard passe de l'interface au ciel sans
    buter sur une arête franche. */
-.coque-topbar {
-  grid-area: topbar;
+/* L'empilement, du fond vers la surface : la scène, les cartes, le panneau, les barres. Les
+   barres sont au-dessus de tout parce qu'elles portent les tiroirs — une fenêtre de tiroir
+   qui passerait sous le panneau latéral serait ouverte et invisible. */
+.coque-topbar,
+.coque-barrebas {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 5;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.4rem 0.9rem;
+  gap: 0.6rem;
+  padding: 0 0.75rem;
+  overflow: visible;
+}
+
+.coque-topbar {
+  top: 0;
+  height: var(--barre-haut);
   border-bottom: var(--trait) solid var(--bordure);
   background: linear-gradient(var(--surface-haute), var(--surface));
 }
 
-.coque-panneau {
-  min-height: 0;
-  overflow-y: auto;
-  padding: 0.5rem 0.9rem 3rem;
-  background: var(--surface);
+.coque-barrebas {
+  bottom: 0;
+  height: var(--barre-bas);
+  border-top: var(--trait) solid var(--bordure);
+  background: linear-gradient(var(--surface), var(--surface-haute));
 }
 
-.coque-materiel {
-  grid-area: materiel;
-  border-right: var(--trait) solid var(--bordure);
+/* La visée pousse tout ce qui suit vers la droite : la marque reste collée au bord gauche,
+   les bascules au bord droit, quelle que soit la longueur des lectures entre les deux. */
+.barrehaut-visee {
+  margin-right: auto;
 }
 
-.coque-seance {
-  grid-area: seance;
-  border-left: var(--trait) solid var(--bordure);
+/* Une lecture se rogne, une commande jamais. Sur une fenêtre étroite, c'est la phrase qui
+   perd sa fin — pas la bascule du mode nuit qui sort de l'écran. */
+.coque-topbar > .etat {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-/* Au-dessus du repli, les panneaux sont dépliés en permanence : l'accordéon n'a de sens que
-   quand la largeur manque. */
-.coque-panneau > summary {
-  display: none;
+.coque-topbar > h1,
+.coque-topbar > .tiroir,
+.barrehaut-panneaux {
+  flex: none;
+}
+
+.barrehaut-panneaux {
+  display: flex;
+  gap: 0.25rem;
+  flex: none;
+}
+
+/* Dans la barre, un onglet n'a pas de rangée sous laquelle se poser : son trait fait le
+   tour. La hauteur d'usage ganté reste celle de §11.2. */
+.coque-topbar .onglet {
+  flex: none;
+  border: var(--trait) solid var(--bordure);
+  border-bottom-width: var(--trait);
+}
+
+.coque-topbar .onglet.actif {
+  border-color: var(--accent);
+}
+
+.barrebas-horloge {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex: none;
+}
+
+.barrebas-heure {
+  font-size: 1rem;
+  color: var(--texte);
+  font-variant-numeric: tabular-nums;
+}
+
+.barrebas-mode,
+.barrebas-lieu {
+  font-size: 0.7rem;
+  letter-spacing: var(--suivi-micro);
+  text-transform: uppercase;
+  color: var(--attenue);
+}
+
+/* La date est un champ, pas une pastille : elle reste dans le flux de la barre, en ligne. */
+.barrebas-date {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+}
+
+.barrebas-date input {
+  min-height: 1.9rem;
+  padding: 0.15rem 0.4rem;
+}
+
+/* Le tiroir du lieu ouvre vers le HAUT : ancré à la barre basse, il descendrait hors écran. */
+.coque-barrebas .tiroir {
+  margin-left: 0;
+  flex: none;
+}
+
+.coque-barrebas .tiroir[open] > .tiroir-contenu {
+  top: auto;
+  bottom: calc(100% + 0.25rem);
+  left: 0;
+  right: auto;
+  width: min(32rem, 92vw);
+}
+
+/* Le tiroir du temps ferme la barre : il se pousse à droite et y reste. */
+.tiroir.tiroir-temps {
+  margin-left: auto;
+}
+
+.tiroir.tiroir-temps[open] > .tiroir-contenu {
+  left: auto;
+  right: 0;
 }
 
 .coque-scene {
-  grid-area: scene;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   min-height: 0;
   overflow: hidden;
   padding: 0;
@@ -248,11 +353,10 @@ body {
 /* T-0040 — la scène n'a plus qu'un enfant : le canevas. Les lectures qui la datent sont
    passées dans le menu d'information de la barre haute (T-0039), donc la rangée basse à
    hauteur réservée de T-0037 n'a plus lieu d'être — la taille du canevas ne dépend plus de
-   ce qui s'écrit, elle ne dépend plus que de la place entre les deux panneaux.
+   ce qui s'écrit, elle ne dépend plus que de la place disponible.
 
-   Ni remplissage ni marge : le canevas touche les bordures des panneaux et le bas du
-   viewport. `min-height: 0` reste indispensable — sans lui la piste de grille reprend la
-   hauteur intrinsèque du canevas et le défilement de page revient. */
+   Ni remplissage ni marge : le canevas remplit la coque entière, barres comprises. Les
+   barres sont translucides sur leurs bords : c'est le ciel qui passe dessous, pas du vide. */
 .coque-scene > .scene {
   height: 100%;
   min-height: 0;
@@ -261,9 +365,8 @@ body {
 }
 
 /* T-0068 — la description du canevas : ce que la vue montre en ce moment, et les raccourcis
-   qui la pilotent. Elle est retirée du flux visuel — la colonne centrale ne réserve plus
-   aucune hauteur sous le canevas (T-0040) — mais reste dans l'arbre d'accessibilité, où
-   `display: none` l'aurait supprimée. */
+   qui la pilotent. Elle est retirée du flux visuel mais reste dans l'arbre d'accessibilité,
+   où `display: none` l'aurait supprimée. */
 .scene-description {
   position: absolute;
   width: 1px;
@@ -281,10 +384,7 @@ body {
    n'était pas en 16/9 — c'est-à-dire presque toujours.
 
    `display: block` : un canevas est en ligne par défaut, et l'interligne réservé sous sa
-   ligne de base suffit à faire défiler la page de quelques pixels.
-
-   T-0113 — pas de bordure ici : la scène touche déjà les traits des deux panneaux, un
-   troisième doublerait le filet. */
+   ligne de base suffit à faire défiler la page de quelques pixels. */
 .coque-scene .planetarium {
   display: block;
   width: 100%;
@@ -294,42 +394,233 @@ body {
   border: 0;
 }
 
-/* Repli sous 1100 px : une seule colonne, les panneaux redeviennent des accordéons sous la
-   scène. Les cibles de clic gardent leur hauteur d'usage ganté (§11.2). */
+/* T-0113 — les cartes posées sur la scène.
+
+   `display: contents` : le conteneur n'existe que pour l'ordre du DOM. Chaque carte se
+   positionne par rapport à la COQUE, pas à lui — sinon son propre rectangle deviendrait la
+   boîte de bornage et les cartes ne pourraient plus traverser l'écran. */
+.coque-cartes {
+  display: contents;
+}
+
+.carte {
+  position: absolute;
+  z-index: 2;
+  width: var(--carte-large);
+  max-width: calc(100% - 2 * var(--jour-carte));
+  border: var(--trait) solid var(--bordure);
+  background: var(--surface);
+}
+
+/* Repliée, la carte n'est plus qu'un titre : elle ne réserve pas la largeur d'un panneau. */
+.carte[data-ouverte='false'] {
+  width: max-content;
+}
+
+.carte[data-accent='cible'] {
+  border-color: var(--alerte);
+}
+
+.carte-materiel {
+  left: var(--jour-carte);
+  top: calc(var(--barre-haut) + var(--jour-carte));
+}
+
+.carte-vue {
+  left: var(--jour-carte);
+  bottom: calc(var(--barre-bas) + var(--jour-carte));
+}
+
+.carte-cible {
+  right: var(--jour-carte);
+  top: calc(var(--barre-haut) + var(--jour-carte));
+}
+
+/* Panneau ouvert, la carte Cible se range devant lui plutôt que dessous : elle décrit
+   justement l'objet dont le plan de nuit parle, la cacher au moment où on l'ouvre serait
+   exactement le mauvais moment. Le déplacement l'apprend aussi — `bornesDeplacement` déduit
+   la largeur du panneau des bornes. */
+.coque:has(.coque-lateral:not([hidden])) .carte-cible {
+  right: calc(var(--lateral) + var(--jour-carte));
+}
+
+/* L'en-tête est à la fois la poignée et l'interrupteur : `grab` annonce la première,
+   `aria-expanded` annonce le second. */
+.carte-entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  min-height: var(--cible-clic);
+  padding: 0.35rem 0.6rem;
+  border: 0;
+  border-bottom: var(--trait) solid var(--bordure);
+  background: var(--fond-accent);
+  cursor: grab;
+  touch-action: none;
+}
+
+.carte-entete:active {
+  cursor: grabbing;
+}
+
+.carte-titre {
+  font-family: var(--police-titre);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: var(--suivi-titre);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.carte[data-accent='cible'] .carte-entete {
+  background: var(--fond-alerte);
+  border-bottom-color: var(--alerte);
+}
+
+.carte[data-accent='cible'] .carte-titre {
+  color: var(--alerte);
+}
+
+.carte-marque {
+  color: var(--attenue);
+}
+
+/* Une carte ne pousse jamais la coque : son corps défile chez lui. La borne est la place
+   laissée par les deux barres — une carte seule sur son flanc peut la prendre entière. */
+.carte-corps {
+  max-height: calc(100dvh - var(--barre-haut) - var(--barre-bas) - 4 * var(--jour-carte));
+  overflow-y: auto;
+  padding: 0.25rem 0.6rem 0.75rem;
+}
+
+/* Le flanc gauche en porte DEUX — Matériel ancrée en haut, Vue ancrée en bas. Chacune ne
+   peut donc prendre que la moitié de la hauteur, en-têtes et jours déduits, sinon déplier
+   l'une recouvre l'autre. La borne est calculée, pas choisie : elle tient à toute hauteur de
+   fenêtre, y compris celles où deux valeurs fixes se chevaucheraient. */
+.carte-materiel .carte-corps,
+.carte-vue .carte-corps {
+  max-height: min(
+    20rem,
+    calc((100dvh - var(--barre-haut) - var(--barre-bas)) / 2 - 4rem)
+  );
+}
+
+/* Le premier titre d'une carte suit son en-tête : il n'a pas à s'en détacher d'une marge
+   de section. */
+.carte-corps > *:first-child h2:first-child,
+.carte-corps > h2:first-child {
+  margin-top: 0.5rem;
+}
+
+/* T-0113 — le panneau latéral : ce qui se lit en longueur, à côté de la scène.
+
+   Il reste dans le document même fermé — le plan de session est la seule région imprimable,
+   et un plan démonté sortirait une page blanche depuis un panneau fermé. */
+.coque-lateral {
+  position: absolute;
+  right: 0;
+  top: var(--barre-haut);
+  bottom: var(--barre-bas);
+  z-index: 3;
+  width: var(--lateral);
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-left: var(--trait) solid var(--accent);
+  background: var(--surface);
+}
+
+/* `display: flex` ci-dessus l'emporte sur la règle `[hidden] { display: none }` du
+   navigateur : sans ce rappel, un panneau fermé peint une bande vide sur le flanc droit de
+   la scène. L'impression, elle, le rouvre exprès — voir @media print. */
+.coque-lateral[hidden] {
+  display: none;
+}
+
+.lateral-entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0.6rem;
+  border-bottom: var(--trait) solid var(--bordure);
+  background: var(--fond-accent);
+}
+
+.lateral-entete h2 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.lateral-fermer {
+  min-height: var(--cible-clic);
+  min-width: var(--cible-clic);
+  padding: 0;
+  border: 0;
+}
+
+.lateral-corps {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 0.75rem 2rem;
+}
+
+/* Repli sous 1100 px : plus rien ne flotte. Les barres, les cartes et le panneau reprennent
+   le flux vertical sous la scène ; la scène redevient une image en 16/9. Un écran étroit n'a
+   pas la place d'une carte déplaçable — et le déplacement n'ouvre l'accès à aucune fonction,
+   il n'y a donc rien à remplacer. */
 @media (max-width: 1100px) {
   .coque {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto;
-    grid-template-areas:
-      'topbar'
-      'scene'
-      'materiel'
-      'seance';
+    display: flex;
+    flex-direction: column;
     height: auto;
     min-height: 100dvh;
+    overflow: visible;
   }
 
-  .coque-panneau > summary {
-    display: flex;
-    align-items: center;
+  .coque-topbar,
+  .coque-barrebas,
+  .coque-scene,
+  .carte,
+  .coque-lateral {
+    position: static;
+    inset: auto;
+    width: auto;
+    max-width: none;
+    height: auto;
+    flex-wrap: wrap;
+  }
+
+  .coque-topbar,
+  .coque-barrebas {
     min-height: var(--cible-clic);
-    padding: 0.5rem 0;
-    border-bottom: var(--trait) solid var(--bordure);
-    cursor: pointer;
-    font-family: var(--police-titre);
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: var(--suivi-titre);
-    text-transform: uppercase;
-    color: var(--accent);
+    padding: 0.4rem 0.75rem;
   }
 
-  .coque-materiel,
-  .coque-seance {
-    border-right: 0;
-    border-left: 0;
+  .carte,
+  .coque-lateral {
+    border: 0;
     border-top: var(--trait) solid var(--bordure);
+  }
+
+  .carte[data-ouverte='false'] {
+    width: auto;
+  }
+
+  .carte-corps,
+  .lateral-corps {
+    max-height: none;
     overflow-y: visible;
+  }
+
+  /* Ancrée à la barre basse, la fenêtre de tiroir n'a plus de haut d'écran où remonter. */
+  .coque-barrebas .tiroir[open] > .tiroir-contenu {
+    position: static;
+    width: auto;
   }
 
   .coque-scene,
@@ -345,8 +636,8 @@ body {
     aspect-ratio: 16 / 9;
   }
 
-  /* Le tiroir d'information reste à portée : plafonné à la hauteur du viewport, il défile
-     chez lui plutôt que d'allonger la page. */
+  /* Le tiroir d'information reste utilisable : son contenu défile plutôt que d'allonger la
+     page. */
   .tiroir[open] > .tiroir-contenu {
     max-height: 70dvh;
   }
@@ -446,6 +737,13 @@ body {
    que soit la largeur des éléments qui le précèdent. */
 .tiroir.tiroir-infos {
   margin-left: auto;
+}
+
+/* T-0113 — dans la barre haute, c'est la visée qui pousse tout vers la droite. Un tiroir qui
+   pousserait aussi se détacherait du groupe dès qu'un bouton le précède, et la rangée de
+   bascules se disloquerait. La règle vient APRÈS `.tiroir-infos` : elle la neutralise. */
+.coque-topbar .tiroir {
+  margin-left: 0;
 }
 
 /* T-0041 — un tiroir fermé cache ce qu'il contient. Le bouton change d'aspect quand il a
@@ -946,26 +1244,34 @@ button:disabled {
     display: none;
   }
 
-  /* La coque elle-même ne s'imprime pas : ni barre haute, ni scène, ni panneau matériel.
-     Du panneau droit ne survit que le plan de session. */
+  /* La coque elle-même ne s'imprime pas : ni barres, ni scène, ni cartes. Du panneau
+     latéral ne survit que le plan de session. */
   .coque {
     display: block;
     height: auto;
+    overflow: visible;
   }
 
   .coque-topbar,
+  .coque-barrebas,
   .coque-scene,
-  .coque-materiel {
+  .carte {
     display: none;
   }
 
-  .coque-seance {
+  /* Le panneau est masqué par l'attribut `hidden` tant qu'il est fermé. L'impression le
+     rouvre : c'est lui qui porte le plan, et un plan démonté sortirait une page blanche. */
+  .coque-lateral,
+  .coque-lateral[hidden] {
+    display: block;
+    position: static;
+    width: auto;
     overflow: visible;
     border: 0;
     padding: 0;
   }
 
-  .coque-seance > *:not(.plan-session) {
+  .coque-lateral > *:not(.plan-session) {
     display: none;
   }
 

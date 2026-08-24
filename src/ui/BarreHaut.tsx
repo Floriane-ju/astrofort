@@ -1,10 +1,12 @@
 /**
- * La barre haute : le titre, ce qui date l'image, et les gestes de terrain qui doivent
- * rester à portée sans occuper la scène.
+ * La barre haute : la marque, où pointe la vue, et ce qui ouvre le reste.
  *
- * L'ordre y est un contrat : le mode nuit d'abord parce qu'il se cherche dans le noir, le
- * tiroir de vérification ensuite, les réglages, et les lectures en dernier — donc le plus à
- * droite, et sans hauteur tant qu'elles sont fermées (T-0038, T-0047).
+ * T-0113 — elle ne porte plus de réglage, seulement des bascules. Le niveau d'explication est
+ * descendu dans le tiroir des réglages ; ce qui reste sont quatre tiroirs de terrain et deux
+ * boutons de panneau. L'ordre est un contrat : le mode nuit d'abord parce qu'il se cherche
+ * dans le noir, les panneaux ensuite, puis la vérification, les réglages, et les lectures en
+ * dernier — donc le plus à droite, et sans hauteur tant qu'elles sont fermées (T-0038,
+ * T-0047).
  */
 
 import type { EtatDemarrage } from '../data/bootstrap.ts'
@@ -20,6 +22,9 @@ import { Verification } from './Verification.tsx'
 import { ModeNuit, type EtatModeNuit } from './ModeNuit.tsx'
 import type { NiveauUtilisateur } from './Terme.tsx'
 import type { Persistance } from './app-donnees.ts'
+import { TITRES_PANNEAU } from './PanneauLateral.tsx'
+import { basculePanneau, useCoque, type PanneauLateral } from './coque-etat.ts'
+import { useTrancheScene, type EtatScene } from './scene-etat.ts'
 
 export interface BarreHautProps {
   readonly niveau: NiveauUtilisateur
@@ -42,25 +47,38 @@ export interface BarreHautProps {
   readonly sbCiel: number | null
 }
 
+/** Les deux panneaux que la barre commande, dans l'ordre où ils s'ouvrent. */
+const PANNEAUX: readonly PanneauLateral[] = ['NUIT', 'FILE']
+
+/**
+ * Où pointe la vue, au degré.
+ *
+ * T-0113 — la scène occupe tout l'écran et n'a plus de bandeau sous elle : sans cette
+ * mention, rien ne dit vers quoi on regarde tant qu'on n'ouvre pas les lectures. Le sélecteur
+ * arrondit AVANT de comparer — s'abonner aux degrés décimaux ferait rendre la barre à chaque
+ * image du geste de visée, ce que T-0056 a corrigé partout ailleurs.
+ */
+function viseeAffichee(etat: EtatScene): string {
+  const { azimutDeg, hauteurDeg, fovDeg } = etat.vue
+  return `az ${azimutDeg.toFixed(0)}° · h ${hauteurDeg.toFixed(0)}° · champ ${fovDeg.toFixed(0)}°`
+}
+
+function Visee() {
+  return <p className="etat barrehaut-visee">{useTrancheScene(viseeAffichee)}</p>
+}
+
 export function BarreHaut(props: BarreHautProps) {
+  const { panneau } = useCoque()
+
   return (
     <>
       <h1>Astrofort</h1>
+      <Visee />
       <p className="etat">
         {props.focale} mm f/{props.ouverture} ·{' '}
         {props.capteurMode === 'FULL_FRAME' ? 'plein format' : 'APS-C'}
       </p>
-      <p className="niveau">
-        {/* §10.1 — le niveau ne change QUE la densité d'explication, jamais un calcul. */}
-        Niveau d’explication :{' '}
-        <select
-          value={props.niveau}
-          onChange={(e) => props.surNiveau(e.target.value as NiveauUtilisateur)}
-        >
-          <option value="DEBUTANT">Débutant — gloses visibles</option>
-          <option value="CONFIRME">Confirmé — gloses au survol</option>
-        </select>
-      </p>
+
       {/* §11.1 — le mode nuit est un geste de terrain : il reste à portée, dans la barre. */}
       <details className="tiroir tiroir-nuit">
         <summary>{props.modeNuit.actif ? '☾ nuit — actif' : '☾ nuit'}</summary>
@@ -68,6 +86,24 @@ export function BarreHaut(props: BarreHautProps) {
           <ModeNuit etat={props.modeNuit} surChangement={props.surModeNuit} />
         </div>
       </details>
+
+      {/* Les deux panneaux latéraux. Un bouton pressé rouvre le panneau qu'il a ouvert : la
+          bascule referme, elle ne rouvre pas un autre panneau par surprise. */}
+      <div className="barrehaut-panneaux">
+        {PANNEAUX.map((cle) => (
+          <button
+            key={cle}
+            type="button"
+            className={panneau === cle ? 'onglet actif' : 'onglet'}
+            aria-expanded={panneau === cle}
+            aria-controls="panneau-lateral"
+            onClick={() => basculePanneau(cle)}
+          >
+            {TITRES_PANNEAU[cle]}
+          </button>
+        ))}
+      </div>
+
       <Verification
         etat={props.etat}
         modeReseau={props.modeReseau}
@@ -78,7 +114,12 @@ export function BarreHaut(props: BarreHautProps) {
       />
       {/* T-0047 — le choix brut dans le catalogue, hors du chemin principal. Avant le menu
           des lectures, qui reste le dernier élément. */}
-      <MenuReglages catalogue={props.catalogue} poids={props.poids} />
+      <MenuReglages
+        catalogue={props.catalogue}
+        poids={props.poids}
+        niveau={props.niveau}
+        surNiveau={props.surNiveau}
+      />
       {/* T-0038 — les lectures qui datent l'image : dernier élément de la barre, donc le
           plus à droite, et sans hauteur tant qu'il est fermé. */}
       <MenuInfos

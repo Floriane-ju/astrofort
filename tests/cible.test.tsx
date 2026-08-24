@@ -11,7 +11,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
-import { choisisOnglet } from '../src/ui/seance-etat.ts'
+import { ouvreCarte } from '../src/ui/coque-etat.ts'
 import { FicheCible, LIBELLE_TYPE_OBJET } from '../src/ui/FicheCible.tsx'
 import { ciblesVisibles } from '../src/core/visibles.ts'
 import { cielInstantane } from '../src/core/horloges.ts'
@@ -26,9 +26,9 @@ import { etatScene, majVue, reinitialiseScene } from '../src/ui/scene-etat.ts'
 import type { Site } from '../src/core/ephem.ts'
 import { TYPES_OBJET, type ObjetCielProfond } from '../src/data/deepsky.ts'
 
-// La fiche vit sous l'onglet Cible du panneau droit : le panneau ne monte qu'un onglet à la
-// fois, et c'est celui-là que ce fichier interroge.
-choisisOnglet('CIBLE')
+// T-0113 — la fiche vit dans la carte Cible, posée sur la scène. Elle démarre repliée tant
+// qu'aucun objet n'a été désigné : c'est elle que ce fichier interroge, dépliée.
+ouvreCarte('CIBLE')
 const ecran = renderToStaticMarkup(<App />)
 
 describe('fiche de cible — écran par défaut, M33 depuis le site de l’Annexe A', () => {
