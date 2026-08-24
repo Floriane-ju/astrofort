@@ -15,7 +15,7 @@ import { etatScene, majVue } from './scene-etat.ts'
 import { modeObjectif, type TypeObjectif } from './PanneauMateriel.tsx'
 
 /** Site et configuration ciel profond de l'Annexe A. */
-const DEFAUT = {
+export const DEFAUT = {
   latitude: '46.391',
   longitude: '6.697',
   altitude: '500',

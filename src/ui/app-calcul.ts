@@ -23,7 +23,11 @@ import {
   type MasqueHorizon,
   type SeuilsSite,
 } from '../core/site.ts'
-import { fondDeCiel, type FondDeCiel } from '../core/sky-background.ts'
+import {
+  FondDeCielIndeterminableError,
+  fondDeCiel,
+  type FondDeCiel,
+} from '../core/sky-background.ts'
 import { profilOptique, type ProfilOptique } from '../core/optics.ts'
 import { fluxCiel } from '../core/exposure.ts'
 import { construitIndex, type IndexCiel } from '../core/index-ciel.ts'
@@ -272,7 +276,7 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
 }
 
 /** §7, §5.2 et §9.1 — ce que le lieu et le matériel déclarés produisent, ou la cause du refus. */
-function evalueMateriel(site: Site, lieu: SaisieLieu, materiel: SaisieMateriel): Calcul {
+export function evalueMateriel(site: Site, lieu: SaisieLieu, materiel: SaisieMateriel): Calcul {
   try {
     // Départ à midi UTC : la recherche du coucher part de là.
     const depart = new Date(`${lieu.dateIso}T12:00:00Z`)
@@ -313,6 +317,7 @@ function evalueMateriel(site: Site, lieu: SaisieLieu, materiel: SaisieMateriel):
     // Saisie refusée ou domaine dépassé : la cause est nommée, pas avalée.
     if (
       erreur instanceof BortleHorsTableError ||
+      erreur instanceof FondDeCielIndeterminableError ||
       erreur instanceof HorsDomaineSeriesError ||
       erreur instanceof SaisieRefuseeError
     ) {
