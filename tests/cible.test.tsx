@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
 import { ouvreCarte } from '../src/ui/coque-etat.ts'
 import { FicheCible, LIBELLE_TYPE_OBJET } from '../src/ui/FicheCible.tsx'
-import { ciblesVisibles } from '../src/core/visibles.ts'
+import { lignesCatalogue } from '../src/core/cibles-liste.ts'
 import { cielInstantane } from '../src/core/horloges.ts'
 import { profilOptique } from '../src/core/optics.ts'
 import {
@@ -87,7 +87,7 @@ describe('fiche de cible — écran par défaut, M33 depuis le site de l’Annex
 })
 
 
-// --- T-0045 / T-0046 — la liste des visibles et le bouton « Voir » -----------------------
+// --- T-0046 / T-0048 — le choix de la cible, et ce que la fiche en fait ------------------
 
 /** Annexe A. Depuis 44,84° N, δ = +85° ne se couche jamais et δ = −85° ne se lève jamais. */
 const SITE: Site = { latitudeDeg: 44.84, longitudeDeg: -0.58, altitudeM: 20 }
@@ -144,41 +144,28 @@ function ficheAvecCatalogue(
   )
 }
 
-describe('T-0045 — l’onglet Cible propose ce que le ciel offre à cet instant', () => {
+describe('T-0128 — la fiche décrit la cible, elle ne la choisit plus', () => {
   const rendu = ficheAvecCatalogue([AU_DESSUS, AU_DESSOUS])
 
-  it('remplace le choix brut dans le catalogue par la liste des visibles', () => {
-    expect(rendu).toContain('Cibles visibles')
-    expect(rendu).not.toContain('Choisir dans le catalogue')
-  })
-
-  it('liste l’objet au-dessus de l’horizon et tait celui qui est sous l’horizon', () => {
-    expect(rendu).toContain('CIRCUMPOLAIRE')
-    expect(rendu).not.toContain('JAMAIS_LEVE')
-  })
-
-  it('groupe les entrées par verdict, pour dire ce que le setup en fera', () => {
-    expect(rendu).toMatch(/<optgroup label="(Œil nu|Jumelles|Télescope|Photo seule)"/)
-  })
-
-  it('annonce le compte réel de cibles au-dessus de l’horizon', () => {
-    expect(rendu).toMatch(/1 cible au-dessus de l’horizon/)
-  })
-
-  it('annonce le plafond quand la liste déborde, plutôt que de tronquer en silence', () => {
-    // 250 objets circumpolaires, tous distincts en magnitude : 200 listés, 250 annoncés.
-    const foule = Array.from({ length: 250 }, (_, i) =>
-      objetForge(`OBJ${i}`, 85, { vMag: 4 + i / 100 }),
-    )
-    const large = ficheAvecCatalogue(foule)
-    expect(large).toMatch(/250 cibles au-dessus de l’horizon, les 200 plus brillantes listées/)
-    expect(large).toContain('OBJ0')
-    expect(large).not.toContain('OBJ249')
-  })
-
-  it('n’offre pas de bouton « Voir » tant qu’aucune cible visible n’est choisie', () => {
-    // La fiche s’ouvre sur la cible de référence de §6.3, qui n’est dans aucun catalogue.
+  it('ne porte plus ni liste des visibles, ni filtre de type, ni bouton « Voir »', () => {
+    // Les trois ont rejoint le panneau « Toutes les cibles » : les garder ici rendrait le
+    // catalogue accessible par deux chemins, ce que T-0128 supprime.
+    expect(rendu).not.toContain('Cibles visibles')
+    expect(rendu).not.toContain('Type listé')
     expect(rendu).not.toContain('>Voir<')
+    expect(rendu).not.toMatch(/<optgroup/)
+  })
+
+  it('garde les six champs qui décrivent la cible', () => {
+    for (const champ of [
+      'Désignation',
+      'Type d’objet',
+      'Grand axe',
+      'Petit axe',
+      'Angle de position',
+    ]) {
+      expect(rendu, champ).toContain(champ)
+    }
   })
 })
 
@@ -187,21 +174,25 @@ describe('T-0046 — « Voir » amène la cible au centre, et ne touche à rien 
     reinitialiseScene()
     const avant = etatScene().vue
 
-    const [cible] = ciblesVisibles({
+    const [ligne] = lignesCatalogue({
       catalogue: [AU_DESSUS],
       matriceCiel: cielInstantane(SITE, new Date(etatScene().msAffiche)).matrice,
       sbCiel: 21,
       mLimOeil: 6.1,
       dMm: OPTIQUE.dMm.value,
+      fovHDeg: OPTIQUE.fovHDeg.value,
+      echApx: OPTIQUE.echApx.value,
+      capteurHMm: CAPTEUR.capteurHMm,
     })
-    expect(cible).toBeDefined()
+    expect(ligne).toBeDefined()
+    expect(ligne!.hauteurDeg).toBeGreaterThan(0)
 
-    // Le geste du bouton, tel qu'il est câblé dans la fiche.
-    majVue({ azimutDeg: cible!.azimutDeg, hauteurDeg: cible!.hauteurDeg })
+    // Le geste du bouton, tel qu'il est câblé dans le panneau des cibles.
+    majVue({ azimutDeg: ligne!.azimutDeg, hauteurDeg: ligne!.hauteurDeg })
 
     const apres = etatScene().vue
-    expect(apres.azimutDeg).toBeCloseTo(cible!.azimutDeg, 1)
-    expect(apres.hauteurDeg).toBeCloseTo(cible!.hauteurDeg, 1)
+    expect(apres.azimutDeg).toBeCloseTo(ligne!.azimutDeg, 1)
+    expect(apres.hauteurDeg).toBeCloseTo(ligne!.hauteurDeg, 1)
     expect(apres.fovDeg).toBe(avant.fovDeg)
     expect(apres.rotationCadreDeg).toBe(avant.rotationCadreDeg)
     reinitialiseScene()
@@ -213,34 +204,16 @@ describe('T-0046 — « Voir » amène la cible au centre, et ne touche à rien 
 
 const GLOBULAIRE = objetForge('GLOB', 85, { type: 'AMAS_GLOB', vMag: 7 })
 
-describe('T-0049 — le type de l’objet se lit dans la liste', () => {
+describe('T-0049 — les types du catalogue se lisent en français', () => {
   const rendu = ficheAvecCatalogue([AU_DESSUS, GLOBULAIRE])
 
-  it('porte le type de chaque objet, en français, dans son option', () => {
-    expect(rendu).toContain('· galaxie ·')
-    expect(rendu).toContain('· amas globulaire ·')
-  })
-
-  it('traduit du même coup le sélecteur « Type d’objet » de la fiche', () => {
+  it('traduit le sélecteur « Type d’objet » de la fiche', () => {
     expect(rendu).not.toContain('>AMAS_GLOB<')
     expect(rendu).toContain('>nébuleuse planétaire<')
   })
 
   it('donne un libellé aux dix types du catalogue', () => {
     expect(TYPES_OBJET.filter((t) => LIBELLE_TYPE_OBJET[t].trim() === '')).toEqual([])
-  })
-})
-
-describe('T-0050 — la liste se restreint à un type d’objet', () => {
-  const rendu = ficheAvecCatalogue([AU_DESSUS, GLOBULAIRE])
-
-  it('offre un filtre de type au-dessus de la liste', () => {
-    expect(rendu).toContain('Type listé')
-  })
-
-  it('ne filtre rien par défaut : les deux cibles restent comptées', () => {
-    expect(rendu).toContain('>Tous types<')
-    expect(rendu).toMatch(/2 cibles au-dessus de l’horizon/)
   })
 })
 
@@ -259,8 +232,12 @@ describe('T-0051 — une cible du catalogue ne se saisit plus', () => {
     expect(rendu).toMatch(/<select[^>]*disabled/i)
   })
 
-  it('propose « Personnalisé » dans la liste pour rouvrir la saisie', () => {
-    expect(ficheAvecCatalogue([AU_DESSUS], AU_DESSUS)).toContain('>Personnalisé<')
+  it('garde un chemin pour rouvrir la saisie, la liste des visibles disparue', () => {
+    // T-0128 — l'option « Personnalisé » du `<select>` est devenue un bouton : le verrou de
+    // T-0051 ne serait plus qu'une impasse sans geste pour en sortir.
+    const rendu = ficheAvecCatalogue([AU_DESSUS], AU_DESSUS)
+    expect(rendu).toContain('>Cible personnalisée<')
+    expect(ficheAvecCatalogue([AU_DESSUS])).not.toContain('>Cible personnalisée<')
   })
 
   it('garde les valeurs du catalogue affichées, verrou posé', () => {

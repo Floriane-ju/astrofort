@@ -1,7 +1,7 @@
 /**
  * T-0113 — le panneau latéral : ce qui se lit en longueur, à côté de la scène.
  *
- * Deux contenus seulement y passent — le plan de nuit et le filé. Ce ne sont pas des
+ * Trois contenus y passent — le catalogue, le plan de nuit et le filé. Ce ne sont pas des
  * réglages qu'on ajuste en regardant le ciel bouger : ce sont des listes et des séquences
  * qu'on lit de haut en bas. Le reste — matériel, vue, cible — est en carte sur la scène,
  * parce qu'on le règle EN regardant.
@@ -18,6 +18,7 @@ import { Icone } from './Icone.tsx'
 
 /** Le titre de chaque panneau : il nomme ce qu'on lit, pas l'onglet d'où l'on vient. */
 export const TITRES_PANNEAU: Readonly<Record<ClePanneau, string>> = Object.freeze({
+  CIBLES: 'Toutes les cibles',
   NUIT: 'Plan de nuit',
   FILE: 'Filé',
 })

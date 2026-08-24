@@ -10,7 +10,12 @@
 import { useMemo } from 'react'
 import { fenetreNocturne, offsetMidiSolaireMin, type FenetreNocturne } from '../core/night.ts'
 import { fenetreUtile as calculeFenetreUtile, type FenetreUtile } from '../core/moon.ts'
-import { planSession, type PlanSession, type PoidsScoring } from '../core/session.ts'
+import {
+  planSession,
+  type ContexteSession,
+  type PlanSession,
+  type PoidsScoring,
+} from '../core/session.ts'
 import {
   masqueDepuisPoints,
   masquePlat,
@@ -85,6 +90,8 @@ export interface ChaineCalcul {
   readonly profilsCadre: readonly ProfilCadre[]
   /** Absent quand le matériel n'est pas chiffrable : la scène n'incruste alors rien. */
   readonly materielFile: MaterielFile | null
+  /** §8.3 — le contexte de la nuit, partagé par le plan de séance et la liste du catalogue. */
+  readonly contexteSession: ContexteSession | null
   readonly plan: PlanSession | null
   /** Le matériel et le ciel sous lesquels la fiche évalue une cible (§6, §7). */
   readonly contexteFiche: ContexteFiche | null
@@ -207,17 +214,15 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
   }, [calcul, profondeurFile])
 
   /**
-   * §8.3 — le plan complet. Il n'est calculé qu'une fois les catalogues vérifiés.
+   * §8.3 — le ciel, le site et le matériel sous lesquels une cible est évaluée pour la nuit.
    *
-   * ponytail: calcul sur le thread de rendu. §12.1 le veut en Web Worker ; il tient
-   * aujourd'hui sous la centaine de millisecondes parce que le pré-filtrage dur limite à
-   * quelques dizaines de candidates. Le jour où le catalogue ou le nombre de candidates
-   * grossit, c'est ce point-là qu'il faut déporter, pas le rendu.
+   * Mémoïsé à part du plan parce que DEUX écrans s'en servent : le plan de séance et la liste
+   * du catalogue (§6.4). Un second contexte assemblé ailleurs annoncerait tôt ou tard une
+   * autre pose pour la même cible — le désaccord que T-0089 a corrigé une fois.
    */
-  const plan = useMemo(() => {
-    if (!calcul.ok || catalogue.length === 0 || fenetreUtile === null) return null
-    return planSession(
-      {
+  const contexteSession = useMemo<ContexteSession | null>(() => {
+    if (!calcul.ok || fenetreUtile === null) return null
+    return {
         site,
         nuit: calcul.nuit,
         fenetreUtile,
@@ -240,10 +245,13 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
         typeMonture: materiel.typeMonture,
         niveau,
         poids,
-      },
-      catalogue,
-    )
-  }, [calcul, catalogue, masque, niveau, materiel.typeMonture, site, fenetreUtile, poids])
+    }
+  }, [calcul, masque, niveau, materiel.typeMonture, site, fenetreUtile, poids])
+
+  const plan = useMemo(() => {
+    if (contexteSession === null || catalogue.length === 0) return null
+    return planSession(contexteSession, catalogue)
+  }, [contexteSession, catalogue])
 
   return {
     calcul,
@@ -253,6 +261,7 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     index,
     profilsCadre,
     materielFile,
+    contexteSession,
     plan,
     contexteFiche: calcul.ok ? contexteFiche(calcul, materiel, lieu, catalogue) : null,
     panneauFile:

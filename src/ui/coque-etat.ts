@@ -21,7 +21,7 @@ import { useSyncExternalStore } from 'react'
 export type CleCarte = 'MATERIEL' | 'VUE' | 'CIBLE'
 
 /** Ce que le panneau latéral montre, ou rien du tout : il se ferme entièrement. */
-export type PanneauLateral = 'NUIT' | 'FILE'
+export type PanneauLateral = 'CIBLES' | 'NUIT' | 'FILE'
 
 export interface Decalage {
   readonly x: number

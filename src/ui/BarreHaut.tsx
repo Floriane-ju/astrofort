@@ -47,8 +47,11 @@ export interface BarreHautProps {
   readonly sbCiel: number | null
 }
 
-/** Les deux panneaux que la barre commande, dans l'ordre où ils s'ouvrent. */
-const PANNEAUX: readonly PanneauLateral[] = ['NUIT', 'FILE']
+/**
+ * Les panneaux que la barre commande, dans l'ordre où ils s'ouvrent. L'ordre est un
+ * contrat : on choisit une cible avant de lire le plan qui l'ordonne.
+ */
+const PANNEAUX: readonly PanneauLateral[] = ['CIBLES', 'NUIT', 'FILE']
 
 /**
  * Où pointe la vue, au degré.
@@ -87,7 +90,7 @@ export function BarreHaut(props: BarreHautProps) {
         </div>
       </details>
 
-      {/* Les deux panneaux latéraux. Un bouton pressé rouvre le panneau qu'il a ouvert : la
+      {/* Les panneaux latéraux. Un bouton pressé rouvre le panneau qu'il a ouvert : la
           bascule referme, elle ne rouvre pas un autre panneau par surprise. */}
       <div className="barrehaut-panneaux">
         {PANNEAUX.map((cle) => (
@@ -112,14 +115,9 @@ export function BarreHaut(props: BarreHautProps) {
         surExport={props.persistance.surExport}
         surImport={props.persistance.surImport}
       />
-      {/* T-0047 — le choix brut dans le catalogue, hors du chemin principal. Avant le menu
-          des lectures, qui reste le dernier élément. */}
-      <MenuReglages
-        catalogue={props.catalogue}
-        poids={props.poids}
-        niveau={props.niveau}
-        surNiveau={props.surNiveau}
-      />
+      {/* T-0047 — ce qui se règle une fois et ne décrit pas une séance. Avant le menu des
+          lectures, qui reste le dernier élément. */}
+      <MenuReglages poids={props.poids} niveau={props.niveau} surNiveau={props.surNiveau} />
       {/* T-0038 — les lectures qui datent l'image : dernier élément de la barre, donc le
           plus à droite, et sans hauteur tant qu'il est fermé. */}
       <MenuInfos

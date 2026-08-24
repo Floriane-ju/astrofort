@@ -1390,3 +1390,140 @@ select:disabled {
   font-variant-numeric: tabular-nums;
   color: var(--texte);
 }
+
+/* T-0128 — la liste du catalogue (§6.4).
+
+   La ligne est un bloc de trois rangées, pas une carte : trois cents d'entre elles se
+   parcourent à l'œil, et une bordure par objet transformerait la colonne en damier. Ce qui
+   sépare deux cibles est un filet, et le seul relief est celui du survol. */
+.cibles-recherche {
+  width: 100%;
+  margin: 0.5rem 0;
+}
+
+.cibles-portee {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: var(--trait) solid var(--bordure-faible);
+}
+
+.cibles-filtres {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.6rem 0;
+}
+.cibles-filtres > label {
+  display: grid;
+  gap: 0.2rem;
+}
+.cibles-mag-valeur {
+  color: var(--accent);
+  font-family: var(--police-mono);
+}
+
+.cibles-liste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cible-item {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+  border-top: var(--trait) solid var(--bordure-faible);
+}
+
+.cible-ligne {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.5rem 0.4rem;
+  min-height: var(--cible-clic);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--texte);
+  cursor: pointer;
+  text-align: left;
+  /* Une ligne porte des NOMS et des LECTURES, pas une commande : les capitales du bouton
+     générique rendraient « Fish on the Platter » illisible et « mag/as² » faux. Seule la
+     désignation les garde, parce qu'elle est un identifiant de catalogue. */
+  letter-spacing: normal;
+  text-transform: none;
+}
+.cible-ligne:hover,
+.cible-ligne:focus-visible {
+  background: var(--fond-accent);
+}
+
+.cible-tete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cible-designation {
+  font-family: var(--police-titre);
+  font-size: 0.95rem;
+  letter-spacing: var(--suivi-micro);
+  text-transform: uppercase;
+}
+
+/* La pose est ce qu'on compare d'une ligne à l'autre : elle est la seule à porter l'accent. */
+.cible-pose {
+  color: var(--accent);
+  font-family: var(--police-mono);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.cible-commun,
+.cible-mag {
+  color: var(--attenue);
+  font-size: 0.78rem;
+}
+.cible-mag {
+  font-family: var(--police-mono);
+}
+
+/* Les lectures qui expliquent la pose : brillance de surface, hauteur, encombrement. Elles
+   se lisent après le nom et la pose, pas avant — d'où le corps le plus petit.
+
+   Chaque mesure est un bloc insécable dans un `flex-wrap` : sur un panneau étroit, la ligne
+   passe à la suivante ENTRE deux mesures, jamais au milieu de « 1841 × 1841 px ». */
+.cible-lectures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+  color: var(--attenue);
+  font-family: var(--police-mono);
+  font-size: 0.7rem;
+}
+.cible-lectures > span {
+  white-space: nowrap;
+}
+/* Le point médian est posé par le style, pas par le texte : il ne doit ni être annoncé aux
+   lecteurs d'écran, ni rester orphelin en début de ligne après un retour. */
+.cible-lectures > span + span::before {
+  content: '· ';
+}
+
+/* Une commande par ligne, deux cents fois : elle se réduit à son glyphe. Le libellé vit
+   dans `aria-label`, où il reste annoncé sans peser sur la colonne. */
+.cible-voir {
+  flex: 0 0 auto;
+  align-self: center;
+  min-width: var(--cible-clic);
+  min-height: var(--cible-clic);
+  padding: 0;
+  border-color: var(--bordure-faible);
+}
+
+.cibles-note {
+  margin-top: 1rem;
+  padding-top: 0.6rem;
+  border-top: var(--trait) solid var(--bordure-faible);
+}

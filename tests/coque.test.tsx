@@ -29,8 +29,9 @@ import {
   vuePlanetarium,
 } from '../src/ui/scene-etat.ts'
 import { MenuInfos } from '../src/ui/MenuInfos.tsx'
-import { MenuReglages, OptionsCatalogue, objetDesigne } from '../src/ui/MenuReglages.tsx'
+import { MenuReglages } from '../src/ui/MenuReglages.tsx'
 import { poidsParDefaut } from '../src/core/session.ts'
+import { DOMAINES } from '../src/registry/domains.ts'
 import { construitIndex } from '../src/core/index-ciel.ts'
 import { projecteur } from '../src/core/projection.ts'
 import { versSpherique } from '../src/core/mat3.ts'
@@ -123,7 +124,7 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
   it('garde le lieu lisible et réglable quel que soit le panneau ouvert', () => {
     // Les six champs du site sont descendus dans la barre basse : ce qui devait survivre au
     // déménagement n'est pas leur dépliement permanent, c'est leur accessibilité constante.
-    for (const panneau of [null, 'NUIT', 'FILE'] as const) {
+    for (const panneau of [null, 'CIBLES', 'NUIT', 'FILE'] as const) {
       if (panneau !== null) basculePanneau(panneau)
       const html = ecran()
       const barre = html.slice(html.indexOf('coque-barrebas'))
@@ -567,29 +568,20 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
     expect(ecran.indexOf('tiroir-reglages')).toBeLessThan(ecran.indexOf('tiroir-infos'))
   })
 
-  it('porte l’accès au catalogue, que la carte Cible n’a pas', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} {...REGLAGES_INERTES} />)
-    expect(rendu).toContain('Chercher dans le catalogue')
-    ouvreCarte('CIBLE')
-    const ecranComplet = renderToStaticMarkup(<App />)
-    expect(ecranComplet.slice(ecranComplet.indexOf('carte-cible'))).not.toContain(
-      'Chercher dans le catalogue',
-    )
+  it('T-0128 — ne porte plus le catalogue : il a un écran à lui', () => {
+    const rendu = renderToStaticMarkup(<MenuReglages {...REGLAGES_INERTES} />)
+    expect(rendu).not.toContain('Chercher dans le catalogue')
+    expect(rendu).not.toContain('<datalist')
   })
 
   it('T-0113 — porte aussi le niveau d’explication, qui a quitté la barre haute', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} {...REGLAGES_INERTES} />)
+    const rendu = renderToStaticMarkup(<MenuReglages {...REGLAGES_INERTES} />)
     expect(rendu).toContain('Niveau d’explication')
     expect(rendu).toContain('Débutant — gloses visibles')
   })
 
-  it('lit une entrée du catalogue comme la liste des visibles la lit', () => {
-    const rendu = renderToStaticMarkup(<OptionsCatalogue catalogue={[M31]} saisie="M31" />)
-    expect(rendu).toContain('M31 — Andromède · galaxie · mag 3.4')
-  })
-
   it('T-0087 — porte les cinq poids C-15 et le retour aux valeurs du registre', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} {...REGLAGES_INERTES} />)
+    const rendu = renderToStaticMarkup(<MenuReglages {...REGLAGES_INERTES} />)
     expect(rendu.match(/type="range"/g)).toHaveLength(5)
     expect(rendu).toContain('Revenir aux poids C-15')
     // Le poids effectif s'affiche : c'est lui que le plan utilise, pas la position brute.
@@ -597,13 +589,13 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
   })
 
   it('T-0087 — dit que le score arbitre les conflits, sans ordonner la nuit', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31]} {...REGLAGES_INERTES} />)
+    const rendu = renderToStaticMarkup(<MenuReglages {...REGLAGES_INERTES} />)
     expect(rendu).toMatch(/chronologie suit les culminations/)
     expect(rendu).toMatch(/Rien n’est appris/)
   })
 
   it('garde la cible de clic de §11.2 : le tiroir est un `.tiroir` comme les autres', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[]} {...REGLAGES_INERTES} />)
+    const rendu = renderToStaticMarkup(<MenuReglages {...REGLAGES_INERTES} />)
     expect(rendu).toMatch(/class="tiroir tiroir-reglages"/)
     const styles = readFileSync(
       join(import.meta.dirname, '..', 'src', 'ui', 'styles.css'),
@@ -619,78 +611,66 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
 
 
 /**
- * T-0053 — le catalogue se cherche au lieu de se dérouler. Le `<datalist>` ne porte que les
- * résultats de la frappe en cours : ce qui est vérifié ici est la structure native et la
- * résolution avant `ouvreCible`, pas le comportement de la liste déroulante du navigateur.
+ * T-0128 — le catalogue a un écran, et il en a UN seul.
+ *
+ * Ce qui est vérifié ici est le remplacement, pas la recherche : `chercheCatalogue` a ses
+ * propres tests, et le filtrage ceux de `cibles-liste`. Ce qui doit se constater au niveau
+ * de la coque, c'est qu'aucun des deux chemins remplacés ne subsiste — un second chemin
+ * vers le catalogue est exactement le défaut que ce lot corrige.
  */
-describe('T-0053 — le tiroir cherche le catalogue au lieu de le dérouler', () => {
-  const M45: ObjetCielProfond = {
-    designation: 'M45',
-    nomsCommuns: 'Pléiades',
-    adDeg: 56.75,
-    decDeg: 24.12,
-    type: 'AMAS_OUVERT',
-    majAxArcmin: 110,
-    minAxArcmin: 110,
-    posAngDeg: null,
-    vMag: 1.6,
-    bMag: null,
-    surfBr: null,
-  }
-
-  it('porte un champ de saisie relié à un `datalist`, plus un `select` déroulant', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[M31, M45]} {...REGLAGES_INERTES} />)
-    expect(rendu).toContain('<datalist')
-    expect(rendu).toMatch(/<input[^>]+list="/)
-    // T-0113 — le seul `select` du tiroir est le niveau d'explication, arrivé de la barre
-    // haute. Le catalogue, lui, se cherche : le dérouler reste hors de question (T-0053).
-    expect(rendu.match(/<select/g)).toHaveLength(1)
-    expect(rendu).toContain('Débutant — gloses visibles')
+describe('T-0128 — l’onglet Cibles remplace les deux chemins vers le catalogue', () => {
+  it('ouvre un troisième panneau latéral, en tête des onglets', () => {
+    const topbar = barreHaute(ecran())
+    expect(topbar).toContain('Toutes les cibles')
+    expect(topbar.indexOf('Toutes les cibles')).toBeLessThan(topbar.indexOf('Plan de nuit'))
+    expect(topbar.indexOf('Plan de nuit')).toBeLessThan(topbar.indexOf('Filé'))
   })
 
-  it('ne rend aucune option avant la première frappe : le catalogue n’est pas une liste', () => {
-    expect(renderToStaticMarkup(<OptionsCatalogue catalogue={[M31, M45]} saisie="" />)).toBe('')
+  it('ne monte son contenu qu’une fois ouvert, comme les deux autres (§11.2)', () => {
+    expect(ecran()).not.toContain('Tout le catalogue')
+    basculePanneau('CIBLES')
+    const ouvert = ecran()
+    expect(ouvert).toContain('Tout le catalogue')
+    expect(ouvert).toContain('Photographiables')
+    expect(ouvert).not.toContain('<h2>Fenêtre nocturne</h2>')
   })
 
-  it('propose M45 sur « pléiades » comme sur « M45 », et n’insère que la désignation', () => {
-    for (const saisie of ['pléiades', 'PLEIADES', 'M45']) {
-      const rendu = renderToStaticMarkup(
-        <OptionsCatalogue catalogue={[M31, M45]} saisie={saisie} />,
-      )
-      expect(rendu).toContain('value="M45"')
-      expect(rendu).not.toContain('value="M45 —')
-    }
+  it('referme sur une seconde pression de son bouton', () => {
+    basculePanneau('CIBLES')
+    expect(etatCoque().panneau).toBe('CIBLES')
+    basculePanneau('CIBLES')
+    expect(etatCoque().panneau).toBeNull()
   })
 
-  it('atteint n’importe quelle partie du catalogue : les Messier ne sont plus hors de portée', () => {
-    const remplissage: ObjetCielProfond[] = Array.from({ length: 500 }, (_, i) => ({
-      ...M31,
-      designation: `IC${i}`,
-      nomsCommuns: '',
-    }))
-    const rendu = renderToStaticMarkup(
-      <OptionsCatalogue catalogue={[...remplissage, M45]} saisie="M45" />,
-    )
-    expect(rendu).toContain('value="M45"')
+  it('porte la recherche et les deux filtres, que plus personne d’autre ne porte', () => {
+    basculePanneau('CIBLES')
+    const ouvert = ecran()
+    expect(ouvert).toMatch(/<input[^>]+type="search"/)
+    expect(ouvert).toContain('Tous types')
+    expect(ouvert).toContain('Jusqu’à la magnitude')
   })
 
-  it('résout la saisie sur une désignation exacte, et sur rien d’autre', () => {
-    expect(objetDesigne([M31, M45], 'M45')).toBe(M45)
-    expect(objetDesigne([M31, M45], '  M45  ')).toBe(M45)
-    expect(objetDesigne([M31, M45], 'Pléiades')).toBeNull()
-    expect(objetDesigne([M31, M45], 'M4')).toBeNull()
-    expect(objetDesigne([M31, M45], '')).toBeNull()
+  it('a vidé la carte Cible de son choix de cible : elle ne fait plus que décrire', () => {
+    ouvreCarte('CIBLE')
+    const carte = ecran().slice(ecran().indexOf('carte-cible'))
+    expect(carte).not.toContain('Cibles visibles')
+    expect(carte).not.toContain('Type listé')
   })
 
-  it('garde le message d’attente d’intégrité quand le catalogue n’est pas vérifié', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages catalogue={[]} {...REGLAGES_INERTES} />)
-    expect(rendu).toContain('contrôle d’intégrité')
-    // Le champ de recherche disparaît ; les poids de scoring restent, ils ne dépendent
-    // d'aucun paquet (T-0087).
-    expect(rendu).not.toContain('Chercher dans le catalogue')
-    expect(rendu).not.toMatch(/<input[^>]+list="/)
+  it('borne le filtre de magnitude sur le domaine du registre, sans le réécrire', () => {
+    basculePanneau('CIBLES')
+    const ouvert = ecran()
+    expect(ouvert).toContain(`min="${DOMAINES.m_int.min}"`)
+    expect(ouvert).toContain(`max="${DOMAINES.m_int.max}"`)
   })
 
+  it('nomme le SNR sur lequel la pose est calculée : un temps sans sa cible ne se lit pas', () => {
+    basculePanneau('CIBLES')
+    expect(ecran()).toMatch(/rapport signal sur bruit de \d+/)
+  })
+})
+
+describe('§11.2 — la cible de clic tient dans les panneaux comme ailleurs', () => {
   it('garde la cible de clic de §11.2 : un `input` a la hauteur d’usage ganté', () => {
     const styles = readFileSync(
       join(import.meta.dirname, '..', 'src', 'ui', 'styles.css'),

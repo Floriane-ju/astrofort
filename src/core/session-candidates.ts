@@ -7,6 +7,7 @@
  */
 
 import { K } from '../registry/constants.ts'
+import { SaisieRefuseeError } from '../registry/domains.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import { REMPLISSAGE_MIN_PLANIFIABLE, VERDICTS_PLANIFIABLES } from '../registry/verdicts.ts'
 import { creneauCible, type CreneauCible, type Intervalle } from './creneaux.ts'
@@ -58,7 +59,36 @@ function codeExclusionCreneau(creneau: CreneauCible): CauseEcart {
   return creneau.causeExclusion === 'RELIEF' ? 'RELIEF' : 'FENETRE'
 }
 
+/**
+ * Une cible, évaluée de bout en bout, ou écartée en nommant sa cause.
+ *
+ * Le refus de domaine est traité ICI et pas chez l'appelant. Un moteur de §7 refuse une
+ * entrée hors de sa plage de validité en LEVANT — c'est son contrat, et il est juste. Mais
+ * ce refus vaut pour UNE cible : le laisser remonter fait tomber l'écran entier sur un seul
+ * objet du catalogue, ce que §12.5 interdit. Une nébuleuse obscure de 100’ à magnitude 14
+ * dépasse les 26 mag/as² du domaine, et ce n'est pas une raison pour priver les autres
+ * cibles de leur pose.
+ *
+ * La garde était chez `planSession` seul. Deux appelants la voulaient — la liste du
+ * catalogue de §6.4 est arrivée sans, et l'écran est tombé dès qu'une optique de 300 mm a
+ * rétréci la fenêtre de cadrage assez pour laisser entrer ces objets-là.
+ */
 export function evalueCandidate(
+  contexte: ContexteSession,
+  objet: ObjetCielProfond,
+  fenetre: Intervalle,
+  sbCielBase: number,
+  poids: PoidsScoring,
+): Candidate | CibleEcartee {
+  try {
+    return evalue(contexte, objet, fenetre, sbCielBase, poids)
+  } catch (erreur) {
+    if (!(erreur instanceof SaisieRefuseeError)) throw erreur
+    return { designation: objet.designation, code: 'HORS_PORTEE', cause: erreur.message }
+  }
+}
+
+function evalue(
   contexte: ContexteSession,
   objet: ObjetCielProfond,
   fenetre: Intervalle,
@@ -225,14 +255,20 @@ export interface PreFiltrage {
  * seule. Chaque exclusion porte sa cause, et seules les candidates survivantes — les plus
  * brillantes — vont au calcul de créneau, qui est le poste coûteux.
  */
+/**
+ * `plafond` est la borne de calcul de l'APPELANT, pas une propriété du pré-filtrage : le plan
+ * de séance retient C-20 candidates (§8.3), la liste du catalogue en évalue davantage (§6.4).
+ * Chacun paie ses éphémérides, aucun n'hérite du budget de l'autre.
+ */
 export function preFiltre(
   contexte: ContexteSession,
   catalogue: readonly ObjetCielProfond[],
+  plafond = K('CIBLES_CANDIDATES_MAX'),
 ): PreFiltrage {
   const seuil = contexte.seuilHauteurDeg ?? K('SEUIL_HAUTEUR_IMAGERIE_DEG')
   const tailleMin = contexte.fovHDeg * REMPLISSAGE_MIN_PLANIFIABLE * ARCMIN_PAR_DEG
   const tailleMax = contexte.fovHDeg * ARCMIN_PAR_DEG
-  const cap = K('CIBLES_CANDIDATES_MAX')
+  const cap = plafond
   const infini = Number.POSITIVE_INFINITY
 
   const retenues: ObjetCielProfond[] = []

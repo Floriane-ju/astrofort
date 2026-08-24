@@ -797,6 +797,30 @@ const PLANIFICATION = {
     ordreDeGrandeur: false,
     sections: ['8.3'],
   }),
+  CIBLES_LISTEES_MAX: entree({
+    ref: 'C-20',
+    libelle: 'Nombre de lignes rendues par la liste du catalogue',
+    valeur: 200,
+    unite: '—',
+    source:
+      '§6.4 — « un plafond borne le nombre de résultats RENDUS, jamais l’étendue ' +
+      'parcourue » : le filtre et la recherche tombent avant lui',
+    tolerance: 'convention produit',
+    ordreDeGrandeur: false,
+    sections: ['6.4'],
+  }),
+  CIBLES_EVALUEES_MAX: entree({
+    ref: 'C-20',
+    libelle: 'Nombre de cibles soumises au calcul de créneau par la liste du catalogue',
+    valeur: 200,
+    unite: '—',
+    source:
+      '§6.4 — borne de calcul propre à la liste : le créneau coûte une éphéméride par ' +
+      'cible, et la liste n’hérite pas du budget du plan de séance (C-20, §8.3)',
+    tolerance: 'convention produit',
+    ordreDeGrandeur: false,
+    sections: ['6.4'],
+  }),
   MARGE_NUIT_DEBUTANT: entree({
     ref: 'C-20',
     libelle: 'Part de la nuit réservée en marge au niveau débutant',

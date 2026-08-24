@@ -19,7 +19,6 @@
  */
 
 import { K } from '../registry/constants.ts'
-import { SaisieRefuseeError } from '../registry/domains.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { Intervalle } from './creneaux.ts'
 import { dureeLisible } from './exposure.ts'
@@ -123,9 +122,10 @@ export function planSession(
 }
 
 /**
- * Les candidates du pré-filtrage passées aux moteurs. Une cible hors du domaine de validité
- * d'un moteur est écartée avec sa cause : elle ne fait pas tomber le plan entier (§12.5 —
- * jamais d'erreur technique brute).
+ * Les candidates du pré-filtrage passées aux moteurs, triées en retenues et écartées.
+ *
+ * Le refus de domaine est absorbé par `evalueCandidate` lui-même (§12.5) : chaque appelant
+ * de ce moteur en a besoin, pas seulement le plan.
  */
 function evalueCandidates(
   contexte: ContexteSession,
@@ -138,13 +138,7 @@ function evalueCandidates(
 ): readonly Candidate[] {
   const retenues: Candidate[] = []
   for (const objet of candidates) {
-    let resultat: Candidate | CibleEcartee
-    try {
-      resultat = evalueCandidate(contexte, objet, fenetre, sbCielBase, poids)
-    } catch (erreur) {
-      if (!(erreur instanceof SaisieRefuseeError)) throw erreur
-      resultat = { designation: objet.designation, code: 'HORS_PORTEE', cause: erreur.message }
-    }
+    const resultat = evalueCandidate(contexte, objet, fenetre, sbCielBase, poids)
     if ('code' in resultat) {
       ecartees.push(resultat)
       comptes.set(resultat.code, (comptes.get(resultat.code) ?? 0) + 1)

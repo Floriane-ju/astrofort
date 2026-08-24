@@ -1,102 +1,26 @@
 /**
- * La région « Cible » de la fiche : ce qu'on vise, choisi dans le ciel du moment ou saisi
- * à la main.
+ * La région « Cible » de la fiche : ce qu'on vise, choisi dans le catalogue ou saisi à la main.
  *
- * Choisir dans la liste des visibles verrouille la saisie — les valeurs viennent alors
- * d'OpenNGC et ne se retouchent pas (T-0051). « Personnalisé » la rouvre.
+ * T-0128 — le choix ne se fait plus ici. Deux `<select>` y vivaient — la liste des visibles et
+ * son filtre par type — et ils tenaient dans une carte posée sur la scène ce que le panneau
+ * « Toutes les cibles » montre maintenant en entier, chiffres compris. La carte ne garde que
+ * ce qu'elle sait faire : décrire la cible retenue.
+ *
+ * Une cible venue du catalogue verrouille la saisie — les valeurs viennent d'OpenNGC et ne se
+ * retouchent pas (T-0051, §6.4). « Cible personnalisée » la rouvre.
  */
 
-import { useMemo } from 'react'
-import { TYPES_OBJET, type ObjetCielProfond, type TypeObjet } from '../data/deepsky.ts'
-import type { VerdictDetectabilite } from '../core/detectability.ts'
-import { ciblesVisibles, parType, typesPresents, type CibleVisible } from '../core/visibles.ts'
-import { cielInstantane } from '../core/horloges.ts'
-import type { Site } from '../core/ephem.ts'
-import { majVue, minuteAffichee, MS_PAR_MINUTE, useTrancheScene } from './scene-etat.ts'
+import { TYPES_OBJET, type TypeObjet } from '../data/deepsky.ts'
 import { Etiquette } from './Terme.tsx'
-import { LIBELLE_TYPE_OBJET, libelleCible } from './libelles-objet.ts'
+import { LIBELLE_TYPE_OBJET } from './libelles-objet.ts'
 import type { EtatSaisieCible } from './fiche-cible-saisie.ts'
-
-/**
- * T-0045 — plafond de la liste des visibles. Le compte réel est annoncé à côté : un plafond
- * muet mentirait sur le ciel.
- *
- * ponytail: un `<select>` plafonné suffit tant que la liste se parcourt à l'œil. Le jour où
- * elle doit devenir cherchable, la sortie est `<input list>` + `<datalist>`, pas une
- * pagination.
- */
-const CIBLES_LISTEES_MAX = 200
-
-/** L'ordre des groupes dit ce que le setup fera de la cible, du plus direct au plus long. */
-const VERDICTS_GROUPES: readonly VerdictDetectabilite[] = [
-  'OEIL_NU',
-  'JUMELLES',
-  'TELESCOPE',
-  'PHOTO_SEULE',
-]
-
-const LIBELLE_VERDICT: Readonly<Record<VerdictDetectabilite, string>> = {
-  OEIL_NU: 'Œil nu',
-  JUMELLES: 'Jumelles',
-  TELESCOPE: 'Télescope',
-  PHOTO_SEULE: 'Photo seule',
-}
 
 export interface ChampsCibleProps {
   readonly saisie: EtatSaisieCible
-  readonly site: Site
-  readonly catalogue: readonly ObjetCielProfond[]
-  readonly sbCiel: number
-  readonly mLimOeil: number | null
-  readonly dMm: number
-  readonly filtreType: TypeObjet | null
-  readonly surFiltreType: (type: TypeObjet | null) => void
 }
 
 export function ChampsCible(props: ChampsCibleProps) {
-  const { saisie, catalogue, site, sbCiel, mLimOeil, dMm, filtreType } = props
-  // T-0056 — la liste des visibles suit la minute affichée, pas l'instant : la scène publie
-  // `msAffiche` deux fois par seconde et le catalogue compte ~14 000 entrées, alors qu'une
-  // minute de granularité ne change pas quel objet est au-dessus de l'horizon.
-  const minute = useTrancheScene(minuteAffichee)
-
-  const visibles = useMemo(
-    () =>
-      ciblesVisibles({
-        catalogue,
-        matriceCiel: cielInstantane(site, new Date(minute * MS_PAR_MINUTE)).matrice,
-        sbCiel,
-        mLimOeil,
-        dMm,
-      }),
-    [catalogue, site, minute, sbCiel, mLimOeil, dMm],
-  )
-  // T-0050 — le filtre tombe avant le plafond : filtrer les 200 plus brillantes du ciel
-  // entier ne dirait rien du ciel. Le compte annoncé suit le filtre.
-  const filtrees = parType(visibles, filtreType)
-  const listees = filtrees.slice(0, CIBLES_LISTEES_MAX)
-  const typesOfferts = useMemo(() => typesPresents(visibles), [visibles])
-
-  /**
-   * T-0046 — la cible visible courante est l'objet du catalogue retenu, relu dans `visibles`
-   * pour sa position : le bouton vise donc la minute affichée, pas l'instant du choix. Une
-   * cible personnalisée, ou passée sous l'horizon, n'a pas de position — le bouton disparaît,
-   * ce qui est juste : on ne sait plus où pointer.
-   */
-  const choisie =
-    saisie.objetCatalogue === null
-      ? null
-      : visibles.find((c) => c.objet.designation === saisie.objetCatalogue!.designation) ?? null
-
-  /** La valeur vide de la liste est « Personnalisé » : elle rouvre la saisie (T-0051). */
-  function choisitParmiLesVisibles(designationChoisie: string) {
-    if (designationChoisie === '') {
-      saisie.appliqueObjet(null)
-      return
-    }
-    const cible = visibles.find((c) => c.objet.designation === designationChoisie)
-    if (cible !== undefined) saisie.appliqueObjet(cible.objet)
-  }
+  const { saisie } = props
 
   return (
     <section>
@@ -110,69 +34,12 @@ export function ChampsCible(props: ChampsCibleProps) {
             readOnly={saisie.verrouille}
           />
         </label>
-        {catalogue.length > 0 && (
-          <label>
-            Type listé
-            <select
-              value={filtreType ?? ''}
-              onChange={(e) =>
-                props.surFiltreType(e.target.value === '' ? null : (e.target.value as TypeObjet))
-              }
-            >
-              <option value="">Tous types</option>
-              {typesOfferts.map((t) => (
-                <option key={t} value={t}>
-                  {LIBELLE_TYPE_OBJET[t]}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {catalogue.length > 0 && (
-          <label>
-            Cibles visibles
-            <select
-              value={saisie.objetCatalogue === null ? '' : saisie.objetCatalogue.designation}
-              onChange={(e) => choisitParmiLesVisibles(e.target.value)}
-            >
-              <option value="">Personnalisé</option>
-              {/* La cible retenue reste affichée même quand le filtre ou l'horizon l'ont
-                  sortie de la liste : le verrou tient, la lecture doit le dire. */}
-              {saisie.objetCatalogue !== null &&
-                !listees.some((c) => c.objet.designation === saisie.objetCatalogue!.designation) && (
-                  <option value={saisie.objetCatalogue.designation}>
-                    {saisie.objetCatalogue.designation} (hors de la liste affichée)
-                  </option>
-                )}
-              {VERDICTS_GROUPES.map((verdict) => (
-                <GroupeVerdict key={verdict} verdict={verdict} cibles={listees} />
-              ))}
-            </select>
-          </label>
-        )}
-        {catalogue.length > 0 && (
+        {saisie.verrouille && (
           <div className="actions">
-            <span className="etat">
-              {filtrees.length.toLocaleString('fr-FR')} cible
-              {filtrees.length > 1 ? 's' : ''} au-dessus de l’horizon
-              {filtreType === null ? '' : ` de type ${LIBELLE_TYPE_OBJET[filtreType]}`}
-              {filtrees.length > CIBLES_LISTEES_MAX
-                ? `, les ${CIBLES_LISTEES_MAX} plus brillantes listées`
-                : ''}
-              .
-            </span>
-            {/* T-0046 — « Voir » centre, et rien d'autre : ni le champ, ni la rotation, ni
-                l'horloge ne bougent. L'utilisateur garde son zoom et son instant. */}
-            {choisie !== null && (
-              <button
-                type="button"
-                onClick={() => {
-                  majVue({ azimutDeg: choisie.azimutDeg, hauteurDeg: choisie.hauteurDeg })
-                }}
-              >
-                Voir
-              </button>
-            )}
+            <span className="etat">Valeurs du catalogue, en lecture seule.</span>
+            <button type="button" onClick={() => saisie.appliqueObjet(null)}>
+              Cible personnalisée
+            </button>
           </div>
         )}
         <label>
@@ -226,26 +93,5 @@ export function ChampsCible(props: ChampsCibleProps) {
         </label>
       </div>
     </section>
-  )
-}
-
-/** Un groupe de la liste des visibles : ce que le setup en fera, du plus direct au plus long. */
-function GroupeVerdict({
-  verdict,
-  cibles,
-}: {
-  readonly verdict: VerdictDetectabilite
-  readonly cibles: readonly CibleVisible[]
-}) {
-  const groupe = cibles.filter((c) => c.verdict === verdict)
-  if (groupe.length === 0) return null
-  return (
-    <optgroup label={LIBELLE_VERDICT[verdict]}>
-      {groupe.map((c) => (
-        <option key={c.objet.designation} value={c.objet.designation}>
-          {libelleCible(c)}
-        </option>
-      ))}
-    </optgroup>
   )
 }

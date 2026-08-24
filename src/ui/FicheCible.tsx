@@ -15,7 +15,7 @@
 import { useMemo, useState } from 'react'
 import { SaisieRefuseeError } from '../registry/domains.ts'
 import { PRESETS_SNR } from '../registry/verdicts.ts'
-import type { ObjetCielProfond, TypeObjet } from '../data/deepsky.ts'
+import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { Site } from '../core/ephem.ts'
 import { ChampsCible } from './ChampsCible.tsx'
 import { Verdicts } from './Verdicts.tsx'
@@ -42,8 +42,6 @@ export function FicheCible(props: FicheCibleProps) {
   const [permissif, setPermissif] = useState(false)
   const [explicationDepliee, setExplicationDepliee] = useState(false)
   const [snrCible, setSnrCible] = useState(PRESETS_SNR[1]!.valeur)
-  /** T-0050 — restriction de la liste à un type d'objet. `null` ne restreint rien. */
-  const [filtreType, setFiltreType] = useState<TypeObjet | null>(null)
 
   const saisie = useSaisieCible(props.objetSelectionne ?? null)
   const iso = props.iso
@@ -80,16 +78,7 @@ export function FicheCible(props: FicheCibleProps) {
 
   return (
     <>
-      <ChampsCible
-        saisie={saisie}
-        site={props.site}
-        catalogue={props.catalogue}
-        sbCiel={props.sbCiel}
-        mLimOeil={props.mLimOeil}
-        dMm={props.optique.dMm.value}
-        filtreType={filtreType}
-        surFiltreType={setFiltreType}
-      />
+      <ChampsCible saisie={saisie} />
       {!calcul.ok && <p className="erreur">{calcul.erreur}</p>}
       {calcul.ok && (
         <Verdicts

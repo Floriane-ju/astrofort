@@ -2,12 +2,11 @@
  * Ce qu'on peut dire d'un objet du ciel profond sans rien savoir du ciel : sa désignation,
  * son nom commun, son type, sa magnitude.
  *
- * Un seul endroit où traduire un type — le tiroir de réglages, la liste des visibles, son
- * filtre (T-0050) et le champ « Type d'objet » de la fiche y puisent tous.
+ * Un seul endroit où traduire un type — la liste du catalogue, son filtre et le champ
+ * « Type d'objet » de la fiche y puisent tous.
  */
 
 import type { ObjetCielProfond, TypeObjet } from '../data/deepsky.ts'
-import type { CibleVisible } from '../core/visibles.ts'
 
 /**
  * T-0049 — les types de §6.3 en français. Le `Record` complet fait refuser par le
@@ -26,13 +25,20 @@ export const LIBELLE_TYPE_OBJET: Readonly<Record<TypeObjet, string>> = {
   AUTRE: 'autre type',
 }
 
-export function libelleObjet(objet: ObjetCielProfond): string {
-  const nom = objet.nomsCommuns === '' ? '' : ` — ${objet.nomsCommuns.split('|')[0]}`
-  const mag = objet.vMag === null ? '' : ` · mag ${objet.vMag.toFixed(1)}`
-  return `${objet.designation}${nom} · ${LIBELLE_TYPE_OBJET[objet.type]}${mag}`
+/**
+ * Le premier nom commun, ou la chaîne vide : beaucoup d'entrées n'en portent aucun.
+ *
+ * Deux séparateurs, parce que la source en emploie deux : `|` sépare les noms qu'Astrofort
+ * assemble à la construction du paquet, la virgule ceux qu'OpenNGC empile déjà dans son
+ * champ « Common names ». Sans la seconde coupe, une ligne de liste annonce
+ * « Large Magellanic Cloud,Nubecula Major » pour un seul objet.
+ */
+export function nomCommun(objet: ObjetCielProfond): string {
+  return objet.nomsCommuns === '' ? '' : (objet.nomsCommuns.split(/[|,]/)[0]?.trim() ?? '')
 }
 
-/** La hauteur, elle, n'existe que pour une cible levée : elle reste à la liste des visibles. */
-export function libelleCible(cible: CibleVisible): string {
-  return `${libelleObjet(cible.objet)} · ${cible.hauteurDeg.toFixed(0)}° de hauteur`
+export function libelleObjet(objet: ObjetCielProfond): string {
+  const nom = nomCommun(objet) === '' ? '' : ` — ${nomCommun(objet)}`
+  const mag = objet.vMag === null ? '' : ` · mag ${objet.vMag.toFixed(1)}`
+  return `${objet.designation}${nom} · ${LIBELLE_TYPE_OBJET[objet.type]}${mag}`
 }

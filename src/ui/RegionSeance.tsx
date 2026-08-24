@@ -18,6 +18,7 @@ import { libelleZpSource } from '../data/equipment.ts'
 import { Carte } from './Carte.tsx'
 import { PanneauVue } from './PanneauVue.tsx'
 import { PanneauLateral } from './PanneauLateral.tsx'
+import { PanneauCibles } from './PanneauCibles.tsx'
 import { PanneauFile } from './PanneauFile.tsx'
 import { FicheCible } from './FicheCible.tsx'
 import { PlanSessionVue } from './PlanSession.tsx'
@@ -96,6 +97,19 @@ export function LateralSeance(props: RegionSeanceProps) {
   const { panneau } = useCoque()
 
   const contenus = {
+    CIBLES: calcul.ok ? (
+      <PanneauCibles
+        catalogue={catalogue}
+        site={chaine.site}
+        sbCiel={calcul.ciel.sbCiel.value}
+        mLimOeil={calcul.ciel.mLimOeil.value}
+        dMm={calcul.optique.dMm.value}
+        fovHDeg={calcul.optique.fovHDeg.value}
+        echApx={calcul.optique.echApx.value}
+        capteurHMm={calcul.capteur.capteurHMm}
+        contexteSession={chaine.contexteSession}
+      />
+    ) : null,
     NUIT: calcul.ok ? (
       <RegionNuit
         nuit={calcul.nuit}
