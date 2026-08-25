@@ -31,12 +31,7 @@ import {
 } from './ui/app-donnees.ts'
 import { profilAEnregistrer, siteAEnregistrer } from './ui/saisie-persistee.ts'
 import { useChaineCalcul } from './ui/app-calcul.ts'
-import {
-  appliqueModeNuit,
-  doitSActiver,
-  litEtatPersiste,
-  type EtatModeNuit,
-} from './ui/ModeNuit.tsx'
+import { appliqueModeNuit, litEtatPersiste, type EtatModeNuit } from './ui/ModeNuit.tsx'
 import { NiveauContext, type NiveauUtilisateur } from './ui/Terme.tsx'
 
 const MS_PAR_JOUR = 86_400_000
@@ -51,18 +46,16 @@ export function epoqueAffichee(etat: EtatScene): number {
   return epoqueAnnee(new Date(Math.floor(etat.msAffiche / MS_PAR_JOUR) * MS_PAR_JOUR))
 }
 
-/** §11.1 — le mode nuit reste actif au redémarrage, et s'allume seul au crépuscule nautique. */
-function useModeNuit(debutNautique: Date | null): [EtatModeNuit, (etat: EtatModeNuit) => void] {
+/**
+ * §11.1 — le mode nuit reste actif au redémarrage.
+ *
+ * T-0140 — il ne s'allume plus seul au crépuscule : un basculement au rouge pendant la
+ * préparation du matériel n'est pas demandé à l'instant où il survient.
+ */
+function useModeNuit(): [EtatModeNuit, (etat: EtatModeNuit) => void] {
   const [modeNuit, setModeNuit] = useState<EtatModeNuit>(litEtatPersiste)
 
   useEffect(() => appliqueModeNuit(modeNuit), [modeNuit])
-
-  useEffect(() => {
-    if (debutNautique === null || modeNuit.actif) return
-    if (doitSActiver(modeNuit, debutNautique, new Date())) {
-      setModeNuit({ ...modeNuit, actif: true })
-    }
-  }, [debutNautique, modeNuit])
 
   return [modeNuit, setModeNuit]
 }
@@ -101,7 +94,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
     poids: poids.poids,
   })
   const { calcul } = chaine
-  const [modeNuit, setModeNuit] = useModeNuit(calcul.ok ? calcul.nuit.debutNautique : null)
+  const [modeNuit, setModeNuit] = useModeNuit()
 
   // §12.3 — le lieu et le matériel s'enregistrent au fil de la saisie, masque d'horizon
   // relevé compris, et l'export les emporte tels qu'ils sont à l'écran.

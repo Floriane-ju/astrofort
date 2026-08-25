@@ -84,7 +84,7 @@ export function BarreHaut(props: BarreHautProps) {
 
       {/* §11.1 — le mode nuit est un geste de terrain : il reste à portée, dans la barre. */}
       <details className="tiroir tiroir-nuit">
-        <summary>{props.modeNuit.actif ? 'nuit — actif' : 'nuit'}</summary>
+        <summary>{props.modeNuit.actif ? 'mode nuit — actif' : 'mode nuit'}</summary>
         <div className="tiroir-contenu">
           <ModeNuit etat={props.modeNuit} surChangement={props.surModeNuit} />
         </div>

@@ -9,23 +9,21 @@
  * L'extinction est faite par la palette, pas par un filtre de teinte : la feuille de style
  * bascule des variables dont les canaux vert et bleu sont strictement nuls. Un filtre posé
  * sur une interface claire laisserait la luminance globale trop élevée.
+ *
+ * T-0140 — le tiroir ne porte plus que ce qui se décide : une bascule et une luminance. Le
+ * pourquoi du rouge ne s'arbitre pas, il reste ici. Le type de dalle ne changeait aucun
+ * calcul — faire saisir une donnée pour n'obtenir qu'une phrase, c'est afficher la phrase.
+ * L'auto-activation au crépuscule décidait à la place de l'observateur, écran basculé au
+ * rouge pendant la préparation du matériel : la bascule est un geste, pas une corvée.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { K } from '../registry/constants.ts'
-import { Etiquette, Terme } from './Terme.tsx'
-
-const DALLES = ['OLED', 'LCD', 'INCONNUE'] as const
-const AUTO_ACTIVATIONS = ['JAMAIS', 'AU_CREPUSCULE'] as const
-
-export type TypeDalle = (typeof DALLES)[number]
-export type AutoActivation = (typeof AUTO_ACTIVATIONS)[number]
+import { Etiquette } from './Terme.tsx'
 
 export interface EtatModeNuit {
   readonly actif: boolean
   readonly luminance: number
-  readonly typeDalle: TypeDalle
-  readonly autoActivation: AutoActivation
 }
 
 const CLE_STOCKAGE = 'astrofort.mode-nuit'
@@ -34,20 +32,15 @@ const LUMINANCE_NOMINALE = 1
 export const ETAT_INITIAL: EtatModeNuit = Object.freeze({
   actif: false,
   luminance: LUMINANCE_NOMINALE,
-  typeDalle: 'INCONNUE',
-  autoActivation: 'JAMAIS',
 })
-
-function estParmi<T extends string>(valeur: unknown, valeurs: readonly T[]): valeur is T {
-  return typeof valeur === 'string' && (valeurs as readonly string[]).includes(valeur)
-}
 
 /**
  * Le mode reste actif au redémarrage et entre les vues (§11.1).
  *
  * Le stockage local est hors du périmètre de confiance : une clé retouchée, ou écrite par
  * une version antérieure, ne doit pas se propager dans l'état. Chaque champ de forme
- * inattendue retombe sur `ETAT_INITIAL`, les champs intrus sont ignorés.
+ * inattendue retombe sur `ETAT_INITIAL`, les champs intrus sont ignorés — dont `typeDalle`
+ * et `autoActivation`, écrits par les versions d'avant T-0140.
  */
 export function litEtatPersiste(): EtatModeNuit {
   if (typeof localStorage === 'undefined') return ETAT_INITIAL
@@ -66,10 +59,6 @@ export function litEtatPersiste(): EtatModeNuit {
         champs.luminance <= LUMINANCE_NOMINALE
           ? champs.luminance
           : ETAT_INITIAL.luminance,
-      typeDalle: estParmi(champs.typeDalle, DALLES) ? champs.typeDalle : ETAT_INITIAL.typeDalle,
-      autoActivation: estParmi(champs.autoActivation, AUTO_ACTIVATIONS)
-        ? champs.autoActivation
-        : ETAT_INITIAL.autoActivation,
     }
   } catch {
     return ETAT_INITIAL
@@ -96,29 +85,15 @@ export function appliqueModeNuit(etat: EtatModeNuit): void {
   racine.style.setProperty('--luminance-nuit', String(etat.luminance))
 }
 
-/** §11.1 — auto-activation liée au crépuscule nautique de §8.1. */
-export function doitSActiver(
-  etat: EtatModeNuit,
-  crepusculeNautique: Date | null,
-  maintenant: Date,
-): boolean {
-  if (etat.actif) return true
-  if (etat.autoActivation !== 'AU_CREPUSCULE' || crepusculeNautique === null) return false
-  return maintenant.getTime() >= crepusculeNautique.getTime()
-}
-
 export interface ModeNuitProps {
   readonly etat: EtatModeNuit
   readonly surChangement: (etat: EtatModeNuit) => void
 }
 
 export function ModeNuit({ etat, surChangement }: ModeNuitProps) {
-  const [dalleAnnoncee, setDalleAnnoncee] = useState(false)
-
   useEffect(() => {
     appliqueModeNuit(etat)
     ecritEtatPersiste(etat)
-    if (etat.actif && etat.typeDalle === 'LCD') setDalleAnnoncee(true)
   }, [etat])
 
   const plancher = K('LUMINANCE_PLANCHER_MODE_NUIT')
@@ -126,7 +101,6 @@ export function ModeNuit({ etat, surChangement }: ModeNuitProps) {
   return (
     <section>
       <h2>Mode nuit</h2>
-      <Terme cle="mode_nuit" contexte={etat.actif ? 'actif' : 'inactif'} />
       <div className="champs">
         <label className="interrupteur">
           <input
@@ -151,38 +125,13 @@ export function ModeNuit({ etat, surChangement }: ModeNuitProps) {
             {(plancher * 100).toFixed(0)} %
           </span>
         </label>
-        <label>
-          Type de dalle
-          <select
-            value={etat.typeDalle}
-            onChange={(e) => surChangement({ ...etat, typeDalle: e.target.value as TypeDalle })}
-          >
-            <option value="INCONNUE">Je ne sais pas</option>
-            <option value="OLED">OLED</option>
-            <option value="LCD">LCD</option>
-          </select>
-        </label>
-        <label>
-          Activation automatique
-          <select
-            value={etat.autoActivation}
-            onChange={(e) =>
-              surChangement({ ...etat, autoActivation: e.target.value as AutoActivation })
-            }
-          >
-            <option value="JAMAIS">Jamais — bascule manuelle</option>
-            <option value="AU_CREPUSCULE">Au crépuscule nautique</option>
-          </select>
-        </label>
       </div>
 
-      {etat.typeDalle === 'LCD' && dalleAnnoncee && (
-        <p className="cause">
-          Dalle LCD : le rétroéclairage traverse toujours, un noir affiché reste émissif et une
-          fuite de bleu subsiste. Le mode nuit y est efficace mais imparfait. Sur OLED, un noir
-          est un pixel éteint, donc une extinction réelle des canaux vert et bleu.
-        </p>
-      )}
+      <p className="etat">
+        Si votre écran est une dalle LCD, l’extinction ne peut pas être totale : le
+        rétroéclairage traverse toujours et une fuite de bleu subsiste. Le mode reste efficace,
+        il est simplement imparfait. Sur OLED, un noir est un pixel éteint.
+      </p>
       <p className="etat">
         Aucune animation non sollicitée n’est jouée en mode nuit : le défilement du curseur
         temporel du planétarium est mis en pause, et la vue le signale. Elle reste

@@ -15,12 +15,7 @@ import { join } from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
-import {
-  ETAT_INITIAL,
-  appliqueModeNuit,
-  doitSActiver,
-  litEtatPersiste,
-} from '../src/ui/ModeNuit.tsx'
+import { ETAT_INITIAL, appliqueModeNuit, litEtatPersiste } from '../src/ui/ModeNuit.tsx'
 import { K } from '../src/registry/constants.ts'
 import { etatScene } from '../src/ui/scene-etat.ts'
 
@@ -307,32 +302,23 @@ describe('état du mode nuit §11.1', () => {
       stocke('{ ceci n’est pas du JSON')
       expect(litEtatPersiste()).toStrictEqual(ETAT_INITIAL)
 
-      stocke(
-        JSON.stringify({
-          actif: 'oui',
-          luminance: 'sombre',
-          typeDalle: 'PLASMA',
-          autoActivation: 42,
-          intrus: true,
-        }),
-      )
+      stocke(JSON.stringify({ actif: 'oui', luminance: 'sombre', intrus: true }))
       expect(litEtatPersiste()).toStrictEqual(ETAT_INITIAL)
 
+      // T-0140 — `typeDalle` et `autoActivation` sont écrits par les versions antérieures :
+      // ils ne sont plus lus, et leur présence ne doit pas contaminer l'état relu.
       stocke(JSON.stringify({ actif: true, luminance: 12, typeDalle: 'OLED' }))
-      expect(litEtatPersiste()).toStrictEqual({
-        ...ETAT_INITIAL,
-        actif: true,
-        typeDalle: 'OLED',
-      })
+      expect(litEtatPersiste()).toStrictEqual({ ...ETAT_INITIAL, actif: true })
 
-      const complet = {
-        actif: true,
-        luminance: 0.4,
-        typeDalle: 'LCD' as const,
-        autoActivation: 'AU_CREPUSCULE' as const,
-      }
-      stocke(JSON.stringify(complet))
-      expect(litEtatPersiste()).toStrictEqual(complet)
+      stocke(
+        JSON.stringify({
+          actif: true,
+          luminance: 0.4,
+          typeDalle: 'LCD',
+          autoActivation: 'AU_CREPUSCULE',
+        }),
+      )
+      expect(litEtatPersiste()).toStrictEqual({ actif: true, luminance: 0.4 })
     } finally {
       delete (globalThis as { localStorage?: unknown }).localStorage
     }
@@ -340,18 +326,6 @@ describe('état du mode nuit §11.1', () => {
 
   it('ne s’applique pas hors navigateur, sans lever d’erreur', () => {
     expect(() => appliqueModeNuit(ETAT_INITIAL)).not.toThrow()
-  })
-
-  it('s’active au crépuscule nautique quand l’utilisateur l’a demandé', () => {
-    const crepuscule = new Date('2026-08-14T21:30:00Z')
-    const etat = { ...ETAT_INITIAL, autoActivation: 'AU_CREPUSCULE' as const }
-    expect(doitSActiver(etat, crepuscule, new Date('2026-08-14T20:00:00Z'))).toBe(false)
-    expect(doitSActiver(etat, crepuscule, new Date('2026-08-14T22:00:00Z'))).toBe(true)
-  })
-
-  it('ne s’active jamais tout seul quand l’auto-activation est refusée', () => {
-    const crepuscule = new Date('2026-08-14T21:30:00Z')
-    expect(doitSActiver(ETAT_INITIAL, crepuscule, new Date('2026-08-15T01:00:00Z'))).toBe(false)
   })
 
   it('borne la luminance à un plancher d’environ 2 % du nominal', () => {
@@ -368,8 +342,17 @@ describe('interface rendue', () => {
 
   it('expose le réglage du mode nuit et la limite des dalles LCD', () => {
     expect(ecran).toContain('Activer le mode nuit')
-    expect(ecran).toContain('Au crépuscule nautique')
+    expect(ecran).toMatch(/dalle LCD/)
     expect(ecran).toMatch(/mode nuit/i)
+  })
+
+  // T-0140 — le tiroir ne porte que ce qui se décide : ni physiologie rétinienne, ni saisie
+  // du type de dalle, ni bascule automatique.
+  it('ne rend ni l’explication du rouge, ni les réglages retirés', () => {
+    expect(ecran).not.toMatch(/bâtonnets/)
+    expect(ecran).not.toContain('Type de dalle')
+    expect(ecran).not.toContain('Activation automatique')
+    expect(ecran).not.toContain('Au crépuscule nautique')
   })
 })
 
