@@ -18,6 +18,7 @@ import { PRESETS_SNR } from '../registry/verdicts.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { Site } from '../core/ephem.ts'
 import { ChampsCible } from './ChampsCible.tsx'
+import { ImageCible } from './ImageCible.tsx'
 import { Verdicts } from './Verdicts.tsx'
 import { useSaisieCible } from './fiche-cible-saisie.ts'
 import { useLuneCible } from './fiche-cible-lune.ts'
@@ -78,11 +79,16 @@ export function FicheCible(props: FicheCibleProps) {
 
   return (
     <>
+      {/* §6.4 — l'objet avant ses nombres. Une cible personnalisée n'a pas d'identité au
+          catalogue, donc pas d'image à chercher : le composant ne rend alors rien. */}
+      <ImageCible objet={saisie.objetCatalogue} />
       <ChampsCible saisie={saisie} />
       {!calcul.ok && <p className="erreur">{calcul.erreur}</p>}
       {calcul.ok && (
         <Verdicts
           r={calcul.r}
+          objetCadre={saisie.objetCatalogue}
+          optique={props.optique}
           snrCible={snrCible}
           surSnr={setSnrCible}
           isoLibelle={iso.message}

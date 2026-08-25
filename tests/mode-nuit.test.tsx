@@ -112,9 +112,13 @@ describe('palette du mode nuit §11.1', () => {
   })
 
   it('n’écrit aucune couleur en dur hors des blocs de palette', () => {
-    // Tout ce qui suit le dernier bloc :root est la feuille proprement dite : elle ne doit
-    // référencer que des variables. Une couleur en dur y survivrait au mode nuit.
-    const apresPalettes = CSS.slice(CSS.lastIndexOf(':root[data-mode-nuit'))
+    // Tout ce qui suit le bloc de palette nocturne est la feuille proprement dite : elle ne
+    // doit référencer que des variables. Une couleur en dur y survivrait au mode nuit.
+    //
+    // L'ancrage est la PREMIÈRE occurrence, celle de la palette : depuis §6.4 la feuille porte
+    // aussi des règles de composant sous ce sélecteur, et s'ancrer sur la dernière ne ferait
+    // plus balayer que la fin du fichier.
+    const apresPalettes = CSS.slice(CSS.indexOf(":root[data-mode-nuit='true']"))
     const corps = apresPalettes.slice(apresPalettes.indexOf('}') + 1)
     expect(corps).not.toMatch(/#[0-9a-f]{3,8}\b/i)
     expect(corps).not.toMatch(/\brgba?\(/)

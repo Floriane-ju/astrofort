@@ -1527,3 +1527,89 @@ select:disabled {
   padding-top: 0.6rem;
   border-top: var(--trait) solid var(--bordure-faible);
 }
+
+/* §6.4 — l'image d'une cible.
+
+   MODE NUIT. §11.1 exige des canaux vert et bleu strictement nuls, et une photographie en
+   couleurs les porte par construction. Le fondu multiplicatif règle le cas exactement plutôt
+   qu'approximativement : le résultat vaut, canal par canal, image × fond. Avec un fond de
+   rouge pur, le vert et le bleu tombent à zéro et le rouge garde sa modulation — l'image reste
+   lisible, l'adaptation à l'obscurité reste intacte. Un filtre de teinte, lui, laisserait
+   fuir les deux autres canaux.
+
+   Le fond porte donc `--texte` en mode nuit : le jeton est déjà du rouge pur au facteur de
+   luminance courant, donc la vignette s'assombrit avec le reste de l'interface. */
+.image-cible {
+  margin: 0 0 0.8rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.image-cible-vue {
+  display: block;
+  position: relative;
+  background: var(--fond);
+  border: var(--trait) solid var(--bordure-faible);
+}
+
+.image-cible-vue img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+:root[data-mode-nuit='true'] .image-cible-vue {
+  background: var(--texte);
+}
+
+:root[data-mode-nuit='true'] .image-cible-vue img {
+  mix-blend-mode: multiply;
+}
+
+.image-cible figcaption {
+  font-size: 0.7rem;
+  color: var(--attenue);
+}
+
+/* La vignette de liste garde la hauteur d'une cible de clic : elle aligne la ligne au lieu
+   de la déformer, et une ligne avec image ne saute pas par rapport à celles sans. */
+.cible-vignette {
+  flex: 0 0 auto;
+  align-self: center;
+  width: var(--cible-clic);
+  height: var(--cible-clic);
+  overflow: hidden;
+}
+
+.cible-vignette img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* §6.2 — l'aperçu du cadre sur imagerie de fond.
+
+   Le rectangle est le CADRE, pas l'image : sa largeur est la fraction que la marge du registre
+   laisse au capteur, sa hauteur suit le rapport des deux champs, et sa rotation est l'angle de
+   boîtier suggéré. Les trois viennent du profil, donc du style en ligne — une classe ne peut
+   pas porter un nombre qui dépend de la focale.
+
+   Il ne remplit rien : ce qu'on regarde est ce qui déborde. */
+.apercu-cadre {
+  margin: 0.6rem 0 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.apercu-cadre-rectangle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border: var(--trait) solid var(--accent);
+  pointer-events: none;
+}
+
+.apercu-cadre figcaption {
+  font-size: 0.7rem;
+  color: var(--attenue);
+}

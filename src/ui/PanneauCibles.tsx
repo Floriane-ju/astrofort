@@ -33,6 +33,7 @@ import { K } from '../registry/constants.ts'
 import { DOMAINES } from '../registry/domains.ts'
 import type { ObjetCielProfond, TypeObjet } from '../data/deepsky.ts'
 import { Icone } from './Icone.tsx'
+import { VignetteCible } from './ImageCible.tsx'
 import { LIBELLE_TYPE_OBJET, nomCommun } from './libelles-objet.ts'
 import { ouvreCible } from './seance-etat.ts'
 import { majVue, minuteAffichee, useTrancheScene, MS_PAR_MINUTE } from './scene-etat.ts'
@@ -235,6 +236,9 @@ function LigneListe({ ligne, pose }: { readonly ligne: LigneCible; readonly pose
 
   return (
     <li className="cible-item">
+      {/* §6.4 — depuis le cache seulement : le défilement de la liste n'émet aucune requête.
+          Hors du bouton, pour que l'image ne soit pas un contenu cliquable de plus. */}
+      <VignetteCible objet={objet} />
       <button type="button" className="cible-ligne" onClick={() => ouvreCible(objet)}>
         <span className="cible-tete">
           <span className="cible-designation">{objet.designation}</span>
