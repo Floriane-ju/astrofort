@@ -47,6 +47,7 @@ import {
   type EntreeDessin,
   type SurvolEcran,
 } from '../src/ui/dessine-ciel.ts'
+import type { OptiquePose } from '../src/ui/dessine-pose-cadre.ts'
 import { decritCible } from '../src/ui/planetarium-selection.ts'
 import { ancreLabel, libelleCible, titreCible } from '../src/ui/libelles-cibles.ts'
 import { etoileLabellisable } from '../src/core/labels.ts'
@@ -180,6 +181,7 @@ function rend(
     corps?: readonly PositionCorps[]
     vueRealiste?: boolean
     lune?: LuneEcran
+    poseCadre?: OptiquePose
   } = {},
 ) {
   const ctx = contexteEspion()
@@ -232,6 +234,7 @@ function rend(
     modeNuit: options.modeNuit ?? false,
     survol: options.survol,
     passeFile: options.passeFile,
+    poseCadre: options.poseCadre,
   }
   return { ctx, sortie: dessineCiel(entree), entree }
 }
@@ -1282,4 +1285,70 @@ describe('écart des couches de repérage — T-0110', () => {
     for (const ligne of entree.frontieres.polylignes) n += ligne.length
     return n
   }
+})
+
+describe('§9.1 — T-0142, la carte de pose peinte dans le cadre', () => {
+  /** Un grand-angle ouvert : la NPF y donne des poses de quelques dizaines de secondes. */
+  const OPTIQUE: OptiquePose = { focaleMm: 24, ouvertureN: 2.8, pitchUm: 5.94 }
+
+  /** Les textes de la passe, dans l'ordre où ils ont été peints. */
+  function textes(ctx: ReturnType<typeof contexteEspion>): readonly string[] {
+    return ctx.appels.filter((a) => a.nom === 'fillText').map((a) => String(a.args[0]))
+  }
+
+  const estPose = (texte: string): boolean => /^(∞|[\d.]+ s)$/.test(texte)
+  const estDeclinaison = (texte: string): boolean => texte.startsWith('δ ')
+
+  it('ne peint rien tant que l’optique n’est pas demandée', () => {
+    const { ctx } = rend()
+    expect(textes(ctx).some(estPose)).toBe(false)
+    expect(textes(ctx).some(estDeclinaison)).toBe(false)
+  })
+
+  it('porte une pose et une déclinaison par cellule de la grille de §9.1', () => {
+    const { ctx } = rend({ poseCadre: OPTIQUE })
+    const cote = K('CELLULES_CARTE_POSE')
+    const poses = textes(ctx).filter(estPose)
+    expect(poses.length).toBe(cote * cote)
+    const declinaisons = textes(ctx).filter(estDeclinaison)
+    expect(declinaisons.length).toBe(cote * cote)
+    // La grille couvre le cadre, elle ne répète pas son centre : sur 17° de champ, les
+    // cellules ne tombent pas toutes sur la même déclinaison — c'est tout le propos de §9.1.
+    expect(new Set(declinaisons).size).toBeGreaterThan(1)
+  })
+
+  it('masque ce qu’elle recouvre : le noir du cadre est peint après le dernier repère', () => {
+    const { ctx } = rend({ poseCadre: OPTIQUE })
+    const appels = ctx.appels
+    const dernierRemplissage = appels.map((a) => a.nom).lastIndexOf('fill')
+    const dernierRepere = appels.reduce(
+      (dernier, appel, i) =>
+        appel.nom === 'fillText' && !estPose(String(appel.args[0])) &&
+        !estDeclinaison(String(appel.args[0]))
+          ? i
+          : dernier,
+      -1,
+    )
+    expect(dernierRepere).toBeGreaterThan(-1)
+    expect(dernierRemplissage).toBeGreaterThan(dernierRepere)
+    expect(ctx.couleurs).toContain('#000000')
+  })
+
+  it('renonce plutôt que de masquer pour rien quand le cadre est trop petit à l’écran', () => {
+    const { ctx } = rend({ poseCadre: OPTIQUE, fovDeg: 300 })
+    expect(textes(ctx).some(estPose)).toBe(false)
+  })
+
+  it('n’écrit aucune composante verte ou bleue en mode nuit', () => {
+    const { ctx } = rend({ poseCadre: OPTIQUE, modeNuit: true })
+    for (const couleur of ctx.couleurs) {
+      const rgb = couleur.match(/rgb\((\d+) (\d+) (\d+)\)/)
+      if (rgb !== null) {
+        expect(Number(rgb[2]), couleur).toBe(0)
+        expect(Number(rgb[3]), couleur).toBe(0)
+        continue
+      }
+      expect(couleur, couleur).toBe('#000000')
+    }
+  })
 })

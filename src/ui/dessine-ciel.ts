@@ -62,6 +62,7 @@ import { bandeRealiste, couleurTeinte, fondRealiste, paletteScene, teinte, TEINT
 import { brillanceVoieLacteeNl } from '../core/fond-ciel-rendu.ts'
 import { nanolamberts } from '../core/moon.ts'
 import { dessineHaloHorizon, dessineHaloLune, type LuneEcran } from './dessine-fond-ciel.ts'
+import { dessineCartePose, type OptiquePose } from './dessine-pose-cadre.ts'
 
 export interface CouchesActives {
   readonly figures: boolean
@@ -150,6 +151,11 @@ export interface EntreeDessin {
   readonly passeFile?:
     | ((ctx: CanvasRenderingContext2D, projecteur: Projecteur) => void)
     | undefined
+  /**
+   * §9.1 / T-0142 — l'optique dont la carte de pose a besoin. Présente : le cadre matériel est
+   * masqué et garni de la grille de §9.1, en dernier, par-dessus tout ce qu'il recouvre.
+   */
+  readonly poseCadre?: OptiquePose | undefined
   /** §3.4 / T-0085 — absent : rien n'est survolé, la scène ne révèle aucun nom. */
   readonly survol?: SurvolEcran | undefined
 }
@@ -1023,6 +1029,34 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   if (revele !== null) {
     ctx.fillStyle = teintes.texte
     ctx.fillText(revele.texte, revele.xPx, revele.yPx)
+  }
+
+  // --- Carte de pose dans le cadre §9.1 / T-0142 ---------------------------
+  // En DERNIER : la carte masque le cadre, traces, repères et noms compris. Peinte avec les
+  // repères, elle laisserait passer par-dessus elle les labels retenus juste au-dessus.
+  if (entree.poseCadre !== undefined && entree.couches.cadre) {
+    for (const cadre of entree.cadres) {
+      const garni = dessineCartePose({
+        ctx,
+        // Projecteur BRUT, comme le contour : la carte décrit le cadre du matériel, y compris
+        // quand il vise sous l'horizon (§3.5).
+        projecteur: brut,
+        cadre,
+        matriceCiel: entree.matriceCiel,
+        optique: entree.poseCadre,
+        chemin: () => cheminCadre(ctx, brut, cadre, entree.matriceCiel),
+        couleurTexte: teintes.texte,
+        couleurLimitante: teintes.cadre,
+      })
+      // Le contour se retrace sur le masque : peint plus tôt, il en perdrait la moitié.
+      if (garni) {
+        ctx.strokeStyle = teintes.cadre
+        ctx.lineWidth = 2
+        cheminCadre(ctx, brut, cadre, entree.matriceCiel)
+        ctx.stroke()
+        ctx.lineWidth = 1
+      }
+    }
   }
 
   // T-0107 — une étoile nommée n'est pas AUSSI une cible anonyme. Les deux passes ci-dessus

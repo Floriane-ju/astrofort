@@ -66,7 +66,7 @@ export function PanneauFile(props: PanneauFileProps) {
         mode={props.modeObjectif}
         actions={actions}
       />
-      <PoseMaximale lectures={lectures} />
+      <PoseMaximale lectures={lectures} file={file} />
       <ProfondeurDUnePose
         lectures={lectures}
         file={file}

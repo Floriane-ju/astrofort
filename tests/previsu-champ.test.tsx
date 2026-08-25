@@ -331,13 +331,14 @@ describe('§9.2 — modulation par les paramètres de capture', () => {
 describe('§9 — le panneau du filé', () => {
   it('compose les quatre features sur un seul pointage', () => {
     const html = renderToStaticMarkup(createElement(PanneauFile, PROPS_PANNEAU))
-    expect(html).toContain('Pose maximale par déclinaison')
+    // T-0142 — la carte de pose se lit dans le cadre : le panneau n'en porte que la bascule.
+    expect(html).toContain('Afficher la pose maximale dans le cadre')
+    expect(html).not.toContain('carte-pose')
     expect(html).toContain('Prévisualisation de champ')
     expect(html).toContain('Filé d’étoiles')
     expect(html).toContain('Séquence de filé')
     // La règle des 500 est affichée, et la carte de pose porte une valeur par cellule.
     expect(html).toContain('Règle des 500')
-    expect(html).toContain('carte-pose')
     // Sans autonomie constructeur, aucun nombre de batteries n'est inventé.
     expect(html).toContain('[DONNÉE MANQUANTE]')
   })

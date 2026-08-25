@@ -33,6 +33,8 @@ export interface ReglagesFile {
   readonly reductionBruit: boolean
   /** T-0116 — §9.2/§9.3 peints sur toute la scène, sous les repères, plutôt qu'à part. */
   readonly incrustation: boolean
+  /** T-0142 — §9.1 peinte DANS le cadre du capteur, qu'elle masque, plutôt qu'au panneau. */
+  readonly poseDansCadre: boolean
 }
 
 /** Ce que la dernière passe de filé a effectivement tracé. `null` tant qu'aucune n'a eu lieu. */
@@ -60,6 +62,7 @@ const ETAT_INITIAL: EtatSeance = {
     espaceLibreGo: '',
     reductionBruit: false,
     incrustation: false,
+    poseDansCadre: false,
   },
   renduFile: null,
 }

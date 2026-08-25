@@ -29,6 +29,7 @@ import { poseRenduFile, publicateurRenduFile } from './seance-etat.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
 import { dessineChamp, type ParametresFile, type SortieDessinChamp } from './dessine-champ.ts'
 import { dessineCiel, type CibleEcran, type SurvolEcran } from './dessine-ciel.ts'
+import type { OptiquePose } from './dessine-pose-cadre.ts'
 import type { LuneEcran } from './dessine-fond-ciel.ts'
 
 /** Noms français des corps mobiles de §3.1. */
@@ -72,6 +73,8 @@ export interface EtatBoucle {
   readonly vueRealiste: boolean
   /** T-0100 — la Lune de l'instant affiché. Absente : aucun halo lunaire n'est peint. */
   readonly lune: LuneEcran | null
+  /** §9.1 / T-0142 — l'optique quand la carte de pose est demandée dans le cadre, `null` sinon. */
+  readonly poseCadre: OptiquePose | null
   readonly vue: VueScene
   readonly modeTemps: string
   readonly facteur: number
@@ -184,6 +187,7 @@ export function useBoucleRendu(entree: {
         corps,
         nomsCorps: NOMS_CORPS,
         cadres,
+        ...(courant.poseCadre === null ? {} : { poseCadre: courant.poseCadre }),
         couches: courant.couches,
         magLimite: courant.magLimite,
         sbCiel: courant.sbCiel,

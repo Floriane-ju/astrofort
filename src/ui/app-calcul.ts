@@ -210,12 +210,17 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
   const materielFile = useMemo(() => {
     if (!calcul.ok || profondeurFile === null) return null
     return {
+      optique: {
+        focaleMm: Number(materiel.focale),
+        ouvertureN: calcul.ouvertureN,
+        pitchUm: calcul.capteur.pitchUm,
+      },
       profondeur: profondeurFile,
       echApx: calcul.optique.echApx.value,
       sbCiel: calcul.ciel.sbCiel.value,
       tMaxSuiviS: calcul.suivi.tMaxSuiviS.value,
     }
-  }, [calcul, profondeurFile])
+  }, [calcul, profondeurFile, materiel.focale])
 
   /**
    * §8.3 — le ciel, le site et le matériel sous lesquels une cible est évaluée pour la nuit.

@@ -1304,37 +1304,6 @@ button:disabled {
   cursor: grabbing;
 }
 
-/* §9.1 — la pose maximale est une carte, pas un nombre : la grille reprend la géométrie du
-   cadre, cellule par cellule. */
-.carte-pose {
-  border-collapse: collapse;
-  font-size: 0.68rem;
-  margin: 0.5rem 0 1rem;
-}
-
-.carte-pose td {
-  border: var(--trait) solid var(--bordure);
-  padding: 0.2rem 0.4rem;
-  text-align: center;
-  background: var(--surface-haute);
-}
-
-.carte-pose-dec {
-  display: block;
-  color: var(--attenue);
-  font-size: 0.9em;
-}
-
-/* La zone limitante et ses voisines immédiates : ce sont elles qui fixent la pose. */
-.carte-pose .pose-courte {
-  background: var(--fond-alerte);
-  color: var(--alerte);
-}
-
-.carte-pose .pose-pole {
-  background: var(--fond-accent);
-}
-
 @media print {
   /* §11.2 — le plan est imprimable : ce qui n'est pas le plan ne l'est pas. */
   .actions,

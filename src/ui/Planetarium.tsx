@@ -252,6 +252,9 @@ export function Planetarium(props: PlanetariumProps) {
     asterismes,
     frontieres,
     couches: rendu.couches,
+    // T-0142 — la carte de pose ne se peint que si elle est demandée ET chiffrable : sans
+    // matériel, il n'y a pas de NPF, donc pas de cadre à masquer.
+    poseCadre: file.poseDansCadre && props.file !== undefined ? props.file.optique : null,
     magLimite: profondeur.magLimite.value,
     sbCiel: sbCielScene,
     vueRealiste: rendu.vueRealiste,

@@ -8,7 +8,6 @@
 import { K } from '../registry/constants.ts'
 import { vignettageDiaph } from '../core/galactique.ts'
 import { libelleZpSource, type PointZeroSysteme } from '../data/equipment.ts'
-import type { CartePoseMax } from '../core/grand-champ.ts'
 import type { ModeProjection } from '../core/projection.ts'
 import type { ActionsScene } from './scene-etat.ts'
 import { activeIncrustation, majFile, type ModeApercu, type ReglagesFile, type RenduFile } from './seance-etat.ts'
@@ -27,36 +26,6 @@ const POURCENT = 100
 /** Une pose courte se lit à la dizaine de seconde près : l'arrondi à l'unité l'écraserait. */
 function formatePose(tS: number): string {
   return tS < 10 ? tS.toFixed(1) : tS.toFixed(0)
-}
-
-function celluleClasse(tNpfS: number | null, tLimite: number | null): string {
-  if (tNpfS === null) return 'pose-pole'
-  if (tLimite === null) return 'pose-cellule'
-  return tNpfS <= tLimite * K('ECART_POSE_CADRE_SIGNIFICATIF') ? 'pose-courte' : 'pose-longue'
-}
-
-/** Carte de pose maximale : une grille, pas un nombre (§9.1). */
-function CartePose({ carte }: { readonly carte: CartePoseMax }) {
-  const lignes = Array.from({ length: carte.cote }, (_, ligne) =>
-    carte.cellules.slice(ligne * carte.cote, (ligne + 1) * carte.cote),
-  )
-  const limite = carte.tMaxCadreS.value
-  return (
-    <table className="carte-pose">
-      <tbody>
-        {lignes.map((cellules, ligne) => (
-          <tr key={ligne}>
-            {cellules.map((cellule, colonne) => (
-              <td key={colonne} className={celluleClasse(cellule.tNpfS, limite)}>
-                {cellule.tNpfS === null ? '∞' : `${formatePose(cellule.tNpfS)} s`}
-                <span className="carte-pose-dec">δ {cellule.decDeg.toFixed(0)}°</span>
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
 }
 
 interface CadrageProps {
@@ -152,13 +121,40 @@ export function CadrageDuFile({
   )
 }
 
-/** §9.1 — la pose maximale n'est pas un nombre, c'est une carte par déclinaison. */
-export function PoseMaximale({ lectures }: { readonly lectures: LecturesFile }) {
+/**
+ * §9.1 — la pose maximale n'est pas un nombre, c'est une carte par déclinaison.
+ *
+ * T-0142 — et cette carte EST le cadre : elle se lit dans le cadre du capteur, sur la scène,
+ * pas dans une grille abstraite posée à côté de lui. Ne restent ici que les valeurs qui ne
+ * dépendent d'aucune cellule — la pose retenue, le repère de la règle des 500, la focale
+ * équivalente — et les avertissements qui portent une décision.
+ */
+export function PoseMaximale({
+  lectures,
+  file,
+}: {
+  readonly lectures: LecturesFile
+  readonly file: ReglagesFile
+}) {
   const { carte } = lectures
   return (
     <section>
-      <h3>Pose maximale par déclinaison</h3>
-      <CartePose carte={carte} />
+      <div className="champs">
+        <label className="interrupteur">
+          <input
+            type="checkbox"
+            checked={file.poseDansCadre}
+            onChange={(e) => majFile({ poseDansCadre: e.target.checked })}
+          />
+          Afficher la pose maximale dans le cadre
+        </label>
+      </div>
+      {file.poseDansCadre && (
+        <p className="etat">
+          Le cadre du capteur porte la grille de pose : il est masqué le temps qu'elle s'y
+          lise, étoiles et repères compris.
+        </p>
+      )}
       <TracedValue terme="pose_max_cadre" trace={carte.tMaxCadreS} decimales={1} unite="s" />
       <TracedValue terme="regle_500" trace={carte.t500S} decimales={1} unite="s" />
       <TracedValue

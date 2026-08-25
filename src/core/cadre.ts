@@ -81,6 +81,54 @@ export function contourCadreJ2000(cadre: Cadre, matriceCiel: Mat3): readonly Vec
   return points
 }
 
+export interface CelluleCadre {
+  /** Position du centre de la cellule dans le cadre, de −1 (gauche, bas) à +1 (droite, haut). */
+  readonly uFrac: number
+  readonly vFrac: number
+  /** Direction J2000 du centre de la cellule : sa déclinaison est `asin(dir.z)`. */
+  readonly dir: Vec3
+}
+
+/**
+ * §9.1 — centres des cellules de la carte de pose, dans la géométrie du cadre RÉELLEMENT
+ * dessiné (T-0142).
+ *
+ * `cartePoseMax` échantillonne la même grille dans le repère équatorial, à partir d'une visée
+ * et d'un roulis. Ici la grille part du cadre de la scène — azimut, hauteur, roulis du
+ * boîtier — pour que chaque valeur tombe sur le pixel qu'elle décrit. Même inverse gnomonique
+ * que le contour ci-dessus : c'est le même objectif rectilinéaire, il n'y en a pas deux.
+ *
+ * Les points sont les CENTRES des cellules, non leurs bords : un nombre peint dans une case
+ * vaut pour ce qu'elle couvre, pas pour le trait qui la borde.
+ */
+export function cellulesCadreJ2000(
+  cadre: Cadre,
+  matriceCiel: Mat3,
+  cote: number,
+): readonly CelluleCadre[] {
+  const uMax = Math.tan((cadre.profil.fovLDeg / 2) * DEG)
+  const vMax = Math.tan((cadre.profil.fovHDeg / 2) * DEG)
+  const versHorizon = transpose(
+    matriceVue(cadre.azimutDeg, cadre.hauteurDeg, cadre.rotationDeg),
+  )
+  const versJ2000 = transpose(matriceCiel)
+
+  const cellules: CelluleCadre[] = []
+  for (let ligne = 0; ligne < cote; ligne++) {
+    // Ligne 0 en haut du cadre, comme la carte de §9.1 : v décroît quand la ligne augmente.
+    const vFrac = 1 - (2 * ligne + 1) / cote
+    for (let colonne = 0; colonne < cote; colonne++) {
+      const uFrac = (2 * colonne + 1) / cote - 1
+      const u = uFrac * uMax
+      const v = vFrac * vMax
+      const norme = Math.hypot(u, v, 1)
+      const local: Vec3 = { x: u / norme, y: v / norme, z: 1 / norme }
+      cellules.push({ uFrac, vFrac, dir: applique(versJ2000, applique(versHorizon, local)) })
+    }
+  }
+  return cellules
+}
+
 /** §3.5 — le refus de fabriquer un cadre en l'absence de profil déclaré. */
 export const REFUS_SANS_PROFIL =
   'Aucun profil matériel n’est renseigné : l’application ne superpose pas de cadre par ' +
