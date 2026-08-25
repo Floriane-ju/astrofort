@@ -2723,7 +2723,6 @@ La règle des 500 donne une valeur unique de 50 s pour tout le ciel : le double 
 Quand je consulte la pose max
 Alors l'app affiche 25,2 s
 Et la règle des 500 à 50 s en repère explicitement non retenu
-Et nomme la zone limitante du cadre
 
 Étant donné le même objectif pointé près du pôle
 Quand je consulte la pose max
@@ -2734,8 +2733,6 @@ Et l'app avertit que la contrainte devient le bruit thermique et le fond de ciel
 Étant donné un cadre couvrant à la fois δ = +70° et δ = +5°         # cas limite
 Quand la pose max est calculée
 Alors la valeur retenue est celle de δ = +5°
-Et l'app signale que le pôle tiendrait des poses bien plus longues,
-    en proposant un recadrage
 
 Étant donné suivi_actif = vrai                                      # cas limite
 Quand j'ouvre le module grand champ
@@ -2807,7 +2804,6 @@ MODULATION PAR LES PARAMÈTRES DE CAPTURE — ce qui distingue une prévisu d'un
 Quand j'ouvre la prévisualisation
 Alors la bande de la Voie lactée apparaît, orientée conformément aux coordonnées galactiques
 Et les étoiles de magnitude ≤ 7,5 sont aux positions réelles du catalogue
-Et le rendu porte la mention que les étoiles faibles sont générées, non catalographiées
 
 Étant donné une pose de 60 s à δ = 0 alors que t_max vaut 25,2 s
 Quand la prévisualisation est générée
@@ -3544,7 +3540,7 @@ ORDRE DES GESTES DANS LA BARRE — c'est un contrat, pas une mise en page
   n'existe que pour qui pense à ouvrir le menu.
 
 ONGLETS D'INTENTION — un seul jeu de réglages à l'écran à la fois
-  Explorer · Cible · Nuit · Filé. Un clic sur un objet de la scène ouvre l'onglet Cible
+  Explorer · Cible · Nuit · Panorama. Un clic sur un objet de la scène ouvre l'onglet Cible
   garni : le geste part de la scène et arrive dans le panneau, l'état de l'onglet est
   donc partagé, pas local au panneau.
   Le groupe « Séance » — lieu, date, ciel — reste visible SOUS TOUS LES ONGLETS : ces
@@ -3587,7 +3583,7 @@ Alors le canevas de la scène conserve sa taille
 Quand la fiche s'ouvre
 Alors l'onglet Cible est activé et garni de cet objet
 
-Étant donné l'onglet Filé actif et un plan de session produit
+Étant donné l'onglet Panorama actif et un plan de session produit
 Quand je lance l'impression
 Alors le plan de session est imprimé, pas une page blanche
 
