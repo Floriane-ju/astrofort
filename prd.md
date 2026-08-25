@@ -1635,6 +1635,49 @@ AMENER LA CIBLE AU CENTRE
   Un geste unique pointe la scène sur la cible choisie. Sans lui, la liste nomme des
   objets que l'utilisateur ne sait pas retrouver dans le champ — et §8.4 ne répond qu'à
   la question du pointage sur le terrain, pas à celle du repérage à l'écran.
+
+UNE IMAGE DE L'OBJET, ET CE QU'ELLE COÛTE
+  La liste et la recherche rendent la désignation atteignable, pas reconnaissable. Un
+  débutant qui ne sait pas taper « NGC 7000 » ne sait pas davantage ce qu'il choisit
+  quand il le lit. L'image est ce qui referme cet écart, et c'est sa seule fonction :
+  elle n'entre dans aucun verdict, elle ne modifie aucune sortie de §6.2 ni de §6.3.
+
+  DEUX SOURCES, DANS CET ORDRE
+    1. l'image de tête de la page encyclopédique de l'objet, quand elle existe
+    2. sinon, une découpe du relevé DSS2 couleur aux coordonnées de l'objet
+
+  L'ordre vient de la mesure, pas de l'intuition : interrogée par son numéro NGC, la
+  source encyclopédique rend une image pour 60 objets NGC sur 60 — des découpes DSS,
+  PanSTARRS et SDSS. Interrogée par son numéro Messier, elle en rend 42 sur 110. C'est
+  donc la désignation NGC qui interroge, y compris pour un objet Messier.
+  Hors NGC, la couverture s'effondre : 8 IC sur 30, 1 Barnard sur 20. La découpe de
+  relevé n'est pas un repli d'exception, c'est le cas courant pour Sharpless et Barnard.
+
+  LE CHAMP DE LA DÉCOUPE EST CALCULÉ, JAMAIS CHOISI
+    champ_decoupe_deg = taille_maj_arcmin / 60 × marge        (marge : registre)
+    Un objet de 71' et un objet de 2' ne se regardent pas au même champ. Une taille
+    absente au catalogue prend une valeur de repli nommée, comme partout ailleurs.
+
+  UNE IMAGE FAUSSE EST PIRE QU'AUCUNE IMAGE
+    L'image de tête d'une page encyclopédique n'est pas toujours l'objet : pour un
+    Sharpless, c'est fréquemment la carte de la constellation qui le contient. Un
+    fichier dont le nom trahit un diagramme — carte, atlas, schéma, frontières — est
+    refusé, et l'objet retombe sur la découpe de relevé. Le motif de refus est une
+    donnée de registre, pas une condition dans le code.
+
+  L'ATTRIBUTION EST UNE CONDITION D'AFFICHAGE, PAS UNE MENTION
+    Les images encyclopédiques sont sous licence libre à attribution. Auteur, licence et
+    lien vers le fichier source sont visibles sous l'image, sans interaction. Une image
+    dont l'auteur ou la licence n'a pas pu être lu n'est pas affichée.
+
+  CE QUE L'IMAGE NE FAIT PAS
+    - elle ne se précharge pas : le catalogue embarqué compte plus de 13 000 objets, et
+      §12.2 plafonne le volume livré. Une image est demandée à la consultation d'une
+      cible, jamais au défilement d'une liste.
+    - elle ne bloque rien : son absence n'est pas une erreur, et la fiche reste complète
+      sans elle. C'est la formulation que §12.5 emploie déjà pour l'imagerie de fond.
+    - elle ne quitte pas le cadre de §13 : ce qui sort est une désignation ou un couple
+      de coordonnées. Ni profil, ni site, ni plan de séance.
 ```
 
 ### Entrées / Sorties
@@ -1649,6 +1692,9 @@ AMENER LA CIBLE AU CENTRE
 | `visibles` | array | — | sortie | objet, azimut, hauteur, verdict |
 | `types_presents` | array | — | sortie | sous-ensemble de §6.3 |
 | `origine_cible` | enum | — | CATALOGUE / PERSONNALISEE | pilote la lecture seule |
+| `image_objet` | blob ou nul | — | sortie | nul = aucune image, pas une erreur |
+| `image_origine` | enum | — | ENCYCLOPEDIE / RELEVE | sortie, pilote l'attribution |
+| `image_credit` | string ou nul | — | sortie | auteur, licence, lien du fichier source |
 
 ### Critères d'acceptation
 
@@ -1686,11 +1732,31 @@ Et seule une cible personnalisée reste saisissable
 Étant donné une cible choisie dans la liste
 Quand je demande à la voir
 Alors la scène se pointe sur elle sans changer l'instant affiché
+
+Étant donné une cible Messier dont la page encyclopédique porte une image
+Quand j'ouvre sa fiche
+Alors l'image de l'objet est affichée
+Et son auteur, sa licence et le lien vers le fichier source sont visibles sans interaction
+
+Étant donné une cible Sharpless dont l'image de tête est une carte de constellation
+Quand son image est résolue
+Alors la carte est refusée
+Et c'est la découpe du relevé aux coordonnées de l'objet qui est affichée
+
+Étant donné une cible sans image et sans réseau                     # cas limite
+Quand j'ouvre sa fiche
+Alors la fiche est complète, désignation et type compris
+Et l'absence d'image n'est pas présentée comme une erreur
+
+Étant donné une liste de cibles visibles que je fais défiler        # cas limite
+Quand les lignes se rendent
+Alors aucune image n'est demandée au réseau
+Et seules les images déjà en cache local apparaissent en vignette
 ```
 
 ### Dépendances données
 
-Catalogue d'objets du ciel profond embarqué (§12.2). Verdicts : §6.2, §6.3. Matrice du ciel : §3.1. Aucune source nouvelle, aucun réseau. Fallback : total.
+Catalogue d'objets du ciel profond embarqué (§12.2). Verdicts : §6.2, §6.3. Matrice du ciel : §3.1. Liste, recherche, filtre et pointage : aucune source nouvelle, aucun réseau, fallback total. **Image de l'objet : en ligne seulement** — page encyclopédique et fichier associé (Wikipédia, Wikimedia Commons), découpe de relevé DSS2 en repli (service HiPS du CDS, Strasbourg), la même source que §6.2. Fraîcheur : statique. Fallback hors-ligne : l'image tombe pour une cible neuve, et reste servie du cache local pour une cible déjà consultée (§12.5).
 
 ---
 
@@ -3891,6 +3957,7 @@ Aucune pour Soleil, Lune, planètes, étoiles. TLE CelesTrak pour les satellites
 | Profil matériel, champ, échantillonnage | §5 | **complet** | aucune |
 | Verdict de domaine, cadrage, détectabilité | §6.1–6.3 | **complet** | aucune |
 | Prévisualisation du cadre sur imagerie de fond | §6.2 | **tombe** | cadre schématique sur positions d'étoiles réelles |
+| Image de l'objet dans la liste et la fiche | §6.4 | **tombe** | cible déjà consultée : image du cache ; cible neuve : désignation et type, sans image |
 | Flux, pose unitaire, N poses, calibration | §7 | **complet** | aucune |
 | Fenêtre nocturne, Lune, créneaux, plan | §8.1–8.3 | **complet** | aucune |
 | Masque d'horizon | §4, §8.1 | **complet si en cache** | site inconnu → masque plat marqué `[HYP]` |
@@ -3933,6 +4000,11 @@ Et l'app ne prétend pas que la nuit sera dégagée
 Quand j'y calcule un créneau
 Alors un masque plat est appliqué et marqué [HYP]
 Et l'app indique que le relief local n'a pas été pris en compte
+
+Étant donné une cible consultée en ligne, puis le mode hors réseau
+Quand je l'ouvre à nouveau
+Alors son image est servie depuis le cache local
+Et une cible jamais consultée n'affiche ni image ni erreur
 ```
 
 ### Dépendances données
@@ -3958,6 +4030,26 @@ CONSERVÉ  métriques produit anonymes et agrégées, sans lien avec une prédic
           En cas de refus, aucune fonctionnalité n'est dégradée.
 ```
 
+```
+TIERS CONTACTÉS — et ce qui leur est transmis
+  L'application n'a pas de serveur, mais elle n'est plus sans trafic. Deux services
+  publics sont interrogés, uniquement pour l'image d'objet de §6.4 :
+
+  wikipedia.org, wikimedia.org    la désignation de la cible consultée
+  service HiPS du CDS, Strasbourg les coordonnées de la cible consultée
+
+  Dans les deux cas s'ajoute ce qu'une requête HTTP transmet toujours : l'adresse IP du
+  navigateur. Ne sont transmis ni profil matériel, ni site, ni masque d'horizon, ni plan
+  de séance, ni saisie — le critère de §13.3 reste vrai.
+  Mais il cesse d'être vrai PAR ABSENCE DE TRAFIC, et c'est la raison de ce bloc : la
+  garantie ne se lit plus dans l'architecture, elle se lit dans cette liste. Toute
+  origine ajoutée à cette liste est un amendement du présent document, pas un choix
+  d'implémentation. La politique de sécurité de contenu de l'application énumère
+  exactement ces origines, et rien d'autre.
+
+  Hors réseau, ou sur une cible sans image à résoudre, aucune requête n'est émise.
+```
+
 ## 13.2 Vérification par tests, non par mesure d'usage
 
 Les constantes du registre §2.1 n'étant pas ajustables, la qualité se vérifie par tests automatisés plutôt que par télémétrie :
@@ -3972,6 +4064,7 @@ Les constantes du registre §2.1 n'étant pas ajustables, la qualité se vérifi
 | Complétude du glossaire | Vérification en compilation : tout libellé d'interface a une entrée (§10.1) |
 | Absence de fuite en mode nuit | Analyse des canaux V et B sur captures de toutes les vues (§11.1) |
 | Performance de rendu | 50 Hz minimum avec catalogue complet et planification concurrente (§12.1) |
+| Confinement des origines réseau | La liste d'origines de la politique de sécurité de contenu est celle de §13.1, vérifiée en compilation ; une origine ajoutée d'un côté sans l'autre fait échouer la suite (§13.1) |
 
 ## 13.3 Critères d'acceptation
 
@@ -3988,6 +4081,11 @@ Alors aucune donnée de profil, de site ou de plan de session n'est transmise
 Étant donné le jeu de cas de référence des formules optiques
 Quand la suite de tests s'exécute
 Alors chaque valeur calculée correspond à la valeur attendue dans sa tolérance
+
+Étant donné une session de travail complète
+Quand j'inspecte le trafic réseau
+Alors les seules origines contactées sont celles énumérées en §13.1
+Et chaque requête ne porte qu'une désignation de cible ou un couple de coordonnées
 ```
 
 ---
@@ -4052,11 +4150,19 @@ Le découpage suit les dépendances entre moteurs, pas la valeur perçue. Un lot
 
 **Dépend des lots 0 à 5.** Ce lot n'ajoute aucun moteur : il rend atteignables ceux qui existent. Le placer avant le lot 5 aurait imposé d'incruster un aperçu que rien ne produisait encore.
 
+## Lot 7 — L'objet devient reconnaissable
+
+**Contenu** §6.4 image de l'objet dans la liste et la fiche · §12.5 ligne de dégradation correspondante · §13.1 énumération des tiers contactés
+
+**Livrable** une cible cesse d'être une désignation : elle se voit avant d'être choisie, et l'application dit exactement à qui elle a parlé pour ça.
+
+**Dépend du lot 6** — l'image se pose dans la liste de §6.4 et dans la fiche, que ce lot vient de rendre atteignables. C'est le premier lot qui fait sortir du trafic : il est le dernier justement pour que la promesse hors-ligne des lots 0 à 6 soit livrée et vérifiée avant d'être assouplie.
+
 ## Post-MVP — par ordre de valeur décroissante
 
 | Sujet | Pourquoi différé |
 |---|---|
-| Imagerie de fond HiPS | Casse l'offline, forte valeur visuelle : à traiter comme option en ligne |
+| Imagerie de fond HiPS en tuiles — planétarium (§3.7) et prévisualisation du cadre (§6.2) | Casse l'offline sur toute la scène, pas sur un objet : le lot 7 sert une découpe par cible consultée, des tuiles se demandent par centaines et à chaque geste. Forte valeur visuelle, à traiter comme option en ligne |
 | Paquet Gaia DR3 et zoom à 5° | Multiplie par six le volume téléchargé pour un champ où le persona primaire ne prend aucune décision de capture (§12.2) |
 | Multi-sites et comparaison de deux sites | Chiffrerait le levier « site plus sombre » de §10.2 par un différentiel calculé. Exige d'abord qu'un site survive au rechargement (§12.3), puis une gestion de collection (§4.1) |
 | Atlas de pollution lumineuse aux coordonnées | Écarté du MVP : exige le réseau et un cache par site pour remplacer une saisie exacte de deux secondes (§4.1) |
