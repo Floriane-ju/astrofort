@@ -45,6 +45,13 @@ export const MATRICE_DEGRADATION: readonly LigneDegradation[] = Object.freeze([
     degradation: 'cadre schématique sur positions d’étoiles réelles',
   },
   {
+    fonction: 'Image de l’objet dans la liste et la fiche',
+    sections: '§6.4',
+    horsReseau: 'TOMBE',
+    degradation:
+      'cible déjà consultée : image du cache ; cible neuve : désignation et type, sans image',
+  },
+  {
     fonction: 'Flux, pose unitaire, nombre de poses, calibration',
     sections: '§7',
     horsReseau: 'COMPLET',

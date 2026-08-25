@@ -2,7 +2,7 @@
  * §12.1, §12.3 — Persistance locale sur IndexedDB.
  *
  * Deux natures de données, à ne pas confondre :
- *   - les paquets de catalogues sont retéléchargeables ;
+ *   - les paquets de catalogues et les vignettes d'objets sont retéléchargeables ;
  *   - les profils, sites, masques d'horizon édités et plans de session ne le sont pas.
  * C'est cette seconde catégorie que l'export JSON de `persistence.ts` doit protéger.
  */
@@ -10,7 +10,11 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 
 export const NOM_BASE = 'astrofort'
-export const VERSION_BASE = 1
+/**
+ * 2 — ajout du magasin `images` (§6.4). Une montée de version ne détruit rien : les magasins
+ * existants traversent la mise à niveau, seul le nouveau est créé.
+ */
+export const VERSION_BASE = 2
 
 export interface SiteEnregistre {
   readonly id: string
@@ -82,11 +86,39 @@ export interface PaquetStocke {
   readonly donnees: ArrayBuffer
 }
 
+/**
+ * §6.4 — l'image d'une cible, rangée par sa désignation.
+ *
+ * Les octets sont stockés, pas l'adresse : c'est ce qui rend l'image visible après la
+ * coupure réseau (§12.5). `origine` et `credit` voyagent avec eux, sans quoi une image
+ * relue du cache s'afficherait sans son attribution — donc sans le droit de s'afficher.
+ *
+ * Le crédit n'est jamais absent : une image encyclopédique dont l'auteur ou la licence n'a
+ * pas pu être lu n'est pas rangée, et une découpe de relevé porte le crédit fixe du registre.
+ * Une image relue sans crédit serait une image qu'on n'a pas le droit d'afficher.
+ */
+export interface ImageStockee {
+  readonly designation: string
+  readonly origine: 'ENCYCLOPEDIE' | 'RELEVE'
+  readonly octets: Blob
+  readonly credit: CreditImage
+  /** Adresse d'où les octets viennent, pour pouvoir remonter à la source affichée. */
+  readonly source: string
+  readonly obtenueIso: string
+}
+
+export interface CreditImage {
+  readonly auteur: string
+  readonly licence: string
+  readonly lien: string
+}
+
 interface AstrofortDB extends DBSchema {
   sites: { key: string; value: SiteEnregistre }
   profils: { key: string; value: ProfilMateriel }
   plans: { key: string; value: PlanEnregistre }
   paquets: { key: string; value: PaquetStocke }
+  images: { key: string; value: ImageStockee }
   reglages: { key: string; value: unknown }
 }
 
@@ -95,11 +127,18 @@ let instance: Promise<IDBPDatabase<AstrofortDB>> | null = null
 export function db(): Promise<IDBPDatabase<AstrofortDB>> {
   instance ??= openDB<AstrofortDB>(NOM_BASE, VERSION_BASE, {
     upgrade(base) {
-      base.createObjectStore('sites', { keyPath: 'id' })
-      base.createObjectStore('profils', { keyPath: 'id' })
-      base.createObjectStore('plans', { keyPath: 'id' })
-      base.createObjectStore('paquets', { keyPath: 'nom' })
-      base.createObjectStore('reglages')
+      // Chaque magasin est créé s'il manque : la mise à niveau depuis une base en version 1
+      // doit ajouter `images` sans toucher aux profils, sites et plans déjà rangés (§12.3).
+      const cree = (nom: 'sites' | 'profils' | 'plans' | 'paquets' | 'images', cle?: string) => {
+        if (base.objectStoreNames.contains(nom)) return
+        base.createObjectStore(nom, cle === undefined ? undefined : { keyPath: cle })
+      }
+      cree('sites', 'id')
+      cree('profils', 'id')
+      cree('plans', 'id')
+      cree('paquets', 'nom')
+      cree('images', 'designation')
+      if (!base.objectStoreNames.contains('reglages')) base.createObjectStore('reglages')
     },
   })
   return instance
@@ -112,4 +151,12 @@ export async function litPaquet(nom: string): Promise<ArrayBuffer | null> {
 
 export async function ecritPaquet(paquet: PaquetStocke): Promise<void> {
   await (await db()).put('paquets', paquet)
+}
+
+export async function litImage(designation: string): Promise<ImageStockee | null> {
+  return (await (await db()).get('images', designation)) ?? null
+}
+
+export async function ecritImage(image: ImageStockee): Promise<void> {
+  await (await db()).put('images', image)
 }

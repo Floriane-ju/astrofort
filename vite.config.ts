@@ -2,11 +2,22 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import type { Plugin } from 'vite'
+import { ORIGINES_IMAGERIE } from './src/registry/imagerie.ts'
 
 // §13.1, §13.3 — l'application n'a pas de serveur applicatif et ne transmet ni profil, ni site,
-// ni plan de séance. `connect-src 'self'` fait tenir cette promesse par le navigateur à
-// l'exécution : une dépendance qui appellerait un tiers demain est refusée sans qu'une revue de
-// code ait à la rattraper.
+// ni plan de séance. `connect-src` fait tenir cette promesse par le navigateur à l'exécution :
+// une dépendance qui appellerait un tiers demain est refusée sans qu'une revue de code ait à la
+// rattraper.
+//
+// §6.4 — la liste n'est plus vide pour autant. L'image d'objet joint deux services publics, et
+// les origines viennent de `ORIGINES_IMAGERIE` : elles ne sont pas réécrites ici, parce que la
+// même liste sert de garantie de confidentialité en §13.1. Ce qui leur est transmis est une
+// désignation ou un couple de coordonnées — jamais un profil, un site ou un plan de séance,
+// donc le critère de §13.3 tient toujours.
+//
+// Une seule directive s'ouvre. Les vignettes sont téléchargées, rangées en IndexedDB, puis
+// affichées depuis un `blob:` : `img-src` n'a aucun hôte tiers à nommer, et il n'y a qu'une
+// surface à surveiller au lieu de deux.
 //
 // La politique voyage dans `<meta>` plutôt que dans un en-tête parce que le dépôt ne fixe aucune
 // cible d'hébergement (§13.1 : pas de serveur) : un `<meta>` part avec l'artefact et vaut sur
@@ -21,9 +32,18 @@ const CSP_COMMUNE = [
   // React pose des styles en attribut (`style={{…}}`) et Vite injecte la feuille par script :
   // les deux exigent l'inline. Sans effet sur §13.3, qui se joue sur `connect-src`.
   "style-src 'self' 'unsafe-inline'",
+  // `blob:` — les vignettes de §6.4, et rien d'autre : aucune origine distante ici.
+  "img-src 'self' blob:",
 ]
 
-export const CSP_PRODUCTION = [...CSP_COMMUNE, "script-src 'self'", "connect-src 'self'"].join('; ')
+/** `connect-src`, dérivé de la liste d'origines : une seule source de vérité (§13.1). */
+function connectSrc(...supplements: readonly string[]): string {
+  return ['connect-src', "'self'", ...supplements, ...ORIGINES_IMAGERIE.map((o) => o.origine)].join(
+    ' ',
+  )
+}
+
+export const CSP_PRODUCTION = [...CSP_COMMUNE, "script-src 'self'", connectSrc()].join('; ')
 
 // Assouplissements réservés au serveur de développement, jamais construits : Vite injecte le
 // préambule de rafraîchissement React en script inline, et le rechargement à chaud ouvre une
@@ -31,7 +51,7 @@ export const CSP_PRODUCTION = [...CSP_COMMUNE, "script-src 'self'", "connect-src
 export const CSP_DEVELOPPEMENT = [
   ...CSP_COMMUNE,
   "script-src 'self' 'unsafe-inline'",
-  "connect-src 'self' ws: wss:",
+  connectSrc('ws:', 'wss:'),
 ].join('; ')
 
 export function politiqueDeSecurite(): Plugin {
