@@ -259,11 +259,12 @@ export function Planetarium(props: PlanetariumProps) {
     vue: pointage,
     modeTemps: temps.modeTemps,
     facteur: reglage.facteur,
-    // §11.2 — aucune animation non sollicitée : le mode nuit met le défilement en pause.
-    // T-0072 : `prefers-reduced-motion` n'ajoute rien ici. Le défilement n'est jamais l'état
-    // de départ (§3.2, `MAINTENANT`) — il ne peut donc pas s'imposer, et le couper d'office
-    // sous la préférence retirerait un mode que l'utilisateur a explicitement demandé.
-    anime: temps.modeTemps === 'DEFILEMENT' && !props.modeNuit,
+    decalageMs: temps.decalageMs,
+    // T-0137 — le mode nuit ne change que les couleurs : il ne coupe pas le défilement, qui
+    // se règle sous le ciel comme en préparation. T-0072 : `prefers-reduced-motion` n'ajoute
+    // rien ici non plus — le défilement n'est jamais l'état de départ (§3.2, `MAINTENANT`),
+    // il ne peut donc pas s'imposer, et le couper d'office retirerait un mode demandé.
+    anime: temps.modeTemps === 'DEFILEMENT',
   }
 
   const cibles = useBoucleRendu({ canevas, etat: etatBoucle, instant, parametresFile, survol })

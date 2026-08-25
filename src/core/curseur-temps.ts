@@ -6,69 +6,24 @@
  * serrée : c'est l'erreur classique des planétariums grand public. Ici, le curseur de
  * vitesse est couplé au zoom.
  *
- * Le chiffre qui condamne le temps réel : à 32 px/°, ×1 donne 0,13 px/s. L'animation ne
- * montre rien. L'application le dit et propose un facteur utile plutôt que d'animer dans
- * le vide.
+ * Le chiffre qui condamne le temps réel comme ANIMATION : à 32 px/°, ×1 donne 0,13 px/s.
+ * D'où deux vitesses nommées — ×150 et ×1500 — plutôt qu'un curseur continu à régler ; le
+ * temps réel reste le mode de lecture, il n'est simplement jamais un défilement.
  */
 
 import { K } from '../registry/constants.ts'
 import { trace, type Traced } from './traced.ts'
 
-export type ModeTemps = 'MAINTENANT' | 'FIGE' | 'DEFILEMENT' | 'PAS_ASTRONOMIQUES'
+export type ModeTemps = 'MAINTENANT' | 'FIGE' | 'DEFILEMENT'
 
 /**
- * Les pas sont calés sur des périodes réelles, pas sur des durées rondes : « +1 heure »
- * n'enseigne rien, un jour sidéral enseigne que les étoiles reviennent et pas les planètes.
+ * Les deux vitesses du transport, au signe près. Le curseur continu de §3.2 était un réglage
+ * à trouver ; deux crans nommés sont une commande. Le plafond, lui, ne bouge pas : ces
+ * facteurs s'y écrêtent comme n'importe quel autre.
  */
-export type PasAstronomique =
-  | 'JOUR_SIDERAL'
-  | 'JOUR_SOLAIRE'
-  | 'MOIS_SYNODIQUE'
-  | 'ANNEE_TROPIQUE'
-
-export interface DescriptionPas {
-  readonly libelle: string
-  readonly dureeS: number
-  readonly enseigne: string
+export function facteurDefilement(rapide: boolean): number {
+  return rapide ? K('FACTEUR_DEFILEMENT_RAPIDE') : K('FACTEUR_DEFILEMENT_NORMAL')
 }
-
-export function pasAstronomique(pas: PasAstronomique): DescriptionPas {
-  const S_PAR_JOUR = K('JOUR_SOLAIRE_S')
-  switch (pas) {
-    case 'JOUR_SIDERAL':
-      return {
-        libelle: 'Jour sidéral',
-        dureeS: K('JOUR_SIDERAL_S'),
-        enseigne:
-          'Le ciel étoilé revient à l’identique ; les planètes et la Lune, elles, ont bougé.',
-      }
-    case 'JOUR_SOLAIRE':
-      return {
-        libelle: 'Jour solaire',
-        dureeS: S_PAR_JOUR,
-        enseigne: 'Le Soleil revient à la même place ; les étoiles ont pris quatre minutes d’avance.',
-      }
-    case 'MOIS_SYNODIQUE':
-      return {
-        libelle: 'Mois synodique',
-        dureeS: K('MOIS_SYNODIQUE_J') * S_PAR_JOUR,
-        enseigne: 'La Lune retrouve la même phase.',
-      }
-    case 'ANNEE_TROPIQUE':
-      return {
-        libelle: 'Année tropique',
-        dureeS: K('ANNEE_TROPIQUE_J') * S_PAR_JOUR,
-        enseigne: 'La même saison revient, donc le même ciel à la même heure.',
-      }
-  }
-}
-
-export const PAS_ASTRONOMIQUES: readonly PasAstronomique[] = Object.freeze([
-  'JOUR_SIDERAL',
-  'JOUR_SOLAIRE',
-  'MOIS_SYNODIQUE',
-  'ANNEE_TROPIQUE',
-])
 
 export type EtatLisibilite = 'IMPERCEPTIBLE' | 'LISIBLE' | 'RAPIDE' | 'REPLIEMENT'
 
@@ -116,13 +71,8 @@ export interface ReglageVitesse {
   readonly pxParDegre: number
   /** Vrai quand le facteur demandé a été ramené sous le plafond. */
   readonly ajuste: boolean
-  /** Facteur proposé quand le facteur demandé ne montre rien. */
-  readonly facteurPropose?: number
   readonly message?: string
 }
-
-/** ×60 : une minute par seconde, premier facteur qui rend le mouvement lisible (§3.2). */
-const FACTEUR_UNE_MINUTE_PAR_SECONDE = 60
 
 /**
  * Applique le plafond de lisibilité au facteur demandé. L'ajustement est SIGNALÉ : l'app
@@ -161,15 +111,14 @@ export function reglageVitesse(
     }
   }
 
+  // Reste atteignable en vue très large, où le plafond est haut mais la densité de pixels
+  // par degré si faible que même la vitesse rapide ne montre rien.
   if (etat === 'IMPERCEPTIBLE' && facteur !== 0) {
     return {
       ...base,
-      facteurPropose: Math.min(FACTEUR_UNE_MINUTE_PAR_SECONDE, plafond.value),
       message:
         `À ×${Math.abs(facteur).toFixed(0)}, le ciel défile à ${vEcran.value.toFixed(2)} px/s : ` +
-        'le mouvement est imperceptible et l’animation ne montre rien. ' +
-        `×${Math.min(FACTEUR_UNE_MINUTE_PAR_SECONDE, plafond.value).toFixed(0)}, soit une ` +
-        'minute par seconde, rend le mouvement lisible.',
+        'le mouvement est imperceptible. Resserrer le champ le rend visible.',
     }
   }
 

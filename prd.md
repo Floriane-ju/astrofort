@@ -144,10 +144,10 @@ PRINCIPE
 | Constante | Valeur | Consommée par |
 |---|---|---|
 | Rotation apparente du ciel | 15,041 °/h | §3.1, §9.1, §9.3 |
-| Jour sidéral | 86 164,09 s | §3.2 |
-| Jour solaire moyen | 86 400 s | §3.2 |
-| Mois synodique | 29,5306 j | §3.2 |
-| Année tropique | 365,2422 j | §3.2 |
+| Jour sidéral | 86 164,09 s | §3.1 |
+| Jour solaire moyen | 86 400 s | §3.1 |
+| Mois synodique | 29,5306 j | aucune — conservée pour mémoire |
+| Année tropique | 365,2422 j | aucune — conservée pour mémoire |
 | Précession générale | 50,29 "/an | §3.1, §3.4 |
 | Radian en arcsecondes | 206 265 | §5.1 |
 | Limite de Dawes | 116 / D(mm) | §5.1 |
@@ -500,7 +500,9 @@ PLAFOND
 |---|---|---|---|
 | ×1 (temps réel) | 1 s/s | **0,13 px/s** | imperceptible — inutilisable en animation |
 | ×60 | 1 min/s | 8,0 px/s | lisible, mouvement doux |
+| **×150** (vitesse normale) | 2,5 min/s | **20 px/s** | lisible — écrêtée sous 2° de champ |
 | ×600 | 10 min/s | 80 px/s | lisible, lecture d'une nuit entière |
+| **×1500** (vitesse rapide) | 25 min/s | **201 px/s** | lisible — écrêtée sous 20° de champ |
 | ×3600 | 1 h/s | 481 px/s | limite haute, encore suivable |
 | ×10000 | 2,8 h/s | 1 337 px/s | repliement, illisible |
 
@@ -512,46 +514,72 @@ CONSÉQUENCE PRODUIT
   une animation fluide en vue large et illisible en vue serrée. C'est l'erreur
   classique des planétariums grand public.
 
-MODES DE TEMPS
-  MAINTENANT       suit l'horloge système, resynchronisation continue
+MODES DE TEMPS — trois, et le mode de départ est la lecture
+  MAINTENANT       le temps s'écoule à la cadence de l'horloge système, à un DÉCALAGE
+                   CONSTANT près : instant_affiche = horloge_systeme + decalage.
+                   Nul au démarrage — l'app ouvre sur l'instant présent. Resynchronisé
+                   à chaque image, donc sans dérive. MODE PAR DÉFAUT.
   FIGE             instant arbitraire, aucun défilement
   DEFILEMENT       facteur ∈ [−facteur_max ; +facteur_max]
-  PAS ASTRONOMIQUES  sauts calés sur des périodes réelles, pas sur des durées rondes
-     jour sidéral (86 164,09 s)  → le ciel étoilé revient à l'identique, les planètes bougent
-     jour solaire (86 400 s)     → le Soleil revient à l'identique
-     mois synodique (29,5306 j)  → même phase de Lune
-     année tropique (365,2422 j) → même saison
-  → ces pas enseignent quelque chose ; « +1 heure » n'enseigne rien.
+
+COMMANDES — un transport, pas un formulaire
+  lecture / pause  bascule MAINTENANT ↔ FIGE. La lecture repart de l'INSTANT AFFICHÉ,
+                   pas de l'heure du jour : le décalage est figé à la reprise. Reprendre
+                   après avoir choisi le 21 août montre le 21 août qui s'écoule.
+  défilement       DEUX VITESSES NOMMÉES, dans les deux sens :
+                     normale  ×150   → 2,5 min de ciel par seconde
+                     rapide   ×1500  → 25 min de ciel par seconde
+  aller à          saisie d'une date-heure ; l'instant choisi met le temps en pause,
+                   sans quoi la resynchronisation de MAINTENANT l'effacerait aussitôt
+
+  Les deux vitesses RESTENT SOUMISES à facteur_max : elles ne remplacent pas le
+  plafond, elles s'y écrêtent — et l'écrêtage est annoncé, comme partout ailleurs.
 ```
 
 ### Entrées / Sorties
 
 | Champ | Type | Unité | Plage valide | Note |
 |---|---|---|---|---|
-| `mode_temps` | enum | — | 4 valeurs | |
-| `facteur_vitesse` | float | — | borné par `facteur_max` | |
+| `mode_temps` | enum | — | 3 valeurs | MAINTENANT au démarrage |
+| `facteur_vitesse` | float | — | borné par `facteur_max` | ×150 ou ×1500, au signe près |
 | `facteur_max` | float | — | sortie | recalculé à chaque zoom |
-| `pas_astronomique` | enum | — | 4 valeurs | |
+| `instant_choisi` | datetime | — | entrée | fixe l'horloge et passe en FIGE |
+| `decalage_ms` | int | ms | — | écart constant à l'horloge système en MAINTENANT |
 | `v_ecran_px_s` | float | px/s | sortie | affiché en mode expert |
 | `etat_lisibilite` | enum | — | IMPERCEPTIBLE / LISIBLE / RAPIDE / REPLIEMENT | sortie |
 
 ### Critères d'acceptation
 
 ```gherkin
-Étant donné un champ de 60° sur un viewport de 1920 px et un facteur ×1
-Quand l'animation démarre
-Alors la vitesse écran est de 0,13 px/s
-Et l'app propose de passer à ×60 en indiquant que le temps réel est imperceptible
+Étant donné un champ de 60° sur un viewport de 1920 px
+Quand je demande la vitesse normale puis la vitesse rapide
+Alors le ciel défile à 20 px/s puis à 201 px/s
+Et les deux valeurs tombent dans la plage lisible, sans écrêtage à annoncer
+
+Étant donné la lecture temps réel, mode de départ
+Quand je ne touche à rien
+Alors l'horloge suit le système et le ciel avance de 0,13 px/s
+Et l'app ne propose aucun défilement : une horloge juste n'est pas une animation ratée
 
 Étant donné un défilement à ×3600 en champ de 60°
 Quand je zoome jusqu'à un champ de 5°
 Alors le facteur est automatiquement ramené sous ×374
 Et l'app signale l'ajustement plutôt que de laisser l'image se replier
 
-Étant donné le pas « jour sidéral » appliqué une fois
-Quand je compare les deux images
-Alors les étoiles occupent des positions identiques
-Et les planètes et la Lune se sont déplacées, ce que l'app souligne
+Étant donné la vitesse rapide demandée en champ de 5°
+Quand le plafond s'applique
+Alors le facteur retenu est ×374 et non ×1500
+Et l'app affiche le facteur réellement appliqué et sa raison
+
+Étant donné une date-heure saisie dans la barre
+Quand je la valide
+Alors le ciel montre cet instant, le plan de séance porte sur cette nuit
+Et le temps est en pause
+
+Étant donné un instant choisi la nuit du 21 août, temps en pause
+Quand je reprends la lecture
+Alors l'horloge repart du 21 août et avance à la seconde réelle
+Et elle ne saute pas à l'heure du jour
 
 Étant donné un défilement en marche arrière traversant un changement d'année  # cas limite
 Quand la précession est réappliquée
@@ -3455,8 +3483,10 @@ place, y compris sur un écran d'ordinateur portable dans une voiture.
   - Cibles de clic ≥ 44 px, compatibles avec un usage ganté sur écran tactile.
   - Le plan de session §8.3 est imprimable et exportable en texte : un plan qui
     exige un écran allumé pendant trois heures est un plan qui vide la batterie.
-  - Aucune animation non sollicitée en mode nuit : le curseur temporel §3.2 se met
-    en pause quand le mode nuit s'active, et le signale.
+  - Aucune animation décorative : ni image clé, ni défilement lissé, ni transition
+    de position. Le mode nuit ne change QUE les couleurs — il ne retire aucune
+    commande et n'interrompt pas le curseur temporel §3.2, qu'on règle sous le ciel
+    comme en préparation.
   - Toute valeur affichée sur le terrain porte son unité. Un « 13 » sans unité est
     une source d'erreur de manipulation.
 ```

@@ -15,7 +15,7 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import { K } from '../registry/constants.ts'
 import { fovMaxSelonMode, type ModeProjection, type Vue } from '../core/projection.ts'
-import type { ModeTemps, PasAstronomique } from '../core/curseur-temps.ts'
+import type { ModeTemps } from '../core/curseur-temps.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
 
@@ -93,12 +93,20 @@ export function vuePlanetarium(vue: VueScene): Vue {
   }
 }
 
-/** Le temps : le mode du curseur temporel de §3.2 et ses réglages. */
+/** Le temps : le mode du curseur temporel de §3.2, sa vitesse et son ancrage. */
 export interface TempsScene {
   readonly modeTemps: ModeTemps
   /** Facteur de défilement demandé, avant plafonnement par la lisibilité. */
   readonly facteur: number
-  readonly pas: PasAstronomique
+  /**
+   * Écart CONSTANT entre l'instant affiché et l'horloge système, en millisecondes.
+   *
+   * `MAINTENANT` ne veut pas dire « aujourd'hui » mais « le temps s'écoule » : reprendre la
+   * lecture après avoir choisi le 21 août doit repartir du 21 août, pas sauter à ce soir.
+   * Nul au démarrage — l'app ouvre sur l'instant présent —, il est recalculé à chaque reprise
+   * et la resynchronisation par image continue d'interdire toute dérive.
+   */
+  readonly decalageMs: number
 }
 
 /**
@@ -170,7 +178,7 @@ const ETAT_INITIAL: EtatScene = {
     largeurPx: LARGEUR_SCENE_PX,
     hauteurPx: HAUTEUR_SCENE_PX,
   },
-  temps: { modeTemps: 'MAINTENANT', facteur: 60, pas: 'JOUR_SIDERAL' },
+  temps: { modeTemps: 'MAINTENANT', facteur: K('FACTEUR_DEFILEMENT_NORMAL'), decalageMs: 0 },
   rendu: {
     couches: {
       figures: true,
@@ -260,9 +268,25 @@ export function afficheInstant(ms: number, diagnostic?: DiagnosticRendu): void {
   pose({ ...etat, msAffiche: ms, lectures })
 }
 
-/** §3.2 — un pas astronomique est un saut de l'horloge d'affichage, pas un défilement. */
-export function saute(secondes: number): void {
-  instant.ms += secondes * 1000
+/**
+ * §3.2 — aller à un instant : l'horloge d'affichage saute, et le temps se met en pause.
+ *
+ * Sans la pause, `MAINTENANT` resynchroniserait sur l'horloge système à l'image suivante et
+ * l'instant choisi n'aurait vécu que 40 ms.
+ */
+export function vaA(ms: number): void {
+  instant.ms = ms
+  majTemps({ modeTemps: 'FIGE' })
+}
+
+/**
+ * §3.2 — rendre le temps à son écoulement, DEPUIS l'instant affiché.
+ *
+ * Le décalage est figé ici plutôt que lu par image : c'est ce qui fait de la reprise un
+ * geste, et de l'horloge système une cadence plutôt qu'une destination.
+ */
+export function reprend(): void {
+  majTemps({ modeTemps: 'MAINTENANT', decalageMs: instant.ms - Date.now() })
 }
 
 /** Remet la scène dans son état de départ. Réservé aux tests : l'application n'en a pas besoin. */
@@ -298,6 +322,14 @@ export function minuteAffichee(etat: EtatScene): number {
   return Math.floor(etat.msAffiche / MS_PAR_MINUTE)
 }
 
+/**
+ * La seconde affichée. La barre basse date l'instant à la seconde ; s'abonner à `msAffiche`
+ * ferait rendre l'horloge à chaque publication de la boucle, pour la même seconde.
+ */
+export function secondeAffichee(etat: EtatScene): number {
+  return Math.floor(etat.msAffiche / 1000)
+}
+
 export function useTrancheScene<T>(selecteur: (etat: EtatScene) => T): T {
   const lit = useCallback(() => selecteur(etatScene()), [selecteur])
   return useSyncExternalStore(abonne, lit, lit)
@@ -309,7 +341,8 @@ export interface ActionsScene {
   readonly majTemps: typeof majTemps
   readonly majRendu: typeof majRendu
   readonly majLectures: typeof majLectures
-  readonly saute: typeof saute
+  readonly vaA: typeof vaA
+  readonly reprend: typeof reprend
 }
 
 export function useScene(): {
@@ -329,6 +362,6 @@ export function useScene(): {
     lectures: courant.lectures,
     msAffiche: courant.msAffiche,
     instant,
-    actions: { majVue, majTemps, majRendu, majLectures, saute },
+    actions: { majVue, majTemps, majRendu, majLectures, vaA, reprend },
   }
 }

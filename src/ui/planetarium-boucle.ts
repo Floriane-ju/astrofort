@@ -75,6 +75,8 @@ export interface EtatBoucle {
   readonly vue: VueScene
   readonly modeTemps: string
   readonly facteur: number
+  /** §3.2 — l'écart constant entre l'instant affiché et l'horloge système. */
+  readonly decalageMs: number
   readonly anime: boolean
 }
 
@@ -125,8 +127,10 @@ export function useBoucleRendu(entree: {
       dernierTs = ts
 
       if (courant.modeTemps === 'MAINTENANT') {
-        // Resynchronisation continue : aucune dérive ne s'accumule sur plusieurs heures.
-        instant.ms = Date.now()
+        // Resynchronisation continue : aucune dérive ne s'accumule sur plusieurs heures. Le
+        // décalage rend la lecture reprenable là où on l'avait laissée — l'horloge système
+        // donne la cadence, pas la destination (T-0137).
+        instant.ms = Date.now() + courant.decalageMs
       } else if (courant.anime) {
         instant.ms += dt * courant.facteur
       }

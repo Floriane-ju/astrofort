@@ -58,7 +58,7 @@ const EXACTES = {
     source: 'constante astronomique exacte',
     tolerance: null,
     ordreDeGrandeur: false,
-    sections: ['3.2'],
+    sections: ['3.1'],
   }),
   JOUR_SOLAIRE_S: entree({
     ref: 'A-SOL',
@@ -68,8 +68,10 @@ const EXACTES = {
     source: 'constante astronomique exacte',
     tolerance: null,
     ordreDeGrandeur: false,
-    sections: ['3.2'],
+    sections: ['3.1'],
   }),
+  // §2.1 — conservées pour mémoire depuis que §3.2 ne propose plus de sauts par période :
+  // une constante exacte et sourcée ne coûte rien à garder, et la table du PRD la cite.
   MOIS_SYNODIQUE_J: entree({
     ref: 'A-SYN',
     libelle: 'Mois synodique',
@@ -78,7 +80,7 @@ const EXACTES = {
     source: 'constante astronomique exacte',
     tolerance: null,
     ordreDeGrandeur: false,
-    sections: ['3.2'],
+    sections: ['2.1'],
   }),
   ANNEE_TROPIQUE_J: entree({
     ref: 'A-TRO',
@@ -88,7 +90,7 @@ const EXACTES = {
     source: 'constante astronomique exacte',
     tolerance: null,
     ordreDeGrandeur: false,
-    sections: ['3.2'],
+    sections: ['2.1'],
   }),
   PRECESSION_ARCSEC_AN: entree({
     ref: 'A-PRE',
@@ -1013,6 +1015,26 @@ const RENDU = {
     source: '§3.2 — au-delà, le ciel devient illisible : l’app ne continue pas d’animer',
     tolerance: 'ordre de grandeur',
     ordreDeGrandeur: true,
+    sections: ['3.2'],
+  }),
+  FACTEUR_DEFILEMENT_NORMAL: entree({
+    ref: 'C-25',
+    libelle: 'Facteur de défilement, vitesse normale',
+    valeur: 150,
+    unite: '×',
+    source: '§3.2 — « normale ×150 → 2,5 min de ciel par seconde »',
+    tolerance: 'écrêté par facteur_max sous 2° de champ',
+    ordreDeGrandeur: false,
+    sections: ['3.2'],
+  }),
+  FACTEUR_DEFILEMENT_RAPIDE: entree({
+    ref: 'C-25',
+    libelle: 'Facteur de défilement, vitesse rapide',
+    valeur: 1500,
+    unite: '×',
+    source: '§3.2 — « rapide ×1500 → 25 min de ciel par seconde »',
+    tolerance: 'écrêté par facteur_max sous 20° de champ',
+    ordreDeGrandeur: false,
     sections: ['3.2'],
   }),
   MAG_BASE_RENDU: entree({

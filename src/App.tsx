@@ -203,13 +203,11 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       surBortle={lieu.surBortle}
       sqm={lieu.sqm}
       surSqm={lieu.surSqm}
-      dateIso={lieu.dateIso}
       surDateIso={lieu.surDateIso}
       masque={chaine.masque}
       pointsMasque={lieu.pointsMasque}
       surPointsMasque={lieu.surPointsMasque}
       {...(calcul.ok ? { seuils: calcul.seuils } : {})}
-      modeNuit={modeNuit.actif}
     />
   )
 

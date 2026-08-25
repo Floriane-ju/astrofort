@@ -8,10 +8,9 @@
 
 import { describe, expect, it } from 'vitest'
 import {
-  PAS_ASTRONOMIQUES,
   etatLisibilite,
+  facteurDefilement,
   facteurMax,
-  pasAstronomique,
   pxParDegre,
   reglageVitesse,
   vitesseEcran,
@@ -64,10 +63,9 @@ describe('couplage du curseur au zoom §3.2', () => {
     expect(serre.etat).not.toBe('REPLIEMENT')
   })
 
-  it('propose un facteur utile plutôt que d’animer dans le vide', () => {
+  it('dit quand le mouvement ne montre rien plutôt que d’animer dans le vide', () => {
     const reel = reglageVitesse(1, VIEWPORT, 60)
     expect(reel.etat).toBe('IMPERCEPTIBLE')
-    expect(reel.facteurPropose).toBe(60)
     expect(reel.message).toMatch(/imperceptible/)
   })
 
@@ -85,22 +83,31 @@ describe('couplage du curseur au zoom §3.2', () => {
   })
 })
 
-describe('pas astronomiques §3.2', () => {
-  it('cale les quatre pas sur des périodes réelles du registre', () => {
-    expect(pasAstronomique('JOUR_SIDERAL').dureeS).toBe(K('JOUR_SIDERAL_S'))
-    expect(pasAstronomique('JOUR_SOLAIRE').dureeS).toBe(K('JOUR_SOLAIRE_S'))
-    expect(pasAstronomique('MOIS_SYNODIQUE').dureeS).toBe(
-      K('MOIS_SYNODIQUE_J') * K('JOUR_SOLAIRE_S'),
-    )
-    expect(pasAstronomique('ANNEE_TROPIQUE').dureeS).toBe(
-      K('ANNEE_TROPIQUE_J') * K('JOUR_SOLAIRE_S'),
-    )
+describe('T-0137 — deux vitesses nommées §3.2', () => {
+  it('tire ses deux crans du registre, jamais d’un nombre écrit dans l’interface', () => {
+    expect(facteurDefilement(false)).toBe(K('FACTEUR_DEFILEMENT_NORMAL'))
+    expect(facteurDefilement(true)).toBe(K('FACTEUR_DEFILEMENT_RAPIDE'))
   })
 
-  it('dit ce que chaque pas enseigne — « +1 heure » n’enseignerait rien', () => {
-    for (const pas of PAS_ASTRONOMIQUES) {
-      expect(pasAstronomique(pas).enseigne.length, pas).toBeGreaterThan(20)
+  it('place les deux vitesses dans la plage lisible au champ de référence', () => {
+    for (const rapide of [false, true]) {
+      const reglage = reglageVitesse(facteurDefilement(rapide), VIEWPORT, 60)
+      expect(reglage.etat, `rapide=${rapide}`).toBe('LISIBLE')
+      expect(reglage.ajuste, `rapide=${rapide}`).toBe(false)
     }
-    expect(pasAstronomique('JOUR_SIDERAL').enseigne).toMatch(/planètes/)
+  })
+
+  it('écrête la vitesse rapide en champ serré, et le dit', () => {
+    // Le plafond ne dépend pas de la commande : c'est le zoom qui l'abaisse (§3.2).
+    const serre = reglageVitesse(facteurDefilement(true), VIEWPORT, 5)
+    expect(serre.ajuste).toBe(true)
+    expect(serre.facteur).toBeCloseTo(serre.facteurMax.value, 6)
+    expect(serre.message).toMatch(/ramené/)
+  })
+
+  it('laisse passer la vitesse normale là où la rapide est écrêtée', () => {
+    const normale = reglageVitesse(facteurDefilement(false), VIEWPORT, 5)
+    expect(normale.ajuste).toBe(false)
+    expect(normale.facteur).toBe(K('FACTEUR_DEFILEMENT_NORMAL'))
   })
 })

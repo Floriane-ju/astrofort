@@ -329,38 +329,11 @@ body {
   border-color: var(--accent);
 }
 
-.barrebas-horloge {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  flex: none;
-}
-
-.barrebas-heure {
-  font-size: 1rem;
-  color: var(--texte);
-  font-variant-numeric: tabular-nums;
-}
-
-.barrebas-mode,
 .barrebas-lieu {
   font-size: 0.7rem;
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
   color: var(--attenue);
-}
-
-/* La date est un champ, pas une pastille : elle reste dans le flux de la barre, en ligne. */
-.barrebas-date {
-  flex-direction: row;
-  align-items: center;
-  gap: 0.4rem;
-  flex: none;
-}
-
-.barrebas-date input {
-  min-height: 1.9rem;
-  padding: 0.15rem 0.4rem;
 }
 
 /* Le tiroir du lieu ouvre vers le HAUT : ancré à la barre basse, il descendrait hors écran. */
@@ -378,14 +351,81 @@ body {
   max-height: calc(100dvh - var(--barre-bas) - 1rem);
 }
 
-/* Le tiroir du temps ferme la barre : il se pousse à droite et y reste. */
-.tiroir.tiroir-temps {
+/* T-0137 — le transport ferme la barre : il se pousse à droite et y reste. */
+.barretemps {
+  position: relative;
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex: none;
 }
 
-.tiroir.tiroir-temps[open] > .tiroir-contenu {
-  left: auto;
-  right: 0.75rem;
+/* Un chevron porte un glyphe, pas un mot : il perd le rembourrage et la casse d'un bouton
+   de formulaire, mais garde la cible de clic gantée de §11.2. */
+.barretemps-cran,
+.barretemps-lecture,
+.barretemps-instant {
+  min-height: calc(var(--cible-clic) - 0.5rem);
+  border-color: transparent;
+}
+
+.barretemps-cran,
+.barretemps-lecture {
+  min-width: calc(var(--cible-clic) - 0.5rem);
+  padding: 0.2rem 0.3rem;
+}
+
+/* La vitesse active et la lecture se voient, sinon deux états identiques à l'œil font croire
+   que le clic n'a rien fait. */
+.barretemps-cran[aria-pressed='true'],
+.barretemps-lecture[aria-pressed='true'] {
+  border-color: var(--accent);
+}
+
+.barretemps-instant {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  color: var(--texte);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+input.barretemps-instant {
+  font: 0.9rem/1.4 var(--police-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.barretemps-jour {
+  font-size: 0.8rem;
+  color: var(--attenue);
+}
+
+.barretemps-heure {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.barretemps-facteur {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  letter-spacing: var(--suivi-micro);
+}
+
+/* L'écrêtage se pose AU-DESSUS de la barre, dont la hauteur est fixe. Il s'affiche en clair
+   plutôt qu'en infobulle : sur le terrain, rien de critique ne dépend du survol (§11.2). */
+.barretemps-message {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.35rem);
+  width: min(28rem, calc(100vw - 1.5rem));
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  background: var(--surface-haute);
+  border: var(--trait) solid var(--bordure);
 }
 
 .coque-scene {

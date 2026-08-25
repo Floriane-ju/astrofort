@@ -23,7 +23,7 @@ import {
   majTemps,
   majVue,
   reinitialiseScene,
-  saute,
+  vaA,
   type EtatScene,
 } from '../src/ui/scene-etat.ts'
 import { epoqueAffichee } from '../src/App.tsx'
@@ -94,10 +94,13 @@ describe('§3 — le magasin de scène', () => {
     expect(etatScene().vue.azimutDeg).toBe(180)
   })
 
-  it('saute d’un pas astronomique sans passer par un rendu', () => {
-    const depart = instant.ms
-    saute(86164)
-    expect(instant.ms - depart).toBe(86164 * 1000)
+  it('va à un instant choisi et met le temps en pause', () => {
+    // §3.2 — sans la pause, `MAINTENANT` resynchroniserait sur l'horloge système à l'image
+    // suivante : l'instant choisi n'aurait vécu qu'une image.
+    const choisi = Date.UTC(2026, 7, 21, 20, 41, 7)
+    vaA(choisi)
+    expect(instant.ms).toBe(choisi)
+    expect(etatScene().temps.modeTemps).toBe('FIGE')
   })
 })
 

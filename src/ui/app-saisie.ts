@@ -11,6 +11,7 @@ import { poidsParDefaut, type PoidsScoring } from '../core/session.ts'
 import type { PointMasque } from '../core/site.ts'
 import { BOITIER_REFERENCE, type CapteurMode, type SaisieBoitier } from '../data/equipment.ts'
 import type { QualiteMiseEnStation, TypeMonture } from '../core/tracking.ts'
+import { jourLocalIso } from './horaire.ts'
 import { etatScene, majVue } from './scene-etat.ts'
 import { modeObjectif, type TypeObjectif } from './PanneauMateriel.tsx'
 
@@ -64,7 +65,9 @@ export function useSaisieLieu(depart: DepartLieu | null): SaisieLieu {
   const [altitude, surAltitude] = useState(depart?.altitude ?? DEFAUT.altitude)
   const [bortle, surBortle] = useState(depart?.bortle ?? DEFAUT.bortle)
   const [sqm, surSqm] = useState(depart?.sqm ?? '')
-  const [dateIso, surDateIso] = useState(() => new Date().toISOString().slice(0, 10))
+  // Le jour LOCAL : `toISOString()` donnerait le jour UTC, donc la nuit suivante après
+  // minuit UTC en été — celle qu'on ne prépare pas.
+  const [dateIso, surDateIso] = useState(() => jourLocalIso(new Date()))
   const [pointsMasque, surPointsMasque] = useState<readonly PointMasque[]>(
     depart?.pointsMasque ?? [],
   )
