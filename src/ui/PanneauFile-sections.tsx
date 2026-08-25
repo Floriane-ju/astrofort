@@ -6,7 +6,6 @@
  */
 
 import { K } from '../registry/constants.ts'
-import { MENTION_SEMIS } from '../data/semis.ts'
 import { vignettageDiaph } from '../core/galactique.ts'
 import { libelleZpSource, type PointZeroSysteme } from '../data/equipment.ts'
 import type { CartePoseMax } from '../core/grand-champ.ts'
@@ -93,7 +92,6 @@ export function CadrageDuFile({
         {renduFile !== null &&
           ` · ${renduFile.reelles} étoiles réelles et ${renduFile.generees} générées tracées`}
       </p>
-      <p className="etat">{MENTION_SEMIS}</p>
       <p className="etat">
         {file.apercu === 'FILE' ? MENTION_PLAFOND_FILE : MENTION_PLAFOND_CHAMP}
       </p>

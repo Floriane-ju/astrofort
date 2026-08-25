@@ -20,7 +20,7 @@ import { Icone } from './Icone.tsx'
 export const TITRES_PANNEAU: Readonly<Record<ClePanneau, string>> = Object.freeze({
   CIBLES: 'Toutes les cibles',
   NUIT: 'Plan de nuit',
-  FILE: 'Filé',
+  FILE: 'Panorama',
 })
 
 export interface PanneauLateralProps {

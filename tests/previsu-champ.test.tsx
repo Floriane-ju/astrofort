@@ -12,7 +12,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { Etoile } from '../src/data/catalog.ts'
-import { MENTION_SEMIS, semisGeneratif } from '../src/data/semis.ts'
+import { semisGeneratif } from '../src/data/semis.ts'
 import {
   densiteRelative,
   latitudeGalactiqueDeg,
@@ -253,11 +253,6 @@ describe('§9.2 — semis génératif', () => {
     const magnitudes = semis.map((e) => e.magV)
     expect(magnitudes.reduce((a, b) => Math.min(a, b))).toBeGreaterThanOrEqual(seuil)
     expect(magnitudes.reduce((a, b) => Math.max(a, b))).toBeLessThanOrEqual(K('SEMIS_MAG_MAX'))
-  })
-
-  it('déclare que ces étoiles sont générées, et le plafond appliqué', () => {
-    expect(MENTION_SEMIS).toMatch(/GÉNÉRÉES/)
-    expect(MENTION_SEMIS).toMatch(new RegExp(String(K('SEMIS_ETOILES_TOTAL'))))
   })
 
   it('rend deux fois le même cadre à l’identique — graine déterministe', () => {

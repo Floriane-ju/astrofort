@@ -48,7 +48,6 @@ describe('§9.1 — pose max par déclinaison', () => {
     expect(resultat.tMaxCadreS.value).toBeCloseTo(25.16, 1)
     expect(resultat.decMinAbsDeg).toBeCloseTo(0, 6)
     expect(resultat.zoneLimitante).toMatch(/δ = -?0°/)
-    expect(resultat.messages.join(' ')).toMatch(/[Zz]one limitante/)
   })
 
   it('affiche la règle des 500 en repère explicitement non retenu', () => {
@@ -78,7 +77,6 @@ describe('§9.1 — pose max par déclinaison', () => {
     const resultat = carte({ centreDecDeg: 37.5, fovLDeg: 2, fovHDeg: 65 })
     expect(resultat.decMinAbsDeg).toBeCloseTo(5, 0)
     expect(resultat.tMaxCadreS.value).toBeCloseTo(npf({ ...GRAND_ANGLE, decDeg: 5 }).value!, 0)
-    expect(resultat.messages.join(' ')).toMatch(/Recadrer vers le pôle/)
   })
 
   it('avertit que la contrainte change de nature près du pôle', () => {

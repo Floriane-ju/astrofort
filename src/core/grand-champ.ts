@@ -166,12 +166,6 @@ export function cartePoseMax(entree: EntreeCartePose): CartePoseMax {
   const poseOperanteS = suiviActif ? entree.tMaxSuiviS! : (zone?.tNpfS ?? null)
 
   const messages: string[] = []
-  if (zone !== null) {
-    messages.push(
-      `Zone limitante du cadre : ${nommeZone(zone.uFrac, zone.vFrac, zone.decDeg)}. C’est elle ` +
-        'qui fixe la pose, pas le centre de visée.',
-    )
-  }
   const longue = plusLongue
   // L'avertissement porte sur la zone la plus polaire du cadre, celle où la NPF cesse d'être
   // la contrainte — c'est là qu'il est utile, que le reste du cadre la suive ou non.
@@ -181,21 +175,6 @@ export function cartePoseMax(entree: EntreeCartePose): CartePoseMax {
       `${global ? 'Sur tout le cadre' : 'Près du pôle, dans ce cadre'}, la pose tolérée dépasse ` +
         `${K('POSE_LONGUE_AVERTISSEMENT_S')} s : le filé cesse d’y être la contrainte, ce sont ` +
         'le bruit thermique du capteur et le fond de ciel qui limitent désormais la pose.',
-    )
-  }
-  if (
-    zone !== null &&
-    longue !== null &&
-    (longue.tNpfS === null || longue.tNpfS >= zone.tNpfS! * K('ECART_POSE_CADRE_SIGNIFICATIF'))
-  ) {
-    const tenue =
-      longue.tNpfS === null
-        ? 'des poses sans limite de filé'
-        : `des poses de ${longue.tNpfS.toFixed(0)} s`
-    messages.push(
-      `Le cadre couvre de δ = ${zone.decDeg.toFixed(0)}° à δ = ${longue.decDeg.toFixed(0)}° : ` +
-        `sa zone la plus polaire tiendrait ${tenue}, contre ${zone.tNpfS!.toFixed(0)} s retenues. ` +
-        'Recadrer vers le pôle rallongerait la pose utile.',
     )
   }
   if (suiviActif) {

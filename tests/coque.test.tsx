@@ -623,7 +623,7 @@ describe('T-0128 — l’onglet Cibles remplace les deux chemins vers le catalog
     const topbar = barreHaute(ecran())
     expect(topbar).toContain('Toutes les cibles')
     expect(topbar.indexOf('Toutes les cibles')).toBeLessThan(topbar.indexOf('Plan de nuit'))
-    expect(topbar.indexOf('Plan de nuit')).toBeLessThan(topbar.indexOf('Filé'))
+    expect(topbar.indexOf('Plan de nuit')).toBeLessThan(topbar.indexOf('Panorama'))
   })
 
   it('ne monte son contenu qu’une fois ouvert, comme les deux autres (§11.2)', () => {

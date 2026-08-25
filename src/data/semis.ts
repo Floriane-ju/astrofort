@@ -70,11 +70,3 @@ export function semisGeneratif(): readonly Etoile[] {
   return etoiles
 }
 
-/** §9.2 — mention obligatoire du rendu : les étoiles faibles sont générées, non catalographiées. */
-export const MENTION_SEMIS =
-  `Au-delà de la magnitude ${K('SEUIL_MAG_ETOILES_REELLES')}, les étoiles affichées sont ` +
-  'GÉNÉRÉES, non catalographiées : leurs positions individuelles sont fausses, seule la ' +
-  'densité — modulée par la latitude galactique — est fidèle. Le semis est plafonné à ' +
-  `${K('SEMIS_ETOILES_TOTAL')} étoiles sur toute la sphère, un ciel réel en compte bien ` +
-  'davantage à cette profondeur. La graine est déterministe : le même cadre donne le même ' +
-  'rendu, sans scintillement.'
