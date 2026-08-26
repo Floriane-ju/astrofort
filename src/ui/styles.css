@@ -293,11 +293,11 @@ body {
   background: linear-gradient(var(--surface), var(--surface-haute));
 }
 
-/* T-0145 — la barre se lit en deux blocs : les lectures à gauche, les commandes à droite.
-   C'est la dernière lecture qui porte la poussée, pas la première : sinon le matériel, écrit
-   après la visée, repartirait du côté des commandes. */
-.barrehaut-lectures-fin {
-  margin-right: auto;
+/* T-0145 — seule la marque tient le bord gauche ; tout le reste — lectures puis commandes —
+   forme un bloc calé à droite. La poussée est portée par la PREMIÈRE lecture : ce qui la suit
+   reste soudé, quelle que soit la largeur de la fenêtre. */
+.barrehaut-lectures-debut {
+  margin-left: auto;
 }
 
 /* Une lecture se rogne, une commande jamais. Sur une fenêtre étroite, c'est la phrase qui
