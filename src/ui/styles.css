@@ -295,8 +295,9 @@ body {
 
 /* T-0145 — seule la marque tient le bord gauche ; tout le reste — lectures puis commandes —
    forme un bloc calé à droite. La poussée est portée par la PREMIÈRE lecture : ce qui la suit
-   reste soudé, quelle que soit la largeur de la fenêtre. */
-.barrehaut-lectures-debut {
+   reste soudé, quelle que soit la largeur de la fenêtre. Le sélecteur cite la barre : `.etat`
+   repose ses marges plus bas dans la feuille, et une classe seule perdrait l'arbitrage. */
+.coque-topbar > .barrehaut-lectures-debut {
   margin-left: auto;
 }
 
@@ -802,13 +803,11 @@ input.barretemps-instant {
 
    T-0113 — un tiroir fermé est une pastille : angles vifs, filet d'un pixel, capitales
    espacées. Ouvert, il prend le trait d'accent et le fond teinté, comme un onglet actif. */
+/* T-0145 — un tiroir ne pousse plus rien : c'est la première lecture de la barre qui cale le
+   bloc entier à droite. Une poussée par tiroir disloquait la bande dès qu'un bouton le
+   précédait. */
 .tiroir {
   position: relative;
-  margin-left: auto;
-}
-
-.tiroir + .tiroir {
-  margin-left: 0;
 }
 
 .coque-topbar .onglet,
@@ -854,19 +853,6 @@ input.barretemps-instant {
 .coque-topbar .tiroir > summary:hover,
 .coque-topbar .tiroir[open] > summary {
   border-color: transparent;
-}
-
-/* T-0038 — le menu d'information ferme la barre : il se pousse à droite et y reste, quelle
-   que soit la largeur des éléments qui le précèdent. */
-.tiroir.tiroir-infos {
-  margin-left: auto;
-}
-
-/* T-0113 — dans la barre haute, c'est la visée qui pousse tout vers la droite. Un tiroir qui
-   pousserait aussi se détacherait du groupe dès qu'un bouton le précède, et la rangée de
-   bascules se disloquerait. La règle vient APRÈS `.tiroir-infos` : elle la neutralise. */
-.coque-topbar .tiroir {
-  margin-left: 0;
 }
 
 /* T-0041 — un tiroir fermé cache ce qu'il contient. Le bouton change d'aspect quand il a
