@@ -842,6 +842,20 @@ input.barretemps-instant {
   color: var(--accent);
 }
 
+/* T-0145 — dans la barre haute, une commande ne porte pas de filet : la barre est déjà son
+   cadre, et une rangée jointive de pastilles redessinait une grille de traits verticaux. Le
+   filet passe à `transparent` plutôt qu'à zéro — la géométrie ne bouge pas, donc rien ne se
+   décale entre l'état au repos, le survol et l'état actif, qui se signalent au fond et à la
+   teinte. Le trait reste ailleurs : la barre basse garde le sien. */
+.coque-topbar .onglet,
+.coque-topbar .onglet:hover,
+.coque-topbar .onglet.actif,
+.coque-topbar .tiroir > summary,
+.coque-topbar .tiroir > summary:hover,
+.coque-topbar .tiroir[open] > summary {
+  border-color: transparent;
+}
+
 /* T-0038 — le menu d'information ferme la barre : il se pousse à droite et y reste, quelle
    que soit la largeur des éléments qui le précèdent. */
 .tiroir.tiroir-infos {
