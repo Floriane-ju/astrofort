@@ -154,6 +154,9 @@ body {
   --lateral: 22rem;
   --carte-large: 19rem;
   --jour-carte: 0.75rem;
+  /* T-0145 — l'écart entre deux éléments d'une barre. Nommé parce que la bande de commandes
+     l'annule par marge négative : la valeur doit être lue au même endroit des deux côtés. */
+  --jour-barre: 0.6rem;
 }
 
 /* T-0122 — les icônes viennent d'une police à ligatures, embarquée avec les sources.
@@ -271,7 +274,7 @@ body {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 0.6rem;
+  gap: var(--jour-barre);
   padding: 0 0.75rem;
   overflow: visible;
 }
@@ -314,8 +317,20 @@ body {
 
 .barrehaut-panneaux {
   display: flex;
-  gap: 0.25rem;
+  gap: 0;
   flex: none;
+}
+
+/* T-0145 — les commandes de la barre forment une bande continue : ni jour, ni double filet.
+   La marge négative absorbe le `gap` de la barre et superpose les deux traits voisins, si bien
+   qu'une pastille et sa suivante ne partagent qu'un trait. La règle démarre au DEUXIÈME élément
+   qui suit les lectures — le premier garde son jour, sinon la bande collerait au texte. */
+.coque-topbar > .barrehaut-lectures-fin ~ * ~ * {
+  margin-left: calc(-1 * (var(--jour-barre) + var(--trait)));
+}
+
+.barrehaut-panneaux > .onglet + .onglet {
+  margin-left: calc(-1 * var(--trait));
 }
 
 /* T-0145 — dans la barre, un onglet n'a pas de rangée sous laquelle se poser : il prend le
