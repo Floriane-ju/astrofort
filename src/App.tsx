@@ -104,7 +104,6 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
   })
 
   const gaia = catalogues.etat === null ? false : gaiaCharge(catalogues.etat.catalogues)
-  const sbCiel = ciel.ok ? ciel.ciel.sbCiel.value : null
 
   const topbar = (
     <BarreHaut
@@ -116,12 +115,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       etat={catalogues.etat}
       modeReseau={modeReseau}
       persistance={persistance}
-      catalogue={catalogues.objets}
       poids={poids}
-      site={chaine.site}
-      index={chaine.index}
-      profils={chaine.profilsCadre}
-      sbCiel={sbCiel}
     />
   )
 
@@ -197,6 +191,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       sqm={lieu.sqm}
       surSqm={lieu.surSqm}
       surDateIso={lieu.surDateIso}
+      site={chaine.site}
       masque={chaine.masque}
       pointsMasque={lieu.pointsMasque}
       surPointsMasque={lieu.surPointsMasque}

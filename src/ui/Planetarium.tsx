@@ -8,9 +8,9 @@
  *
  * Depuis le lot 6, la scène ne porte plus ses réglages : ils sont dans le panneau droit, à
  * hauteur d'œil de l'image qu'ils modifient. Depuis T-0038 elle ne porte plus non plus ses
- * lectures : elles sont dans le menu d'information de la barre haute (`MenuInfos`), et ce
- * composant publie dans le magasin de scène ce qu'il est seul à savoir — le diagnostic de la
- * boucle, l'objet cliqué, l'attente d'une incrustation.
+ * lectures ; depuis T-0153 il n'en reste qu'une, la phrase qui date l'image, au centre de la
+ * barre basse. Ce composant publie dans le magasin de scène ce qu'il est seul à savoir —
+ * l'objet cliqué, l'attente d'une incrustation.
  *
  * Ne reste ici que le canevas et l'assemblage : la boucle de rendu est dans
  * `planetarium-boucle.ts`, l'incrustation du filé dans `planetarium-incrustation.ts`, les
@@ -311,7 +311,7 @@ export function Planetarium(props: PlanetariumProps) {
         onPointerLeave={souris.onPointerLeave}
       />
       {/* T-0068 — ce que la vue montre en ce moment, dans les mots exacts de la lecture
-          affichée au menu d'information : `ligneVisee` est la seule à composer la phrase.
+          affichée à la barre basse : `ligneVisee` est la seule à composer la phrase.
           Hors flux visuel — la colonne centrale ne réserve aucune hauteur sous le canevas
           (T-0040) — mais présente dans l'arbre d'accessibilité. */}
       <p className="scene-description" id={ID_DESCRIPTION}>

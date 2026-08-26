@@ -1,20 +1,17 @@
 /**
- * La barre haute : la marque, où pointe la vue, et ce qui ouvre le reste.
+ * La barre haute : la marque, le matériel en une ligne, et ce qui ouvre le reste.
  *
- * T-0113 — elle ne porte plus de réglage, seulement des bascules : quatre tiroirs de terrain
- * et deux boutons de panneau. L'ordre est un contrat : le mode nuit d'abord parce qu'il se cherche
- * dans le noir, les panneaux ensuite, puis la vérification, les réglages, et les lectures en
- * dernier — donc le plus à droite, et sans hauteur tant qu'elles sont fermées (T-0038,
- * T-0047).
+ * T-0113 — elle ne porte plus de réglage, seulement des bascules : des tiroirs de terrain et
+ * des boutons de panneau. L'ordre est un contrat : le mode nuit d'abord parce qu'il se cherche
+ * dans le noir, les panneaux ensuite, puis la vérification et les réglages en dernier (T-0047).
+ *
+ * T-0153 — le tiroir des lectures est démonté. Il portait une phrase utile et quatre lectures
+ * d'atelier ; la phrase est descendue au centre de la barre basse, où elle se lit sans un clic,
+ * et la mention « az · h · champ » qui la répétait ici part avec elle.
  */
 
 import type { EtatDemarrage } from '../data/bootstrap.ts'
-import type { ObjetCielProfond } from '../data/deepsky.ts'
-import type { IndexCiel } from '../core/index-ciel.ts'
-import type { ProfilCadre } from '../core/cadre.ts'
-import type { Site } from '../core/ephem.ts'
 import type { CapteurMode } from '../data/equipment.ts'
-import { MenuInfos } from './MenuInfos.tsx'
 import { MenuReglages } from './MenuReglages.tsx'
 import type { SaisiePoids } from './app-saisie.ts'
 import { Verification } from './Verification.tsx'
@@ -23,7 +20,6 @@ import { Inconnu } from './Inconnu.tsx'
 import type { Persistance } from './app-donnees.ts'
 import { TITRES_PANNEAU } from './PanneauLateral.tsx'
 import { basculePanneau, useCoque, type PanneauLateral } from './coque-etat.ts'
-import { useTrancheScene, type EtatScene } from './scene-etat.ts'
 
 export interface BarreHautProps {
   readonly focale: string
@@ -34,14 +30,8 @@ export interface BarreHautProps {
   readonly etat: EtatDemarrage | null
   readonly modeReseau: string
   readonly persistance: Persistance
-  readonly catalogue: readonly ObjetCielProfond[]
   /** §8.3 — les poids de scoring, réglés depuis le tiroir des réglages. */
   readonly poids: SaisiePoids
-  readonly site: Site
-  readonly index: IndexCiel
-  readonly profils: readonly ProfilCadre[]
-  /** §2.2 — fond de ciel du site, relayé au menu d'informations pour §3.3. */
-  readonly sbCiel: number | null
 }
 
 /**
@@ -50,32 +40,14 @@ export interface BarreHautProps {
  */
 const PANNEAUX: readonly PanneauLateral[] = ['CIBLES', 'NUIT', 'FILE']
 
-/**
- * Où pointe la vue, au degré.
- *
- * T-0113 — la scène occupe tout l'écran et n'a plus de bandeau sous elle : sans cette
- * mention, rien ne dit vers quoi on regarde tant qu'on n'ouvre pas les lectures. Le sélecteur
- * arrondit AVANT de comparer — s'abonner aux degrés décimaux ferait rendre la barre à chaque
- * image du geste de visée, ce que T-0056 a corrigé partout ailleurs.
- */
-function viseeAffichee(etat: EtatScene): string {
-  const { azimutDeg, hauteurDeg, fovDeg } = etat.vue
-  return `az ${azimutDeg.toFixed(0)}° · h ${hauteurDeg.toFixed(0)}° · champ ${fovDeg.toFixed(0)}°`
-}
-
-function Visee() {
-  /* T-0145 — première lecture de la barre : c'est elle qui cale le bloc à droite. */
-  return <p className="etat barrehaut-lectures-debut">{useTrancheScene(viseeAffichee)}</p>
-}
-
 export function BarreHaut(props: BarreHautProps) {
   const { panneau } = useCoque()
 
   return (
     <>
       <h1>Astrofort</h1>
-      <Visee />
-      {/* T-0145 — dernière lecture : la bande de commandes se soude à partir d'elle. */}
+      {/* T-0145 / T-0153 — seule lecture de la barre : c'est elle qui cale le bloc de
+          commandes à droite, et la bande se soude à partir d'elle. */}
       <p className="etat barrehaut-lectures-fin">
         {/* T-0149 — un champ vidé pour être retapé n'efface pas la lecture : il la marque. */}
         {props.focale.trim() === '' ? <Inconnu /> : props.focale} mm f/
@@ -116,18 +88,9 @@ export function BarreHaut(props: BarreHautProps) {
         surExport={props.persistance.surExport}
         surImport={props.persistance.surImport}
       />
-      {/* T-0047 — ce qui se règle une fois et ne décrit pas une séance. Avant le menu des
-          lectures, qui reste le dernier élément. */}
+      {/* T-0047 — ce qui se règle une fois et ne décrit pas une séance : dernier élément de
+          la barre, donc le plus à droite. */}
       <MenuReglages poids={props.poids} />
-      {/* T-0038 — les lectures qui datent l'image : dernier élément de la barre, donc le
-          plus à droite, et sans hauteur tant qu'il est fermé. */}
-      <MenuInfos
-        site={props.site}
-        index={props.index}
-        objets={props.catalogue}
-        profils={props.profils}
-        sbCiel={props.sbCiel}
-      />
     </>
   )
 }

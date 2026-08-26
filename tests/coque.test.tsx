@@ -17,8 +17,6 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
 import type { ObjetCielProfond } from '../src/data/deepsky.ts'
-import type { Site } from '../src/core/ephem.ts'
-import { cielInstantane } from '../src/core/horloges.ts'
 import { mentionProjection } from '../src/ui/scene-overlay.ts'
 import {
   HAUTEUR_SCENE_PX,
@@ -26,16 +24,10 @@ import {
   etatScene,
   reinitialiseScene,
   resolutionRendu,
-  vuePlanetarium,
 } from '../src/ui/scene-etat.ts'
-import { MenuInfos } from '../src/ui/MenuInfos.tsx'
 import { MenuReglages } from '../src/ui/MenuReglages.tsx'
 import { poidsParDefaut } from '../src/core/session.ts'
 import { DOMAINES } from '../src/registry/domains.ts'
-import { construitIndex } from '../src/core/index-ciel.ts'
-import { projecteur } from '../src/core/projection.ts'
-import { versSpherique } from '../src/core/mat3.ts'
-import type { ProfilCadre } from '../src/core/cadre.ts'
 import {
   activeIncrustation,
   etatSeance,
@@ -148,8 +140,10 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
     expect(topbar).not.toMatch(/<details class="tiroir tiroir-verification" open/)
   })
 
-  it('dit où pointe la vue, que plus aucun bandeau ne porte sous le canevas', () => {
-    expect(barreHaute(ecran()).replaceAll('<!-- -->', '')).toMatch(/az \d+° · h \d+°/)
+  // T-0153 — la barre haute ne dit plus où pointe la vue : la phrase complète est en bas,
+  // et la répéter ici en abrégé faisait deux lectures pour un seul fait.
+  it('ne répète plus la visée : elle est au centre de la barre basse', () => {
+    expect(barreHaute(ecran()).replaceAll('<!-- -->', '')).not.toMatch(/az \d+° · h \d+°/)
   })
 })
 
@@ -354,82 +348,47 @@ describe('§11.2 — le plan reste imprimable', () => {
 })
 
 /**
- * T-0039 — les lectures passent dans un menu d'information, en haut à droite.
+ * T-0153 — il ne reste qu'une lecture, et elle est au centre de la barre basse.
  *
- * Ce qui se vérifie est le déplacement, pas la rédaction : les mêmes textes, au même endroit
- * logique, mais dans un tiroir de la barre haute plutôt que sous le canevas.
+ * Le tiroir d'information de T-0038 mêlait la phrase qui date l'image et quatre lectures
+ * d'atelier — magnitude limite, époque, cadrage, diagnostic de rendu. Notre persona ne mesure
+ * pas le rendu. Ce qui se vérifie ici est donc double : la phrase est visible sans un clic, et
+ * le tiroir n'existe plus.
  */
-describe('T-0039 — le menu d’information porte les lectures', () => {
-  function barre(html: string): string {
-    return barreHaute(html)
+describe('T-0153 — la barre basse porte la phrase qui date l’image', () => {
+  /** La barre basse : ce qui suit la dernière région, en fin de document. */
+  function barreBasse(html: string): string {
+    return html.slice(html.indexOf('coque-barrebas'))
   }
 
-  it('pose un tiroir fermé en fin de barre haute, pas une bande sous le canevas', () => {
+  it('pose la phrase au centre de la barre basse, entre le lieu et le transport', () => {
+    const bas = barreBasse(ecran()).replaceAll('<!-- -->', '')
+    expect(bas).toMatch(/visée[\s\S]*AD[\s\S]*azimut[\s\S]*hauteur[\s\S]*champ/)
+    expect(bas).toContain('barrebas-visee')
+    // Entre les deux : le lieu la précède, le transport la suit.
+    expect(bas.indexOf('barrebas-lieu')).toBeLessThan(bas.indexOf('barrebas-visee'))
+    expect(bas.indexOf('barrebas-visee')).toBeLessThan(bas.indexOf('barretemps'))
+  })
+
+  it('la centre en lui laissant ce que le lieu et le transport ne prennent pas', () => {
+    const debut = CSS_COQUE.indexOf('.coque-barrebas > .barrebas-visee {')
+    expect(debut).toBeGreaterThan(-1)
+    const corps = CSS_COQUE.slice(debut, CSS_COQUE.indexOf('}', debut))
+    expect(corps).toContain('flex: 1')
+    expect(corps).toContain('text-align: center')
+    // Elle est la seule à se rogner : un transport amputé ne se rattrape pas.
+    expect(corps).toContain('text-overflow: ellipsis')
+  })
+
+  it('ne monte plus aucun tiroir de lectures dans la barre haute', () => {
     const html = ecran()
     expect(html).not.toContain('scene-lectures')
-    const topbar = barre(html)
-    expect(topbar).toContain('tiroir tiroir-infos')
-    // Fermé par défaut : il ne prend aucune hauteur tant qu'on ne l'ouvre pas.
-    expect(topbar).not.toMatch(/<details class="tiroir tiroir-infos"[^>]*open/)
-    // Dernier élément de la barre, donc le plus à droite.
-    expect(topbar.indexOf('tiroir-infos')).toBeGreaterThan(topbar.indexOf('tiroir-verification'))
-  })
-
-  it('y reprend les cinq groupes de lectures, textes inchangés', () => {
-    const topbar = barre(ecran())
-    // 1 — la ligne d'état qui date l'image.
-    expect(topbar).toMatch(/visée[\s\S]*AD[\s\S]*azimut[\s\S]*hauteur[\s\S]*champ/)
-    expect(topbar).toContain('jusqu’à la magnitude')
-    expect(topbar).toContain('époque')
-    // 3 — les lectures du cadre. 5 — le diagnostic de rendu.
-    expect(topbar).toContain('images/s')
-    expect(topbar).toContain('étoiles tracées sur')
-    expect(topbar).toContain('cellules d’index retenues sur')
-  })
-
-  it('garde le bouton « Appliquer » actionnable depuis le menu', () => {
-    const html = renderToStaticMarkup(<MenuInfos {...menuAvecCible()} />)
-    expect(html).toMatch(/le grand axe de ALLONGEE s’aligne/)
-    expect(html).toMatch(/<button type="button">Appliquer -?\d+°<\/button>/)
+    expect(html).not.toContain('tiroir-infos')
+    // Les lectures d'atelier partent avec lui : plus de compteur d'images par seconde.
+    expect(html).not.toContain('images/s')
+    expect(html).not.toContain('étoiles tracées sur')
   })
 })
-
-/**
- * Un menu garni : un profil de cadre, et une galaxie allongée posée pile sur la visée
- * courante. C'est le seul montage qui déclenche à la fois la cible dominante et la rotation
- * suggérée — les deux lectures du groupe « cadre » qui portent un geste.
- */
-function menuAvecCible(): {
-  readonly site: Site
-  readonly index: ReturnType<typeof construitIndex>
-  readonly objets: readonly ObjetCielProfond[]
-  readonly profils: readonly ProfilCadre[]
-  readonly sbCiel: number
-} {
-  const site: Site = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
-  const { vue, msAffiche } = etatScene()
-  const ciel = cielInstantane(site, new Date(msAffiche))
-  // La visée, ramenée en J2000 : y poser l'objet garantit qu'il tombe dans le cadre.
-  const visee = versSpherique(
-    projecteur(vuePlanetarium(vue), ciel.matrice).inverse(vue.largeurPx / 2, vue.hauteurPx / 2),
-  )
-  return {
-    site,
-    index: construitIndex([]),
-    objets: [
-      {
-        ...M31,
-        designation: 'ALLONGEE',
-        adDeg: visee.longitudeDeg,
-        decDeg: visee.latitudeDeg,
-      },
-    ],
-    profils: [
-      { libelle: '120 mm', fovLDeg: 17, fovHDeg: 11.4, echApx: 8.8, capteurHMm: 24, tPoseS: 2.1 },
-    ],
-    sbCiel: 20.6,
-  }
-}
 
 /**
  * T-0040 — le canevas seul au centre, sans marges.
@@ -503,50 +462,21 @@ describe('T-0040 — la colonne centrale ne porte plus que la scène', () => {
 })
 
 /**
- * T-0041 — une alerte se signale sur le menu fermé.
+ * T-0041 — une alerte se signale sur le tiroir fermé.
  *
  * Une cause rangée dans un tiroir fermé est une cause invisible : on règle quelque chose,
  * rien ne bouge à l'écran, et l'explication est derrière un clic qu'on ne pense pas à faire.
+ * T-0153 a démonté le menu d'information ; la règle vaut toujours pour le tiroir de
+ * vérification, dont T-0082 signale une écriture perdue.
  */
-describe('T-0041 — le bouton du menu dit qu’il a quelque chose à lire', () => {
+describe('T-0041 — un tiroir qui s’alerte ne le dit pas par la seule couleur', () => {
   const CSS = readFileSync(join(import.meta.dirname, '..', 'src', 'ui', 'styles.css'), 'utf8')
 
-  it('annonce le compte en toutes lettres quand une cause est active', () => {
-    // Sans profil déclaré, le cadre est refusé : un message attend d'être lu.
-    const alerte = renderToStaticMarkup(
-      <MenuInfos {...menuAvecCible()} profils={[]} />,
-    )
-    expect(alerte).toContain('data-alerte="true"')
-    expect(alerte).toMatch(/1 message à lire/)
-  })
-
-  it('compte une rotation en attente comme un message à lire', () => {
-    // Son bouton « Appliquer » est le seul moyen de l'appliquer : il ne doit pas s'oublier.
-    const html = renderToStaticMarkup(<MenuInfos {...menuAvecCible()} />)
-    expect(html).toContain('data-alerte="true"')
-    expect(html).toMatch(/1 message à lire/)
-  })
-
-  it('retire le signalement dès que la dernière cause disparaît', () => {
-    // Un profil déclaré, aucune cible dans le cadre : plus rien à lire.
-    const calme = renderToStaticMarkup(
-      <MenuInfos {...menuAvecCible()} objets={[]} />,
-    )
-    expect(calme).toContain('data-alerte="false"')
-    expect(calme).not.toMatch(/à lire/)
-  })
-
-  it('expose le compte aux technologies d’assistance', () => {
-    expect(ecran()).toMatch(/<summary><span aria-live="polite">/)
-  })
-
-  it('ne fait pas porter le signalement par la seule couleur', () => {
-    // La règle vaut pour tout tiroir qui s'alerte — le menu d'information comme le tiroir
-    // de vérification, dont T-0082 signale une écriture perdue.
+  it('change aussi la graisse et la bordure', () => {
     const debut = CSS.indexOf(".tiroir[data-alerte='true'] > summary {")
     expect(debut).toBeGreaterThan(-1)
     const corps = CSS.slice(debut, CSS.indexOf('}', debut))
-    // La graisse et la bordure changent aussi : le rouge du mode nuit ne dit rien seul.
+    // Le rouge du mode nuit ne dit rien seul.
     expect(corps).toContain('font-weight: 700')
     expect(corps).toContain('border-color: var(--alerte)')
   })
@@ -560,9 +490,10 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
     expect(ecran).toContain('Réglages')
   })
 
-  it('le place avant le menu des lectures, qui ferme la barre', () => {
-    const ecran = renderToStaticMarkup(<App />)
-    expect(ecran.indexOf('tiroir-reglages')).toBeLessThan(ecran.indexOf('tiroir-infos'))
+  it('T-0153 — ferme la barre : plus rien ne se monte après lui', () => {
+    const topbar = barreHaute(renderToStaticMarkup(<App />))
+    expect(topbar.indexOf('tiroir-verification')).toBeLessThan(topbar.indexOf('tiroir-reglages'))
+    expect(topbar.slice(topbar.indexOf('tiroir-reglages'))).not.toContain('<details')
   })
 
   it('T-0128 — ne porte plus le catalogue : il a un écran à lui', () => {

@@ -3559,12 +3559,23 @@ QUATRE RÉGIONS, ET LA COQUE N'EN CONNAÎT AUCUN CONTENU
 ORDRE DES GESTES DANS LA BARRE — c'est un contrat, pas une mise en page
   1. mode nuit      : il se cherche dans le noir, il vient donc en premier
   2. vérification   : l'état des paquets, du stockage et du réseau (§12.1, §12.3)
-  3. réglages       : ce qui sort du chemin principal
-  4. lectures       : dernier élément, donc le plus à droite, et SANS HAUTEUR tant
-                      qu'il est fermé — un panneau de lectures replié ne doit pas
-                      voler un pixel à la scène
+  3. réglages       : ce qui sort du chemin principal, et dernier élément — donc le
+                      plus à droite, et SANS HAUTEUR tant qu'il est fermé
   Un menu fermé qui porte une alerte le signale sur lui-même : sinon l'information
   n'existe que pour qui pense à ouvrir le menu.
+
+UNE SEULE LECTURE PERMANENTE — au centre de la barre basse
+  L'instant, la visée en AD/δ, l'azimut, la hauteur, le champ. C'est ce qui DATE
+  l'image : on la consulte en visant, elle ne peut donc pas être derrière un clic.
+  Sa place est entre le lieu (à gauche) et le transport du temps (à droite) — les
+  trois repères qui situent la séance, sur la même ligne.
+  Elle est composée UNE FOIS et sert aussi de description accessible du canevas :
+  deux rédactions divergeraient au premier `toFixed` retouché.
+  Elle est la seule chose de cette barre qui se rogne sur une fenêtre étroite : une
+  commande amputée ne se rattrape pas, une phrase tronquée se relit en élargissant.
+  Le reste — magnitude limite, époque de précession, cadrage de la cible dominante,
+  diagnostic de rendu — n'est PAS affiché : ce sont des lectures d'atelier, et aucune
+  des personas de §1 ne mesure le rendu.
 
 ONGLETS D'INTENTION — un seul jeu de réglages à l'écran à la fois
   Explorer · Cible · Nuit · Panorama. Un clic sur un objet de la scène ouvre l'onglet Cible
@@ -3590,7 +3601,7 @@ REPLI EN UNE COLONNE — sous une largeur seuil
 | Champ | Type | Unité | Plage valide | Note |
 |---|---|---|---|---|
 | `onglet_actif` | enum | — | EXPLORER / CIBLE / NUIT / FILE | état partagé avec la scène |
-| `menus_ouverts` | set | — | nuit / vérification / réglages / lectures | |
+| `menus_ouverts` | set | — | nuit / vérification / réglages | |
 | `alerte_menu` | bool | — | par menu | signalée sur le menu fermé |
 
 ### Critères d'acceptation
@@ -3601,9 +3612,14 @@ Quand je change la focale au panneau gauche
 Alors le cadre de la scène change sans aucun défilement
 Et la scène n'a pas changé de taille
 
-Étant donné des lectures qui s'allongent dans un menu ouvert
-Quand je les lis
-Alors le canevas de la scène conserve sa taille
+Étant donné l'application ouverte
+Quand je regarde la barre basse
+Alors elle porte en son centre l'instant, la visée en AD/δ, l'azimut, la hauteur et le champ
+Et cette phrase est mot pour mot la description accessible du canevas
+
+Étant donné une fenêtre trop étroite pour la barre basse entière      # cas limite
+Quand je la regarde
+Alors c'est la phrase de visée qui se rogne, pas le transport du temps
 
 Étant donné un clic sur un objet du ciel profond dans la scène
 Quand la fiche s'ouvre

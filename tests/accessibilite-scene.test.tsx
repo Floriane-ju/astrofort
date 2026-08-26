@@ -94,8 +94,9 @@ describe('T-0068 — la description dit ce que la vue montre en ce moment', () =
       description(html),
     )
     expect(commune).not.toBeNull()
-    // Le menu d'information de la barre haute porte la même phrase, au caractère près.
-    const barre = html.slice(0, html.indexOf('coque-scene'))
+    // T-0153 — la barre BASSE porte la même phrase, au caractère près : elle a quitté le
+    // menu d'information de la barre haute, elle n'a pas été réécrite en chemin.
+    const barre = html.slice(html.indexOf('coque-barrebas'))
     expect(barre.replaceAll('<!-- -->', '')).toContain(commune![1]!.trim())
   })
 })

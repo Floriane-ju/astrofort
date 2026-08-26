@@ -299,11 +299,11 @@ body {
   background: linear-gradient(var(--surface), var(--surface-haute));
 }
 
-/* T-0145 — seule la marque tient le bord gauche ; tout le reste — lectures puis commandes —
-   forme un bloc calé à droite. La poussée est portée par la PREMIÈRE lecture : ce qui la suit
-   reste soudé, quelle que soit la largeur de la fenêtre. Le sélecteur cite la barre : `.etat`
-   repose ses marges plus bas dans la feuille, et une classe seule perdrait l'arbitrage. */
-.coque-topbar > .barrehaut-lectures-debut {
+/* T-0145 — seule la marque tient le bord gauche ; tout le reste — la lecture du matériel puis
+   les commandes — forme un bloc calé à droite. La poussée est portée par la lecture : ce qui la
+   suit reste soudé, quelle que soit la largeur de la fenêtre. Le sélecteur cite la barre :
+   `.etat` repose ses marges plus bas dans la feuille, et une classe seule perdrait l'arbitrage. */
+.coque-topbar > .barrehaut-lectures-fin {
   margin-left: auto;
 }
 
@@ -331,7 +331,7 @@ body {
 /* T-0145 — les commandes de la barre forment une bande continue : ni jour, ni double filet.
    La marge négative absorbe le `gap` de la barre et superpose les deux traits voisins, si bien
    qu'une pastille et sa suivante ne partagent qu'un trait. La règle démarre au DEUXIÈME élément
-   qui suit les lectures — le premier garde son jour, sinon la bande collerait au texte. */
+   qui suit la lecture — le premier garde son jour, sinon la bande collerait au texte. */
 .coque-topbar > .barrehaut-lectures-fin ~ * ~ * {
   margin-left: calc(-1 * (var(--jour-barre) + var(--trait)));
 }
@@ -345,6 +345,18 @@ body {
    relève du placement en rangée. */
 .coque-topbar .onglet {
   flex: none;
+}
+
+/* T-0153 — la phrase qui date l'image tient le centre de la barre basse : elle prend ce que le
+   lieu et le transport laissent, et s'y centre. Elle est la SEULE chose qui se rogne ici — un
+   transport amputé ne se rattrape pas, une phrase tronquée se relit en élargissant la fenêtre. */
+.coque-barrebas > .barrebas-visee {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .barrebas-lieu {
@@ -704,6 +716,13 @@ input.barretemps-instant {
   .coque-barrebas {
     min-height: var(--cible-clic);
     padding: 0.4rem 0.75rem;
+  }
+
+  /* T-0153 — sous le repli, le lieu et le transport remplissent déjà la rangée : la phrase
+     y serait réduite à ses points de suspension. Elle prend donc sa propre ligne. */
+  .coque-barrebas > .barrebas-visee {
+    flex-basis: 100%;
+    text-align: left;
   }
 
   .carte,

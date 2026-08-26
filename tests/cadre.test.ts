@@ -6,8 +6,6 @@
  * capture, et le cadrage est justement ce que cette couche sert à décider.
  */
 
-import { createElement } from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import {
   REFUS_SANS_PROFIL,
@@ -28,8 +26,6 @@ import { IDENTITE, separationDeg, versSpherique, versVecteur } from '../src/core
 import { projecteur, type Vue } from '../src/core/projection.ts'
 import type { ObjetCielProfond } from '../src/data/deepsky.ts'
 import { K } from '../src/registry/constants.ts'
-import { MenuInfos } from '../src/ui/MenuInfos.tsx'
-import { construitIndex } from '../src/core/index-ciel.ts'
 
 const FOCALE_REFERENCE_MM = 120
 
@@ -324,22 +320,10 @@ describe('remplissage orienté §6.2 après rotation du boîtier §3.5', () => {
 })
 
 describe('garde-fous du cadre §3.5', () => {
+  // T-0153 — le refus n'a plus d'écran : le menu d'information qui le portait est démonté.
+  // Reste la règle elle-même, qui interdit au moteur d'inventer un cadre sans profil.
   it('refuse d’inventer un cadre sans profil déclaré', () => {
     expect(REFUS_SANS_PROFIL).toMatch(/ne superpose pas de cadre par défaut/)
-    // T-0038 — le refus se lit dans le menu d'information, plus sous le canevas.
-    const html = renderToStaticMarkup(
-      createElement(MenuInfos, {
-        site: { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 },
-        index: construitIndex([]),
-        objets: [],
-        profils: [],
-        sbCiel: 20.6,
-      }),
-    )
-    expect(html).toContain('ne superpose pas de cadre par défaut')
-    // T-0041 — et il se signale sur le bouton du menu, fermé.
-    expect(html).toContain('data-alerte="true"')
-    expect(html).toMatch(/1 message à lire/)
   })
 
   it('borne la comparaison à trois profils simultanés', () => {
