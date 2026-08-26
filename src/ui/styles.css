@@ -290,9 +290,10 @@ body {
   background: linear-gradient(var(--surface), var(--surface-haute));
 }
 
-/* La visée pousse tout ce qui suit vers la droite : la marque reste collée au bord gauche,
-   les bascules au bord droit, quelle que soit la longueur des lectures entre les deux. */
-.barrehaut-visee {
+/* T-0145 — la barre se lit en deux blocs : les lectures à gauche, les commandes à droite.
+   C'est la dernière lecture qui porte la poussée, pas la première : sinon le matériel, écrit
+   après la visée, repartirait du côté des commandes. */
+.barrehaut-lectures-fin {
   margin-right: auto;
 }
 
@@ -317,16 +318,11 @@ body {
   flex: none;
 }
 
-/* Dans la barre, un onglet n'a pas de rangée sous laquelle se poser : son trait fait le
-   tour. La hauteur d'usage ganté reste celle de §11.2. */
+/* T-0145 — dans la barre, un onglet n'a pas de rangée sous laquelle se poser : il prend le
+   dessin de pastille du tiroir voisin (plus bas, avec `.tiroir > summary`). Ici, seul ce qui
+   relève du placement en rangée. */
 .coque-topbar .onglet {
   flex: none;
-  border: var(--trait) solid var(--bordure);
-  border-bottom-width: var(--trait);
-}
-
-.coque-topbar .onglet.actif {
-  border-color: var(--accent);
 }
 
 .barrebas-lieu {
@@ -800,6 +796,7 @@ input.barretemps-instant {
   margin-left: 0;
 }
 
+.coque-topbar .onglet,
 .tiroir > summary {
   display: flex;
   align-items: center;
@@ -816,11 +813,14 @@ input.barretemps-instant {
   white-space: nowrap;
 }
 
+.coque-topbar .onglet:hover,
 .tiroir > summary:hover {
   color: var(--texte);
   border-color: var(--accent);
+  background: transparent;
 }
 
+.coque-topbar .onglet.actif,
 .tiroir[open] > summary {
   background: var(--fond-accent);
   border-color: var(--accent);

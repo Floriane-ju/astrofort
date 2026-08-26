@@ -67,7 +67,7 @@ function viseeAffichee(etat: EtatScene): string {
 }
 
 function Visee() {
-  return <p className="etat barrehaut-visee">{useTrancheScene(viseeAffichee)}</p>
+  return <p className="etat">{useTrancheScene(viseeAffichee)}</p>
 }
 
 export function BarreHaut(props: BarreHautProps) {
@@ -77,7 +77,8 @@ export function BarreHaut(props: BarreHautProps) {
     <>
       <h1>Astrofort</h1>
       <Visee />
-      <p className="etat">
+      {/* T-0145 — dernière lecture de la barre : c'est elle qui pousse les commandes à droite. */}
+      <p className="etat barrehaut-lectures-fin">
         {props.focale} mm f/{props.ouverture} ·{' '}
         {props.capteurMode === 'FULL_FRAME' ? 'plein format' : 'APS-C'}
       </p>

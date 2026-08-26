@@ -65,10 +65,22 @@ export function couleurTeinte(index: number, modeNuit: boolean): string {
   const max = ANCRES[ANCRES.length - 1]![0]
   const bv = min + ((max - min) * index) / (TEINTES - 1)
   const [r, v, b] = interpole(bv)
-  if (!modeNuit) return `rgb(${r} ${v} ${b})`
-  // Luminance perçue ramenée sur le seul canal rouge.
-  const luminance = Math.round(0.299 * r + 0.587 * v + 0.114 * b)
-  return `rgb(${luminance} 0 0)`
+  return modeNuit ? rougeEquivalent(r, v, b) : `rgb(${r} ${v} ${b})`
+}
+
+/** Coefficients de luminance BT.601 — une DÉFINITION, comme ceux de WCAG plus bas. */
+const BT601_R = 0.299
+const BT601_V = 0.587
+const BT601_B = 0.114
+
+/**
+ * §11.1 — la même luminance perçue, portée par le seul canal rouge.
+ *
+ * Une seule écriture de la règle du mode nuit sur le canevas : étoiles (§3.3) et marqueurs
+ * d'objets (`apparence-objets.ts`) ne peuvent pas l'appliquer de deux façons.
+ */
+export function rougeEquivalent(r: number, v: number, b: number): string {
+  return `rgb(${Math.round(BT601_R * r + BT601_V * v + BT601_B * b)} 0 0)`
 }
 
 /**
@@ -80,9 +92,16 @@ export function couleurTeinte(index: number, modeNuit: boolean): string {
  * qui permet de peindre seize mille étoiles en quelques dizaines d'ordres.
  */
 export function couleurTeinteOpacite(index: number, opacite: number, modeNuit: boolean): string {
-  const opaque = couleurTeinte(index, modeNuit)
-  if (opacite >= 1) return opaque
-  return `${opaque.slice(0, -1)} / ${opacite.toFixed(3)})`
+  return avecOpacite(couleurTeinte(index, modeNuit), opacite)
+}
+
+/**
+ * La même couleur, à opacité donnée. Le canal alpha entre dans la COULEUR pour la raison dite
+ * plus haut : une couleur porte son opacité, `globalAlpha` impose un ordre de tracé.
+ */
+export function avecOpacite(couleur: string, opacite: number): string {
+  if (opacite >= 1) return couleur
+  return `${couleur.slice(0, -1)} / ${opacite.toFixed(3)})`
 }
 
 export interface PaletteCiel {
@@ -356,10 +375,15 @@ export function ajusteContrasteSurFond(
  */
 let cacheRealiste: { sb: number; palette: PaletteCiel } | null = null
 
+/** Luminance du fond de ciel à cette brillance de surface : la référence de la compensation. */
+export function luminanceFondRealiste(sbCiel: number): number {
+  return luminanceRelative(composantesFond(sbCiel))
+}
+
 export function paletteRealiste(sbCiel: number): PaletteCiel {
   if (cacheRealiste !== null && cacheRealiste.sb === sbCiel) return cacheRealiste.palette
   const fond = fondRealiste(sbCiel)
-  const luminanceFond = luminanceRelative(composantesFond(sbCiel) as Composantes)
+  const luminanceFond = luminanceFondRealiste(sbCiel)
   const compense = (teinte: string): string =>
     ajusteContrasteSurFond(teinte, luminanceFond).couleur
   const composee: PaletteCiel = Object.freeze({
