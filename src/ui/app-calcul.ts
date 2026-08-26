@@ -61,13 +61,27 @@ import type { PanneauFileProps } from './PanneauFile.tsx'
 /** Objectif de qualité retenu pour le plan de la nuit : « correct » au sens de §7.3. */
 const PRESET_SNR_PLAN = 10
 
-export type Calcul =
+/**
+ * T-0149 — ce que le LIEU et la DATE donnent, sans rien savoir du matériel.
+ *
+ * Séparé de `Calcul` parce que les deux tombent pour des raisons différentes : une focale
+ * effacée en cours de frappe ne rend pas la nuit incalculable, et la scène n'a besoin que
+ * de ce bloc-ci pour se dessiner (§12.5).
+ */
+export type CalculCiel =
   | {
       readonly ok: true
       readonly nuit: FenetreNocturne
       readonly ciel: FondDeCiel
       readonly seuils: SeuilsSite
       readonly offsetMidi: Traced<number>
+    }
+  | { readonly ok: false; readonly erreur: string }
+
+/** §5.1, §5.2 et §9.1 — ce que le MATÉRIEL déclaré produit, ou la cause de son refus. */
+export type Calcul =
+  | {
+      readonly ok: true
       readonly optique: ProfilOptique
       readonly suivi: ProfilSuivi
       readonly poseNpf: Traced<number | null>
@@ -85,6 +99,8 @@ export type Calcul =
 
 export interface ChaineCalcul {
   readonly calcul: Calcul
+  /** T-0149 — le ciel du site : il se calcule même quand le matériel est incomplet. */
+  readonly ciel: CalculCiel
   readonly site: Site
   readonly masque: MasqueHorizon
   readonly fenetreUtile: FenetreUtile | null
@@ -140,14 +156,16 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     [lieu.latitude, lieu.longitude, lieu.altitude],
   )
 
+  const ciel = useMemo(
+    () => evalueCiel(site, lieu),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [site, lieu.bortle, lieu.sqm, lieu.dateIso],
+  )
+
   const calcul = useMemo(
-    () => evalueMateriel(site, lieu, materiel),
+    () => evalueMateriel(materiel),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
-      site,
-      lieu.bortle,
-      lieu.sqm,
-      lieu.dateIso,
       materiel.boitier,
       materiel.iso,
       materiel.focale,
@@ -160,8 +178,8 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
   )
 
   const fenetreUtile = useMemo(
-    () => (calcul.ok ? calculeFenetreUtile(site, calcul.nuit) : null),
-    [calcul, site],
+    () => (ciel.ok ? calculeFenetreUtile(site, ciel.nuit) : null),
+    [ciel, site],
   )
 
   const index = useMemo(() => construitIndex(etoiles), [etoiles])
@@ -181,13 +199,13 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
    * dépendent : le panneau du filé, qui la chiffre, et la scène, qui l'incruste dans le cadre.
    */
   const profondeurFile: EntreeProfondeur | null = useMemo(() => {
-    if (!calcul.ok) return null
+    if (!calcul.ok || !ciel.ok) return null
     return {
       tPoseS: tPoseFileS,
       dMm: calcul.optique.dMm.value,
       zpSys: calcul.zeroSysteme.valeur,
       eCielPxS: fluxCiel({
-        sbMagArcsec2: calcul.ciel.sbCiel.value,
+        sbMagArcsec2: ciel.ciel.sbCiel.value,
         zpSys: calcul.zeroSysteme.valeur,
         pitchUm: calcul.capteur.pitchUm,
         ouvertureN: calcul.ouvertureN,
@@ -196,7 +214,7 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
       readNoiseE: calcul.iso.readNoiseE ?? K('READ_NOISE_DEFAUT_E'),
       zpEstime: calcul.zeroSysteme.estime,
     }
-  }, [calcul, tPoseFileS])
+  }, [calcul, ciel, tPoseFileS])
 
   /**
    * Ce que la scène doit savoir du filé pour l'incruster dans le cadre.
@@ -206,7 +224,7 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
    * relancerait donc l'incrustation, qui republierait, sans fin.
    */
   const materielFile = useMemo(() => {
-    if (!calcul.ok || profondeurFile === null) return null
+    if (!calcul.ok || !ciel.ok || profondeurFile === null) return null
     return {
       optique: {
         focaleMm: Number(materiel.focale),
@@ -215,10 +233,10 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
       },
       profondeur: profondeurFile,
       echApx: calcul.optique.echApx.value,
-      sbCiel: calcul.ciel.sbCiel.value,
+      sbCiel: ciel.ciel.sbCiel.value,
       tMaxSuiviS: calcul.suivi.tMaxSuiviS.value,
     }
-  }, [calcul, profondeurFile, materiel.focale])
+  }, [calcul, ciel, profondeurFile, materiel.focale])
 
   /**
    * §8.3 — le ciel, le site et le matériel sous lesquels une cible est évaluée pour la nuit.
@@ -228,10 +246,10 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
    * autre pose pour la même cible — le désaccord que T-0089 a corrigé une fois.
    */
   const contexteSession = useMemo<ContexteSession | null>(() => {
-    if (!calcul.ok || fenetreUtile === null) return null
+    if (!calcul.ok || !ciel.ok || fenetreUtile === null) return null
     return {
         site,
-        nuit: calcul.nuit,
+        nuit: ciel.nuit,
         fenetreUtile,
         masque,
         fovHDeg: calcul.optique.fovHDeg.value,
@@ -245,14 +263,14 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
         readNoiseE: calcul.iso.readNoiseE,
         tailleRawMo: calcul.boitier.tailleRawMo,
         isoSession: calcul.iso.iso,
-        sbCielNoir: calcul.ciel.sbCiel.value,
-        mLimOeil: calcul.ciel.mLimOeil.value,
+        sbCielNoir: ciel.ciel.sbCiel.value,
+        mLimOeil: ciel.ciel.mLimOeil.value,
         tMaxS: calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value,
         snrCible: PRESET_SNR_PLAN,
         typeMonture: materiel.typeMonture,
         poids,
     }
-  }, [calcul, masque, materiel.typeMonture, site, fenetreUtile, poids])
+  }, [calcul, ciel, masque, materiel.typeMonture, site, fenetreUtile, poids])
 
   const plan = useMemo(() => {
     if (contexteSession === null || catalogue.length === 0) return null
@@ -261,6 +279,7 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
 
   return {
     calcul,
+    ciel,
     site,
     masque,
     fenetreUtile,
@@ -269,7 +288,8 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     materielFile,
     contexteSession,
     plan,
-    contexteFiche: calcul.ok ? contexteFiche(calcul, materiel, lieu, catalogue) : null,
+    contexteFiche:
+      calcul.ok && ciel.ok ? contexteFiche(calcul, ciel, materiel, lieu, catalogue) : null,
     panneauFile:
       calcul.ok && profondeurFile !== null
         ? panneauFile(calcul, materiel, site, profondeurFile)
@@ -277,17 +297,12 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
   }
 }
 
-/** §7, §5.2 et §9.1 — ce que le lieu et le matériel déclarés produisent, ou la cause du refus. */
-export function evalueMateriel(site: Site, lieu: SaisieLieu, materiel: SaisieMateriel): Calcul {
+/** §4.1 et §2.2 — ce que le lieu et la date donnent, ou la cause du refus. */
+export function evalueCiel(site: Site, lieu: SaisieLieu): CalculCiel {
   try {
     // Départ à midi UTC : la recherche du coucher part de là.
     const depart = new Date(`${lieu.dateIso}T12:00:00Z`)
     const offsetFuseauH = -new Date().getTimezoneOffset() / 60
-    const { boitier, estimations } = resoutBoitier(materiel.boitier)
-    const capteur = capteurEffectif(boitier, materiel.capteurMode)
-    const focaleMm = Number(materiel.focale)
-    const ouvertureN = Number(materiel.ouverture)
-    const isoChoisi = materiel.iso.trim() === '' ? null : valide('iso_capture', Number(materiel.iso))
     return {
       ok: true,
       nuit: fenetreNocturne(site, depart),
@@ -297,6 +312,27 @@ export function evalueMateriel(site: Site, lieu: SaisieLieu, materiel: SaisieMat
       }),
       seuils: seuilsDeclinaison(site.latitudeDeg),
       offsetMidi: offsetMidiSolaireMin(site.longitudeDeg, offsetFuseauH),
+    }
+  } catch (erreur) {
+    return refus(erreur)
+  }
+}
+
+/**
+ * §5.1, §5.2 et §9.1 — ce que le matériel déclaré produit, ou la cause du refus.
+ *
+ * T-0149 — le lieu n'entre plus ici. Une focale effacée le temps de la retaper refusait
+ * jusqu'à la nuit et au fond de ciel, et la scène disparaissait avec eux.
+ */
+export function evalueMateriel(materiel: SaisieMateriel): Calcul {
+  try {
+    const { boitier, estimations } = resoutBoitier(materiel.boitier)
+    const capteur = capteurEffectif(boitier, materiel.capteurMode)
+    const focaleMm = Number(materiel.focale)
+    const ouvertureN = Number(materiel.ouverture)
+    const isoChoisi = materiel.iso.trim() === '' ? null : valide('iso_capture', Number(materiel.iso))
+    return {
+      ok: true,
       optique: profilOptique({ focaleMm, ouvertureN, ...capteur }),
       suivi: profilSuivi({
         suiviActif: materiel.suiviActif,
@@ -316,17 +352,21 @@ export function evalueMateriel(site: Site, lieu: SaisieLieu, materiel: SaisieMat
       ...(capteur.noteRecadrage === undefined ? {} : { noteRecadrage: capteur.noteRecadrage }),
     }
   } catch (erreur) {
-    // Saisie refusée ou domaine dépassé : la cause est nommée, pas avalée.
-    if (
-      erreur instanceof BortleHorsTableError ||
-      erreur instanceof FondDeCielIndeterminableError ||
-      erreur instanceof HorsDomaineSeriesError ||
-      erreur instanceof SaisieRefuseeError
-    ) {
-      return { ok: false, erreur: erreur.message }
-    }
-    throw erreur
+    return refus(erreur)
   }
+}
+
+/** Saisie refusée ou domaine dépassé : la cause est nommée, pas avalée. */
+function refus(erreur: unknown): { readonly ok: false; readonly erreur: string } {
+  if (
+    erreur instanceof BortleHorsTableError ||
+    erreur instanceof FondDeCielIndeterminableError ||
+    erreur instanceof HorsDomaineSeriesError ||
+    erreur instanceof SaisieRefuseeError
+  ) {
+    return { ok: false, erreur: erreur.message }
+  }
+  throw erreur
 }
 
 function profilsDeCadre(calcul: Calcul, materiel: SaisieMateriel): readonly ProfilCadre[] {
@@ -355,6 +395,7 @@ function profilsDeCadre(calcul: Calcul, materiel: SaisieMateriel): readonly Prof
 
 function contexteFiche(
   calcul: Calcul & { ok: true },
+  ciel: CalculCiel & { ok: true },
   materiel: SaisieMateriel,
   lieu: SaisieLieu,
   catalogue: readonly ObjetCielProfond[],
@@ -367,8 +408,8 @@ function contexteFiche(
     boitier: calcul.boitier,
     zeroSysteme: calcul.zeroSysteme,
     iso: calcul.iso,
-    sbCiel: calcul.ciel.sbCiel.value,
-    mLimOeil: calcul.ciel.mLimOeil.value,
+    sbCiel: ciel.ciel.sbCiel.value,
+    mLimOeil: ciel.ciel.mLimOeil.value,
     // Sans suivi, c'est la NPF qui plafonne la pose (§9.1) — jamais rien.
     tMaxS: calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value,
     catalogue,

@@ -19,6 +19,7 @@ import { MenuReglages } from './MenuReglages.tsx'
 import type { SaisiePoids } from './app-saisie.ts'
 import { Verification } from './Verification.tsx'
 import { ModeNuit, type EtatModeNuit } from './ModeNuit.tsx'
+import { Inconnu } from './Inconnu.tsx'
 import type { Persistance } from './app-donnees.ts'
 import { TITRES_PANNEAU } from './PanneauLateral.tsx'
 import { basculePanneau, useCoque, type PanneauLateral } from './coque-etat.ts'
@@ -76,7 +77,9 @@ export function BarreHaut(props: BarreHautProps) {
       <Visee />
       {/* T-0145 — dernière lecture : la bande de commandes se soude à partir d'elle. */}
       <p className="etat barrehaut-lectures-fin">
-        {props.focale} mm f/{props.ouverture} ·{' '}
+        {/* T-0149 — un champ vidé pour être retapé n'efface pas la lecture : il la marque. */}
+        {props.focale.trim() === '' ? <Inconnu /> : props.focale} mm f/
+        {props.ouverture.trim() === '' ? <Inconnu /> : props.ouverture} ·{' '}
         {props.capteurMode === 'FULL_FRAME' ? 'plein format' : 'APS-C'}
       </p>
 

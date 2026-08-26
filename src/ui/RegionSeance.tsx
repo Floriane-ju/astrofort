@@ -25,6 +25,7 @@ import { PlanSessionVue } from './PlanSession.tsx'
 import { RegionNuit } from './RegionNuit.tsx'
 import { modeObjectif } from './PanneauMateriel.tsx'
 import { useCoque } from './coque-etat.ts'
+import { AIDE_MATERIEL_INCOMPLET } from './Inconnu.tsx'
 import type { SaisieLieu, SaisieMateriel } from './app-saisie.ts'
 import type { ChaineCalcul } from './app-calcul.ts'
 
@@ -55,8 +56,7 @@ export interface CartesSeanceProps extends RegionSeanceProps {
  */
 export function CartesSeance(props: CartesSeanceProps) {
   const { chaine, materiel } = props
-  const { calcul } = chaine
-  const sbCiel = calcul.ok ? calcul.ciel.sbCiel.value : null
+  const sbCiel = chaine.ciel.ok ? chaine.ciel.ciel.sbCiel.value : null
 
   return (
     <>
@@ -77,7 +77,12 @@ export function CartesSeance(props: CartesSeanceProps) {
 
       <Carte cle="CIBLE" titre="Cible" accent="cible">
         {chaine.contexteFiche === null ? (
-          <p className="etat">Aucune cible : cliquez un objet sur la scène.</p>
+          /* T-0149 — deux absences distinctes : rien de cliqué, ou rien de chiffrable. */
+          <p className="etat">
+            {chaine.calcul.ok
+              ? 'Aucune cible : cliquez un objet sur la scène.'
+              : AIDE_MATERIEL_INCOMPLET}
+          </p>
         ) : (
           <FicheCible
             {...chaine.contexteFiche}
@@ -93,44 +98,53 @@ export function CartesSeance(props: CartesSeanceProps) {
 /** Le panneau latéral et son plan imprimable. */
 export function LateralSeance(props: RegionSeanceProps) {
   const { chaine, lieu, materiel, catalogue } = props
-  const { calcul } = chaine
+  const { calcul, ciel } = chaine
   const { panneau } = useCoque()
 
   const contenus = {
-    CIBLES: calcul.ok ? (
-      <PanneauCibles
-        catalogue={catalogue}
-        site={chaine.site}
-        sbCiel={calcul.ciel.sbCiel.value}
-        mLimOeil={calcul.ciel.mLimOeil.value}
-        dMm={calcul.optique.dMm.value}
-        fovHDeg={calcul.optique.fovHDeg.value}
-        echApx={calcul.optique.echApx.value}
-        capteurHMm={calcul.capteur.capteurHMm}
-        contexteSession={chaine.contexteSession}
-      />
-    ) : null,
-    NUIT: calcul.ok ? (
+    /* T-0149 — la liste chiffre un cadrage : sans optique, elle dit ce qui manque. */
+    CIBLES:
+      calcul.ok && ciel.ok ? (
+        <PanneauCibles
+          catalogue={catalogue}
+          site={chaine.site}
+          sbCiel={ciel.ciel.sbCiel.value}
+          mLimOeil={ciel.ciel.mLimOeil.value}
+          dMm={calcul.optique.dMm.value}
+          fovHDeg={calcul.optique.fovHDeg.value}
+          echApx={calcul.optique.echApx.value}
+          capteurHMm={calcul.capteur.capteurHMm}
+          contexteSession={chaine.contexteSession}
+        />
+      ) : (
+        <p className="etat">{AIDE_MATERIEL_INCOMPLET}</p>
+      ),
+    NUIT: ciel.ok ? (
       <RegionNuit
-        nuit={calcul.nuit}
-        ciel={calcul.ciel}
-        offsetMidi={calcul.offsetMidi}
+        nuit={ciel.nuit}
+        ciel={ciel.ciel}
+        offsetMidi={ciel.offsetMidi}
         planIndisponible={chaine.plan === null && catalogue.length === 0}
       />
     ) : null,
-    FILE: chaine.panneauFile === null ? null : <PanneauFile {...chaine.panneauFile} />,
+    FILE:
+      chaine.panneauFile === null ? (
+        <p className="etat">{AIDE_MATERIEL_INCOMPLET}</p>
+      ) : (
+        <PanneauFile {...chaine.panneauFile} />
+      ),
   }
 
   /* §11.2 — la seule région qui survit à l'impression : elle est nommée pour ça. */
   const planImprimable =
-    calcul.ok && chaine.plan !== null && chaine.fenetreUtile !== null ? (
+    calcul.ok && ciel.ok && chaine.plan !== null && chaine.fenetreUtile !== null ? (
       <PlanSessionVue
         plan={chaine.plan}
         fenetreUtile={chaine.fenetreUtile}
         site={chaine.site}
         fovHDeg={calcul.optique.fovHDeg.value}
         fovLDeg={calcul.optique.fovLDeg.value}
-        mLimOeil={calcul.ciel.mLimOeil.value}
+        mLimOeil={ciel.ciel.mLimOeil.value}
         etoiles={props.etoiles}
         enTete={{
           dateIso: lieu.dateIso,

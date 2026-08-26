@@ -90,7 +90,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
     tPoseFileS: file.tPoseS,
     poids: poids.poids,
   })
-  const { calcul } = chaine
+  const { calcul, ciel } = chaine
   const [modeNuit, setModeNuit] = useModeNuit()
 
   // §12.3 — le lieu et le matériel s'enregistrent au fil de la saisie, masque d'horizon
@@ -104,7 +104,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
   })
 
   const gaia = catalogues.etat === null ? false : gaiaCharge(catalogues.etat.catalogues)
-  const sbCiel = calcul.ok ? calcul.ciel.sbCiel.value : null
+  const sbCiel = ciel.ok ? ciel.ciel.sbCiel.value : null
 
   const topbar = (
     <BarreHaut
@@ -146,7 +146,12 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
     />
   )
 
-  const scene = calcul.ok ? (
+  /**
+   * T-0149 — la scène ne dépend que du CIEL. Un matériel incomplet lui retire son cadre et
+   * son incrustation de filé — `profilsCadre` est alors vide, `materielFile` absent — mais
+   * pas les étoiles, le sol ni le fond de ciel : ce sont des grandeurs du lieu.
+   */
+  const scene = ciel.ok ? (
     <Planetarium
       site={chaine.site}
       masque={chaine.masque}
@@ -155,8 +160,8 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       objets={catalogues.objets}
       constellations={catalogues.constellations}
       profils={chaine.profilsCadre}
-      mLimOeil={calcul.ciel.mLimOeil.value}
-      sbCiel={calcul.ciel.sbCiel.value}
+      mLimOeil={ciel.ciel.mLimOeil.value}
+      sbCiel={ciel.ciel.sbCiel.value}
       gaiaCharge={gaia}
       modeObjectif={modeObjectif(materiel.typeObjectif)}
       modeNuit={modeNuit.actif}
@@ -164,7 +169,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       surSelectionObjet={ouvreCible}
     />
   ) : (
-    <p className="erreur">{calcul.erreur}</p>
+    <p className="erreur">{ciel.erreur}</p>
   )
 
   const regions = {
@@ -195,7 +200,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       masque={chaine.masque}
       pointsMasque={lieu.pointsMasque}
       surPointsMasque={lieu.surPointsMasque}
-      {...(calcul.ok ? { seuils: calcul.seuils } : {})}
+      {...(ciel.ok ? { seuils: ciel.seuils } : {})}
     />
   )
 

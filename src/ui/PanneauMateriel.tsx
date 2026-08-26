@@ -35,6 +35,7 @@ import { DOMAINES, type DomaineId } from '../registry/domains.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette } from './Terme.tsx'
 import { Bulle } from './Bulle.tsx'
+import { LectureInconnue } from './Inconnu.tsx'
 
 /**
  * §5.1 — ce que la saisie exige, dit une fois au titre de la carte. Au survol plutôt qu'en
@@ -352,7 +353,19 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
 
       {props.erreur !== undefined && <p className="erreur">{props.erreur}</p>}
 
-      {lectures !== undefined && (
+      {/* T-0149 — la section reste, même sans lectures : ce qui manque se voit à sa place. */}
+      {lectures === undefined ? (
+        <section>
+          <h2>Ce que ce matériel donne</h2>
+          <LectureInconnue terme="champ" suffixe="largeur" />
+          <LectureInconnue terme="champ" suffixe="hauteur" />
+          <LectureInconnue terme="echantillonnage" />
+          <LectureInconnue terme="diametre_pupille" />
+          <LectureInconnue terme="pouvoir_separateur" />
+          <LectureInconnue terme="npf" />
+          <LectureInconnue terme="pose_max_suivi" />
+        </section>
+      ) : (
         <section>
           <h2>Ce que ce matériel donne</h2>
           <TracedValue terme="champ" suffixe="largeur" trace={lectures.optique.fovLDeg} unite="°" />
