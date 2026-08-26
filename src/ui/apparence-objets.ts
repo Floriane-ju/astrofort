@@ -34,8 +34,11 @@ export interface ApparenceObjet {
 /**
  * Les familles partagent leur teinte : trois nébuleuses de mécanisme différent restent trois
  * nébuleuses à l'œil, et multiplier les teintes proches ne distingue plus rien sur fond noir.
- * La nébuleuse obscure est la seule dont le cœur est plus sombre que son bord — c'est ce
- * qu'elle est : une absence de lumière cernée par ce qu'elle masque.
+ *
+ * Le radiant est TOUJOURS plus clair que le bord, y compris pour la nébuleuse obscure. Peindre
+ * celle-ci d'un cœur noir était juste sur le fond — c'est ce qu'elle est, une absence de lumière
+ * — mais sur un canevas noir, un dégradé noir n'est plus un dégradé : l'objet perdait sa forme
+ * et son étendue, la seule chose que le marqueur a à dire. C'est un symbole, pas une photographie.
  */
 export const APPARENCE_OBJET: Readonly<Record<TypeObjet, ApparenceObjet>> = Object.freeze({
   INCONNU: { radiant: [169, 236, 201], bord: [169, 236, 201] },
@@ -45,7 +48,7 @@ export const APPARENCE_OBJET: Readonly<Record<TypeObjet, ApparenceObjet>> = Obje
   NEB_PLANETAIRE: { radiant: [233, 165, 220], bord: [196, 128, 184] },
   EMISSION: { radiant: [233, 165, 220], bord: [196, 128, 184] },
   REFLEXION: { radiant: [233, 165, 220], bord: [196, 128, 184] },
-  NEB_OBSCURE: { radiant: [26, 12, 32], bord: [107, 74, 122] },
+  NEB_OBSCURE: { radiant: [150, 110, 170], bord: [107, 74, 122] },
   RESTE_SUPERNOVA: { radiant: [180, 154, 232], bord: [143, 118, 196] },
   AUTRE: { radiant: [169, 236, 201], bord: [169, 236, 201] },
 } satisfies Record<TypeObjet, ApparenceObjet>)

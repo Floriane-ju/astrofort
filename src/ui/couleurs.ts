@@ -109,7 +109,6 @@ export interface PaletteCiel {
   readonly figures: string
   readonly frontieres: string
   readonly asterismes: string
-  readonly objets: string
   readonly corps: string
   readonly cadre: string
   readonly horizon: string
@@ -129,7 +128,6 @@ const PALETTE_NUIT: PaletteCiel = Object.freeze({
   figures: 'rgb(90 0 0)',
   frontieres: 'rgb(55 0 0)',
   asterismes: 'rgb(140 0 0)',
-  objets: 'rgb(120 0 0)',
   corps: 'rgb(190 0 0)',
   cadre: 'rgb(200 0 0)',
   horizon: 'rgb(70 0 0)',
@@ -156,7 +154,6 @@ const PALETTE_JOUR: PaletteCiel = Object.freeze({
   figures: 'rgb(64 96 82)',
   frontieres: 'rgb(38 54 47)',
   asterismes: 'rgb(110 158 134)',
-  objets: 'rgb(169 236 201)',
   corps: 'rgb(244 199 106)',
   cadre: 'rgb(255 111 94)',
   horizon: 'rgb(70 96 84)',
@@ -213,7 +210,7 @@ const HEXA = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i
 const RVB = /^rgb\((\d+) (\d+) (\d+)\)$/
 
 /** Composantes linéaires d'une couleur CSS de la palette — `#rrggbb` ou `rgb(r v b)`. */
-function composantesDeCss(css: string): Composantes {
+export function composantesDeCss(css: string): Composantes {
   const hexa = HEXA.exec(css)
   if (hexa !== null) {
     return [
@@ -392,7 +389,6 @@ export function paletteRealiste(sbCiel: number): PaletteCiel {
     figures: compense(PALETTE_JOUR.figures),
     frontieres: compense(PALETTE_JOUR.frontieres),
     asterismes: compense(PALETTE_JOUR.asterismes),
-    objets: compense(PALETTE_JOUR.objets),
     corps: compense(PALETTE_JOUR.corps),
     cadre: compense(PALETTE_JOUR.cadre),
     horizon: compense(PALETTE_JOUR.horizon),

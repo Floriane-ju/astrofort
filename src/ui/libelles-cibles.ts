@@ -73,7 +73,11 @@ export function titreCible(cible: CibleEcran): string {
 /** L'ancre du label : il longe le marqueur que la scène a peint pour cet élément. */
 export function ancreLabel(cible: CibleEcran): { readonly xPx: number; readonly yPx: number } {
   const marge = HAUTEUR_LABEL_PX / 2
-  if (cible.type === 'OBJET') return { xPx: cible.xPx + MARQUEUR_OBJET_PX + marge, yPx: cible.yPx }
+  // T-0144 — l'objet porte l'encombrement de son marqueur : un nom posé à quatre pixels fixes
+  // tomberait DANS une galaxie qui s'étale sur un quart du canevas.
+  if (cible.type === 'OBJET') {
+    return { xPx: cible.xPx + (cible.rayonPx ?? MARQUEUR_OBJET_PX) + marge, yPx: cible.yPx }
+  }
   if (cible.type === 'CORPS') return { xPx: cible.xPx + RAYON_CORPS_PX + marge, yPx: cible.yPx }
   // L'étoile n'a pas de marqueur de taille fixe à contourner — son disque suit sa magnitude.
   // Le nom se pose en diagonale, seul décalage qui ne recouvre jamais l'astre qu'il nomme.

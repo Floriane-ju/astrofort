@@ -42,6 +42,7 @@ import {
 import {
   cibleSousLeCurseur,
   dessineCiel,
+  RAYON_CLIC_PX,
   type CibleEcran,
   type CouchesActives,
   type EntreeDessin,
@@ -52,6 +53,7 @@ import { decritCible } from '../src/ui/planetarium-selection.ts'
 import { ancreLabel, libelleCible, titreCible } from '../src/ui/libelles-cibles.ts'
 import { etoileLabellisable } from '../src/core/labels.ts'
 import { palette, paletteRealiste } from '../src/ui/couleurs.ts'
+import { teintesObjets } from '../src/ui/apparence-objets.ts'
 import type { LuneEcran } from '../src/ui/dessine-fond-ciel.ts'
 import { sousLeSol } from '../src/core/sol.ts'
 import { K } from '../src/registry/constants.ts'
@@ -100,8 +102,10 @@ function contexteEspion() {
     get globalAlpha() {
       return opacite
     },
-    set fillStyle(v: string) {
-      couleurs.push(v)
+    // Un dégradé n'est pas une couleur : ses arrêts sont déjà enregistrés un par un par
+    // `addColorStop`, et le pousser ici ferait entrer un objet dans la liste des teintes.
+    set fillStyle(v: unknown) {
+      if (typeof v === 'string') couleurs.push(v)
     },
     get fillStyle() {
       return couleurs[couleurs.length - 1] ?? ''
@@ -118,6 +122,14 @@ function contexteEspion() {
     moveTo: enregistre('moveTo'),
     lineTo: enregistre('lineTo'),
     arc: enregistre('arc'),
+    // T-0143 — le marqueur d'objet peint son dégradé dans un contexte transformé, et son
+    // contour hors transformation.
+    ellipse: enregistre('ellipse'),
+    save: enregistre('save'),
+    restore: enregistre('restore'),
+    translate: enregistre('translate'),
+    rotate: enregistre('rotate'),
+    scale: enregistre('scale'),
     stroke: (...args: unknown[]) => {
       opacites.push(opacite)
       appels.push({ nom: 'stroke', args })
@@ -477,10 +489,12 @@ describe('passe de rendu §3.3', () => {
   })
 
   it('n’écrit aucune composante verte ou bleue en mode nuit', () => {
-    const { ctx } = rend({ modeNuit: true })
+    // Objet dimensionné compris : les arrêts de son dégradé portent leur opacité DANS la
+    // couleur (T-0119), et c'est une couleur peinte comme une autre.
+    const { ctx } = rend({ modeNuit: true, objets: [OBJET_AU_CENTRE] })
     expect(ctx.couleurs.length).toBeGreaterThan(0)
     for (const couleur of ctx.couleurs) {
-      const rgb = couleur.match(/rgb\((\d+) (\d+) (\d+)\)/)
+      const rgb = couleur.match(/rgb\((\d+) (\d+) (\d+)(?: \/ [\d.]+)?\)/)
       if (rgb !== null) {
         expect(Number(rgb[2]), couleur).toBe(0)
         expect(Number(rgb[3]), couleur).toBe(0)
@@ -498,6 +512,74 @@ describe('passe de rendu §3.3', () => {
  * Le modèle lui-même est vérifié dans `fond-ciel.test.ts` ; ce qui se joue ici est l'ORDRE
  * des couches et le fait que le mode nuit ne peint rien de tout cela.
  */
+/**
+ * T-0143 — le marqueur d'un objet du ciel profond. La géométrie se vérifie dans
+ * `marqueur-objet.test.ts` ; ce qui se joue ici est ce que la PASSE peint, et avec quelle teinte.
+ */
+describe('marqueur d’objet §3.3', () => {
+  const SANS_DIMENSIONS: ObjetCielProfond = {
+    ...OBJET_AU_CENTRE,
+    designation: 'NGC 0000',
+    type: 'INCONNU',
+    majAxArcmin: null,
+    minAxArcmin: null,
+    posAngDeg: null,
+  }
+
+  it('peint une ellipse et son dégradé pour un objet dimensionné', () => {
+    const { ctx } = rend({ objets: [OBJET_AU_CENTRE] })
+    expect(ctx.appels.filter((a) => a.nom === 'ellipse')).toHaveLength(1)
+    // Le dégradé est elliptique par la transformation du contexte : `createRadialGradient` ne
+    // sait faire que des cercles.
+    expect(ctx.appels.filter((a) => a.nom === 'scale')).toHaveLength(1)
+    expect(ctx.appels.filter((a) => a.nom === 'save')).toHaveLength(1)
+    expect(ctx.appels.filter((a) => a.nom === 'restore')).toHaveLength(1)
+  })
+
+  it('reprend la croix quand le catalogue n’a pas de dimensions', () => {
+    const { ctx } = rend({ objets: [SANS_DIMENSIONS] })
+    expect(ctx.appels.filter((a) => a.nom === 'ellipse')).toHaveLength(0)
+    // Les deux branches de la croix, et rien de transformé.
+    expect(ctx.appels.filter((a) => a.nom === 'scale')).toHaveLength(0)
+  })
+
+  it('prend la teinte du type de l’objet, pas une teinte commune', () => {
+    const teintes = teintesObjets(false, false, 21)
+    const galaxie = rend({ objets: [OBJET_AU_CENTRE] })
+    expect(galaxie.ctx.couleurs).toContain(teintes.GALAXIE.bord)
+    const nebuleuse = rend({
+      objets: [{ ...OBJET_AU_CENTRE, type: 'EMISSION' }],
+    })
+    expect(nebuleuse.ctx.couleurs).toContain(teintes.EMISSION.bord)
+    expect(nebuleuse.ctx.couleurs).not.toContain(teintes.GALAXIE.bord)
+  })
+
+  it('donne à la croix la couleur de bord de son type', () => {
+    const teintes = teintesObjets(false, false, 21)
+    const { ctx } = rend({ objets: [SANS_DIMENSIONS] })
+    expect(ctx.couleurs).toContain(teintes.INCONNU.bord)
+  })
+
+  it('rend cliquable toute l’étendue d’une grande ellipse (T-0144)', () => {
+    const { sortie } = rend({ objets: [OBJET_AU_CENTRE] })
+    const cible = sortie.cibles.find((c) => c.objet?.designation === OBJET_AU_CENTRE.designation)
+    expect(cible?.rayonPx).toBeGreaterThan(RAYON_CLIC_PX)
+    // Un clic au bord du marqueur, bien au-delà du rayon de désignation par défaut.
+    const auBord = cibleSousLeCurseur(
+      sortie.cibles,
+      LARGEUR / 2 + cible!.rayonPx! - 1,
+      HAUTEUR / 2,
+    )
+    expect(auBord?.objet?.designation).toBe(OBJET_AU_CENTRE.designation)
+  })
+
+  it('pose le nom au bord du marqueur, jamais dedans (T-0144)', () => {
+    const { sortie } = rend({ objets: [OBJET_AU_CENTRE] })
+    const cible = sortie.cibles.find((c) => c.objet?.designation === OBJET_AU_CENTRE.designation)!
+    expect(ancreLabel(cible).xPx).toBeGreaterThan(cible.xPx + cible.rayonPx!)
+  })
+})
+
 describe('fond de ciel réaliste §3.3', () => {
   const SB = 19.9
 

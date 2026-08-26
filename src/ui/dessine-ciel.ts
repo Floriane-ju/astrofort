@@ -63,6 +63,8 @@ import { brillanceVoieLacteeNl } from '../core/fond-ciel-rendu.ts'
 import { nanolamberts } from '../core/moon.ts'
 import { dessineHaloHorizon, dessineHaloLune, type LuneEcran } from './dessine-fond-ciel.ts'
 import { dessineCartePose, type OptiquePose } from './dessine-pose-cadre.ts'
+import { teintesObjets } from './apparence-objets.ts'
+import { geometrieMarqueur, peintCroix, peintEllipse } from './marqueur-objet.ts'
 
 export interface CouchesActives {
   readonly figures: boolean
@@ -87,6 +89,11 @@ export interface CibleEcran {
   readonly etoile?: Etoile
   readonly etoileNommee?: EtoileNommee
   readonly corps?: PositionCorps
+  /**
+   * T-0144 — encombrement du marqueur peint, en pixels depuis son centre. Le label s'y appuie
+   * pour ne pas tomber DANS l'objet, et le clic pour porter jusqu'à son bord.
+   */
+  readonly rayonPx?: number
 }
 
 /**
@@ -172,7 +179,7 @@ export interface SortieDessin {
 /* T-0109 — la mise en page des labels appartient à `libelles-cibles.ts` : les tailles y sont
    déclarées, et importées ici pour les labels qui n'ont pas de cible (constellations,
    astérismes, Voie lactée). */
-const RAYON_CLIC_PX = 10
+export const RAYON_CLIC_PX = 10
 /* T-0107 — pas de la clé de pixel entier. Toute largeur de canevas réaliste lui est très
    inférieure, ce qui rend `y * PAS + x` injectif, y compris pour le voisinage à x = −1. */
 const PAS_CLE_PIXEL = 65536
@@ -879,24 +886,29 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   }
 
   // --- Objets du ciel profond ---------------------------------------------
-  ctx.strokeStyle = teintes.objets
-  ctx.lineWidth = 1
-  ctx.beginPath()
+  // Un tracé par objet, là où les étoiles se regroupent en huit chemins : chacun porte la teinte
+  // de son type et son dégradé (`apparence-objets.ts`). Ce sont quelques centaines d'ordres, pas
+  // les seize mille que le regroupement des étoiles évite.
+  const teintesParType = teintesObjets(entree.modeNuit, entree.vueRealiste, entree.sbCiel)
   for (const objet of entree.objets) {
     if (objet.vMag === null || objet.vMag > entree.magLimite) continue
     const v = versVecteur(objet.adDeg, objet.decDeg)
     if (!projecteur.projetteEn(v.x, v.y, v.z, p)) continue
     if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
-    ctx.moveTo(p.xPx - MARQUEUR_OBJET_PX, p.yPx - MARQUEUR_OBJET_PX)
-    ctx.lineTo(p.xPx + MARQUEUR_OBJET_PX, p.yPx + MARQUEUR_OBJET_PX)
-    ctx.moveTo(p.xPx + MARQUEUR_OBJET_PX, p.yPx - MARQUEUR_OBJET_PX)
-    ctx.lineTo(p.xPx - MARQUEUR_OBJET_PX, p.yPx + MARQUEUR_OBJET_PX)
+    // La géométrie vient APRÈS les trois rejets : ses deux projections auxiliaires ne se paient
+    // que pour ce qui se voit.
+    const teintesObjet = teintesParType[objet.type]
+    const geo = geometrieMarqueur(projecteur, objet, p.xPx, p.yPx)
+    if (geo === null) peintCroix(ctx, p.xPx, p.yPx, teintesObjet.bord)
+    else peintEllipse(ctx, p.xPx, p.yPx, geo, teintesObjet)
     const cible: CibleEcran = {
       type: 'OBJET',
       xPx: p.xPx,
       yPx: p.yPx,
       nom: objet.designation,
       objet,
+      // T-0144 — le nom et le clic suivent le marqueur peint, plus un carré de quatre pixels.
+      rayonPx: geo === null ? MARQUEUR_OBJET_PX : geo.demiGrandPx,
     }
     cibles.push(cible)
     const texte = libelleCible(cible)
@@ -904,7 +916,8 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
       candidats.push({ ...boiteLabel(cible, texte), categorie: 'OBJET', priorite: objet.vMag })
     }
   }
-  ctx.stroke()
+  // Les passes suivantes tracent au trait fin : l'épaisseur des contours ne leur appartient pas.
+  ctx.lineWidth = 1
 
   // --- Corps mobiles -------------------------------------------------------
   const versJ2000 = transpose(entree.matriceCiel)
@@ -1077,7 +1090,14 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   return { stats, etoilesDessinees, cibles: ciblesUniques, labels, revele }
 }
 
-/** Cible la plus proche du point cliqué, dans un rayon de quelques pixels. */
+/**
+ * Cible la plus proche du point cliqué, dans un rayon de quelques pixels.
+ *
+ * T-0144 — un marqueur plus grand que ce rayon est éligible sur toute son étendue : une ellipse
+ * de cent pixels ne se désigne pas en visant son centre. La règle de DÉSIGNATION ne change pas
+ * pour autant — parmi les cibles éligibles, c'est toujours la plus proche du point visé qui
+ * gagne, y compris quand une petite se superpose à une grande.
+ */
 export function cibleSousLeCurseur(
   cibles: readonly CibleEcran[],
   xPx: number,
@@ -1090,9 +1110,10 @@ export function cibleSousLeCurseur(
   rayonPx: number = RAYON_CLIC_PX,
 ): CibleEcran | null {
   let meilleure: CibleEcran | null = null
-  let meilleureDistance = rayonPx
+  let meilleureDistance = Number.POSITIVE_INFINITY
   for (const cible of cibles) {
     const distance = Math.hypot(cible.xPx - xPx, cible.yPx - yPx)
+    if (distance > Math.max(rayonPx, cible.rayonPx ?? 0)) continue
     if (distance <= meilleureDistance) {
       meilleureDistance = distance
       meilleure = cible

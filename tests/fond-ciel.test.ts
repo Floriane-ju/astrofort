@@ -211,7 +211,9 @@ describe('palette de vue réaliste (T-0097)', () => {
   })
 
   it('retient chaque repère à son rapport de contraste actuel, ou déclare la saturation', () => {
-    const reperes = ['figures', 'frontieres', 'asterismes', 'objets', 'corps', 'cadre',
+    // Les marqueurs d'objets ne sont plus dans la palette : ils ont leur table par type, et
+    // sa compensation se vérifie dans `marqueur-objet.test.ts`.
+    const reperes = ['figures', 'frontieres', 'asterismes', 'corps', 'cadre',
       'horizon', 'voieLactee', 'texte'] as const
     for (const bortle of [1, 6, 9]) {
       const sb = interpoleBortle(bortle).sb
