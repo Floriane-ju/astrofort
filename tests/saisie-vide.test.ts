@@ -49,7 +49,6 @@ const MATERIEL: SaisieMateriel = {
     fullWellE: '',
     zpSys: '',
     tailleRawMo: '',
-    autonomieCipa: '',
   },
   surBoitier: rien,
   iso: '',

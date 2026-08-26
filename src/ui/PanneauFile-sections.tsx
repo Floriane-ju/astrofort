@@ -306,7 +306,7 @@ export function ArcsDuFile({
   )
 }
 
-/** §9.4 — combien de photos, combien de batteries, combien de gigaoctets. */
+/** §9.4 — combien de photos, combien de gigaoctets, et ce que la carte tiendra. */
 export function SequenceDePrises({
   lectures,
   file,
@@ -330,21 +330,6 @@ export function SequenceDePrises({
           />
         </label>
         <label>
-          Température prévue (°C)
-          <input
-            value={file.temperatureC}
-            onChange={(e) => majFile({ temperatureC: e.target.value })}
-          />
-        </label>
-        <label>
-          <Etiquette cle="autonomie_cipa" />
-          <input
-            value={file.autonomieSaisie}
-            placeholder="images par charge"
-            onChange={(e) => majFile({ autonomieSaisie: e.target.value })}
-          />
-        </label>
-        <label>
           <Etiquette cle="espace_carte" />
           <input
             value={file.espaceLibreGo}
@@ -365,11 +350,6 @@ export function SequenceDePrises({
       {sequence.intervalleRefuse !== null && <p className="erreur">{sequence.intervalleRefuse}</p>}
       <TracedValue terme="n_poses_file" trace={sequence.nPoses} decimales={0} />
       <TracedValue terme="volume_stockage" trace={sequence.volumeGo} decimales={1} unite="Go" />
-      <TracedValue terme="batteries" trace={sequence.nBatteries} decimales={0} />
-      <p className="etat">
-        <Etiquette cle="facteur_froid" /> : {sequence.facteurFroid.valeur} —{' '}
-        {sequence.facteurFroid.libelle}
-      </p>
       {sequence.interruptionStockage !== null && (
         <p className="cause">{sequence.interruptionStockage.message}</p>
       )}

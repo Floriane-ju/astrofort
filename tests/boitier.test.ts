@@ -32,7 +32,6 @@ function saisie(partiel: Partial<SaisieBoitier> = {}): SaisieBoitier {
     fullWellE: '',
     zpSys: '',
     tailleRawMo: '',
-    autonomieCipa: '',
     ...partiel,
   }
 }

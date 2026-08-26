@@ -592,8 +592,8 @@ export const GLOSSAIRE = Object.freeze({
     glose: 'durée cumulée sur la cible',
     explication:
       'C’est le temps cumulé de toutes les poses sur une cible, pour atteindre la qualité visée. ' +
-      'Il se répartit sur autant de nuits que nécessaire, la seule contrainte étant de garder ' +
-      'des darks à température comparable.',
+      'Il se répartit sur autant de nuits que nécessaire, chacune demandant son propre lot de ' +
+      'darks.',
     consequence: 'Elle dit si la cible tient dans une nuit, ou s’il faut planifier une série.',
     sections: ['7.3'],
   }),
@@ -621,8 +621,8 @@ export const GLOSSAIRE = Object.freeze({
     glose: 'sessions nécessaires à la cible',
     explication:
       'Quand l’intégration dépasse le créneau exploitable d’une nuit, la capture se répartit ' +
-      'sur plusieurs sorties. L’empilement multi-nuits impose alors des darks pris à ' +
-      'température comparable.',
+      'sur plusieurs sorties. Chaque nuit demande alors son propre lot de darks, la ' +
+      'température du capteur n’étant jamais la même deux soirs de suite.',
     consequence: 'Il transforme une cible « impossible » en une série de sessions ordinaires.',
     sections: ['7.3'],
   }),
@@ -1024,8 +1024,8 @@ export const GLOSSAIRE = Object.freeze({
     glose: 'temps total de la séquence',
     explication:
       'La durée totale est le temps couvert par l’ensemble des poses empilées, intervalles ' +
-      'compris. Elle fixe la longueur des arcs, le nombre de fichiers et le budget batterie. ' +
-      'Elle n’est pas la durée d’une pose unitaire, qui reste courte.',
+      'compris. Elle fixe la longueur des arcs et le nombre de fichiers. Elle n’est pas la ' +
+      'durée d’une pose unitaire, qui reste courte.',
     consequence:
       'Doubler la durée totale double la longueur des arcs, sans rien changer à la pose unitaire.',
     sections: ['9.3', '9.4'],
@@ -1047,44 +1047,10 @@ export const GLOSSAIRE = Object.freeze({
     glose: 'images de la séquence',
     explication:
       'Le nombre de poses découle de la durée totale divisée par la cadence, pose et intervalle ' +
-      'compris. Il fixe le volume de fichiers et la consommation de batterie. La pose unique ' +
-      'très longue est écartée : bruit thermique et ciel cramé en présence de pollution lumineuse.',
+      'compris. Il fixe le volume de fichiers à rapporter. La pose unique très longue est ' +
+      'écartée : bruit thermique et ciel cramé en présence de pollution lumineuse.',
     consequence:
       'Les poses courtes s’empilent ensuite en mode éclaircir pour reconstituer le filé complet.',
-    sections: ['9.4'],
-  }),
-  batteries: terme({
-    libelle: 'Batteries à emporter',
-    glose: 'nombre, marge d’une incluse',
-    explication:
-      'Le budget se calcule à partir de l’autonomie constructeur, corrigée par le facteur de ' +
-      'froid, avec une batterie de marge assumée. L’application annonce un nombre de batteries ' +
-      'et jamais une durée d’autonomie précise : un chiffre faux au quart d’heure près serait ' +
-      'plus nuisible qu’utile.',
-    consequence:
-      'Sans autonomie constructeur renseignée, aucun nombre n’est produit plutôt qu’estimé au hasard.',
-    sections: ['9.4'],
-  }),
-  facteur_froid: terme({
-    libelle: 'Facteur de froid',
-    glose: 'autonomie réduite par température',
-    explication:
-      'Une batterie perd une grande part de sa capacité utile dès que la température descend. ' +
-      'Le facteur retenu vaut un au-dessus de dix degrés, six dixièmes entre zéro et dix, et ' +
-      'quatre dixièmes sous zéro. Ce sont des ordres de grandeur de terrain, pas des mesures.',
-    consequence:
-      'Une nuit sous zéro peut plus que doubler le nombre de batteries à emporter.',
-    sections: ['9.4'],
-  }),
-  autonomie_cipa: terme({
-    libelle: 'Autonomie CIPA',
-    glose: 'images par batterie, norme constructeur',
-    explication:
-      'La norme CIPA donne un nombre d’images par charge, mesuré dans des conditions ' +
-      'standardisées. Elle est optimiste pour la pose longue en continu, et elle n’est pas ' +
-      'renseignée pour tous les boîtiers de la base. La valeur saisie reste un ordre de grandeur.',
-    consequence:
-      'Renseigner cette valeur débloque le budget batterie de la fiche de séquence.',
     sections: ['9.4'],
   }),
   espace_carte: terme({

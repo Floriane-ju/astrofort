@@ -170,6 +170,11 @@ export interface PlanSession {
   readonly noteCouvertureCatalogue?: string
   /** Rappelé sur chaque plan : l'application ne prétend pas connaître la météo. */
   readonly avertissementMeteo: string
+  /**
+   * Renseigné quand la capture dépasse C-16 : une longue nuit vide une batterie. Un rappel,
+   * pas un budget — aucune autonomie n'est modélisée (T-0150).
+   */
+  readonly avertissementBatterie?: string
 }
 
 export const AVERTISSEMENT_METEO =

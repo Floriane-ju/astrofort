@@ -168,13 +168,12 @@ PRINCIPE
 | C-07 | Plafond de pose sans autoguidage | 240 s | convention terrain | ordre de grandeur |
 | C-08 | Recouvrement de mosaïque | 15 % | convention | — |
 | C-09 | Intervalle inter-pose en filé | ≤ 1 s | socle | contrainte dure |
-| C-10 | Écart de température darks | ± 3 °C | convention | — |
 | C-11 | Pupille de l'œil adapté | 6,5 mm | convention | 5 à 8 mm selon l'âge |
 | C-12 | `t_ref_soigne` à 200 mm | 120 s | socle (1 à 4 min) | ordre de grandeur |
 | C-13 | `t_ref_approx` à 200 mm | 45 s | socle | ordre de grandeur |
 | C-14 | Point zéro système générique | `ZP_sys` = 20,20 | dérivé, voir §2.3 | ± 0,5 mag |
 | C-15 | Poids de scoring | w_c 0,25 · w_h 0,20 · w_s 0,30 · w_f 0,15 · w_l 0,10 | convention, réglable | — |
-| C-16 | Facteur de froid batterie | 1,0 (>10 °C) · 0,6 (0–10 °C) · 0,4 (<0 °C) | convention terrain | ordre de grandeur |
+| C-16 | Seuil de rappel batterie | 90 min de prise de vue | convention terrain | ordre de grandeur |
 
 ### Critères d'acceptation
 
@@ -357,7 +356,7 @@ Alors aucune n'existe, et aucun écran n'invite à en effectuer une
 
 ### Dépendances données
 
-Base matériel embarquée : `zp_sys`, bruit de lecture par ISO, seuil de double gain, capacité de saturation, taille de fichier RAW, autonomie CIPA. Sources : documentation constructeur, Photons to Photos. Fraîcheur : trimestrielle, non critique. Fallback : valeur générique C-14.
+Base matériel embarquée : `zp_sys`, bruit de lecture par ISO, seuil de double gain, capacité de saturation, taille de fichier RAW. Sources : documentation constructeur, Photons to Photos. Fraîcheur : trimestrielle, non critique. Fallback : valeur générique C-14.
 
 ---
 
@@ -370,7 +369,7 @@ Les constantes que la calibration devait établir sont closes par convention doc
 | Références de suivi | `t_max_suivi = t_ref × (200 / focale_mm)`, plafonné par C-07 | C-12, C-13 |
 | Seuils de contraste visuel | Table publiée par Clark, *Visual Astronomy of the Deep Sky* (1990), d'après Blackwell (1946). Embarquée, jamais interpolée hors domaine | — |
 | Tolérance NPF | `k = 1` par défaut ; `k = 2` en option explicite, jamais appliqué en silence | C-06 |
-| Autonomie batterie | Nombre de vues CIPA × facteur de froid, plus une batterie de marge assumée | C-16 |
+| Autonomie batterie | Hors périmètre : aucune autonomie n'est modélisée. Au-delà de C-16 minutes de prise de vue, un rappel, jamais un nombre de batteries | C-16 |
 | Poids de scoring | Figés, exposés, réglables par l'utilisateur, sans apprentissage | C-15 |
 | Constantes de rendu | Réglées une fois par comparaison visuelle à des photographies de référence, puis figées. Paramètres esthétiques, hors calibration physique | §3.3, §9.2 |
 | Type de monture | Sélecteur explicite `GEM` / `TRACKER` / `ALTAZ`, aucune inférence | §5.2 |
@@ -1242,13 +1241,12 @@ DIAGNOSTIC D'ÉCHANTILLONNAGE (seeing courant 2–3", constante C-04)
 | `full_well_e` | int | e⁻ | 5 000 – 200 000 | saturation |
 | `zp_sys` | float | mag | 18 – 22 | §2.3, saisi ou repli générique |
 | `taille_raw_mo` | float | Mo | 5 – 120 | budget stockage §7.3, §9.4 |
-| `autonomie_cipa` | int | vues | 100 – 2000 | budget batterie §9.4 |
 | `fov_l_deg`, `fov_h_deg` | float | ° | sortie | |
 | `ech_apx` | float | "/px | sortie | |
 | `dawes_as`, `D_mm` | float | ", mm | sortie | |
 | `diag_ech` | enum | — | 4 valeurs | sortie |
 
-Les champs `read_noise_e`, `full_well_e`, `zp_sys`, `seuil_double_gain_iso`, `taille_raw_mo` et `autonomie_cipa` sont invisibles pour le débutant : facultatifs, éditables en mode avancé, remplacés par le repli générique du registre quand ils sont absents.
+Les champs `read_noise_e`, `full_well_e`, `zp_sys`, `seuil_double_gain_iso` et `taille_raw_mo` sont invisibles pour le débutant : facultatifs, éditables en mode avancé, remplacés par le repli générique du registre quand ils sont absents.
 
 ### Critères d'acceptation
 
@@ -1295,7 +1293,7 @@ Alors la saisie est refusée avec un message nommant le champ fautif
 
 ### Dépendances données
 
-Table de formats de capteur embarquée (5 formats, dimensions physiques uniquement) : documentation constructeur, aucune marque de boîtier ni prix commercial. Les grandeurs avancées (bruit de lecture, seuil de double gain, capacité de saturation, point zéro système, taille de fichier RAW, autonomie CIPA) n'ont pas de base matériel : saisies à la main ou remplacées par le repli générique du registre (§2.3).
+Table de formats de capteur embarquée (5 formats, dimensions physiques uniquement) : documentation constructeur, aucune marque de boîtier ni prix commercial. Les grandeurs avancées (bruit de lecture, seuil de double gain, capacité de saturation, point zéro système, taille de fichier RAW) n'ont pas de base matériel : saisies à la main ou remplacées par le repli générique du registre (§2.3).
 
 ---
 
@@ -2042,7 +2040,7 @@ Et l'app affiche que passer à SNR 20 exige 3 h 45, soit quatre fois plus
 Étant donné une cible dont T_requis dépasse le créneau disponible   # cas limite
 Quand je calcule le plan
 Alors l'app répartit la capture sur plusieurs nuits et indique leur nombre
-Et rappelle que l'empilement multi-nuits impose des darks à température comparable
+Et rappelle que chaque nuit demande son propre lot de darks
 
 Étant donné une nuit astronomique de durée nulle                    # cas limite
 Quand j'ouvre le planificateur
@@ -2072,8 +2070,11 @@ OFFSETS (bias)  50 à 100 poses au temps minimum, à l'ISO de session, obturateu
                 Réutilisables tant que l'ISO ne change pas.
 DARKS           20 à 50 poses, MÊME durée, MÊME ISO, MÊME température capteur.
                 Sur boîtier photo non régulé : en fin de session, capteur encore froid.
-                Écart de température toléré : ± 3 °C (C-10), au-delà la bibliothèque
-                est invalidée.
+                AUCUNE BIBLIOTHÈQUE RÉUTILISABLE N'EST VALIDÉE. Un dark ne vaut que
+                pour la température du capteur, et l'application ne la mesure pas :
+                déclarer une bibliothèque valide sur le seul ISO et la seule durée
+                autoriserait à sauter les darks à tort. Un lot par séance, prescrit
+                sans condition.
 FLATS           20 à 30 poses, MÊME focale, MÊME mise au point, MÊME orientation,
                 sans jamais démonter l'objectif. Exposition visant ≈ 1/2 saturation.
                 Ils corrigent le vignettage.
@@ -2096,23 +2097,22 @@ HIÉRARCHIE POUR LE GRAND CHAMP RAPIDE
 | Champ | Type | Unité | Plage valide | Note |
 |---|---|---|---|---|
 | `t_pose_s`, `iso`, `n_poses` | — | — | §7.2, §7.3 | |
-| `temp_capteur_c` | float | °C | −20 – 40 | saisie |
 | `plan_calibration` | objet | — | sortie | 3 listes + consignes |
 | `surcout_temps_min` | float | min | sortie | ajouté au budget session |
-| `biblio_darks_valide` | bool | — | sortie | selon ISO, durée, température |
 
 ### Critères d'acceptation
 
 ```gherkin
-Étant donné une session de 252 poses de 13 s à ISO 640 à 8 °C
+Étant donné une session de 252 poses de 13 s à ISO 640
 Quand j'ouvre le plan de calibration
 Alors l'app prescrit 30 darks de 13 s à ISO 640, 25 flats et 50 offsets
 Et ajoute environ 7 min au budget de session pour les darks
 Et rappelle de ne pas toucher la bague de mise au point avant les flats
 
-Étant donné une bibliothèque de darks prise à ISO 640, 13 s, 20 °C
-Quand je planifie une session à 5 °C                                # cas limite
-Alors l'app invalide la bibliothèque (écart > 3 °C) et prescrit de nouveaux darks
+Étant donné une session planifiée, quelle qu'elle soit
+Quand le plan de calibration est généré
+Alors un lot de darks est prescrit sans condition, à prendre en fin de séance
+Et aucune température ne se saisit ni ne se compare
 
 Étant donné une session sans autoguidage
 Quand le plan est généré
@@ -2126,9 +2126,9 @@ Alors l'app signale que les flats de la première cible ne sont plus valides
 
 ### Dépendances données
 
-Aucune source externe. Température capteur SAISIE. Fallback : total.
+Aucune source externe, aucune saisie. Fallback : total.
 
-**La lecture EXIF est retirée du périmètre.** La rédaction initiale prévoyait de lire la température capteur dans les métadonnées d'un fichier fourni. Le décodeur RAW en WebAssembly a disparu avec la calibration (Annexe C, décision 9) : il ne reste donc qu'un sélecteur de fichier pour renseigner un champ que l'utilisateur saisit en trois secondes, et dont le seul usage est de comparer à ±3 °C (C-10). Le coût — un chemin d'import, un parseur de métadonnées, un cas d'erreur par format de boîtier — n'achète aucune précision que la saisie n'ait déjà.
+**La température capteur est hors périmètre, et la lecture EXIF avec elle.** La rédaction initiale prévoyait de lire la température dans les métadonnées d'un fichier fourni, puis de la faire saisir après la disparition du décodeur RAW (Annexe C, décision 9). Son seul usage était de valider une bibliothèque de darks d'une séance à l'autre. Cette validation tombe (Annexe C, décision 23) : un lot de darks par séance est prescrit sans condition, ce qui est la consigne juste dans tous les cas et ne demande aucun thermomètre.
 
 ---
 
@@ -2551,6 +2551,7 @@ Coordonnées : OpenNGC, Messier, Sharpless, Barnard. Transformations et instants
 | `plan[].verdict` | enum | — | §6.3 | |
 | `cibles_ecartees` | array | — | sortie | avec `cause_exclusion` |
 | `budget_nuit` | objet | — | sortie | capture / calibration / mise en station / pointage |
+| `rappel_batterie` | string | — | sortie | quand la capture dépasse C-16, sinon absent |
 
 ### Critères d'acceptation
 
@@ -2989,11 +2990,14 @@ CONTRAINTE MATÉRIELLE QUI PLAFONNE L'INTERVALLE
 
 BUDGET
   volume_go   = n_poses × taille_raw_mo / 1024
-  n_batteries = ceil( n_poses / (autonomie_cipa × facteur_froid) ) + 1     C-16
-    facteur_froid : 1,0 au-dessus de 10 °C · 0,6 entre 0 et 10 °C · 0,4 sous 0 °C
-    Le « + 1 » est une marge assumée, affichée comme telle.
-  → l'app annonce un NOMBRE DE BATTERIES avec sa marge, jamais une durée d'autonomie
-    précise. Un chiffre faux au quart d'heure près serait plus nuisible qu'utile.
+
+  AUCUNE AUTONOMIE DE BATTERIE N'EST MODÉLISÉE.
+  L'autonomie CIPA se mesure en rafale au flash, la température prévue se saisit à la
+  main : leur produit donnait à un ordre de grandeur l'allure d'une prédiction, posée à
+  côté de grandeurs réellement calculées. Ni la norme, ni la température, ni un facteur
+  de froid n'entrent plus dans l'application.
+  → RAPPEL SEUL : au-delà de C-16 minutes de prise de vue, l'app rappelle de prévoir de
+    quoi tenir la nuit. Une durée qu'elle a calculée, pas un nombre de batteries.
 
 VOIE À SPÉCIFIER : empilement de poses courtes en mode éclaircir.
   La pose unique très longue est écartée : bruit thermique, ciel cramé en présence
@@ -3009,11 +3013,10 @@ VOIE À SPÉCIFIER : empilement de poses courtes en mode éclaircir.
 | `duree_totale_min` | float | min | 5 – 480 | |
 | `t_pose_s` | float | s | 5 – 60 | recommandé 20–30 |
 | `intervalle_s` | float | s | 0 – 30 | refusé au-delà de C-09 |
-| `temperature_c` | float | °C | −20 – 40 | météo §4 ou saisie |
 | `capacite_carte_go`, `espace_libre_go` | float | Go | — | déclaratif |
 | `n_poses` | int | — | sortie | |
 | `volume_go` | float | Go | sortie | |
-| `n_batteries` | int | — | sortie | marge incluse |
+| `rappel_batterie` | string | — | sortie | au-delà de C-16, sinon absent |
 | `consignes_bloquantes` | array | — | sortie | dont dark automatique |
 
 ### Critères d'acceptation
@@ -3033,15 +3036,15 @@ Quand je planifie la séquence
 Alors l'app annonce que la séquence sera interrompue après un nombre d'images donné
 Et indique la durée d'arc réellement obtenue dans ce cas
 
-Étant donné une température de −5 °C
-Quand le budget batterie est estimé
-Alors le facteur de froid 0,4 est appliqué et le nombre de batteries arrondi au supérieur
-Et l'app affiche un nombre de batteries, pas une durée d'autonomie précise
+Étant donné une durée d'accumulation dépassant le seuil C-16
+Quand j'ouvre la fiche de séquence
+Alors l'app rappelle de prévoir de quoi tenir la nuit en batterie
+Et n'affiche ni nombre de batteries, ni autonomie, ni température, ni facteur de froid
 ```
 
 ### Dépendances données
 
-Taille RAW et autonomie CIPA par boîtier : base embarquée, valeurs `[À VÉRIFIER]`. Facteur de froid : C-16, ordre de grandeur. Température prévue : API météo (§12.5, en ligne seulement). Fallback : saisie manuelle de la température.
+Taille RAW par boîtier : base embarquée, valeur `[À VÉRIFIER]`. Seuil de rappel batterie : C-16, ordre de grandeur. Aucune donnée météo n'est requise : la température n'entre plus dans aucun calcul de cette section.
 
 ---
 
@@ -3335,7 +3338,6 @@ CATALOGUE DE CATÉGORIES ET DE LEURS CONDITIONS
                          → gain chiffré en pose unitaire et en cibles débloquées
   autoguidage            si régime LIMITE_SUIVI persistant malgré mise en station
                          soignée et t_max_suivi au plafond C-07
-  batterie supplémentaire si n_batteries de §9.4 dépasse le nombre déclaré
 
 JAMAIS RECOMMANDÉ
   Un équipement dont le gain n'est pas calculable par les moteurs existants.
@@ -4011,7 +4013,7 @@ Aucune pour Soleil, Lune, planètes, étoiles. TLE CelesTrak pour les satellites
 | Flux, pose unitaire, N poses, calibration | §7 | **complet** | aucune |
 | Fenêtre nocturne, Lune, créneaux, plan | §8.1–8.3 | **complet** | aucune |
 | Masque d'horizon | §4, §8.1 | **complet si en cache** | site inconnu → masque plat marqué `[HYP]` |
-| Météo, couverture nuageuse, seeing, température | §4, §9.4 | **tombe** | planification sans filtre météo, signalée |
+| Météo, couverture nuageuse, seeing, température | §4 | **tombe** | planification sans filtre météo, signalée |
 | Cheminement et carte de pointage | §8.4 | **complet** | aucune |
 | Prévisualisation fixe et filé | §9.2–9.3 | **complet** | Voie lactée procédurale, pas HiPS |
 | Glossaire et explications de verdict | §10 | **complet** | aucune |
@@ -4253,8 +4255,8 @@ Nuit astronomique : 2 h 35 au solstice d'été, 11 h 43 au solstice d'hiver,
 ```
 Capteur 35,9 × 23,9 mm, 7008 × 4672 px  →  pitch = 5,12 µm
 Recadrage APS-C : 23,5 × 15,6 mm, pitch inchangé
-Bruit de lecture, seuil de double gain, point zéro système, taille RAW,
-autonomie CIPA : base matériel, [À VÉRIFIER] (Photons to Photos)
+Bruit de lecture, seuil de double gain, point zéro système, taille RAW :
+base matériel, [À VÉRIFIER] (Photons to Photos)
 Valeurs de travail : RN ≈ 1,5 e⁻ au-delà du seuil de double gain (≈ ISO 640),
                      ZP_sys ≈ 20,20 (générique C-14), RAW ≈ 33 Mo
 ```
@@ -4356,7 +4358,6 @@ t_npf        = k × (35 × N + 30 × pitch_um) / ( focale_mm × cos(δ) )
 t_500        = 500 / focale_equivalente_24x36            repère, non opérant
 arc_deg      = 15,041 × duree_h × cos(δ)
 n_poses_file = floor( duree_s / (t_pose_s + intervalle_s) )
-n_batteries  = ceil( n_poses / (autonomie_cipa × facteur_froid) ) + 1
 ```
 
 ## Position et temps
@@ -4410,9 +4411,11 @@ sensibilite  = | ∂ln(sortie) / ∂ln(variable) |                   facteur dom
 | 16 | Canvas 2D retenu, WebGL 2 non prérequis | §12.1 réécrit. Ce qui tient le critère de §3.1 n'est pas le GPU mais l'indexation spatiale et l'arrêt par magnitude de §3.3 : le nombre d'étoiles examinées par image ne dépend pas de la taille du catalogue. La règle « tout calcul part en Worker, sans exception » devient une exigence de fréquence, et le Worker un moyen déclenché par la mesure. |
 | 17 | Paquet Gaia et zoom à 5° reportés | §3.3 et §12.2. Le plancher de zoom n'est pas une promesse du produit : le persona primaire vit entre 15° et 130° de champ. Douze mégaoctets pour un champ où aucune décision de capture ne se prend est le mauvais arbitrage. L'application plafonne à 15° et nomme la cause. |
 | 18 | Un seul site au MVP, atlas de pollution lumineuse écarté | §4.1. Le Bortle déclaré et le SQM mesuré sont exacts et hors ligne ; un atlas aux coordonnées franchirait la frontière de §1.2 pour une commodité de saisie. Le multi-sites part en post-MVP : il suppose d'abord qu'un site survive au rechargement. |
-| 19 | Lecture EXIF de la température capteur retirée | §7.4. Sans décodeur RAW (décision 9), il ne restait qu'un chemin d'import pour renseigner un champ saisi en trois secondes, et comparé à ±3 °C. |
+| 19 | Lecture EXIF de la température capteur retirée | §7.4. Sans décodeur RAW (décision 9), il ne restait qu'un chemin d'import pour renseigner un champ saisi en trois secondes. Le champ lui-même a suivi en décision 23. |
 | 20 | L'extinction atmosphérique entre dans le moteur Pose | Ajout de §7.6. Une magnitude de catalogue est hors atmosphère, une brillance de ciel est mesurée au sol : atténuer l'objet seul est la seule combinaison cohérente des deux sources. L'effet est quadratique sur T_requis — près du double au seuil C-01 — et rend `S_hauteur` de §8.3 redondant avec `S_signal`, arbitrage ouvert. |
 | 21 | La Voie lactée se montre, elle ne se déduit pas | §3.7 étendu à la bande modulée par le fond de ciel et au repère du centre galactique. La hauteur de culmination de 14,6° depuis le site de référence vivait dans un tableau du PRD ; sur la scène, elle se lit. |
+| 22 | Le budget batterie retiré, remplacé par un rappel | §9.4, §8.3, C-16. L'autonomie CIPA se mesure en rafale au flash et la température prévue se saisit à la main : leur produit portait trois incertitudes multiplicatives et s'affichait à côté du volume de fichiers, réellement calculé. Ce que l'application connaît d'elle-même, c'est la durée de prise de vue — au-delà du seuil, elle rappelle le risque et ne chiffre rien. |
+| 23 | La validation d'une bibliothèque de darks retirée | §7.4, C-10 supprimée. Personne n'alimentait `temp_capteur_c` ni `biblio_darks` : la validation ne s'exécutait jamais et son seul effet visible était un avertissement réclamant un champ qu'aucun écran n'offrait. La garder sans température aurait déclaré valide une bibliothèque prise vingt degrés plus haut — une erreur qui autorise à sauter les darks. Un lot par séance, en fin de séance capteur encore froid, est juste sans thermomètre. |
 
 ## Corrections apportées au socle initial en cours de rédaction
 

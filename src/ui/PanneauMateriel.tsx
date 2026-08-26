@@ -160,11 +160,6 @@ function ChampsAvances({
         valeur={boitier.tailleRawMo}
         surValeur={surChamp('tailleRawMo')}
       />
-      <ChampCapteur
-        domaine="autonomie_cipa"
-        valeur={boitier.autonomieCipa}
-        surValeur={surChamp('autonomieCipa')}
-      />
     </div>
   )
 }

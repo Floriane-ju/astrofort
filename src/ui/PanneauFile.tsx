@@ -40,8 +40,6 @@ export interface PanneauFileProps {
   readonly profondeur: EntreeProfondeur
   /** §5.2 — plafond de la monture quand le suivi est actif, `null` sinon. */
   readonly tMaxSuiviS: number | null
-  /** Autonomie CIPA du boîtier, absente de la base tant qu'elle n'est pas sourcée. */
-  readonly autonomieCipa: number | null
   /** §7.1 — `zp_source` s'affiche partout où une pose l'est, celle du filé comprise. */
   readonly zeroSysteme: PointZeroSysteme
   /** §5.1 — la projection imposée par le type d'objectif, réglé au panneau matériel. */

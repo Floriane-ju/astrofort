@@ -78,13 +78,6 @@ export const DOMAINES = Object.freeze({
   }),
   zp_sys: domaine({ champ: 'le point zéro système', min: 18, max: 22, unite: 'mag', section: '5.1' }),
   taille_raw_mo: domaine({ champ: 'la taille RAW', min: 5, max: 120, unite: 'Mo', section: '5.1' }),
-  autonomie_cipa: domaine({
-    champ: 'l’autonomie CIPA',
-    min: 100,
-    max: 2000,
-    unite: 'vues',
-    section: '5.1',
-  }),
 
   iso_capture: domaine({ champ: 'l’ISO de capture', min: 100, max: 6400, unite: 'ISO', section: '7.2' }),
 
@@ -107,15 +100,6 @@ export const DOMAINES = Object.freeze({
 
   // §7.3 — objectif de qualité
   snr_cible: domaine({ champ: 'le rapport signal sur bruit visé', min: 5, max: 50, unite: '—', section: '7.3' }),
-
-  // §7.4 — plan de calibration
-  temp_capteur_c: domaine({
-    champ: 'la température du capteur',
-    min: -20,
-    max: 40,
-    unite: '°C',
-    section: '7.4',
-  }),
 
   // §5.2 — profil Suivi
   t_max_suivi_s: domaine({ champ: 'la pose maximale de suivi', min: 1, max: 240, unite: 's', section: '5.2' }),

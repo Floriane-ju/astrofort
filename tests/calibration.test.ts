@@ -9,10 +9,9 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { planCalibration, valideBibliothequeDarks } from '../src/core/calibration.ts'
-import { K } from '../src/registry/constants.ts'
+import { planCalibration } from '../src/core/calibration.ts'
 
-const SESSION = { tPoseS: 13, iso: 640, nPoses: 252, tempCapteurC: 8 }
+const SESSION = { tPoseS: 13, iso: 640, nPoses: 252 }
 
 describe('plan de calibration §7.4', () => {
   const plan = planCalibration(SESSION)
@@ -48,29 +47,17 @@ describe('plan de calibration §7.4', () => {
   })
 })
 
-describe('bibliothèque de darks §7.4', () => {
-  it('invalide une bibliothèque prise plus de 3 °C à côté', () => {
-    const plan = planCalibration({
-      ...SESSION,
-      tempCapteurC: 5,
-      biblioDarks: { iso: 640, tPoseS: 13, tempC: 20 },
-    })
-    expect(plan.biblioDarksValide).toBe(false)
-    expect(plan.causeInvalidation).toMatch(/15 °C/)
-    expect(plan.causeInvalidation).toMatch(new RegExp(`${K('ECART_TEMPERATURE_DARKS_C')} °C`))
+describe('aucune bibliothèque de darks réutilisable §7.4', () => {
+  const plan = planCalibration(SESSION)
+
+  it('prescrit un lot de darks à chaque séance, sans jamais le déclarer réutilisable', () => {
+    expect(plan.lots.map((l) => l.type)).toContain('DARKS')
+    expect(JSON.stringify(plan)).not.toMatch(/bibliothèque/i)
   })
 
-  it('accepte une bibliothèque à ISO, durée et température comparables', () => {
-    const verdict = valideBibliothequeDarks(
-      { iso: 640, tPoseS: 13, tempC: 6 },
-      { iso: 640, tPoseS: 13, tempC: 8 },
-    )
-    expect(verdict.valide).toBe(true)
-  })
-
-  it('refuse une bibliothèque prise à un autre ISO ou une autre durée', () => {
-    expect(valideBibliothequeDarks({ iso: 200, tPoseS: 13, tempC: 8 }, { iso: 640, tPoseS: 13, tempC: 8 }).valide).toBe(false)
-    expect(valideBibliothequeDarks({ iso: 640, tPoseS: 30, tempC: 8 }, { iso: 640, tPoseS: 13, tempC: 8 }).valide).toBe(false)
+  it('dit quand les prendre plutôt que de comparer une température', () => {
+    expect(plan.surcoutTempsMin.note).toMatch(/fin de session, capteur encore froid/)
+    expect(JSON.stringify(plan)).not.toMatch(/°C/)
   })
 })
 

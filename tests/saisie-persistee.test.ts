@@ -59,7 +59,6 @@ function saisieMateriel(champs: Partial<SaisieMateriel> = {}): SaisieMateriel {
       fullWellE: '',
       zpSys: '',
       tailleRawMo: '',
-      autonomieCipa: '',
     },
     iso: '',
     focale: '135',
@@ -142,7 +141,6 @@ describe('T-0082 — la saisie survit au rechargement', () => {
         fullWellE: '52000',
         zpSys: '21.4',
         tailleRawMo: '25',
-        autonomieCipa: '780',
       },
       iso: '1600',
     })

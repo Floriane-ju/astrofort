@@ -56,7 +56,6 @@ export interface ProfilMateriel {
   readonly fullWellE?: number
   readonly zpSys?: number
   readonly tailleRawMo?: number
-  readonly autonomieCipa?: number
   /** §7.2 — ISO de capture retenu, quand il n'est pas celui du seuil de double gain. */
   readonly isoCapture?: number
   readonly capteurMode: 'FULL_FRAME' | 'APSC_CROP'

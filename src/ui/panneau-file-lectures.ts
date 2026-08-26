@@ -40,7 +40,6 @@ export interface MaterielCadre {
   readonly tailleRawMo: number
   readonly profondeur: EntreeProfondeur
   readonly tMaxSuiviS: number | null
-  readonly autonomieCipa: number | null
   readonly modeObjectif: ModeProjection
 }
 
@@ -146,17 +145,12 @@ export function useLecturesFile(
         dureeTotaleMin: file.dureeTotaleMin,
         tPoseS: file.tPoseS,
         intervalleS: file.intervalleS,
-        temperatureC: Number(file.temperatureC),
         tailleRawMo: materiel.tailleRawMo,
-        autonomieCipa:
-          file.autonomieSaisie.trim() === ''
-            ? materiel.autonomieCipa
-            : Number(file.autonomieSaisie),
         espaceLibreGo: file.espaceLibreGo.trim() === '' ? null : Number(file.espaceLibreGo),
         decDeg: carte.decMinAbsDeg,
         reductionBruitActive: file.reductionBruit,
       }),
-    [file, materiel.tailleRawMo, materiel.autonomieCipa, carte.decMinAbsDeg],
+    [file, materiel.tailleRawMo, carte.decMinAbsDeg],
   )
 
   return {

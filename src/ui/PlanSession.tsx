@@ -74,6 +74,9 @@ export function PlanSessionVue(props: PlanSessionProps) {
           <p className="cause">{plan.noteCouvertureCatalogue}</p>
         )}
         <p className="cause">{plan.avertissementMeteo}</p>
+        {plan.avertissementBatterie !== undefined && (
+          <p className="cause">{plan.avertissementBatterie}</p>
+        )}
 
         {plan.etapes.map((etape, index) => (
           <Etape key={etape.objet.designation} etape={etape} rang={index + 1} {...props} />

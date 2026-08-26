@@ -126,6 +126,10 @@ export function planEnTexte(plan: PlanSession, enTete: EnTetePlan): string {
   }
 
   lignes.push('', 'MÉTÉO', `  ${plan.avertissementMeteo}`)
+
+  if (plan.avertissementBatterie !== undefined) {
+    lignes.push('', 'BATTERIE', `  ${plan.avertissementBatterie}`)
+  }
   lignes.push(
     '',
     'Durée totale de capture : ' + dureeLisible(b.captureMin * S_PAR_MINUTE) + '.',

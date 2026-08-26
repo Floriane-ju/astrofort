@@ -50,7 +50,6 @@ const MATERIEL = {
     zpEstime: true,
   },
   tMaxSuiviS: null,
-  autonomieCipa: null,
   zeroSysteme: pointZeroSysteme(null),
   modeObjectif: 'MODE_CADRE',
 } as const

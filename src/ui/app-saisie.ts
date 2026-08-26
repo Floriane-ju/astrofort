@@ -106,7 +106,6 @@ const BOITIER_VIDE = {
   fullWellE: '',
   zpSys: '',
   tailleRawMo: '',
-  autonomieCipa: '',
 } as const
 
 export interface SaisieMateriel {

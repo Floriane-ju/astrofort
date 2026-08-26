@@ -443,8 +443,9 @@ export function planIntegration(entree: EntreeIntegration): PlanIntegration {
   const nNuitsValeur = creneau !== null && creneau > 0 ? Math.ceil(tRequis / creneau) : null
   if (nNuitsValeur !== null && nNuitsValeur > 1) {
     messages.push(
-      `La capture se répartit sur ${nNuitsValeur} nuits. Un empilement multi-nuits impose des ` +
-        'darks pris à température comparable, sans quoi la bibliothèque est invalidée (§7.4).',
+      `La capture se répartit sur ${nNuitsValeur} nuits. Chacune demande son propre lot de ` +
+        'darks, pris en fin de séance capteur encore froid : un dark ne vaut que pour la ' +
+        'température de la nuit où il a été pris (§7.4).',
     )
   }
   messages.push(

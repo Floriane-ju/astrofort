@@ -357,9 +357,6 @@ function PlanDeCalibration({ r }: { readonly r: Resultat }) {
       <p className="etat">
         <Etiquette cle="dithering" /> : {calibration.dithering}
       </p>
-      {calibration.causeInvalidation !== undefined && (
-        <p className="cause">{calibration.causeInvalidation}</p>
-      )}
       {calibration.avertissements.map((a) => (
         <p key={a} className="cause">
           {a}

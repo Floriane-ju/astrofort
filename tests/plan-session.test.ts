@@ -15,6 +15,7 @@ import { masquePlat } from '../src/core/site.ts'
 import { planSession, poidsParDefaut, type ContexteSession } from '../src/core/session.ts'
 import { planEnTexte } from '../src/core/plan-texte.ts'
 import { decodeObjets, type ObjetCielProfond } from '../src/data/deepsky.ts'
+import { K } from '../src/registry/constants.ts'
 
 const SITE_REFERENCE = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
 const NUIT = fenetreNocturne(SITE_REFERENCE, new Date('2026-08-14T12:00:00Z'))
@@ -164,6 +165,21 @@ describe('plan de session §8.3', () => {
   it('rappelle qu’aucun filtre météo n’est appliqué', () => {
     expect(plan.avertissementMeteo).toMatch(/météo/)
     expect(plan.avertissementMeteo).toMatch(/nuages/)
+  })
+
+  it('rappelle la batterie quand la capture dépasse le seuil, sans chiffrer d’autonomie', () => {
+    // Le setup de l'Annexe A tient sous le seuil : aucun rappel n'est servi par défaut.
+    expect(plan.budget.captureMin).toBeLessThanOrEqual(K('DUREE_RAPPEL_BATTERIE_MIN'))
+    expect(plan.avertissementBatterie).toBeUndefined()
+
+    // Une cible exigeante allonge la capture : le rappel apparaît, sans chiffrer d'autonomie.
+    const long = planSession(contexte({ snrCible: 30 }), CATALOGUE)
+    expect(long.budget.captureMin).toBeGreaterThan(K('DUREE_RAPPEL_BATTERIE_MIN'))
+    expect(long.avertissementBatterie).toMatch(/batterie/)
+    expect(long.avertissementBatterie).not.toMatch(/CIPA|°C/)
+    expect(
+      planEnTexte(long, { dateIso: '2026-08-14', lieu: 'site', materiel: 'setup' }),
+    ).toContain('BATTERIE')
   })
 
   it('expose les poids de scoring, réglables et non appris', () => {

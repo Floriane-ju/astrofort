@@ -171,10 +171,10 @@ describe('nombre de poses et intégration §7.3', () => {
     expect(snrApres(BASE, plan.tRequisS.value)).toBeCloseTo(10, 6)
   })
 
-  it('répartit sur plusieurs nuits et rappelle la contrainte de température des darks', () => {
+  it('répartit sur plusieurs nuits et prescrit un lot de darks par nuit', () => {
     const plan = planIntegration({ ...BASE, snrCible: 20, dureeCreneauS: 2 * 3600 })
     expect(plan.nNuits?.value).toBeGreaterThan(1)
-    expect(plan.messages.join(' ')).toMatch(/température comparable/)
+    expect(plan.messages.join(' ')).toMatch(/son propre lot de darks/)
   })
 
   it('plafonne l’affichage et annonce la cible hors de portée quand le flux tend vers zéro', () => {

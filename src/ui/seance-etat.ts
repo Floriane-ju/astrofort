@@ -27,8 +27,6 @@ export interface ReglagesFile {
   readonly tPoseS: number
   readonly dureeTotaleMin: number
   readonly intervalleS: number
-  readonly temperatureC: string
-  readonly autonomieSaisie: string
   readonly espaceLibreGo: string
   readonly reductionBruit: boolean
   /** T-0116 — §9.2/§9.3 peints sur toute la scène, sous les repères, plutôt qu'à part. */
@@ -57,8 +55,6 @@ const ETAT_INITIAL: EtatSeance = {
     tPoseS: K('T_POSE_FILE_MAX_S'),
     dureeTotaleMin: K('DUREE_FILE_SPECTACULAIRE_MIN'),
     intervalleS: K('INTERVALLE_INTER_POSE_FILE_MAX_S'),
-    temperatureC: '5',
-    autonomieSaisie: '',
     espaceLibreGo: '',
     reductionBruit: false,
     incrustation: false,

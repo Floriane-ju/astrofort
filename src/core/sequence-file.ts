@@ -10,12 +10,13 @@
  *      après chaque image : l'intervalle effectif devient supérieur à la pose, et la séquence
  *      est ruinée. Sa désactivation est une consigne bloquante, pas un conseil.
  *
- * Le budget batterie s'annonce en NOMBRE DE BATTERIES avec sa marge, jamais en durée
- * d'autonomie : un chiffre faux au quart d'heure près serait plus nuisible qu'utile.
+ * Aucune autonomie de batterie n'est modélisée (T-0150) : seule la durée de prise de vue est
+ * connue, et elle sert de rappel, pas de prédiction.
  */
 
-import { K, type ConstantId } from '../registry/constants.ts'
+import { K } from '../registry/constants.ts'
 import { longueurArcDeg } from './file-etoiles.ts'
+import { rappelBatterie } from './rappel-batterie.ts'
 import { trace, type Traced } from './traced.ts'
 
 const S_PAR_MIN = 60
@@ -25,22 +26,13 @@ export interface EntreeSequenceFile {
   readonly dureeTotaleMin: number
   readonly tPoseS: number
   readonly intervalleS: number
-  readonly temperatureC: number
   readonly tailleRawMo: number
-  /** Autonomie CIPA du boîtier. Absente de la base : aucun nombre de batteries n'est inventé. */
-  readonly autonomieCipa: number | null
   /** Espace disponible sur la carte. Absent : aucune interruption n'est annoncée. */
   readonly espaceLibreGo?: number | null
   /** Déclinaison de la zone visée : elle fixe l'arc obtenu et la longueur d'un trou. */
   readonly decDeg: number
   /** Réduction de bruit longue exposition déclarée active sur le boîtier. */
   readonly reductionBruitActive?: boolean
-}
-
-export interface FacteurFroid {
-  readonly valeur: number
-  readonly constante: ConstantId
-  readonly libelle: string
 }
 
 export interface InterruptionStockage {
@@ -53,38 +45,12 @@ export interface InterruptionStockage {
 export interface SequenceFile {
   readonly nPoses: Traced<number>
   readonly volumeGo: Traced<number>
-  /** `null` quand l'autonomie du boîtier est absente de la base : aucune estimation muette. */
-  readonly nBatteries: Traced<number | null>
-  readonly facteurFroid: FacteurFroid
   readonly arcObtenuDeg: Traced<number>
   /** Renseigné quand l'intervalle dépasse C-09 : la séquence est refusée, le trou chiffré. */
   readonly intervalleRefuse: string | null
   readonly consignesBloquantes: readonly string[]
   readonly interruptionStockage: InterruptionStockage | null
   readonly messages: readonly string[]
-}
-
-/** §9.4 et C-16 — le froid ne réduit pas l'autonomie proportionnellement à la température. */
-export function facteurFroid(temperatureC: number): FacteurFroid {
-  if (temperatureC >= K('TEMPERATURE_SEUIL_FRAIS_C')) {
-    return {
-      valeur: K('FACTEUR_FROID_DOUX'),
-      constante: 'FACTEUR_FROID_DOUX',
-      libelle: `au-dessus de ${K('TEMPERATURE_SEUIL_FRAIS_C')} °C`,
-    }
-  }
-  if (temperatureC >= K('TEMPERATURE_SEUIL_NEGATIF_C')) {
-    return {
-      valeur: K('FACTEUR_FROID_FRAIS'),
-      constante: 'FACTEUR_FROID_FRAIS',
-      libelle: `entre ${K('TEMPERATURE_SEUIL_NEGATIF_C')} et ${K('TEMPERATURE_SEUIL_FRAIS_C')} °C`,
-    }
-  }
-  return {
-    valeur: K('FACTEUR_FROID_NEGATIF'),
-    constante: 'FACTEUR_FROID_NEGATIF',
-    libelle: `sous ${K('TEMPERATURE_SEUIL_NEGATIF_C')} °C`,
-  }
 }
 
 /** Longueur du trou laissé dans chaque trace par un intervalle inter-pose, en degrés. */
@@ -103,7 +69,6 @@ export function sequenceFile(entree: EntreeSequenceFile): SequenceFile {
   const cadenceS = entree.tPoseS + entree.intervalleS
   const nPosesValeur = Math.floor(dureeTotaleS / cadenceS)
   const volume = (nPosesValeur * entree.tailleRawMo) / K('MO_PAR_GO')
-  const froid = facteurFroid(entree.temperatureC)
 
   const nPoses = trace({
     value: nPosesValeur,
@@ -121,36 +86,6 @@ export function sequenceFile(entree: EntreeSequenceFile): SequenceFile {
     inputs: { n_poses: nPosesValeur, taille_raw_mo: entree.tailleRawMo },
     constants: ['MO_PAR_GO'],
   })
-
-  const autonomie = entree.autonomieCipa
-  // La marge d'une batterie est assumée et affichée comme telle (C-16).
-  const nBatteries =
-    autonomie === null || autonomie <= 0
-      ? trace({
-          value: null,
-          formula: 'NOMBRE_BATTERIES',
-          inputs: { n_poses: nPosesValeur, facteur_froid: froid.valeur },
-          constants: [froid.constante],
-          flags: ['DONNEE_MANQUANTE'],
-          note:
-            'Autonomie CIPA absente de la base matériel pour ce boîtier : aucun nombre de ' +
-            'batteries n’est produit. La saisir la débloque, et la valeur reste un ordre de ' +
-            'grandeur.',
-        })
-      : trace({
-          value: Math.ceil(nPosesValeur / (autonomie * froid.valeur)) + 1,
-          formula: 'NOMBRE_BATTERIES',
-          inputs: {
-            n_poses: nPosesValeur,
-            autonomie_cipa: autonomie,
-            facteur_froid: froid.valeur,
-          },
-          constants: [froid.constante],
-          note:
-            `Facteur de froid ${froid.valeur} appliqué (${froid.libelle}), plus une batterie de ` +
-            'marge assumée. L’application annonce un nombre de batteries, jamais une durée ' +
-            'd’autonomie précise.',
-        })
 
   const arcObtenuDeg = longueurArcDeg(entree.dureeTotaleMin, entree.decDeg)
 
@@ -211,12 +146,12 @@ export function sequenceFile(entree: EntreeSequenceFile): SequenceFile {
       `${volume.toFixed(1)} Go de fichiers, arc obtenu ${arcObtenuDeg.value.toFixed(2)}° à ` +
       `δ = ${entree.decDeg.toFixed(0)}°.`,
   )
+  const rappel = rappelBatterie(entree.dureeTotaleMin)
+  if (rappel !== null) messages.push(rappel)
 
   return {
     nPoses,
     volumeGo,
-    nBatteries,
-    facteurFroid: froid,
     arcObtenuDeg,
     intervalleRefuse,
     consignesBloquantes,

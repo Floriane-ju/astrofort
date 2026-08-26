@@ -41,7 +41,6 @@ export interface Boitier {
   /** Absent → point zéro générique C-14, affiché [ESTIMÉ] (§2.3). */
   readonly zpSys?: number
   readonly tailleRawMo: number
-  readonly autonomieCipa?: number
   readonly source: string
 }
 
@@ -197,8 +196,8 @@ function messageIso(
 
 /**
  * Boîtier de référence de l'Annexe A : plein format 35,9 × 23,9 mm, 7008 × 4672 px.
- * Bruit de lecture, capacité de saturation, point zéro système et autonomie CIPA sont
- * marqués `[À VÉRIFIER]` par le PRD — seule la valeur de travail sourcée est portée ici.
+ * Bruit de lecture, capacité de saturation et point zéro système sont marqués `[À VÉRIFIER]`
+ * par le PRD — seule la valeur de travail sourcée est portée ici.
  *
  * Ne se choisit plus dans une interface : §5.1 ne propose qu'un type de capteur et une
  * résolution, jamais un boîtier. Cette constante reste la donnée de travail de l'Annexe A pour
@@ -236,7 +235,6 @@ export interface SaisieBoitier {
   readonly fullWellE: string
   readonly zpSys: string
   readonly tailleRawMo: string
-  readonly autonomieCipa: string
 }
 
 export interface BoitierResolu {
@@ -280,7 +278,6 @@ export function resoutBoitier(saisie: SaisieBoitier): BoitierResolu {
   const fullWellE = champ(saisie.fullWellE, 'full_well_e')
   const zpSys = champ(saisie.zpSys, 'zp_sys')
   const tailleRawMo = champ(saisie.tailleRawMo, 'taille_raw_mo')
-  const autonomieCipa = champ(saisie.autonomieCipa, 'autonomie_cipa')
 
   const estimations: string[] = []
   if (readNoiseE === null) {
@@ -312,9 +309,6 @@ export function resoutBoitier(saisie: SaisieBoitier): BoitierResolu {
         'saturation des étoiles brillantes n’est donc pas chiffrée.',
     )
   }
-  if (autonomieCipa === null) {
-    estimations.push('autonomie CIPA : inconnue — le budget batterie n’est pas chiffré.')
-  }
 
   return {
     boitier: Object.freeze({
@@ -332,7 +326,6 @@ export function resoutBoitier(saisie: SaisieBoitier): BoitierResolu {
       ...(fullWellE === null ? {} : { fullWellE }),
       ...(zpSys === null ? {} : { zpSys }),
       tailleRawMo: tailleRawMo ?? K('TAILLE_RAW_MO_GENERIQUE'),
-      ...(autonomieCipa === null ? {} : { autonomieCipa }),
       source: 'saisie utilisateur — mode custom',
     }),
     estimations,

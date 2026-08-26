@@ -438,7 +438,6 @@ function panneauFile(
     tailleRawMo: calcul.boitier.tailleRawMo,
     profondeur,
     tMaxSuiviS: calcul.suivi.tMaxSuiviS.value,
-    autonomieCipa: calcul.boitier.autonomieCipa ?? null,
     zeroSysteme: calcul.zeroSysteme,
     modeObjectif: modeObjectif(materiel.typeObjectif),
   }

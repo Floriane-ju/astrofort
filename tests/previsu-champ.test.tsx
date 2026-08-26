@@ -172,7 +172,6 @@ const PROPS_PANNEAU: PanneauFileProps = {
   tailleRawMo: 33,
   profondeur: { ...PROFONDEUR, zpEstime: true },
   tMaxSuiviS: null,
-  autonomieCipa: null,
   zeroSysteme: pointZeroSysteme(null),
   modeObjectif: 'MODE_CADRE',
 }
@@ -339,8 +338,8 @@ describe('§9 — le panneau du filé', () => {
     expect(html).toContain('Séquence de filé')
     // La règle des 500 est affichée, et la carte de pose porte une valeur par cellule.
     expect(html).toContain('Règle des 500')
-    // Sans autonomie constructeur, aucun nombre de batteries n'est inventé.
-    expect(html).toContain('[DONNÉE MANQUANTE]')
+    // Le rappel batterie remplace le budget chiffré : une durée, pas un nombre de batteries.
+    expect(html).toContain('Attention à la batterie')
   })
 })
 

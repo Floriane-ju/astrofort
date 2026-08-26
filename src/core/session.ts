@@ -23,6 +23,7 @@ import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { Intervalle } from './creneaux.ts'
 import { dureeLisible } from './exposure.ts'
 import { planCalibration } from './calibration.ts'
+import { rappelBatterie } from './rappel-batterie.ts'
 import { evalueCandidate, preFiltre } from './session-candidates.ts'
 import { alloueCreneau, calculeBudget, retireJusquAuBudget } from './session-nuit.ts'
 import {
@@ -101,6 +102,8 @@ export function planSession(
       ? budget
       : calculeBudget(contexte, etapesRetenues, calibration)
 
+  const rappelCapture = rappelBatterie(budgetFinal.captureMin)
+
   return {
     etapes: etapesRetenues,
     ciblesEcartees: ecartees,
@@ -117,6 +120,7 @@ export function planSession(
       ? {}
       : { noteCouvertureCatalogue: noteCouverture(comptes)! }),
     avertissementMeteo: AVERTISSEMENT_METEO,
+    ...(rappelCapture === null ? {} : { avertissementBatterie: rappelCapture }),
   }
 }
 

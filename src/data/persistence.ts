@@ -217,7 +217,6 @@ const FORME_PROFIL: Forme = {
   fullWellE: optionnel(nombre('full_well_e')),
   zpSys: optionnel(nombre('zp_sys')),
   tailleRawMo: optionnel(nombre('taille_raw_mo')),
-  autonomieCipa: optionnel(nombre('autonomie_cipa')),
   isoCapture: optionnel(nombre('iso_capture')),
   capteurMode: parmi('FULL_FRAME', 'APSC_CROP'),
   suiviActif: booleen,

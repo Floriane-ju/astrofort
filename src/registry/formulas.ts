@@ -237,11 +237,6 @@ export const FORMULES = Object.freeze({
     unite: '—',
     section: '9.4',
   },
-  NOMBRE_BATTERIES: {
-    expression: 'n_batteries = ceil( n_poses / (autonomie_cipa × facteur_froid) ) + 1',
-    unite: '—',
-    section: '9.4',
-  },
   POSE_MAX_CADRE: {
     expression: 't_max_cadre = t_npf( δ_min_abs présent dans le cadre )',
     unite: 's',

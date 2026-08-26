@@ -2,26 +2,22 @@
  * §9.4 — Logistique de séquence de filé.
  *
  * La séquence type du PRD sert de référence : 2 h à 25 s donnent 276 images et environ
- * 8,9 Go. Le reste du test porte sur les refus — intervalle trop long, carte trop petite,
- * autonomie inconnue — parce que ce sont eux qui évitent une sortie ratée.
+ * 8,9 Go. Le reste du test porte sur les refus — intervalle trop long, carte trop petite —
+ * parce que ce sont eux qui évitent une sortie ratée.
  */
 
 import { describe, expect, it } from 'vitest'
-import { facteurFroid, sequenceFile, trouTraceDeg } from '../src/core/sequence-file.ts'
-import { aLeFlag } from '../src/core/traced.ts'
+import { sequenceFile, trouTraceDeg } from '../src/core/sequence-file.ts'
 import { K } from '../src/registry/constants.ts'
 
 const TAILLE_RAW_MO = 33
-const AUTONOMIE_CIPA = 300
 
 function sequence(surcharge: Partial<Parameters<typeof sequenceFile>[0]> = {}) {
   return sequenceFile({
     dureeTotaleMin: 120,
     tPoseS: 25,
     intervalleS: 1,
-    temperatureC: 15,
     tailleRawMo: TAILLE_RAW_MO,
-    autonomieCipa: AUTONOMIE_CIPA,
     decDeg: 0,
     ...surcharge,
   })
@@ -66,29 +62,20 @@ describe('§9.4 — refus de l’intervalle trop long', () => {
   })
 })
 
-describe('§9.4 — budget batterie', () => {
-  it('applique le facteur de froid et arrondit au supérieur, marge comprise', () => {
-    const resultat = sequence({ temperatureC: -5 })
-    expect(resultat.facteurFroid.valeur).toBe(K('FACTEUR_FROID_NEGATIF'))
-    // 276 poses / (300 × 0,4) = 2,3 → 3 batteries, plus une de marge assumée.
-    expect(resultat.nBatteries.value).toBe(4)
-    expect(resultat.nBatteries.note).toMatch(/marge assumée/)
-    expect(resultat.nBatteries.note).toMatch(/jamais une durée/)
+describe('§9.4 — rappel batterie', () => {
+  it('rappelle la batterie au-delà du seuil du registre, jamais en dessous', () => {
+    const longue = sequence({ dureeTotaleMin: K('DUREE_RAPPEL_BATTERIE_MIN') * 2 })
+    expect(longue.messages.some((m) => /[Aa]ttention à la batterie/.test(m))).toBe(true)
+
+    const courte = sequence({ dureeTotaleMin: K('DUREE_RAPPEL_BATTERIE_MIN') })
+    expect(courte.messages.some((m) => /batterie/.test(m))).toBe(false)
   })
 
-  it('choisit le facteur par tranche de température', () => {
-    expect(facteurFroid(15).valeur).toBe(K('FACTEUR_FROID_DOUX'))
-    expect(facteurFroid(5).valeur).toBe(K('FACTEUR_FROID_FRAIS'))
-    expect(facteurFroid(-1).valeur).toBe(K('FACTEUR_FROID_NEGATIF'))
-    // Les bornes appartiennent à la tranche supérieure.
-    expect(facteurFroid(K('TEMPERATURE_SEUIL_FRAIS_C')).valeur).toBe(K('FACTEUR_FROID_DOUX'))
-    expect(facteurFroid(K('TEMPERATURE_SEUIL_NEGATIF_C')).valeur).toBe(K('FACTEUR_FROID_FRAIS'))
-  })
-
-  it('ne produit aucun nombre quand l’autonomie du boîtier est absente de la base', () => {
-    const resultat = sequence({ autonomieCipa: null })
-    expect(resultat.nBatteries.value).toBeNull()
-    expect(aLeFlag(resultat.nBatteries, 'DONNEE_MANQUANTE')).toBe(true)
+  it('ne chiffre ni autonomie, ni température, ni nombre de batteries', () => {
+    const rappel = sequence({ dureeTotaleMin: K('DUREE_RAPPEL_BATTERIE_MIN') * 2 }).messages.join(
+      ' ',
+    )
+    expect(rappel).not.toMatch(/CIPA|°C|batteries à emporter/)
   })
 })
 
