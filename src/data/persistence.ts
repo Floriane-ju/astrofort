@@ -17,6 +17,7 @@ import type { PlanEnregistre, ProfilMateriel, SiteEnregistre } from './db.ts'
 import type { MasqueHorizon, PointMasque } from '../core/site.ts'
 import { normalisePoids, type PoidsScoring } from '../core/session.ts'
 import { type DomaineId, valide as valideDomaine } from '../registry/domains.ts'
+import { TABLE_FORMATS_CAPTEUR } from '../registry/capteur-formats.ts'
 
 export interface EtatStockage {
   readonly persistant: boolean
@@ -209,10 +210,8 @@ const FORME_PROFIL: Forme = {
   focaleMm: nombre('focale_mm'),
   ouvertureN: nombre('ouverture_N'),
   typeObjectif: parmi('RECTILINEAIRE', 'FISHEYE'),
-  boitierId: texte,
-  capteurLMm: optionnel(nombre('capteur_mm')),
-  capteurHMm: optionnel(nombre('capteur_mm')),
-  pitchUm: optionnel(nombre('pitch_um')),
+  formatCapteur: parmi(...TABLE_FORMATS_CAPTEUR.map((f) => f.format)),
+  resolutionMpx: optionnel(nombre('resolution_mpx')),
   readNoiseE: optionnel(nombre('read_noise_e')),
   seuilDoubleGainIso: optionnel(nombre('seuil_double_gain_iso')),
   fullWellE: optionnel(nombre('full_well_e')),

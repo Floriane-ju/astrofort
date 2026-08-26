@@ -9,7 +9,6 @@
 import { describe, expect, it } from 'vitest'
 import { evalueMateriel } from '../src/ui/app-calcul.ts'
 import { DEFAUT, type SaisieLieu, type SaisieMateriel } from '../src/ui/app-saisie.ts'
-import { BOITIER_REFERENCE } from '../src/data/equipment.ts'
 import type { Site } from '../src/core/ephem.ts'
 
 const rien = () => undefined
@@ -41,10 +40,8 @@ function lieu(champs: { readonly bortle: string; readonly sqm: string }): Saisie
 
 const MATERIEL: SaisieMateriel = {
   boitier: {
-    boitierId: BOITIER_REFERENCE.id,
-    capteurLMm: '',
-    capteurHMm: '',
-    pitchUm: '',
+    formatCapteur: 'PLEIN_FORMAT',
+    resolutionMpx: DEFAUT.resolutionMpx,
     readNoiseE: '',
     seuilDoubleGainIso: '',
     fullWellE: '',

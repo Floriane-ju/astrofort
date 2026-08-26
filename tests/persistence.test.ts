@@ -40,7 +40,7 @@ const PROFIL: ProfilMateriel = {
   focaleMm: 135,
   ouvertureN: 2.8,
   typeObjectif: 'RECTILINEAIRE',
-  boitierId: 'inconnu',
+  formatCapteur: 'PLEIN_FORMAT',
   capteurMode: 'FULL_FRAME',
   suiviActif: true,
   qualiteMes: 'SOIGNEE',

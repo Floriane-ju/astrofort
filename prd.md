@@ -1190,6 +1190,25 @@ MODE DE RECADRAGE CAPTEUR
     croit très souvent gagner de la portée en passant en APS-C. L'app le dit
     explicitement au moment du basculement, en une ligne.
 
+CAPTEUR — dimensions par format, pitch dérivé de la résolution
+  Aucun boîtier ne se choisit dans une liste. Le capteur se décrit par son type et sa
+  résolution, jamais par des millimètres ou un pitch tapés à la main : ni l'un ni l'autre ne
+  se lit sur une fiche produit aussi directement que le type de capteur et le nombre de
+  mégapixels.
+
+  type_capteur ∈ {PLEIN_FORMAT, APSC_NIKON, APSC_CANON, MICRO_4_3, MOYEN_FORMAT}
+  Chaque format fixe capteur_L_mm et capteur_H_mm (table sourcée, documentation
+  constructeur — aucune marque de boîtier ni prix commercial).
+
+  resolution_mpx (mégapixels totaux) donne le pitch, par la largeur en pixels qu'il implique
+  au ratio du format choisi :
+    L_px     = √( resolution_mpx × 10⁶ × capteur_L_mm / capteur_H_mm )
+    pitch_um = capteur_L_mm × 1000 / L_px
+
+  Le pitch dérivé reste validé contre sa plage habituelle (0,8 – 24 µm) : un format et une
+  résolution incohérents entre eux sont refusés, en nommant le pitch — pas la résolution, qui
+  peut être valide dans l'absolu et absurde seulement rapportée à ce format.
+
 TYPE D'OBJECTIF
   type_objectif ∈ {RECTILINEAIRE, FISHEYE}
   Pilote la projection de §3.3, §9.2 et §9.3. Un 10 mm plein format peut être
@@ -1213,14 +1232,15 @@ DIAGNOSTIC D'ÉCHANTILLONNAGE (seeing courant 2–3", constante C-04)
 | `focale_mm` | float | mm | 8 – 4000 | saisie libre, préréglages courants |
 | `ouverture_N` | float | — | 0,95 – 32 | nombre f/N, réglable |
 | `type_objectif` | enum | — | RECTILINEAIRE / FISHEYE | pilote la projection |
-| `boitier_preset` | string | — | base matériel | pilote L, H, pitch, RN, ZP |
 | `capteur_mode` | enum | — | FULL_FRAME / APSC_CROP | |
-| `capteur_L_mm`, `capteur_H_mm` | float | mm | 3 – 60 | |
-| `pitch_um` | float | µm | 0,8 – 24 | |
-| `read_noise_e` | float | e⁻ | 0,5 – 15 | par ISO, base matériel |
-| `seuil_double_gain_iso` | int | — | 100 – 6400 | base matériel |
+| `type_capteur` | enum | — | PLEIN_FORMAT / APSC_NIKON / APSC_CANON / MICRO_4_3 / MOYEN_FORMAT | pilote capteur_L_mm/H_mm |
+| `resolution_mpx` | float | Mpx | 1 – 200 | avec type_capteur donne pitch_um |
+| `capteur_L_mm`, `capteur_H_mm` | float | mm | 3 – 60 | pilotées par type_capteur |
+| `pitch_um` | float | µm | 0,8 – 24 | dérivé de type_capteur + resolution_mpx |
+| `read_noise_e` | float | e⁻ | 0,5 – 15 | par ISO, saisi ou repli générique |
+| `seuil_double_gain_iso` | int | — | 100 – 6400 | saisi ou absent |
 | `full_well_e` | int | e⁻ | 5 000 – 200 000 | saturation |
-| `zp_sys` | float | mag | 18 – 22 | §2.3, base matériel |
+| `zp_sys` | float | mag | 18 – 22 | §2.3, saisi ou repli générique |
 | `taille_raw_mo` | float | Mo | 5 – 120 | budget stockage §7.3, §9.4 |
 | `autonomie_cipa` | int | vues | 100 – 2000 | budget batterie §9.4 |
 | `fov_l_deg`, `fov_h_deg` | float | ° | sortie | |
@@ -1228,7 +1248,7 @@ DIAGNOSTIC D'ÉCHANTILLONNAGE (seeing courant 2–3", constante C-04)
 | `dawes_as`, `D_mm` | float | ", mm | sortie | |
 | `diag_ech` | enum | — | 4 valeurs | sortie |
 
-Les champs `read_noise_e`, `full_well_e`, `zp_sys`, `seuil_double_gain_iso`, `taille_raw_mo` et `autonomie_cipa` sont invisibles pour le débutant : dérivés de la base matériel, éditables en mode avancé.
+Les champs `read_noise_e`, `full_well_e`, `zp_sys`, `seuil_double_gain_iso`, `taille_raw_mo` et `autonomie_cipa` sont invisibles pour le débutant : facultatifs, éditables en mode avancé, remplacés par le repli générique du registre quand ils sont absents.
 
 ### Critères d'acceptation
 
@@ -1253,7 +1273,17 @@ Et l'app affiche : « recadrage, pas grossissement — même détail, moins de c
 Quand je valide
 Alors l'app signale un sur-échantillonnage et propose une réduction de focale
 
-Étant donné un boîtier custom sans bruit de lecture renseigné        # cas limite
+Étant donné type_capteur = APS-C Nikon/Sony/Pentax/Fujifilm et resolution_mpx = 24
+Quand je valide le profil
+Alors pitch_um se déduit de la formule de dérivation, jamais d'une saisie directe
+Et capteur_L_mm, capteur_H_mm ne sont à aucun moment saisis à la main
+Et aucun boîtier n'a été choisi dans une liste
+
+Étant donné un type_capteur et une resolution_mpx dont le pitch dérivé dépasse 24 µm  # cas limite
+Quand je valide le profil
+Alors la saisie est refusée avec un message nommant pitch_um, pas resolution_mpx
+
+Étant donné un profil sans bruit de lecture renseigné                # cas limite
 Quand un moteur de pose est invoqué
 Alors RN = 3,0 e⁻ et ZP générique C-14 sont appliqués et affichés comme [ESTIMÉ]
 Et aucun résultat n'est annoncé comme une valeur mesurée
@@ -1265,7 +1295,7 @@ Alors la saisie est refusée avec un message nommant le champ fautif
 
 ### Dépendances données
 
-Base matériel embarquée : dimensions capteur, pitch, courbes bruit de lecture par ISO, seuil de double gain, capacité de saturation, point zéro système, taille de fichier RAW, autonomie CIPA. Sources : documentation constructeur, Photons to Photos (Bill Claff). Fraîcheur : trimestrielle, non critique. Fallback : mode `custom` couvrant tout matériel absent.
+Table de formats de capteur embarquée (5 formats, dimensions physiques uniquement) : documentation constructeur, aucune marque de boîtier ni prix commercial. Les grandeurs avancées (bruit de lecture, seuil de double gain, capacité de saturation, point zéro système, taille de fichier RAW, autonomie CIPA) n'ont pas de base matériel : saisies à la main ou remplacées par le repli générique du registre (§2.3).
 
 ---
 

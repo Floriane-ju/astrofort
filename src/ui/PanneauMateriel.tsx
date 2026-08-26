@@ -19,14 +19,19 @@ import type { ProfilSuivi, QualiteMiseEnStation, TypeMonture } from '../core/tra
 import type { ModeProjection } from '../core/projection.ts'
 import type { Traced } from '../core/traced.ts'
 import {
-  BASE_BOITIERS,
-  ID_BOITIER_CUSTOM,
   libelleZpSource,
   type CapteurMode,
   type IsoRetenu,
   type PointZeroSysteme,
   type SaisieBoitier,
 } from '../data/equipment.ts'
+import {
+  SOURCE_TABLE_FORMATS_CAPTEUR,
+  TABLE_FORMATS_CAPTEUR,
+  ligneFormatCapteur,
+  pitchDepuisFormat,
+  type FormatCapteur,
+} from '../registry/capteur-formats.ts'
 import { DOMAINES, type DomaineId } from '../registry/domains.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, useNiveau } from './Terme.tsx'
@@ -154,10 +159,31 @@ function ChampsAvances({
   )
 }
 
+/**
+ * §5.1 — retour immédiat sur le pitch dérivé, dès que la résolution saisie est exploitable.
+ * Pas de `TracedValue` ici : ce n'est pas une formule de moteur tracée, juste un aperçu de
+ * saisie — cohérent avec « chaque nombre reste dépliable » sans en être une instance.
+ */
+function ApercuPitch({
+  formatCapteur,
+  resolutionMpx,
+}: {
+  readonly formatCapteur: string
+  readonly resolutionMpx: string
+}) {
+  const mpx = Number(resolutionMpx)
+  if (resolutionMpx.trim() === '' || !Number.isFinite(mpx) || mpx <= 0) return null
+  const pitch = pitchDepuisFormat(ligneFormatCapteur(formatCapteur as FormatCapteur), mpx)
+  return (
+    <p className="etat">
+      Pitch calculé : {pitch.toFixed(2)} µm
+    </p>
+  )
+}
+
 export function PanneauMateriel(props: PanneauMaterielProps) {
   const lectures = props.lectures
   const niveau = useNiveau()
-  const custom = props.boitier.boitierId === ID_BOITIER_CUSTOM
   const surChamp = (champ: keyof SaisieBoitier) => (v: string) =>
     props.surBoitier({ ...props.boitier, [champ]: v })
 
@@ -165,57 +191,45 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
     <>
       <section>
         <h2>Boîtier</h2>
+        <p className="etat">
+          Type de capteur et résolution sont exigés : sans eux, ni champ ni échantillonnage
+          n’existent. Le pitch s’en déduit, il ne se saisit jamais. Le reste peut rester vide —
+          le registre fournit son repli, et les sorties qui en dépendent portent [ESTIMÉ].
+        </p>
         <div className="champs">
           <label>
-            Boîtier
-            <select value={props.boitier.boitierId} onChange={(e) => surChamp('boitierId')(e.target.value)}>
-              {BASE_BOITIERS.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.libelle}
+            <Etiquette cle="type_capteur" />
+            <select
+              value={props.boitier.formatCapteur}
+              onChange={(e) => surChamp('formatCapteur')(e.target.value)}
+            >
+              {TABLE_FORMATS_CAPTEUR.map((f) => (
+                <option key={f.format} value={f.format}>
+                  {f.libelle}
                 </option>
               ))}
-              <option value={ID_BOITIER_CUSTOM}>Autre boîtier — je saisis mon capteur</option>
             </select>
           </label>
+          <ChampCapteur
+            domaine="resolution_mpx"
+            nom="résolution"
+            valeur={props.boitier.resolutionMpx}
+            surValeur={surChamp('resolutionMpx')}
+            requis
+          />
         </div>
-        {custom && (
-          <>
-            <p className="etat">
-              Dimensions et pitch sont exigés : sans eux, ni champ ni échantillonnage
-              n’existent. Le reste peut rester vide — le registre fournit son repli, et les
-              sorties qui en dépendent portent [ESTIMÉ].
-            </p>
-            <div className="champs">
-              <ChampCapteur
-                domaine="capteur_mm"
-                nom="largeur du capteur"
-                valeur={props.boitier.capteurLMm}
-                surValeur={surChamp('capteurLMm')}
-                requis
-              />
-              <ChampCapteur
-                domaine="capteur_mm"
-                nom="hauteur du capteur"
-                valeur={props.boitier.capteurHMm}
-                surValeur={surChamp('capteurHMm')}
-                requis
-              />
-              <ChampCapteur
-                domaine="pitch_um"
-                valeur={props.boitier.pitchUm}
-                surValeur={surChamp('pitchUm')}
-                requis
-              />
-            </div>
-            {niveau === 'DEBUTANT' ? (
-              <details>
-                <summary>Grandeurs du capteur — mode avancé</summary>
-                <ChampsAvances boitier={props.boitier} surChamp={surChamp} />
-              </details>
-            ) : (
-              <ChampsAvances boitier={props.boitier} surChamp={surChamp} />
-            )}
-          </>
+        <ApercuPitch
+          formatCapteur={props.boitier.formatCapteur}
+          resolutionMpx={props.boitier.resolutionMpx}
+        />
+        <p className="tracee-source">Formats de capteur : {SOURCE_TABLE_FORMATS_CAPTEUR}</p>
+        {niveau === 'DEBUTANT' ? (
+          <details>
+            <summary>Grandeurs du capteur — mode avancé</summary>
+            <ChampsAvances boitier={props.boitier} surChamp={surChamp} />
+          </details>
+        ) : (
+          <ChampsAvances boitier={props.boitier} surChamp={surChamp} />
         )}
         {/* §7.1 — zp_source est affiché avec toute pose, donc aussi à sa source. */}
         {lectures !== undefined && (
@@ -266,7 +280,9 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
               value={props.capteurMode}
               onChange={(e) => props.surCapteurMode(e.target.value as CapteurMode)}
             >
-              <option value="FULL_FRAME">Capteur entier — {props.boitier.boitierId === ID_BOITIER_CUSTOM ? 'boîtier saisi' : (BASE_BOITIERS.find((b) => b.id === props.boitier.boitierId)?.libelle ?? '')}</option>
+              <option value="FULL_FRAME">
+                Capteur entier — {ligneFormatCapteur(props.boitier.formatCapteur as FormatCapteur).libelle}
+              </option>
               <option value="APSC_CROP">Recadrage APS-C</option>
             </select>
           </label>

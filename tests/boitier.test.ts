@@ -1,16 +1,15 @@
 /**
- * §5.1 — le mode `custom` : un boîtier absent de la base se saisit à la main.
+ * §5.1 — aucun boîtier ne se choisit dans une liste : type de capteur et résolution décrivent
+ * le matériel, et le pitch s'en déduit.
  *
- * Le cas limite du PRD est celui qui compte : un boîtier custom sans bruit de lecture doit
+ * Le cas limite du PRD est celui qui compte : un profil sans bruit de lecture renseigné doit
  * produire une pose calculée avec le repli du registre, affichée, et marquée [ESTIMÉ] —
  * jamais un résultat qui passe pour une mesure (§2.3, §7.1).
  */
 
 import { describe, expect, it } from 'vitest'
 import {
-  BASE_BOITIERS,
   BOITIER_REFERENCE,
-  ID_BOITIER_CUSTOM,
   capteurEffectif,
   isoRecommande,
   libelleZpSource,
@@ -18,17 +17,16 @@ import {
   resoutBoitier,
   type SaisieBoitier,
 } from '../src/data/equipment.ts'
+import { ligneFormatCapteur, pitchDepuisFormat } from '../src/registry/capteur-formats.ts'
 import { fluxCiel, poseUnitaire } from '../src/core/exposure.ts'
 import { DOMAINES, SaisieRefuseeError } from '../src/registry/domains.ts'
 import { K } from '../src/registry/constants.ts'
 
-/** Un boîtier saisi dont seules les grandeurs géométriques sont renseignées. */
+/** Un boîtier saisi dont seuls le format de capteur et la résolution sont renseignés. */
 function saisie(partiel: Partial<SaisieBoitier> = {}): SaisieBoitier {
   return {
-    boitierId: ID_BOITIER_CUSTOM,
-    capteurLMm: '23.5',
-    capteurHMm: '15.6',
-    pitchUm: '3.9',
+    formatCapteur: 'APSC_NIKON',
+    resolutionMpx: '24',
     readNoiseE: '',
     seuilDoubleGainIso: '',
     fullWellE: '',
@@ -40,34 +38,34 @@ function saisie(partiel: Partial<SaisieBoitier> = {}): SaisieBoitier {
 }
 
 describe('§5.1 — le boîtier saisi à la main', () => {
-  it('rend le boîtier de la base quand c’est lui qui est choisi, sans rien estimer', () => {
-    const resolu = resoutBoitier(saisie({ boitierId: BOITIER_REFERENCE.id }))
-    expect(resolu.boitier).toBe(BOITIER_REFERENCE)
-    expect(resolu.estimations).toEqual([])
-    expect(BASE_BOITIERS).toContain(resolu.boitier)
-  })
-
-  it('reprend les grandeurs saisies plutôt que celles d’un autre appareil', () => {
+  it('reprend le format et la résolution saisis, jamais les grandeurs d’un autre appareil', () => {
     const { boitier } = resoutBoitier(saisie())
-    expect(boitier.id).toBe(ID_BOITIER_CUSTOM)
-    expect(boitier.capteurLMm).toBeCloseTo(23.5, 6)
-    expect(boitier.pitchUm).toBeCloseTo(3.9, 6)
+    const format = ligneFormatCapteur('APSC_NIKON')
+    expect(boitier.id).toBe('saisi')
+    expect(boitier.capteurLMm).toBe(format.capteurLMm)
+    expect(boitier.capteurHMm).toBe(format.capteurHMm)
+    expect(boitier.pitchUm).toBeCloseTo(pitchDepuisFormat(format, 24), 6)
     expect(boitier.pitchUm).not.toBe(BOITIER_REFERENCE.pitchUm)
   })
 
   it('refuse une grandeur manquante ou hors domaine en nommant le champ fautif', () => {
-    expect(() => resoutBoitier(saisie({ pitchUm: '' }))).toThrow(SaisieRefuseeError)
-    expect(() => resoutBoitier(saisie({ pitchUm: '' }))).toThrow(DOMAINES.pitch_um.champ)
-    expect(() => resoutBoitier(saisie({ capteurLMm: String(DOMAINES.capteur_mm.max + 1) }))).toThrow(
-      /hors de la plage/,
-    )
+    expect(() => resoutBoitier(saisie({ resolutionMpx: '' }))).toThrow(SaisieRefuseeError)
+    expect(() => resoutBoitier(saisie({ resolutionMpx: '' }))).toThrow(DOMAINES.resolution_mpx.champ)
+    expect(() =>
+      resoutBoitier(saisie({ resolutionMpx: String(DOMAINES.resolution_mpx.max + 1) })),
+    ).toThrow(/hors de la plage/)
+    // Résolution dans son propre domaine mais physiquement incohérente avec le format choisi :
+    // le pitch dérivé est refusé, pas la résolution elle-même.
+    expect(() =>
+      resoutBoitier(saisie({ formatCapteur: 'PLEIN_FORMAT', resolutionMpx: '1' })),
+    ).toThrow(DOMAINES.pitch_um.champ)
     expect(() => resoutBoitier(saisie({ zpSys: String(DOMAINES.zp_sys.min - 1) }))).toThrow(
       DOMAINES.zp_sys.champ,
     )
   })
 
   it('garde le recadrage APS-C dans le boîtier : il change les dimensions, jamais le pitch', () => {
-    const { boitier } = resoutBoitier(saisie({ capteurLMm: '35.9', capteurHMm: '23.9' }))
+    const { boitier } = resoutBoitier(saisie({ formatCapteur: 'PLEIN_FORMAT', resolutionMpx: '33' }))
     const entier = capteurEffectif(boitier, 'FULL_FRAME')
     const recadre = capteurEffectif(boitier, 'APSC_CROP')
     expect(recadre.pitchUm).toBe(entier.pitchUm)
@@ -76,7 +74,7 @@ describe('§5.1 — le boîtier saisi à la main', () => {
   })
 })
 
-describe('§5.1 cas limite — boîtier custom sans bruit de lecture', () => {
+describe('§5.1 cas limite — profil sans bruit de lecture renseigné', () => {
   const { boitier, estimations } = resoutBoitier(saisie())
   const iso = isoRecommande(boitier)
   const zeroSysteme = pointZeroSysteme(boitier)

@@ -11,7 +11,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
 import { GLOSSAIRE } from '../src/registry/glossaire.ts'
-import { BOITIER_REFERENCE, ID_BOITIER_CUSTOM } from '../src/data/equipment.ts'
+import { TABLE_FORMATS_CAPTEUR } from '../src/registry/capteur-formats.ts'
 
 const ecran = renderToStaticMarkup(<App />)
 
@@ -23,13 +23,15 @@ describe('contrat d’entrée — écran par défaut, setup de l’Annexe A', ()
   })
 
   it('affiche l’échantillonnage, la pupille et le pouvoir séparateur', () => {
-    expect(ecran).toContain('8.80')
+    // Pitch dérivé de 33 Mpx sur le format plein format (35,9 × 23,9 mm) : 5,099 µm, plus
+    // aucun boîtier ne fournissant de pitch sourcé directement (§5.1).
+    expect(ecran).toContain('8.76')
     expect(ecran).toContain('42.86')
     expect(ecran).toContain('2.71')
   })
 
   it('affiche la pose maximale sans suivi', () => {
-    expect(ecran).toContain('2.10')
+    expect(ecran).toContain('2.09')
   })
 
   it('affiche les seuils de déclinaison du site', () => {
@@ -53,9 +55,10 @@ describe('contrat d’entrée — écran par défaut, setup de l’Annexe A', ()
     expect(ecran).toMatch(/domaine ciel profond est fermé/)
   })
 
-  it('offre le choix du boîtier, avec l’entrée custom de §5.1', () => {
-    expect(ecran).toContain(BOITIER_REFERENCE.libelle)
-    expect(ecran).toContain(`value="${ID_BOITIER_CUSTOM}"`)
+  it('offre le choix du type de capteur, sans sélection de boîtier (§5.1)', () => {
+    for (const format of TABLE_FORMATS_CAPTEUR) {
+      expect(ecran).toContain(`value="${format.format}"`)
+    }
   })
 
   it('affiche zp_source et l’ISO retenu là où une pose est affichée (§7.1, §7.2)', () => {

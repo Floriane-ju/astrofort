@@ -54,6 +54,13 @@ export const DOMAINES = Object.freeze({
     section: '5.1',
   }),
   pitch_um: domaine({ champ: 'le pitch', min: 0.8, max: 24, unite: 'µm', section: '5.1' }),
+  resolution_mpx: domaine({
+    champ: 'la résolution',
+    min: 1,
+    max: 200,
+    unite: 'Mpx',
+    section: '5.1',
+  }),
   read_noise_e: domaine({ champ: 'le bruit de lecture', min: 0.5, max: 15, unite: 'e⁻', section: '5.1' }),
   seuil_double_gain_iso: domaine({
     champ: 'le seuil de double gain',

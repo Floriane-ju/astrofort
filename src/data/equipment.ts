@@ -18,6 +18,7 @@
 
 import { K, ref, type ConstantRef } from '../registry/constants.ts'
 import { valide, type DomaineId } from '../registry/domains.ts'
+import { ligneFormatCapteur, pitchDepuisFormat, type FormatCapteur } from '../registry/capteur-formats.ts'
 
 /**
  * Les champs optionnels sont ceux que le PRD marque `[À VÉRIFIER]` en Annexe A. Ils restent
@@ -198,6 +199,10 @@ function messageIso(
  * Boîtier de référence de l'Annexe A : plein format 35,9 × 23,9 mm, 7008 × 4672 px.
  * Bruit de lecture, capacité de saturation, point zéro système et autonomie CIPA sont
  * marqués `[À VÉRIFIER]` par le PRD — seule la valeur de travail sourcée est portée ici.
+ *
+ * Ne se choisit plus dans une interface : §5.1 ne propose qu'un type de capteur et une
+ * résolution, jamais un boîtier. Cette constante reste la donnée de travail de l'Annexe A pour
+ * les moteurs et les tests qui la citent.
  */
 export const BOITIER_REFERENCE: Boitier = Object.freeze({
   id: 'reference-plein-format-33mp',
@@ -215,23 +220,17 @@ export const BOITIER_REFERENCE: Boitier = Object.freeze({
 })
 
 /**
- * Un seul boîtier sourcé pour l'instant. Tout autre matériel passe par le mode `custom` de
- * §5.1 : dimensions, pitch et ouverture saisis à la main, point zéro générique [ESTIMÉ].
- */
-export const BASE_BOITIERS: readonly Boitier[] = Object.freeze([BOITIER_REFERENCE])
-
-/** §5.1 — l'entrée `custom` du sélecteur : tout matériel absent de la base. */
-export const ID_BOITIER_CUSTOM = 'custom'
-
-/**
  * §5.1 — le boîtier saisi à la main, tel que l'utilisateur le tape : des chaînes, dont les
  * vides sont significatifs. Un champ laissé vide n'est pas zéro, c'est une valeur inconnue.
+ *
+ * Aucun boîtier ne se choisit dans une liste : les dimensions du capteur et le pitch ne sont
+ * jamais tapés non plus. `formatCapteur` fixe les deux premières (table sourcée), et
+ * `resolutionMpx` donne le troisième par le calcul. Un débutant lit un type de capteur et une
+ * résolution sur une fiche produit, jamais un pitch en micromètres.
  */
 export interface SaisieBoitier {
-  readonly boitierId: string
-  readonly capteurLMm: string
-  readonly capteurHMm: string
-  readonly pitchUm: string
+  readonly formatCapteur: string
+  readonly resolutionMpx: string
   readonly readNoiseE: string
   readonly seuilDoubleGainIso: string
   readonly fullWellE: string
@@ -261,20 +260,21 @@ function champRequis(texte: string, domaine: DomaineId): number {
 }
 
 /**
- * §5.1 — le boîtier retenu : celui de la base, ou celui que la saisie décrit.
+ * §5.1 — le boîtier tel que la saisie le décrit : jamais choisi dans une liste.
  *
- * Les dimensions et le pitch sont exigés : sans eux, ni champ ni échantillonnage n'existent,
- * et une valeur inventée produirait un cadrage faux sans le dire. Les grandeurs du mode
- * avancé, elles, tolèrent l'absence — le registre fournit son repli, l'application l'affiche,
- * et la sortie porte [ESTIMÉ] plutôt que de passer pour une mesure.
+ * Le format de capteur et la résolution sont exigés : sans eux, ni champ ni échantillonnage
+ * n'existent, et une valeur inventée produirait un cadrage faux sans le dire. Le pitch qui en
+ * est dérivé reste validé contre le domaine `pitch_um` — un format et une résolution physique-
+ * ment incohérents entre eux sont donc toujours refusés, en nommant le pitch. Les grandeurs du
+ * mode avancé, elles, tolèrent l'absence — le registre fournit son repli, l'application
+ * l'affiche, et la sortie porte [ESTIMÉ] plutôt que de passer pour une mesure.
  */
 export function resoutBoitier(saisie: SaisieBoitier): BoitierResolu {
-  const deLaBase = BASE_BOITIERS.find((b) => b.id === saisie.boitierId)
-  if (deLaBase !== undefined) return { boitier: deLaBase, estimations: [] }
-
-  const capteurLMm = champRequis(saisie.capteurLMm, 'capteur_mm')
-  const capteurHMm = champRequis(saisie.capteurHMm, 'capteur_mm')
-  const pitchUm = champRequis(saisie.pitchUm, 'pitch_um')
+  const format = ligneFormatCapteur(saisie.formatCapteur as FormatCapteur)
+  const resolutionMpx = champRequis(saisie.resolutionMpx, 'resolution_mpx')
+  const capteurLMm = format.capteurLMm
+  const capteurHMm = format.capteurHMm
+  const pitchUm = valide('pitch_um', pitchDepuisFormat(format, resolutionMpx))
   const readNoiseE = champ(saisie.readNoiseE, 'read_noise_e')
   const seuilDoubleGainIso = champ(saisie.seuilDoubleGainIso, 'seuil_double_gain_iso')
   const fullWellE = champ(saisie.fullWellE, 'full_well_e')
@@ -318,8 +318,8 @@ export function resoutBoitier(saisie: SaisieBoitier): BoitierResolu {
 
   return {
     boitier: Object.freeze({
-      id: ID_BOITIER_CUSTOM,
-      libelle: `Boîtier saisi — ${capteurLMm} × ${capteurHMm} mm, pitch ${pitchUm} µm`,
+      id: 'saisi',
+      libelle: `Boîtier saisi — ${format.libelle}, ${resolutionMpx} Mpx, pitch ${pitchUm.toFixed(2)} µm`,
       capteurLMm,
       capteurHMm,
       pitchUm,

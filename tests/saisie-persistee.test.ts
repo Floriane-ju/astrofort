@@ -52,10 +52,8 @@ function saisieLieu(champs: Partial<SaisieLieu> = {}): SaisieLieu {
 function saisieMateriel(champs: Partial<SaisieMateriel> = {}): SaisieMateriel {
   return {
     boitier: {
-      boitierId: 'custom',
-      capteurLMm: '',
-      capteurHMm: '',
-      pitchUm: '',
+      formatCapteur: 'PLEIN_FORMAT',
+      resolutionMpx: '',
       readNoiseE: '',
       seuilDoubleGainIso: '',
       fullWellE: '',
@@ -137,10 +135,8 @@ describe('T-0082 — la saisie survit au rechargement', () => {
     // capteur d'un autre appareil.
     const materiel = saisieMateriel({
       boitier: {
-        boitierId: 'custom',
-        capteurLMm: '23.5',
-        capteurHMm: '15.7',
-        pitchUm: '3.9',
+        formatCapteur: 'APSC_NIKON',
+        resolutionMpx: '24',
         readNoiseE: '1.5',
         seuilDoubleGainIso: '800',
         fullWellE: '52000',

@@ -73,10 +73,8 @@ export function profilAEnregistrer(materiel: SaisieMateriel): ProfilAEnregistrer
       focaleMm: requis(materiel.focale, 'focale_mm'),
       ouvertureN: requis(materiel.ouverture, 'ouverture_N'),
       typeObjectif: materiel.typeObjectif,
-      boitierId: boitier.boitierId,
-      ...siRenseigne('capteurLMm', boitier.capteurLMm, 'capteur_mm'),
-      ...siRenseigne('capteurHMm', boitier.capteurHMm, 'capteur_mm'),
-      ...siRenseigne('pitchUm', boitier.pitchUm, 'pitch_um'),
+      formatCapteur: boitier.formatCapteur,
+      ...siRenseigne('resolutionMpx', boitier.resolutionMpx, 'resolution_mpx'),
       ...siRenseigne('readNoiseE', boitier.readNoiseE, 'read_noise_e'),
       ...siRenseigne('seuilDoubleGainIso', boitier.seuilDoubleGainIso, 'seuil_double_gain_iso'),
       ...siRenseigne('fullWellE', boitier.fullWellE, 'full_well_e'),
@@ -114,10 +112,8 @@ export function departMateriel(profil: ProfilMateriel | null): DepartMateriel | 
   if (profil === null) return null
   return {
     boitier: {
-      boitierId: profil.boitierId,
-      capteurLMm: texteDe(profil.capteurLMm),
-      capteurHMm: texteDe(profil.capteurHMm),
-      pitchUm: texteDe(profil.pitchUm),
+      formatCapteur: profil.formatCapteur,
+      resolutionMpx: texteDe(profil.resolutionMpx),
       readNoiseE: texteDe(profil.readNoiseE),
       seuilDoubleGainIso: texteDe(profil.seuilDoubleGainIso),
       fullWellE: texteDe(profil.fullWellE),

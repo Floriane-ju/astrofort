@@ -9,13 +9,17 @@
 import { useState } from 'react'
 import { poidsParDefaut, type PoidsScoring } from '../core/session.ts'
 import type { PointMasque } from '../core/site.ts'
-import { BOITIER_REFERENCE, type CapteurMode, type SaisieBoitier } from '../data/equipment.ts'
+import type { CapteurMode, SaisieBoitier } from '../data/equipment.ts'
 import type { QualiteMiseEnStation, TypeMonture } from '../core/tracking.ts'
 import { jourLocalIso } from './horaire.ts'
 import { etatScene, majVue } from './scene-etat.ts'
 import { modeObjectif, type TypeObjectif } from './PanneauMateriel.tsx'
 
-/** Site et configuration ciel profond de l'Annexe A. */
+/**
+ * Site et configuration ciel profond de l'Annexe A. `resolutionMpx` reprend la résolution du
+ * boîtier de référence (33 Mpx) : sans elle, l'écran de départ n'aurait rien à calculer avant
+ * la première saisie.
+ */
 export const DEFAUT = {
   latitude: '46.391',
   longitude: '6.697',
@@ -23,6 +27,7 @@ export const DEFAUT = {
   bortle: '4.5',
   focale: '120',
   ouverture: '2.8',
+  resolutionMpx: '33',
 }
 
 export interface SaisieLieu {
@@ -90,11 +95,12 @@ export function useSaisieLieu(depart: DepartLieu | null): SaisieLieu {
   }
 }
 
-/** §5.1 — mode `custom` : tous les champs vides, aucun n'est présumé (§2.3). */
+/**
+ * §5.1 — les grandeurs du mode avancé : vides, aucune n'est présumée (§2.3). Le format de
+ * capteur et la résolution, eux, partent de l'Annexe A (`DEFAUT`) — un écran de départ qui
+ * n'aurait rien à calculer avant la première saisie ne démontrerait rien.
+ */
 const BOITIER_VIDE = {
-  capteurLMm: '',
-  capteurHMm: '',
-  pitchUm: '',
   readNoiseE: '',
   seuilDoubleGainIso: '',
   fullWellE: '',
@@ -104,7 +110,7 @@ const BOITIER_VIDE = {
 } as const
 
 export interface SaisieMateriel {
-  /** §5.1 — le boîtier retenu et, en mode `custom`, ses grandeurs capteur saisies. */
+  /** §5.1 — le type de capteur et la résolution saisis, jamais un boîtier choisi. */
   readonly boitier: SaisieBoitier
   readonly surBoitier: (v: SaisieBoitier) => void
   /** §7.2 — ISO de capture, vide tant que celui du double gain convient. */
@@ -149,7 +155,12 @@ export interface DepartMateriel {
 
 export function useSaisieMateriel(depart: DepartMateriel | null): SaisieMateriel {
   const [boitier, surBoitier] = useState<SaisieBoitier>(
-    () => depart?.boitier ?? { boitierId: BOITIER_REFERENCE.id, ...BOITIER_VIDE },
+    () =>
+      depart?.boitier ?? {
+        formatCapteur: 'PLEIN_FORMAT',
+        resolutionMpx: DEFAUT.resolutionMpx,
+        ...BOITIER_VIDE,
+      },
   )
   const [iso, surIso] = useState(depart?.iso ?? '')
   const [focale, surFocale] = useState(depart?.focale ?? DEFAUT.focale)
