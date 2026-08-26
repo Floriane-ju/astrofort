@@ -32,6 +32,7 @@ import type { ContexteSession } from '../core/session.ts'
 import { K } from '../registry/constants.ts'
 import { DOMAINES } from '../registry/domains.ts'
 import type { ObjetCielProfond, TypeObjet } from '../data/deepsky.ts'
+import { Bulle } from './Bulle.tsx'
 import { Icone } from './Icone.tsx'
 import { VignetteCible } from './ImageCible.tsx'
 import { LIBELLE_TYPE_OBJET, nomCommun } from './libelles-objet.ts'
@@ -259,14 +260,15 @@ function LigneListe({ ligne, pose }: { readonly ligne: LigneCible; readonly pose
       {/* T-0046 — « Voir » centre, et rien d'autre : ni le champ, ni l'horloge ne bougent.
           Sous l'horizon, il n'y a pas de direction à viser : le bouton disparaît. */}
       {ligne.hauteurDeg > 0 && (
-        <button
-          type="button"
-          className="cible-voir"
-          aria-label={`Centrer la scène sur ${objet.designation}`}
-          onClick={() => majVue({ azimutDeg: ligne.azimutDeg, hauteurDeg: ligne.hauteurDeg })}
-        >
-          <Icone nom="my_location" />
-        </button>
+        <Bulle texte={`Centrer la scène sur ${objet.designation}`} place="gauche" nomme>
+          <button
+            type="button"
+            className="cible-voir"
+            onClick={() => majVue({ azimutDeg: ligne.azimutDeg, hauteurDeg: ligne.hauteurDeg })}
+          >
+            <Icone nom="my_location" />
+          </button>
+        </Bulle>
       )}
     </li>
   )

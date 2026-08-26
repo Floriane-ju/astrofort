@@ -14,6 +14,7 @@
 
 import type { ReactNode } from 'react'
 import { fermePanneau, type PanneauLateral as ClePanneau } from './coque-etat.ts'
+import { Bulle } from './Bulle.tsx'
 import { Icone } from './Icone.tsx'
 
 /** Le titre de chaque panneau : il nomme ce qu'on lit, pas l'onglet d'où l'on vient. */
@@ -46,14 +47,15 @@ export function PanneauLateral(props: PanneauLateralProps) {
         <>
           <div className="lateral-entete">
             <h2>{TITRES_PANNEAU[panneau]}</h2>
-            <button
-              type="button"
-              className="lateral-fermer"
-              onClick={fermePanneau}
-              aria-label={`Fermer le panneau ${TITRES_PANNEAU[panneau].toLowerCase()}`}
+            <Bulle
+              texte={`Fermer le panneau ${TITRES_PANNEAU[panneau].toLowerCase()}`}
+              place="gauche"
+              nomme
             >
-              <Icone nom="close" />
-            </button>
+              <button type="button" className="lateral-fermer" onClick={fermePanneau}>
+                <Icone nom="close" />
+              </button>
+            </Bulle>
           </div>
           <div className="lateral-corps">{props.contenus[panneau]}</div>
         </>

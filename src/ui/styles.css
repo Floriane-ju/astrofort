@@ -157,6 +157,12 @@ body {
   /* T-0145 — l'écart entre deux éléments d'une barre. Nommé parce que la bande de commandes
      l'annule par marge négative : la valeur doit être lue au même endroit des deux côtés. */
   --jour-barre: 0.6rem;
+  /* T-0147 — largeur maximale d'une bulle de survol. Une infobulle est une phrase, pas un
+     paragraphe : au-delà, ce n'est plus un survol qu'il faut, c'est la fiche. */
+  --bulle-large: 18rem;
+  /* L'air entre la bulle et ce qu'elle nomme, et entre la bulle et le bord de l'écran :
+     c'est le même écart des deux côtés, sans quoi une bulle rabattue paraît décollée. */
+  --bulle-jour: 0.35rem;
 }
 
 /* T-0122 — les icônes viennent d'une police à ligatures, embarquée avec les sources.
@@ -1043,6 +1049,147 @@ th {
   letter-spacing: 0;
   text-transform: none;
   min-height: var(--cible-clic);
+}
+
+/* T-0147 — la bulle de survol, à la place de l'infobulle du navigateur.
+
+   Tout ce qui la dessine vient des jetons : filet d'un pixel, angles vifs, fond de surface
+   haute, police mono du corps de texte. C'est la condition pour qu'elle bascule au rouge
+   comme le reste (§11.1) — une infobulle native, peinte par le navigateur, ne le fait pas.
+
+   L'ancre est en `inline-flex` et reprend `flex: none` / `align-self: center` : elle
+   s'interpose entre un conteneur en flex et son bouton, et doit se comporter comme le
+   bouton se comportait. `position: relative` est ce qui donne à la bulle son repère.
+
+   RIEN DE CRITIQUE AU SURVOL (§11.2) : la bulle ne fait que répéter un nom déjà porté par
+   le contrôle. `pointer-events: none` l'empêche de voler le survol qui la maintient
+   ouverte. Elle paraît et disparaît d'un coup : T-0072 ne laisse d'animation qu'au fondu
+   de luminance du basculement nuit, et un fondu de bulle n'en est pas un. */
+.bulle-ancre {
+  position: relative;
+  anchor-name: var(--bulle-ancre-nom);
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  flex: none;
+}
+
+.bulle {
+  position: absolute;
+  z-index: 5;
+  visibility: hidden;
+  width: max-content;
+  max-width: var(--bulle-large);
+  padding: 0.3rem 0.5rem;
+  border: var(--trait) solid var(--bordure);
+  background: var(--surface-haute);
+  color: var(--texte);
+  font: 0.72rem/1.35 var(--police-mono);
+  letter-spacing: 0;
+  text-transform: none;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+}
+
+/* Le focus autant que le survol : un contrôle atteint au clavier doit dire ce qu'il fait. */
+.bulle-ancre:hover > .bulle,
+.bulle-ancre:focus-within > .bulle {
+  visibility: visible;
+}
+
+/* T-0147 — LA BULLE NE SORT PAS DE L'ÉCRAN.
+
+   Deux façons de la perdre, et une seule réponse. Elle peut passer sous le bord de la
+   fenêtre ; elle peut aussi être rognée par un ancêtre qui défile — la liste des cibles est
+   en `overflow-y: auto`, et une bulle en `position: absolute` s'y coupe net.
+
+   L'ancrage CSS règle les deux : `position: fixed` échappe à tout rognage, `position-anchor`
+   ramène la bulle au contact de son contrôle, et `position-try-fallbacks` la rabat lui-même
+   quand elle déborde. C'est le navigateur qui mesure — personne n'écrit de JavaScript de
+   positionnement, et rien ne se calcule au survol.
+
+   `span-all` sur l'axe traversant plutôt que `center` : la bulle peut alors occuper toute la
+   largeur disponible, et `anchor-center` la recentre sur le contrôle. Avec `center`, sa
+   largeur eût été celle du bouton — un chevron de 36 px.
+
+   Le nom d'ancre est posé en ligne par le composant (`--bulle-ancre-nom`) : il doit être
+   unique par bulle, sinon toutes se rattachent à la dernière déclarée. */
+@position-try --bulle-cale-fin {
+  justify-self: end;
+}
+
+@position-try --bulle-cale-debut {
+  justify-self: start;
+}
+
+@position-try --bulle-cale-bas {
+  align-self: end;
+}
+
+@position-try --bulle-cale-haut {
+  align-self: start;
+}
+
+@supports (anchor-name: --a) {
+  .bulle {
+    position: fixed;
+    position-anchor: var(--bulle-ancre-nom);
+    margin: var(--bulle-jour);
+  }
+
+  .bulle[data-place='haut'] {
+    position-area: block-start span-all;
+    justify-self: anchor-center;
+    position-try-fallbacks: flip-block, --bulle-cale-fin, --bulle-cale-debut;
+  }
+
+  .bulle[data-place='bas'] {
+    position-area: block-end span-all;
+    justify-self: anchor-center;
+    position-try-fallbacks: flip-block, --bulle-cale-fin, --bulle-cale-debut;
+  }
+
+  .bulle[data-place='gauche'] {
+    position-area: inline-start span-all;
+    align-self: anchor-center;
+    position-try-fallbacks: flip-inline, --bulle-cale-bas, --bulle-cale-haut;
+  }
+
+  .bulle[data-place='droite'] {
+    position-area: inline-end span-all;
+    align-self: anchor-center;
+    position-try-fallbacks: flip-inline, --bulle-cale-bas, --bulle-cale-haut;
+  }
+}
+
+/* Repli sans ancrage CSS : la bulle est posée en absolu, du côté choisi à l'appel. Elle
+   reste lisible, mais personne ne mesure plus son débordement — c'est le seul écart, et il
+   se referme tout seul le jour où le navigateur sait ancrer. */
+@supports not (anchor-name: --a) {
+  .bulle[data-place='haut'] {
+    bottom: calc(100% + var(--bulle-jour));
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .bulle[data-place='bas'] {
+    top: calc(100% + var(--bulle-jour));
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .bulle[data-place='gauche'] {
+    right: calc(100% + var(--bulle-jour));
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .bulle[data-place='droite'] {
+    left: calc(100% + var(--bulle-jour));
+    top: 50%;
+    transform: translateY(-50%);
+  }
 }
 
 /* §10.1 — la glose est au survol pour tous, et visible en plus au niveau débutant.

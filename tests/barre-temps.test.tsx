@@ -28,11 +28,20 @@ function barre(): string {
   return renderToStaticMarkup(<BarreTemps surDateIso={() => undefined} />)
 }
 
-/** Le fragment d'un contrôle, de son libellé à sa fermeture : de quoi lire son état pressé. */
+/**
+ * L'emplacement du libellé d'un contrôle. T-0147 — un bouton à glyphe seul n'écrit plus son
+ * nom dans un `aria-label` : il le tient de la bulle qui le suit, via `aria-labelledby`.
+ */
+function place(html: string, libelle: string): number {
+  const bulle = html.indexOf(`role="tooltip" data-place="haut">${libelle}</span>`)
+  return bulle > -1 ? bulle : html.indexOf(`aria-label="${libelle}"`)
+}
+
+/** Le fragment d'un contrôle, de son ouverture à son libellé : de quoi lire son état pressé. */
 function controle(html: string, libelle: string): string {
-  const debut = html.indexOf(`aria-label="${libelle}"`)
-  expect(debut, libelle).toBeGreaterThan(-1)
-  return html.slice(debut, html.indexOf('</button>', debut))
+  const fin = place(html, libelle)
+  expect(fin, libelle).toBeGreaterThan(-1)
+  return html.slice(html.lastIndexOf('<button', fin), fin)
 }
 
 afterEach(() => {
@@ -43,7 +52,7 @@ describe('T-0137 — la barre basse pilote le temps', () => {
   it('porte les quatre chevrons, le cadran et la lecture', () => {
     const html = barre()
     for (const libelle of ['Reculer vite', 'Reculer', 'Avancer', 'Avancer vite']) {
-      expect(html, libelle).toContain(`aria-label="${libelle}"`)
+      expect(place(html, libelle), libelle).toBeGreaterThan(-1)
     }
     expect(html).toContain('Changer la date et l’heure')
     expect(html).toContain('Mettre le temps en pause')
@@ -53,12 +62,12 @@ describe('T-0137 — la barre basse pilote le temps', () => {
     // L'ordre EST l'information : deux chevrons posés du même côté du cadran ne diraient plus
     // dans quel sens ils emmènent le ciel.
     const html = barre()
-    const place = (libelle: string) => html.indexOf(`aria-label="${libelle}"`)
-    expect(place('Reculer vite')).toBeLessThan(place('Reculer'))
-    expect(place('Reculer')).toBeLessThan(place('Changer la date et l’heure'))
-    expect(place('Changer la date et l’heure')).toBeLessThan(place('Avancer'))
-    expect(place('Avancer')).toBeLessThan(place('Avancer vite'))
-    expect(place('Avancer vite')).toBeLessThan(place('Mettre le temps en pause'))
+    const ou = (libelle: string) => place(html, libelle)
+    expect(ou('Reculer vite')).toBeLessThan(ou('Reculer'))
+    expect(ou('Reculer')).toBeLessThan(ou('Changer la date et l’heure'))
+    expect(ou('Changer la date et l’heure')).toBeLessThan(ou('Avancer'))
+    expect(ou('Avancer')).toBeLessThan(ou('Avancer vite'))
+    expect(ou('Avancer vite')).toBeLessThan(ou('Mettre le temps en pause'))
   })
 
   it('dessine ses commandes avec des glyphes de la police d’icônes, pas des caractères', () => {
@@ -90,10 +99,10 @@ describe('T-0137 — la barre basse pilote le temps', () => {
   })
 
   it('bascule le bouton de lecture selon l’état du temps', () => {
-    expect(barre()).toContain('aria-label="Mettre le temps en pause"')
+    expect(place(barre(), 'Mettre le temps en pause')).toBeGreaterThan(-1)
     majTemps({ modeTemps: 'FIGE' })
     const enPause = barre()
-    expect(enPause).toContain('aria-label="Reprendre l’écoulement du temps"')
+    expect(place(enPause, 'Reprendre l’écoulement du temps')).toBeGreaterThan(-1)
     expect(enPause).toContain('play_arrow')
   })
 

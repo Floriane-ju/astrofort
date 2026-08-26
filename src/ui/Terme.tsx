@@ -10,6 +10,7 @@
  */
 
 import { createContext, useContext } from 'react'
+import { Bulle } from './Bulle.tsx'
 import type { TermeGlossaire } from '../registry/glossaire.ts'
 import { GLOSSAIRE } from '../registry/glossaire.ts'
 
@@ -34,7 +35,9 @@ export function Etiquette({ cle }: EtiquetteProps) {
   const niveau = useNiveau()
   return (
     <span className="terme">
-      <abbr title={entree.glose}>{entree.libelle}</abbr>
+      <Bulle texte={entree.glose} place="bas">
+        <abbr>{entree.libelle}</abbr>
+      </Bulle>
       {niveau === 'DEBUTANT' && <span className="terme-glose">{entree.glose}</span>}
     </span>
   )

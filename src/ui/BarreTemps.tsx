@@ -16,6 +16,7 @@
 import { useState } from 'react'
 import { facteurDefilement, reglageVitesse } from '../core/curseur-temps.ts'
 import { heureSeconde, jourLocalIso, jourLong, pourChampDateHeure } from './horaire.ts'
+import { Bulle } from './Bulle.tsx'
 import { Icone } from './Icone.tsx'
 import {
   majTemps,
@@ -72,16 +73,16 @@ export function BarreTemps(props: BarreTempsProps) {
   const chevron = (cran: Cran) => {
     const facteur = cran.sens * facteurDefilement(cran.rapide)
     return (
-      <button
-        key={cran.libelle}
-        type="button"
-        className="barretemps-cran"
-        aria-label={cran.libelle}
-        aria-pressed={defile && temps.facteur === facteur}
-        onClick={() => majTemps({ modeTemps: 'DEFILEMENT', facteur })}
-      >
-        <Icone nom={cran.icone} />
-      </button>
+      <Bulle key={cran.libelle} texte={cran.libelle} nomme>
+        <button
+          type="button"
+          className="barretemps-cran"
+          aria-pressed={defile && temps.facteur === facteur}
+          onClick={() => majTemps({ modeTemps: 'DEFILEMENT', facteur })}
+        >
+          <Icone nom={cran.icone} />
+        </button>
+      </Bulle>
     )
   }
 
@@ -97,15 +98,19 @@ export function BarreTemps(props: BarreTempsProps) {
       {defile && (
         <span className="barretemps-facteur">×{Math.abs(reglage.facteur).toFixed(0)}</span>
       )}
-      <button
-        type="button"
-        className="barretemps-lecture"
-        aria-label={enPause ? 'Reprendre l’écoulement du temps' : 'Mettre le temps en pause'}
-        aria-pressed={!enPause}
-        onClick={() => (enPause ? reprend() : majTemps({ modeTemps: 'FIGE' }))}
+      <Bulle
+        texte={enPause ? 'Reprendre l’écoulement du temps' : 'Mettre le temps en pause'}
+        nomme
       >
-        <Icone nom={enPause ? 'play_arrow' : 'pause'} />
-      </button>
+        <button
+          type="button"
+          className="barretemps-lecture"
+          aria-pressed={!enPause}
+          onClick={() => (enPause ? reprend() : majTemps({ modeTemps: 'FIGE' }))}
+        >
+          <Icone nom={enPause ? 'play_arrow' : 'pause'} />
+        </button>
+      </Bulle>
     </div>
   )
 }
