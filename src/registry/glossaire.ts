@@ -248,7 +248,7 @@ export const GLOSSAIRE = Object.freeze({
     sections: ['5.1'],
   }),
   recadrage_capteur: terme({
-    libelle: 'Recadrage capteur',
+    libelle: 'Format du capteur',
     glose: 'utiliser une portion du capteur',
     explication:
       'Le recadrage n’utilise qu’une partie centrale du capteur. Il réduit le champ et rien ' +

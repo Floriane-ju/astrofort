@@ -284,17 +284,15 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
               <option value="APSC_CROP">Recadrage APS-C</option>
             </select>
           </label>
-          <label>
-            <Etiquette cle="type_objectif" />
-            <select
-              value={props.typeObjectif}
-              onChange={(e) => props.surTypeObjectif(e.target.value as TypeObjectif)}
-            >
-              <option value="RECTILINEAIRE">Rectilinéaire — projection gnomonique</option>
-              <option value="FISHEYE">Fisheye — projection équidistante</option>
-            </select>
-          </label>
         </div>
+        <label className="interrupteur">
+          <input
+            type="checkbox"
+            checked={props.typeObjectif === 'FISHEYE'}
+            onChange={(e) => props.surTypeObjectif(e.target.checked ? 'FISHEYE' : 'RECTILINEAIRE')}
+          />
+          Objectif fisheye
+        </label>
         <label className="interrupteur">
           <input
             type="checkbox"
