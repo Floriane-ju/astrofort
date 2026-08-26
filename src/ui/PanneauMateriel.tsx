@@ -26,7 +26,6 @@ import {
   type SaisieBoitier,
 } from '../data/equipment.ts'
 import {
-  SOURCE_TABLE_FORMATS_CAPTEUR,
   TABLE_FORMATS_CAPTEUR,
   ligneFormatCapteur,
   pitchDepuisFormat,
@@ -34,7 +33,17 @@ import {
 } from '../registry/capteur-formats.ts'
 import { DOMAINES, type DomaineId } from '../registry/domains.ts'
 import { TracedValue } from './TracedValue.tsx'
-import { Etiquette, useNiveau } from './Terme.tsx'
+import { Etiquette } from './Terme.tsx'
+import { Bulle } from './Bulle.tsx'
+
+/**
+ * §5.1 — ce que la saisie exige, dit une fois au titre de la carte. Au survol plutôt qu'en
+ * paragraphe : la règle se relit quand on hésite, elle n'occupe pas la place des champs.
+ */
+const AIDE_BOITIER =
+  'Type de capteur et résolution sont exigés : sans eux, ni champ ni échantillonnage ' +
+  'n’existent. Le pitch s’en déduit, il ne se saisit jamais. Le reste peut rester vide — ' +
+  'le registre fournit son repli, et les sorties qui en dépendent portent [ESTIMÉ].'
 
 /** §5.1 — le type d'objectif choisit la projection, il n'ajuste pas un rendu. */
 export type TypeObjectif = 'RECTILINEAIRE' | 'FISHEYE'
@@ -119,7 +128,7 @@ function ChampCapteur({
   )
 }
 
-/** §5.1 — les six grandeurs du mode avancé, invisibles au débutant. */
+/** §5.1 — les six grandeurs du mode avancé : facultatives, repliées derrière un dépliant. */
 function ChampsAvances({
   boitier,
   surChamp,
@@ -183,22 +192,20 @@ function ApercuPitch({
 
 export function PanneauMateriel(props: PanneauMaterielProps) {
   const lectures = props.lectures
-  const niveau = useNiveau()
   const surChamp = (champ: keyof SaisieBoitier) => (v: string) =>
     props.surBoitier({ ...props.boitier, [champ]: v })
 
   return (
     <>
       <section>
-        <h2>Boîtier</h2>
-        <p className="etat">
-          Type de capteur et résolution sont exigés : sans eux, ni champ ni échantillonnage
-          n’existent. Le pitch s’en déduit, il ne se saisit jamais. Le reste peut rester vide —
-          le registre fournit son repli, et les sorties qui en dépendent portent [ESTIMÉ].
-        </p>
+        <h2>
+          <Bulle texte={AIDE_BOITIER} place="bas">
+            <span className="aide">Boîtier</span>
+          </Bulle>
+        </h2>
         <div className="champs">
           <label>
-            <Etiquette cle="type_capteur" />
+            Type de capteur
             <select
               value={props.boitier.formatCapteur}
               onChange={(e) => surChamp('formatCapteur')(e.target.value)}
@@ -222,15 +229,10 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
           formatCapteur={props.boitier.formatCapteur}
           resolutionMpx={props.boitier.resolutionMpx}
         />
-        <p className="tracee-source">Formats de capteur : {SOURCE_TABLE_FORMATS_CAPTEUR}</p>
-        {niveau === 'DEBUTANT' ? (
-          <details>
-            <summary>Grandeurs du capteur — mode avancé</summary>
-            <ChampsAvances boitier={props.boitier} surChamp={surChamp} />
-          </details>
-        ) : (
+        <details>
+          <summary>Grandeurs du capteur — mode avancé</summary>
           <ChampsAvances boitier={props.boitier} surChamp={surChamp} />
-        )}
+        </details>
         {/* §7.1 — zp_source est affiché avec toute pose, donc aussi à sa source. */}
         {lectures !== undefined && (
           <p className={lectures.zeroSysteme.estime ? 'cause' : 'etat'}>

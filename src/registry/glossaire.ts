@@ -216,18 +216,6 @@ export const GLOSSAIRE = Object.freeze({
       'règle jamais au moment de la prise.',
     sections: ['5.1'],
   }),
-  type_capteur: terme({
-    libelle: 'Type de capteur',
-    glose: 'format physique du capteur',
-    explication:
-      'Le type de capteur fixe ses dimensions en millimètres — plein format, APS-C, micro ' +
-      '4/3, moyen format. Ces dimensions ne se saisissent jamais à la main : elles sont ' +
-      'sourcées par format, table du registre.',
-    consequence:
-      'Avec la résolution, il donne le pitch : deux capteurs de même type et de résolutions ' +
-      'différentes n’ont jamais le même pitch.',
-    sections: ['5.1'],
-  }),
   echantillonnage: terme({
     libelle: 'Échantillonnage',
     glose: 'ciel couvert par pixel',

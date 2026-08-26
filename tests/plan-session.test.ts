@@ -42,7 +42,6 @@ function contexte(surcharge: Partial<ContexteSession> = {}): ContexteSession {
     tMaxS: 200,
     snrCible: 10,
     typeMonture: 'TRACKER',
-    niveau: 'CONFIRME',
     ...surcharge,
   }
 }
@@ -158,6 +157,10 @@ describe('plan de session §8.3', () => {
     for (const ecartee of plan.ciblesEcartees) expect(ecartee.cause).not.toBe('')
   })
 
+  it('donne à chaque étape sa consigne de terrain', () => {
+    for (const etape of plan.etapes) expect(etape.consigne).not.toBe('')
+  })
+
   it('rappelle qu’aucun filtre météo n’est appliqué', () => {
     expect(plan.avertissementMeteo).toMatch(/météo/)
     expect(plan.avertissementMeteo).toMatch(/nuages/)
@@ -167,15 +170,6 @@ describe('plan de session §8.3', () => {
     expect(plan.poids).toStrictEqual(poidsParDefaut())
     const somme = Object.values(plan.poids).reduce((a, b) => a + b, 0)
     expect(somme).toBeCloseTo(1, 6)
-  })
-})
-
-describe('niveau débutant §8.3', () => {
-  it('limite le plan à deux cibles et élargit la marge de temps', () => {
-    const plan = planSession(contexte({ niveau: 'DEBUTANT' }), CATALOGUE)
-    expect(plan.etapes.length).toBeLessThanOrEqual(2)
-    expect(plan.budget.margeMin).toBeGreaterThan(0)
-    for (const etape of plan.etapes) expect(etape.consigne).not.toBe('')
   })
 })
 

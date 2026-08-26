@@ -260,7 +260,7 @@ describe('contraste du texte — WCAG 2.2 AA', () => {
     // deux états partagent la même.
     const nuit = paletteDeNuit()
     expect(luminance(nuit['attenue']!)).toBeLessThan(luminance(nuit['texte']!))
-    for (const selecteur of ['label', '.etat', '.niveau']) {
+    for (const selecteur of ['label', '.etat']) {
       expect(regle(selecteur), selecteur).toMatch(/font-size: 0\.\d+rem/)
     }
     expect(regle('.onglet.actif')).toMatch(/font-weight: 700/)

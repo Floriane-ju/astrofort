@@ -45,7 +45,6 @@ const CONTEXTE: ContexteSession = {
   tMaxS: 200,
   snrCible: 10,
   typeMonture: 'TRACKER',
-  niveau: 'CONFIRME',
 }
 
 function objet(surcharge: Partial<ObjetCielProfond>): ObjetCielProfond {

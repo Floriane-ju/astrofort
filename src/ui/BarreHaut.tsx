@@ -1,9 +1,8 @@
 /**
  * La barre haute : la marque, où pointe la vue, et ce qui ouvre le reste.
  *
- * T-0113 — elle ne porte plus de réglage, seulement des bascules. Le niveau d'explication est
- * descendu dans le tiroir des réglages ; ce qui reste sont quatre tiroirs de terrain et deux
- * boutons de panneau. L'ordre est un contrat : le mode nuit d'abord parce qu'il se cherche
+ * T-0113 — elle ne porte plus de réglage, seulement des bascules : quatre tiroirs de terrain
+ * et deux boutons de panneau. L'ordre est un contrat : le mode nuit d'abord parce qu'il se cherche
  * dans le noir, les panneaux ensuite, puis la vérification, les réglages, et les lectures en
  * dernier — donc le plus à droite, et sans hauteur tant qu'elles sont fermées (T-0038,
  * T-0047).
@@ -20,15 +19,12 @@ import { MenuReglages } from './MenuReglages.tsx'
 import type { SaisiePoids } from './app-saisie.ts'
 import { Verification } from './Verification.tsx'
 import { ModeNuit, type EtatModeNuit } from './ModeNuit.tsx'
-import type { NiveauUtilisateur } from './Terme.tsx'
 import type { Persistance } from './app-donnees.ts'
 import { TITRES_PANNEAU } from './PanneauLateral.tsx'
 import { basculePanneau, useCoque, type PanneauLateral } from './coque-etat.ts'
 import { useTrancheScene, type EtatScene } from './scene-etat.ts'
 
 export interface BarreHautProps {
-  readonly niveau: NiveauUtilisateur
-  readonly surNiveau: (niveau: NiveauUtilisateur) => void
   readonly focale: string
   readonly ouverture: string
   readonly capteurMode: CapteurMode
@@ -119,7 +115,7 @@ export function BarreHaut(props: BarreHautProps) {
       />
       {/* T-0047 — ce qui se règle une fois et ne décrit pas une séance. Avant le menu des
           lectures, qui reste le dernier élément. */}
-      <MenuReglages poids={props.poids} niveau={props.niveau} surNiveau={props.surNiveau} />
+      <MenuReglages poids={props.poids} />
       {/* T-0038 — les lectures qui datent l'image : dernier élément de la barre, donc le
           plus à droite, et sans hauteur tant qu'il est fermé. */}
       <MenuInfos

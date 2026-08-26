@@ -22,8 +22,6 @@ import type { MasqueHorizon } from './site.ts'
 import type { TypeMonture } from './tracking.ts'
 import type { Traced } from './traced.ts'
 
-export type NiveauUtilisateurPlan = 'DEBUTANT' | 'CONFIRME'
-
 export type CauseEcart =
   | 'DONNEE_MANQUANTE'
   | 'CADRAGE'
@@ -103,7 +101,6 @@ export interface ContexteSession {
   readonly tMaxS: number | null
   readonly snrCible: number
   readonly typeMonture: TypeMonture
-  readonly niveau: NiveauUtilisateurPlan
   readonly filtres?: readonly FamilleFiltre[]
   readonly poids?: PoidsScoring
   readonly seuilHauteurDeg?: number
@@ -149,7 +146,6 @@ export interface BudgetNuit {
   readonly calibrationMin: number
   readonly miseEnStationMin: number
   readonly pointageMin: number
-  readonly margeMin: number
   readonly totalMin: Traced<number>
   readonly tient: boolean
 }

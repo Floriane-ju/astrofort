@@ -72,7 +72,3 @@ export function pitchDepuisFormat(ligne: LigneFormatCapteur, resolutionMpx: numb
   const resolutionLPx = Math.sqrt(resolutionMpx * 1_000_000 * ratio)
   return (ligne.capteurLMm * 1000) / resolutionLPx
 }
-
-export const SOURCE_TABLE_FORMATS_CAPTEUR =
-  'Dimensions physiques usuelles par format de capteur. Documentation constructeur, aucune ' +
-  'marque de boîtier ni prix commercial.'

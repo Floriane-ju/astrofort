@@ -5,40 +5,26 @@
  * qui tient la règle « aucun terme affiché ne peut être absent du glossaire » — un libellé
  * sans entrée ne compile pas, et le compilateur nomme la clé manquante.
  *
- * Le niveau d'affichage ne change QUE la densité d'explication. Aucun calcul, aucune valeur
- * numérique n'en dépend.
+ * Une seule densité d'explication : la glose sort au survol, l'explication complète au clic.
+ * Un réglage de verbosité faisait choisir à l'utilisateur ce que le survol donne déjà.
  */
 
-import { createContext, useContext } from 'react'
 import { Bulle } from './Bulle.tsx'
 import type { TermeGlossaire } from '../registry/glossaire.ts'
 import { GLOSSAIRE } from '../registry/glossaire.ts'
-
-export type NiveauUtilisateur = 'DEBUTANT' | 'CONFIRME'
-
-export const NiveauContext = createContext<NiveauUtilisateur>('DEBUTANT')
-
-export function useNiveau(): NiveauUtilisateur {
-  return useContext(NiveauContext)
-}
 
 interface EtiquetteProps {
   readonly cle: TermeGlossaire
 }
 
-/**
- * Libellé d'un terme, glose au survol. En mode débutant la glose est aussi visible sans
- * survol : le jargon est accompagné systématiquement, l'interface reste dense en CONFIRME.
- */
+/** Libellé d'un terme, glose au survol — le pointillé sous le mot annonce qu'il y a une aide. */
 export function Etiquette({ cle }: EtiquetteProps) {
   const entree = GLOSSAIRE[cle]
-  const niveau = useNiveau()
   return (
     <span className="terme">
       <Bulle texte={entree.glose} place="bas">
         <abbr>{entree.libelle}</abbr>
       </Bulle>
-      {niveau === 'DEBUTANT' && <span className="terme-glose">{entree.glose}</span>}
     </span>
   )
 }

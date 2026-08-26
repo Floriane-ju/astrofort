@@ -2542,7 +2542,6 @@ Coordonnées : OpenNGC, Messier, Sharpless, Barnard. Transformations et instants
 | Champ | Type | Unité | Plage valide | Note |
 |---|---|---|---|---|
 | `date`, `lieu`, `profil_materiel` | — | — | §4, §5 | |
-| `niveau_utilisateur` | enum | — | DEBUTANT / CONFIRME | pilote seuils et verbosité |
 | `poids_scoring` | objet | — | somme = 1 | C-15, réglable, affiché |
 | `snr_cible` | float | — | §7.3 | |
 | `plan` | array | — | sortie | cibles ordonnées |
@@ -2551,7 +2550,7 @@ Coordonnées : OpenNGC, Messier, Sharpless, Barnard. Transformations et instants
 | `plan[].score`, `plan[].detail_score` | float, objet | — | sortie | **décomposition exposée** |
 | `plan[].verdict` | enum | — | §6.3 | |
 | `cibles_ecartees` | array | — | sortie | avec `cause_exclusion` |
-| `budget_nuit` | objet | — | sortie | capture / calibration / pointage / marge |
+| `budget_nuit` | objet | — | sortie | capture / calibration / mise en station / pointage |
 
 ### Critères d'acceptation
 
@@ -2561,6 +2560,7 @@ Quand je demande le plan de la nuit
 Alors l'app propose une chronologie de cibles ordonnée par culmination
 Et le budget total, calibration et pointage inclus, tient dans les 5 h 49 disponibles
 Et chaque cible affiche la décomposition de son score
+Et chaque étape porte sa consigne de terrain
 
 Étant donné une nuit où aucune cible ne franchit le pré-filtrage    # cas limite
 Quand je demande le plan
@@ -2577,11 +2577,6 @@ Et l'app expose l'arbitrage plutôt que de les planifier simultanément
 Quand le plan est finalisé
 Alors la cible de plus faible score est retirée entièrement
 Et aucune intégration n'est tronquée sans mention explicite
-
-Étant donné niveau_utilisateur = DEBUTANT
-Quand le plan est produit
-Alors il est limité à deux cibles au maximum, avec marge de temps élargie
-Et chaque étape porte sa consigne de terrain
 ```
 
 ### Dépendances données
@@ -3174,10 +3169,11 @@ TERMES OBLIGATOIRES — dérivés des sorties des moteurs, non exhaustif
   §9 NPF · règle des 500 · filé · latitude galactique · projection rectilinéaire
   §3 temps sidéral · précession · astérisme · frontière IAU · indice B−V
 
-NIVEAU D'AFFICHAGE
-  DEBUTANT  gloses visibles par défaut, jargon accompagné systématiquement
-  CONFIRME  gloses au survol uniquement, interface non encombrée
-  Le réglage n'altère AUCUN calcul. Il ne change que la densité d'explication.
+DENSITÉ D'EXPLICATION — une seule, pour tous
+  La glose sort au survol du terme, l'explication complète au clic. Aucun réglage de
+  verbosité : il faisait choisir à l'utilisateur ce que le survol donne déjà, et un
+  débutant n'a aucun moyen de savoir lequel des deux niveaux lui convient.
+  → corollaire : aucune information critique ne dépend du seul survol (§11.2).
 ```
 
 ### Entrées / Sorties
@@ -3186,7 +3182,6 @@ NIVEAU D'AFFICHAGE
 |---|---|---|---|---|
 | `cle_terme` | string | — | — | identifiant stable |
 | `contexte_valeur` | float ou string | variable | — | valeur courante de l'utilisateur |
-| `niveau_utilisateur` | enum | — | DEBUTANT / CONFIRME | §8.3 |
 | `glose`, `explication`, `consequence` | string | — | — | sortie |
 | `sections_source` | array | — | — | traçabilité |
 
@@ -3202,10 +3197,10 @@ Et le clic révèle l'explication, la valeur calculée pour cette cible et sa co
 Quand le projet est compilé
 Alors la compilation échoue en nommant le terme manquant
 
-Étant donné le niveau DEBUTANT puis CONFIRME sur une même fiche
-Quand je compare les deux affichages
-Alors seule la densité d'explication diffère
-Et toutes les valeurs numériques sont identiques
+Étant donné un terme technique affiché n'importe où dans l'interface
+Quand je le survole puis que je le clique
+Alors son aide est atteignable par les deux gestes
+Et aucune information critique ne dépend du seul survol
 
 Étant donné un terme dont la valeur en contexte n'est pas encore calculée  # cas limite
 Quand je l'ouvre
@@ -3593,7 +3588,6 @@ REPLI EN UNE COLONNE — sous une largeur seuil
 | Champ | Type | Unité | Plage valide | Note |
 |---|---|---|---|---|
 | `onglet_actif` | enum | — | EXPLORER / CIBLE / NUIT / FILE | état partagé avec la scène |
-| `niveau_utilisateur` | enum | — | DEBUTANT / CONFIRME | §10.1, aucun effet de calcul |
 | `menus_ouverts` | set | — | nuit / vérification / réglages / lectures | |
 | `alerte_menu` | bool | — | par menu | signalée sur le menu fermé |
 

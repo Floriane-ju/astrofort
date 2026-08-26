@@ -43,7 +43,6 @@ export function planEnTexte(plan: PlanSession, enTete: EnTetePlan): string {
   lignes.push(`  Calibration         : ${b.calibrationMin.toFixed(0)} min`)
   lignes.push(`  Mise en station     : ${b.miseEnStationMin.toFixed(0)} min`)
   lignes.push(`  Pointage            : ${b.pointageMin.toFixed(0)} min`)
-  if (b.margeMin > 0) lignes.push(`  Marge               : ${b.margeMin.toFixed(0)} min`)
   lignes.push(
     `  Total               : ${b.totalMin.value.toFixed(0)} min — ` +
       `${b.tient ? 'tient dans la nuit' : 'DÉPASSE la nuit disponible'}`,

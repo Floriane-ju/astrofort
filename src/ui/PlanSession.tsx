@@ -105,12 +105,6 @@ export function PlanSessionVue(props: PlanSessionProps) {
               <th>Pointage</th>
               <td>{plan.budget.pointageMin.toFixed(0)} min</td>
             </tr>
-            {plan.budget.margeMin > 0 && (
-              <tr>
-                <th>Marge (niveau débutant)</th>
-                <td>{plan.budget.margeMin.toFixed(0)} min</td>
-              </tr>
-            )}
           </tbody>
         </table>
         <TracedValue terme="budget_nuit" trace={plan.budget.totalMin} decimales={0} unite="min" />

@@ -777,16 +777,6 @@ const PLANIFICATION = {
     ordreDeGrandeur: false,
     sections: ['8.3'],
   }),
-  CIBLES_MAX_DEBUTANT: entree({
-    ref: 'C-20',
-    libelle: 'Nombre de cibles maximal au niveau débutant',
-    valeur: 2,
-    unite: '—',
-    source: '§8.3 — « limité à deux cibles au maximum, avec marge de temps élargie »',
-    tolerance: null,
-    ordreDeGrandeur: false,
-    sections: ['8.3'],
-  }),
   CIBLES_CANDIDATES_MAX: entree({
     ref: 'C-20',
     libelle: 'Nombre de candidates soumises au calcul de créneau',
@@ -822,16 +812,6 @@ const PLANIFICATION = {
     tolerance: 'convention produit',
     ordreDeGrandeur: false,
     sections: ['6.4'],
-  }),
-  MARGE_NUIT_DEBUTANT: entree({
-    ref: 'C-20',
-    libelle: 'Part de la nuit réservée en marge au niveau débutant',
-    valeur: 0.2,
-    unite: '—',
-    source: '§8.3 — marge de temps élargie pour un débutant',
-    tolerance: 'ordre de grandeur',
-    ordreDeGrandeur: true,
-    sections: ['8.3'],
   }),
 } as const
 

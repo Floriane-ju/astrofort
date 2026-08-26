@@ -52,7 +52,6 @@ import {
 } from '../data/equipment.ts'
 import { K } from '../registry/constants.ts'
 import type { Traced } from '../core/traced.ts'
-import type { NiveauUtilisateur } from './Terme.tsx'
 import { modeObjectif } from './PanneauMateriel.tsx'
 import type { SaisieLieu, SaisieMateriel } from './app-saisie.ts'
 import type { MaterielFile } from './planetarium-materiel.ts'
@@ -105,7 +104,6 @@ export interface ChaineCalcul {
 export interface EntreeChaine {
   readonly lieu: SaisieLieu
   readonly materiel: SaisieMateriel
-  readonly niveau: NiveauUtilisateur
   readonly catalogue: readonly ObjetCielProfond[]
   readonly etoiles: readonly Etoile[]
   /** §9.2 — la pose unitaire du filé, réglée dans le panneau du même nom. */
@@ -115,7 +113,7 @@ export interface EntreeChaine {
 }
 
 export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
-  const { lieu, materiel, niveau, catalogue, etoiles, tPoseFileS, poids } = entree
+  const { lieu, materiel, catalogue, etoiles, tPoseFileS, poids } = entree
 
   /**
    * §4.1 — le relief relevé à la main l'emporte sur toute hypothèse. Sans relevé, le masque
@@ -252,10 +250,9 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
         tMaxS: calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value,
         snrCible: PRESET_SNR_PLAN,
         typeMonture: materiel.typeMonture,
-        niveau,
         poids,
     }
-  }, [calcul, masque, niveau, materiel.typeMonture, site, fenetreUtile, poids])
+  }, [calcul, masque, materiel.typeMonture, site, fenetreUtile, poids])
 
   const plan = useMemo(() => {
     if (contexteSession === null || catalogue.length === 0) return null

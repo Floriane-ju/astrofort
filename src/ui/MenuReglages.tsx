@@ -10,14 +10,14 @@
  * un objet pour n'en voir que le nom n'avait de sens que tant qu'il n'existait pas d'écran
  * pour le montrer.
  *
- * Ne restent ici que deux réglages qui ne décrivent pas une séance : la densité
- * d'explication, et les poids de scoring de §8.3.
+ * Ne restent ici que les poids de scoring de §8.3 : le seul réglage qui ne décrit pas une
+ * séance. Le niveau d'explication a disparu — la glose sort au survol pour tout le monde.
  */
 
 import { normalisePoids } from '../core/session.ts'
 import { DOMAINES } from '../registry/domains.ts'
 import { CRITERES_SCORING, type CritereScoring, type SaisiePoids } from './app-saisie.ts'
-import { Etiquette, type NiveauUtilisateur } from './Terme.tsx'
+import { Etiquette } from './Terme.tsx'
 
 const POURCENT = 100
 
@@ -85,9 +85,6 @@ function ReglagePoids(props: SaisiePoids) {
 
 export interface MenuReglagesProps {
   readonly poids: SaisiePoids
-  /** §10.1 — le niveau ne change QUE la densité d'explication, jamais un calcul. */
-  readonly niveau: NiveauUtilisateur
-  readonly surNiveau: (niveau: NiveauUtilisateur) => void
 }
 
 export function MenuReglages(props: MenuReglagesProps) {
@@ -101,19 +98,6 @@ export function MenuReglages(props: MenuReglagesProps) {
       <summary>Réglages</summary>
 
       <div className="tiroir-contenu">
-        {/* T-0113 — le niveau d'explication rejoint les réglages. Il était dans la barre
-            haute, où il occupait une ligne entière pour un choix qu'on fait une fois. */}
-        <p className="niveau">
-          Niveau d’explication :{' '}
-          <select
-            value={props.niveau}
-            onChange={(e) => props.surNiveau(e.target.value as NiveauUtilisateur)}
-          >
-            <option value="DEBUTANT">Débutant — gloses visibles</option>
-            <option value="CONFIRME">Confirmé — gloses au survol</option>
-          </select>
-        </p>
-
         <ReglagePoids {...props.poids} />
       </div>
     </details>

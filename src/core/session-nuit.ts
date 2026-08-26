@@ -79,9 +79,7 @@ export function calculeBudget(
   const calibrationMin = calibration === null ? 0 : calibration.surcoutTempsMin.value
   const miseEnStationMin = K('TEMPS_MISE_EN_STATION_MIN')
   const pointageMin = K('TEMPS_POINTAGE_PAR_CIBLE_MIN') * etapes.length
-  const margeMin =
-    contexte.niveau === 'DEBUTANT' ? disponibleMin * K('MARGE_NUIT_DEBUTANT') : 0
-  const total = captureMin + calibrationMin + miseEnStationMin + pointageMin + margeMin
+  const total = captureMin + calibrationMin + miseEnStationMin + pointageMin
 
   return {
     disponibleMin,
@@ -89,7 +87,6 @@ export function calculeBudget(
     calibrationMin,
     miseEnStationMin,
     pointageMin,
-    margeMin,
     totalMin: trace({
       value: total,
       formula: 'BUDGET_NUIT',
@@ -98,7 +95,6 @@ export function calculeBudget(
         calibration_min: calibrationMin,
         mise_en_station_min: miseEnStationMin,
         pointage_min: pointageMin,
-        marge_min: margeMin,
       },
       constants: ['TEMPS_MISE_EN_STATION_MIN', 'TEMPS_POINTAGE_PAR_CIBLE_MIN'],
     }),

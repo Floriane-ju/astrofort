@@ -32,7 +32,6 @@ import {
 import { profilAEnregistrer, siteAEnregistrer } from './ui/saisie-persistee.ts'
 import { useChaineCalcul } from './ui/app-calcul.ts'
 import { appliqueModeNuit, litEtatPersiste, type EtatModeNuit } from './ui/ModeNuit.tsx'
-import { NiveauContext, type NiveauUtilisateur } from './ui/Terme.tsx'
 
 const MS_PAR_JOUR = 86_400_000
 
@@ -72,7 +71,6 @@ export function App() {
 }
 
 function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
-  const [niveau, setNiveau] = useState<NiveauUtilisateur>('DEBUTANT')
   const lieu = useSaisieLieu(restauree.lieu)
   const materiel = useSaisieMateriel(restauree.materiel)
   const poids = useSaisiePoids()
@@ -87,7 +85,6 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
   const chaine = useChaineCalcul({
     lieu,
     materiel,
-    niveau,
     catalogue: catalogues.objets,
     etoiles: catalogues.etoiles,
     tPoseFileS: file.tPoseS,
@@ -111,8 +108,6 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
 
   const topbar = (
     <BarreHaut
-      niveau={niveau}
-      surNiveau={setNiveau}
       focale={materiel.focale}
       ouverture={materiel.ouverture}
       capteurMode={materiel.capteurMode}
@@ -205,14 +200,12 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
   )
 
   return (
-    <NiveauContext value={niveau}>
-      <Coque
-        topbar={topbar}
-        scene={scene}
-        cartes={<CartesSeance {...regions} materielRendu={panneauMateriel} />}
-        lateral={<LateralSeance {...regions} />}
-        barrebas={barrebas}
-      />
-    </NiveauContext>
+    <Coque
+      topbar={topbar}
+      scene={scene}
+      cartes={<CartesSeance {...regions} materielRendu={panneauMateriel} />}
+      lateral={<LateralSeance {...regions} />}
+      barrebas={barrebas}
+    />
   )
 }

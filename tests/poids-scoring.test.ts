@@ -71,7 +71,6 @@ function contexte(poids?: PoidsScoring): ContexteSession {
     tMaxS: 13,
     snrCible: 10,
     typeMonture: 'TRACKER',
-    niveau: 'CONFIRME',
     ...(poids === undefined ? {} : { poids }),
   }
 }

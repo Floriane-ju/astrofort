@@ -48,7 +48,6 @@ export {
   type ContexteSession,
   type DetailScore,
   type EtapePlan,
-  type NiveauUtilisateurPlan,
   type PlanSession,
   type PoidsScoring,
 } from './session-types.ts'
@@ -159,22 +158,10 @@ function alloueLaNuit(
   ecartees: CibleEcartee[],
 ): readonly EtapePlan[] {
   const parScore = retenues.slice().sort((a, b) => b.score.value - a.score.value)
-  const limite =
-    contexte.niveau === 'DEBUTANT' ? K('CIBLES_MAX_DEBUTANT') : Number.POSITIVE_INFINITY
   const occupes: Intervalle[] = []
   const etapes: EtapePlan[] = []
 
   for (const candidate of parScore) {
-    if (etapes.length >= limite) {
-      ecartees.push({
-        designation: candidate.objet.designation,
-        code: 'BUDGET',
-        cause:
-          `Plan limité à ${K('CIBLES_MAX_DEBUTANT')} cibles au niveau débutant, avec une marge ` +
-          'de temps élargie. Passer au niveau confirmé lève cette limite.',
-      })
-      continue
-    }
     const tRequisMin = candidate.integration.tRequisS.value / S_PAR_MINUTE
     const alloue = alloueCreneau(candidate.creneau, occupes, tRequisMin)
     if (alloue === null) {

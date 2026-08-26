@@ -86,7 +86,6 @@ function contexteSession(dateIso: string): ContexteSession {
     tMaxS: T_MAX_S,
     snrCible: SNR_PLAN,
     typeMonture: 'TRACKER',
-    niveau: 'CONFIRME',
   }
 }
 

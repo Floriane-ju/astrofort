@@ -87,11 +87,8 @@ const POIDS_INERTES = {
   surDefaut: () => undefined,
 }
 
-/** Le tiroir des réglages porte aussi le niveau d'explication depuis T-0113. */
 const REGLAGES_INERTES = {
   poids: POIDS_INERTES,
-  niveau: 'DEBUTANT',
-  surNiveau: () => undefined,
 } as const
 
 /** La barre haute : tout ce qui précède la scène dans le document. */
@@ -574,10 +571,10 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
     expect(rendu).not.toContain('<datalist')
   })
 
-  it('T-0113 — porte aussi le niveau d’explication, qui a quitté la barre haute', () => {
+  it('ne porte plus de niveau d’explication : la glose est au survol pour tous', () => {
     const rendu = renderToStaticMarkup(<MenuReglages {...REGLAGES_INERTES} />)
-    expect(rendu).toContain('Niveau d’explication')
-    expect(rendu).toContain('Débutant — gloses visibles')
+    expect(rendu).not.toContain('Niveau')
+    expect(rendu).not.toContain('<select')
   })
 
   it('T-0087 — porte les cinq poids C-15 et le retour aux valeurs du registre', () => {
