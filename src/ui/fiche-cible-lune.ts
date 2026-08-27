@@ -27,22 +27,13 @@ const DEG_PAR_HEURE = 360 / HEURES_PAR_TOUR
 export interface EntreeLuneCible {
   readonly site: Site
   readonly instant: Date
-  /** La cible du catalogue : sans ses coordonnées, il n'y a ni séparation ni hauteur. */
-  readonly objet: ObjetCielProfond | null
+  /** La cible du catalogue : ses coordonnées portent la séparation et la hauteur. */
+  readonly objet: ObjetCielProfond
   readonly sbCielNoirMag: number
 }
 
 export function lunePourCible(entree: EntreeLuneCible): LuneFiche {
   const objet = entree.objet
-  if (objet === null) {
-    return {
-      evaluee: false,
-      cause:
-        'Cible personnalisée : sans coordonnées, ni la séparation à la Lune ni la hauteur de ' +
-        'la cible ne se calculent. Le fond de ciel reste celui du site, et la Lune n’est pas ' +
-        'chiffrée plutôt que devinée. Choisir la cible dans la liste des visibles l’évalue.',
-    }
-  }
   try {
     return {
       evaluee: true,
@@ -74,7 +65,7 @@ export function lunePourCible(entree: EntreeLuneCible): LuneFiche {
 export function useLuneCible(
   site: Site,
   sbCielNoirMag: number,
-  objet: ObjetCielProfond | null,
+  objet: ObjetCielProfond,
 ): LuneFiche {
   const minute = useTrancheScene(minuteAffichee)
   return lunePourCible({

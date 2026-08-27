@@ -1,12 +1,12 @@
 /**
- * La chaîne de calcul de la fiche : d'une cible saisie jusqu'à « pose 13 s, 252 images,
- * 8,3 Go », en passant par §6.1 domaine, §6.2 cadrage, §6.3 détectabilité et §7 pose.
+ * La chaîne de calcul de la fiche : d'une cible du catalogue jusqu'à « pose 13 s, 252 images,
+ * 8,3 Go », en passant par §6.2 cadrage, §6.3 détectabilité et §7 pose.
  *
  * Aucune de ces fonctions ne connaît React : elles prennent des valeurs et rendent des
  * valeurs tracées. C'est ce qui rend la chaîne vérifiable de bout en bout.
  */
 
-import { ficheCadrage, verdictDomaine, type FicheCadrage, type VerdictDomaine } from '../core/framing.ts'
+import { ficheCadrage, type FicheCadrage } from '../core/framing.ts'
 import { detectabilite, type Detectabilite } from '../core/detectability.ts'
 import {
   attenuationBrute,
@@ -53,7 +53,6 @@ export interface ContexteFiche {
   readonly mLimOeil: number | null
   /** Plafond de pose : monture avec suivi (§5.2), ou pose NPF sans suivi (§9.1). */
   readonly tMaxS: number | null
-  readonly catalogue: readonly ObjetCielProfond[]
   /** Classe Bortle déclarée, quand elle l'est : elle conditionne le conseil filtre (§7.5). */
   readonly bortle: number | null
   readonly suiviActif: boolean
@@ -69,17 +68,7 @@ export type LuneFiche =
   | { readonly evaluee: true; readonly instant: Date; readonly ciel: CielSousLaLune }
   | { readonly evaluee: false; readonly cause: string }
 
-/** Les six champs de la fiche, tels que l'utilisateur les voit — donc des chaînes. */
-export interface SaisieCible {
-  readonly typeObjet: TypeObjet
-  readonly mInt: string
-  readonly aArcmin: string
-  readonly bArcmin: string
-  readonly posAngDeg: string
-}
-
 export interface Resultat {
-  readonly domaine: VerdictDomaine
   /** §8.1 — le ciel sous la Lune tel qu'il a été retenu, ou la raison de son absence. */
   readonly lune: LuneFiche
   /** Fond de ciel effectivement employé : celui du site, dégradé par la Lune si elle l'est. */
@@ -106,18 +95,13 @@ export interface Conseils {
   readonly recommandations: SortieRecommandations
 }
 
-export function nombreOuNull(texte: string): number | null {
-  const valeur = Number(texte)
-  return texte.trim() === '' || !Number.isFinite(valeur) ? null : valeur
-}
-
 /**
  * `permissif` est le mode C-03 = 3 de §7.2 : il n'est jamais déduit du contexte, il est
  * demandé. Une pose divisée par trois se choisit, elle ne s'applique pas en silence.
  */
 export function evalue(
   contexte: ContexteFiche,
-  saisie: SaisieCible,
+  objet: ObjetCielProfond,
   snrCible: number,
   iso: IsoRetenu,
   lune: LuneFiche,
@@ -128,10 +112,9 @@ export function evalue(
   // le faisait sous le ciel noir du site, et annonçait donc une autre pose pour la même
   // cible. Un seul fond de ciel traverse maintenant toute la chaîne.
   const sbCiel = lune.evaluee ? lune.ciel.sbCielEffectif : contexte.sbCiel
-  const domaine = verdictDomaine(fovHDeg, contexte.catalogue)
-  const a = nombreOuNull(saisie.aArcmin)
-  const b = nombreOuNull(saisie.bArcmin)
-  const m = nombreOuNull(saisie.mInt)
+  const a = objet.majAxArcmin
+  const b = objet.minAxArcmin
+  const m = objet.vMag
 
   const cadrage = ficheCadrage({
     fovHDeg,
@@ -139,14 +122,14 @@ export function evalue(
     capteurHMm: contexte.capteurHMm,
     tailleMajArcmin: a ?? 0,
     tailleMinArcmin: b,
-    posAngDeg: nombreOuNull(saisie.posAngDeg),
+    posAngDeg: objet.posAngDeg,
   })
 
   const detect = detectabilite({
     mInt: m,
     aArcmin: a,
     bArcmin: b,
-    typeObjet: saisie.typeObjet,
+    typeObjet: objet.type,
     sbCiel,
     mLimOeil: contexte.mLimOeil,
     dMm: contexte.optique.dMm.value,
@@ -173,8 +156,8 @@ export function evalue(
 
   /**
    * §7.6 — la hauteur à laquelle la cible est éteinte : sa CULMINATION, la même convention
-   * que celle du modèle lunaire de cette fiche et du plan de séance. Une cible personnalisée
-   * n'a pas de coordonnées, donc pas de hauteur : l'extinction n'est alors pas supposée, et
+   * que celle du modèle lunaire de cette fiche et du plan de séance. Lune non évaluée — hors
+   * du domaine des séries — vaut hauteur inconnue : l'extinction n'est alors pas supposée, et
    * la durée annoncée se présente comme un plancher.
    */
   const hauteurEvaluationDeg = lune.evaluee ? lune.ciel.altitudeCibleDeg : null
@@ -182,7 +165,6 @@ export function evalue(
   const sbObj = detect.sbObj.value
   if (sbObj === null) {
     return {
-      domaine,
       lune,
       sbCielEffectif: sbCiel,
       cadrage,
@@ -212,7 +194,6 @@ export function evalue(
   // et l'écran affiche le refus plutôt qu'une intégration extrapolée (§7.6, borne dure).
   if (eObjReel === null) {
     return {
-      domaine,
       lune,
       sbCielEffectif: sbCiel,
       cadrage,
@@ -254,7 +235,6 @@ export function evalue(
   })
 
   return {
-    domaine,
     lune,
     sbCielEffectif: sbCiel,
     cadrage,
@@ -266,7 +246,7 @@ export function evalue(
     pose,
     integration,
     calibration,
-    explique: expliqueVerdict(contexte, saisie, snrCible, {
+    explique: expliqueVerdict(contexte, objet, snrCible, {
       cadrage,
       detect,
       eCiel,
@@ -308,7 +288,7 @@ interface PointExplicationFiche extends Readonly<Record<string, number>> {
  */
 function expliqueVerdict(
   contexte: ContexteFiche,
-  saisie: SaisieCible,
+  objet: ObjetCielProfond,
   snrCible: number,
   r: {
     readonly cadrage: FicheCadrage
@@ -371,7 +351,7 @@ function expliqueVerdict(
     point,
     contexte: {
       verdict: r.detect.verdict,
-      typeObjet: saisie.typeObjet,
+      typeObjet: objet.type,
       cibleImposee: true,
       cadrageRefuse: !r.cadrage.faisable,
       // §7.6 — sous le seuil d'imagerie, le créneau devient un levier chiffré et non une

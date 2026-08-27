@@ -177,8 +177,9 @@ export function masseAirBrute(hauteurDeg: number): number {
 /**
  * Masse d'air. La formule cesse d'être valide sous environ 15° de hauteur.
  *
- * `null` en entrée n'est pas une erreur : une cible personnalisée n'a pas de coordonnées,
- * donc pas de hauteur, et la sortie le dit au lieu de supposer le zénith (§7.6).
+ * `null` en entrée n'est pas une erreur : une cible dont l'instant d'évaluation sort du
+ * domaine des séries n'a pas de hauteur, et la sortie le dit au lieu de supposer le
+ * zénith (§7.6).
  */
 export function masseAir(hauteurDeg: number | null): Traced<number | null> {
   if (hauteurDeg === null || hauteurDeg <= 0) {

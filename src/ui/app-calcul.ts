@@ -29,6 +29,7 @@ import {
   type FondDeCiel,
 } from '../core/sky-background.ts'
 import { profilOptique, type ProfilOptique } from '../core/optics.ts'
+import { verdictDomaine, type VerdictDomaine } from '../core/framing.ts'
 import { fluxCiel } from '../core/exposure.ts'
 import { construitIndex, type IndexCiel } from '../core/index-ciel.ts'
 import type { EntreeProfondeur } from '../core/galactique.ts'
@@ -114,6 +115,11 @@ export interface ChaineCalcul {
   readonly plan: PlanSession | null
   /** Le matériel et le ciel sous lesquels la fiche évalue une cible (§6, §7). */
   readonly contexteFiche: ContexteFiche | null
+  /**
+   * §6.1 — ce que ce setup cadre. Sortie du MATÉRIEL et du catalogue, pas d'une cible : elle
+   * se lit dès que l'optique est chiffrable, avant qu'aucun objet ne soit désigné.
+   */
+  readonly domaineCadrage: VerdictDomaine | null
   readonly panneauFile: PanneauFileProps | null
 }
 
@@ -277,6 +283,11 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     return planSession(contexteSession, catalogue)
   }, [contexteSession, catalogue])
 
+  const domaineCadrage = useMemo(
+    () => (calcul.ok ? verdictDomaine(calcul.optique.fovHDeg.value, catalogue) : null),
+    [calcul, catalogue],
+  )
+
   return {
     calcul,
     ciel,
@@ -289,7 +300,8 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     contexteSession,
     plan,
     contexteFiche:
-      calcul.ok && ciel.ok ? contexteFiche(calcul, ciel, materiel, lieu, catalogue) : null,
+      calcul.ok && ciel.ok ? contexteFiche(calcul, ciel, materiel, lieu) : null,
+    domaineCadrage,
     panneauFile:
       calcul.ok && profondeurFile !== null
         ? panneauFile(calcul, materiel, site, profondeurFile)
@@ -398,7 +410,6 @@ function contexteFiche(
   ciel: CalculCiel & { ok: true },
   materiel: SaisieMateriel,
   lieu: SaisieLieu,
-  catalogue: readonly ObjetCielProfond[],
 ): ContexteFiche {
   return {
     optique: calcul.optique,
@@ -412,7 +423,6 @@ function contexteFiche(
     mLimOeil: ciel.ciel.mLimOeil.value,
     // Sans suivi, c'est la NPF qui plafonne la pose (§9.1) — jamais rien.
     tMaxS: calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value,
-    catalogue,
     bortle: lieu.bortle.trim() === '' ? null : Number(lieu.bortle),
     suiviActif: materiel.suiviActif,
     focaleMm: Number(materiel.focale),

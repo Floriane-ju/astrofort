@@ -115,8 +115,9 @@ export interface FluxObjetReel {
  *   2. masse d'air hors du domaine de l'approximation plane (sous ~15° de hauteur) →
  *      atténuation REFUSÉE. L'extrapoler sous-estimerait l'extinction là où elle est la plus
  *      forte, ce qui est le sens de l'erreur le plus coûteux ;
- *   3. hauteur inconnue — cible personnalisée, sans coordonnées → aucune atténuation, et la
- *      sortie porte [HYP] : la durée annoncée est alors un PLANCHER, pas une estimation.
+ *   3. hauteur inconnue — la cible n'a pas été évaluée à un instant chiffrable → aucune
+ *      atténuation, et la sortie porte [HYP] : la durée annoncée est alors un PLANCHER, pas
+ *      une estimation.
  */
 export function fluxObjetReel(
   eObj: Traced<number>,

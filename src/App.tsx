@@ -122,6 +122,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
   const panneauMateriel = (
     <PanneauMateriel
       {...materiel}
+      {...(chaine.domaineCadrage === null ? {} : { domaine: chaine.domaineCadrage })}
       {...(calcul.ok
         ? {
             lectures: {

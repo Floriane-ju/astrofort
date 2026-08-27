@@ -71,7 +71,7 @@ describe('absence d’image §12.5', () => {
     expect(renderToStaticMarkup(<VignetteCible objet={objet} />)).toBe('')
   })
 
-  it('ne rend rien du tout pour une cible personnalisée, qui n’a pas d’identité au catalogue', () => {
+  it('ne rend rien du tout sans objet : la vignette d’une ligne vide n’est pas un gabarit', () => {
     expect(renderToStaticMarkup(<ImageCible objet={null} />)).toBe('')
   })
 
@@ -121,7 +121,7 @@ describe('aperçu du cadre §6.2', () => {
     expect(rendu).toBe('')
   })
 
-  it('ne pose rien pour une cible personnalisée', () => {
+  it('ne pose rien sans objet à cadrer', () => {
     expect(
       renderToStaticMarkup(
         <ApercuCadre objet={null} fovLDeg={FOV_L} fovHDeg={FOV_H} angleBoitierDeg={null} />,

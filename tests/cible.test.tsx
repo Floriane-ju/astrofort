@@ -4,8 +4,12 @@
  * plan de calibration.
  *
  * Le rendu statique suffit : rien n'est à cliquer pour que la chaîne §6 → §7 → §10.2
- * produise ses sorties. Le catalogue, lui, n'est décodé qu'après vérification d'intégrité
- * des paquets — l'écran par défaut travaille donc sur la cible de référence de §6.3.
+ * produise ses sorties. T-0156 — la fiche n'a plus de cible par défaut : c'est le magasin de
+ * séance qui en désigne une, comme le ferait un clic sur la scène.
+ *
+ * L'instant affiché est figé sur une Lune sous l'horizon : elle n'ajoute alors rien au fond
+ * de ciel (§8.1), et la chaîne se vérifie sous le ciel noir du site plutôt que sous la phase
+ * du jour où les tests tournent. La position de la Lune, elle, reste calculée.
  */
 
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -22,17 +26,35 @@ import {
   isoRecommande,
   pointZeroSysteme,
 } from '../src/data/equipment.ts'
-import { etatScene, majVue, reinitialiseScene } from '../src/ui/scene-etat.ts'
+import { etatScene, majVue, reinitialiseScene, vaA } from '../src/ui/scene-etat.ts'
+import { ouvreCible, reinitialiseSeance } from '../src/ui/seance-etat.ts'
 import type { Site } from '../src/core/ephem.ts'
 import { TYPES_OBJET, type ObjetCielProfond } from '../src/data/deepsky.ts'
+
+/**
+ * La chaîne de référence de §6.3 : magnitude intégrée 5,7, grand axe 71’, petit axe 42’,
+ * angle de position 23°. Circumpolaire depuis le site de l'Annexe A, pour que sa hauteur de
+ * culmination ne dépende pas du jour où la suite tourne.
+ */
+const CIBLE_REFERENCE = objetForge('CIBLE_REFERENCE', 85, {
+  vMag: 5.7,
+  majAxArcmin: 71,
+  minAxArcmin: 42,
+  posAngDeg: 23,
+})
+
+/** 12 janvier 2026, 1 h UTC : la Lune est sous l'horizon depuis le site de l'Annexe A. */
+const INSTANT_SANS_LUNE = Date.UTC(2026, 0, 12, 1)
 
 // T-0113 — la fiche vit dans la carte Cible, posée sur la scène. Elle démarre repliée tant
 // qu'aucun objet n'a été désigné : c'est elle que ce fichier interroge, dépliée.
 ouvreCarte('CIBLE')
+vaA(INSTANT_SANS_LUNE)
+ouvreCible(CIBLE_REFERENCE)
 const ecran = renderToStaticMarkup(<App />)
 
 describe('fiche de cible — écran par défaut, M33 depuis le site de l’Annexe A', () => {
-  it('annonce le domaine du setup et sa fenêtre de cadrage', () => {
+  it('annonce le domaine du setup et sa fenêtre de cadrage, dans la carte Matériel', () => {
     expect(ecran).toContain('DOMAINE_TRES_GRAND_CHAMP')
     expect(ecran).toContain('3.79')
     expect(ecran).toContain('5.69')
@@ -116,15 +138,11 @@ function objetForge(
 }
 
 const AU_DESSUS = objetForge('CIRCUMPOLAIRE', 85)
-const AU_DESSOUS = objetForge('JAMAIS_LEVE', -85)
 
-function ficheAvecCatalogue(
-  catalogue: readonly ObjetCielProfond[],
-  objetSelectionne: ObjetCielProfond | null = null,
-): string {
+function ficheDe(objet: ObjetCielProfond): string {
   return renderToStaticMarkup(
     <FicheCible
-      objetSelectionne={objetSelectionne}
+      objet={objet}
       site={SITE}
       optique={OPTIQUE}
       capteurHMm={CAPTEUR.capteurHMm}
@@ -136,7 +154,6 @@ function ficheAvecCatalogue(
       sbCiel={21}
       mLimOeil={6.1}
       tMaxS={2.1}
-      catalogue={catalogue}
       bortle={4}
       suiviActif={false}
       focaleMm={120}
@@ -145,7 +162,7 @@ function ficheAvecCatalogue(
 }
 
 describe('T-0128 — la fiche décrit la cible, elle ne la choisit plus', () => {
-  const rendu = ficheAvecCatalogue([AU_DESSUS, AU_DESSOUS])
+  const rendu = ficheDe(AU_DESSUS)
 
   it('ne porte plus ni liste des visibles, ni filtre de type, ni bouton « Voir »', () => {
     // Les trois ont rejoint le panneau « Toutes les cibles » : les garder ici rendrait le
@@ -200,16 +217,15 @@ describe('T-0046 — « Voir » amène la cible au centre, et ne touche à rien 
 })
 
 
-// --- T-0048 — la cible vient du catalogue, ou elle est personnalisée ---------------------
+// --- T-0156 — la cible vient du catalogue, et de nulle part ailleurs -------------------
 
 const GLOBULAIRE = objetForge('GLOB', 85, { type: 'AMAS_GLOB', vMag: 7 })
 
 describe('T-0049 — les types du catalogue se lisent en français', () => {
-  const rendu = ficheAvecCatalogue([AU_DESSUS, GLOBULAIRE])
-
-  it('traduit le sélecteur « Type d’objet » de la fiche', () => {
-    expect(rendu).not.toContain('>AMAS_GLOB<')
-    expect(rendu).toContain('>nébuleuse planétaire<')
+  it('traduit le type de la cible affichée', () => {
+    const rendu = ficheDe(objetForge('PLANETAIRE', 85, { type: 'NEB_PLANETAIRE' }))
+    expect(rendu).not.toContain('NEB_PLANETAIRE')
+    expect(rendu).toContain('nébuleuse planétaire')
   })
 
   it('donne un libellé aux dix types du catalogue', () => {
@@ -217,32 +233,39 @@ describe('T-0049 — les types du catalogue se lisent en français', () => {
   })
 })
 
-describe('T-0051 — une cible du catalogue ne se saisit plus', () => {
-  it('s’ouvre en personnalisé : aucun champ verrouillé', () => {
-    const rendu = ficheAvecCatalogue([AU_DESSUS])
+describe('T-0156 — la cible ne se saisit plus du tout', () => {
+  const rendu = ficheDe(GLOBULAIRE)
+
+  it('ne porte plus ni champ de cible, ni le bouton qui rouvrait la saisie', () => {
+    expect(rendu).not.toContain('Cible personnalisée')
+    // Les seules saisies qui subsistent sont les deux interrupteurs de §7.2 et §7.5.
+    expect(rendu).not.toMatch(/<input(?![^>]*type="checkbox")/i)
     expect(rendu).not.toMatch(/readonly/i)
     expect(rendu).not.toMatch(/disabled/i)
   })
 
-  it('verrouille les six champs d’une cible venue du catalogue', () => {
-    const rendu = ficheAvecCatalogue([AU_DESSUS], AU_DESSUS)
-    // Cinq <input> en lecture seule, et le <select> de type désactivé — un <select> ne
-    // connaît pas readonly.
-    expect(rendu.match(/<input[^>]*readonly/gi)).toHaveLength(5)
-    expect(rendu).toMatch(/<select[^>]*disabled/i)
+  it('affiche les valeurs du catalogue en lectures, avec leur origine', () => {
+    expect(rendu).toContain('GLOB')
+    expect(rendu).toContain('amas globulaire')
+    expect(rendu).toContain('Valeurs du catalogue OpenNGC.')
   })
 
-  it('garde un chemin pour rouvrir la saisie, la liste des visibles disparue', () => {
-    // T-0128 — l'option « Personnalisé » du `<select>` est devenue un bouton : le verrou de
-    // T-0051 ne serait plus qu'une impasse sans geste pour en sortir.
-    const rendu = ficheAvecCatalogue([AU_DESSUS], AU_DESSUS)
-    expect(rendu).toContain('>Cible personnalisée<')
-    expect(ficheAvecCatalogue([AU_DESSUS])).not.toContain('>Cible personnalisée<')
+  it('nomme ce que le catalogue ne porte pas plutôt que de laisser un champ vide', () => {
+    // L'objet forgé n'a pas d'angle de position : §6.3 le dit, et rien ne permet de le saisir.
+    expect(rendu).toContain('[DONNÉE MANQUANTE]')
   })
+})
 
-  it('garde les valeurs du catalogue affichées, verrou posé', () => {
-    const rendu = ficheAvecCatalogue([AU_DESSUS], AU_DESSUS)
-    expect(rendu).toContain('value="CIRCUMPOLAIRE"')
-    expect(rendu).toContain('value="6"')
+describe('T-0156 — sans cible désignée, la carte le dit', () => {
+  it('n’affiche aucun verdict de démonstration', () => {
+    reinitialiseSeance()
+    ouvreCarte('CIBLE')
+    const sansCible = renderToStaticMarkup(<App />)
+    expect(sansCible).toContain('Aucune cible : cliquez un objet sur la scène.')
+    expect(sansCible).not.toContain('Cadrage de la cible')
+    // T-0157 — le domaine, lui, ne dépend que du matériel : il se lit sans cible désignée.
+    expect(sansCible).toContain('Ce que ce setup cadre')
+    expect(sansCible).toContain('DOMAINE_TRES_GRAND_CHAMP')
+    ouvreCible(CIBLE_REFERENCE)
   })
 })

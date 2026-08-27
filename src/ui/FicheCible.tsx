@@ -1,15 +1,17 @@
 /**
- * Fiche d'une cible : §6.1 domaine, §6.2 cadrage, §6.3 détectabilité, §7 pose, intégration
- * et calibration, §10.2 explication dépliable.
+ * Fiche d'une cible : §6.2 cadrage, §6.3 détectabilité, §7 pose, intégration et calibration,
+ * §10.2 explication dépliable.
  *
  * Toute la valeur de l'application tient dans cet écran, et il se livre avant le
  * planétarium. Ce qui est vérifiable ici, c'est la chaîne complète : d'un lieu et d'un
  * matériel jusqu'à « pose 13 s, 252 images, 8,3 Go », chaque nombre dépliable jusqu'à sa
  * formule et sa constante source.
  *
- * Ce fichier n'assemble que les régions. La saisie est dans `fiche-cible-saisie.ts`, le
- * calcul dans `fiche-cible-calcul.ts`, le choix de la cible dans `ChampsCible.tsx` et les
- * verdicts dans `Verdicts.tsx`.
+ * Ce fichier n'assemble que les régions. Le calcul est dans `fiche-cible-calcul.ts`, la
+ * description de la cible dans `ChampsCible.tsx` et les verdicts dans `Verdicts.tsx`.
+ *
+ * T-0156 — la cible vient toujours du catalogue : sans objet désigné, il n'y a pas de fiche,
+ * et c'est la carte qui le dit.
  */
 
 import { useMemo, useState } from 'react'
@@ -20,7 +22,6 @@ import type { Site } from '../core/ephem.ts'
 import { ChampsCible } from './ChampsCible.tsx'
 import { ImageCible } from './ImageCible.tsx'
 import { Verdicts } from './Verdicts.tsx'
-import { useSaisieCible } from './fiche-cible-saisie.ts'
 import { useLuneCible } from './fiche-cible-lune.ts'
 import { conseilsCible, evalue, type ContexteFiche, type Resultat } from './fiche-cible-calcul.ts'
 
@@ -32,7 +33,7 @@ export interface FicheCibleProps extends ContexteFiche {
    * ici son verdict de cadrage, de détectabilité et son plan de capture : le planétarium
    * n'est pas décoratif, c'est le point d'entrée vers les moteurs.
    */
-  readonly objetSelectionne?: ObjetCielProfond | null
+  readonly objet: ObjetCielProfond
   /** T-0045 — le lieu, sans lequel « au-dessus de l'horizon » ne veut rien dire. */
   readonly site: Site
 }
@@ -44,50 +45,50 @@ export function FicheCible(props: FicheCibleProps) {
   const [explicationDepliee, setExplicationDepliee] = useState(false)
   const [snrCible, setSnrCible] = useState(PRESETS_SNR[1]!.valeur)
 
-  const saisie = useSaisieCible(props.objetSelectionne ?? null)
+  const objet = props.objet
   const iso = props.iso
   /**
    * T-0089 — la Lune de cette cible, à l'instant affiché par le planétarium. Elle entre dans
    * la chaîne comme dans le plan de séance : c'est le fond de ciel qui change, donc la pose,
    * le nombre d'images et l'intégration.
    */
-  const lune = useLuneCible(props.site, props.sbCiel, saisie.objetCatalogue)
+  const lune = useLuneCible(props.site, props.sbCiel, objet)
 
   const calcul = useMemo<{ ok: true; r: Resultat } | { ok: false; erreur: string }>(() => {
     try {
-      return { ok: true, r: evalue(props, saisie.saisie, snrCible, iso, lune, permissif) }
+      return { ok: true, r: evalue(props, objet, snrCible, iso, lune, permissif) }
     } catch (erreur) {
       if (erreur instanceof SaisieRefuseeError) return { ok: false, erreur: erreur.message }
       throw erreur
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props, saisie.saisie, snrCible, iso.iso, lune, permissif])
+  }, [props, objet, snrCible, iso.iso, lune, permissif])
 
   const conseils = useMemo(
     () =>
       calcul.ok
         ? conseilsCible(props, calcul.r, {
-            typeObjet: saisie.typeObjet,
+            typeObjet: objet.type,
             snrCible,
             filtreDualBand,
             explicationDepliee,
           })
         : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [calcul, filtreDualBand, explicationDepliee, saisie.typeObjet, snrCible, props],
+    [calcul, filtreDualBand, explicationDepliee, objet, snrCible, props],
   )
 
   return (
     <>
-      {/* §6.4 — l'objet avant ses nombres. Une cible personnalisée n'a pas d'identité au
-          catalogue, donc pas d'image à chercher : le composant ne rend alors rien. */}
-      <ImageCible objet={saisie.objetCatalogue} />
-      <ChampsCible saisie={saisie} />
+      {/* §6.4 — l'objet avant ses nombres. Sans image disponible, le composant ne rend rien :
+          une cible sans image reste une cible complète. */}
+      <ImageCible objet={objet} />
+      <ChampsCible objet={objet} />
       {!calcul.ok && <p className="erreur">{calcul.erreur}</p>}
       {calcul.ok && (
         <Verdicts
           r={calcul.r}
-          objetCadre={saisie.objetCatalogue}
+          objetCadre={objet}
           optique={props.optique}
           snrCible={snrCible}
           surSnr={setSnrCible}

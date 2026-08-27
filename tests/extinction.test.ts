@@ -135,8 +135,8 @@ describe('domaine de validité §7.6', () => {
   })
 
   it('n’applique aucune extinction quand la hauteur est inconnue, et le dit', () => {
-    // Cible personnalisée : sans coordonnées, pas de hauteur. La durée annoncée est un
-    // plancher, marqué [HYP] — pas une estimation, et surtout pas un zénith supposé.
+    // Instant d'évaluation hors du domaine des séries : pas de hauteur. La durée annoncée
+    // est un plancher, marqué [HYP] — pas une estimation, et surtout pas un zénith supposé.
     const sansHauteur = fluxObjetReel(E_OBJ_DOMINE, masseAir(null))
     expect(sansHauteur.attenuation.value).toBe(1)
     expect(sansHauteur.attenuation.flags).toContain('HYP')

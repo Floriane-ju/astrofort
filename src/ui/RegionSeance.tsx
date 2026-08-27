@@ -76,19 +76,16 @@ export function CartesSeance(props: CartesSeanceProps) {
       </Carte>
 
       <Carte cle="CIBLE" titre="Cible" accent="cible">
-        {chaine.contexteFiche === null ? (
-          /* T-0149 — deux absences distinctes : rien de cliqué, ou rien de chiffrable. */
+        {chaine.contexteFiche === null || props.cibleDuCiel === null ? (
+          /* T-0149 — deux absences distinctes : rien de cliqué, ou rien de chiffrable. Le
+             matériel passe devant : une cible désignée ne se chiffrerait pas davantage. */
           <p className="etat">
             {chaine.calcul.ok
               ? 'Aucune cible : cliquez un objet sur la scène.'
               : AIDE_MATERIEL_INCOMPLET}
           </p>
         ) : (
-          <FicheCible
-            {...chaine.contexteFiche}
-            objetSelectionne={props.cibleDuCiel}
-            site={chaine.site}
-          />
+          <FicheCible {...chaine.contexteFiche} objet={props.cibleDuCiel} site={chaine.site} />
         )}
       </Carte>
     </>

@@ -1,5 +1,5 @@
 /**
- * Ce que la chaîne de calcul répond, région par région : §6.1 domaine, §6.2 cadrage,
+ * Ce que la chaîne de calcul répond, région par région : §6.2 cadrage,
  * §6.3 détectabilité, §7 pose, intégration et calibration, §10.2 explication dépliable.
  *
  * Aucune de ces régions ne calcule quoi que ce soit : elles lisent le `Resultat` produit par
@@ -28,7 +28,7 @@ export interface VerdictsProps {
   readonly zeroSysteme: PointZeroSysteme
   readonly conseils: Conseils | null
   /** §6.2 — la cible du catalogue et le champ sous lequel l'aperçu de cadrage est demandé. */
-  readonly objetCadre: ObjetCielProfond | null
+  readonly objetCadre: ObjetCielProfond
   readonly optique: ProfilOptique
   /** §7.2 — mode permissif C-03 : demandé, jamais déduit. */
   readonly permissif: boolean
@@ -42,7 +42,6 @@ export function Verdicts(props: VerdictsProps) {
   const { r } = props
   return (
     <>
-      <CeQueLeSetupCadre r={r} />
       <CadrageDeLaCible r={r} objetCadre={props.objetCadre} optique={props.optique} />
       <Detectabilite r={r} />
       <PoseUnitaire
@@ -65,31 +64,6 @@ export function Verdicts(props: VerdictsProps) {
   )
 }
 
-/** §6.1 — la fenêtre de cadrage de ce setup, et quelques cibles qui y tombent. */
-function CeQueLeSetupCadre({ r }: { readonly r: Resultat }) {
-  return (
-    <section>
-      <h2>Ce que ce setup cadre</h2>
-      <p className="etat">domaine : {r.domaine.domaine}</p>
-      <p>{r.domaine.phrase}</p>
-      <TracedValue terme="fenetre_cadrage" suffixe="taille minimale" trace={r.domaine.tailleMinDeg} unite="°" />
-      <TracedValue terme="fenetre_cadrage" suffixe="taille maximale" trace={r.domaine.tailleMaxDeg} unite="°" />
-      {r.domaine.causeAbsence !== undefined && <p className="cause">{r.domaine.causeAbsence}</p>}
-      {r.domaine.cibles.length > 0 && (
-        <ul>
-          {r.domaine.cibles.map((o) => (
-            <li key={o.designation}>
-              {o.designation}
-              {o.nomsCommuns === '' ? '' : ` — ${o.nomsCommuns.split('|')[0]}`} ·{' '}
-              {o.majAxArcmin?.toFixed(0)}’ · mag {o.vMag ?? '—'}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  )
-}
-
 /** §6.2 — comment la cible tombe dans le cadre : remplissage, diamètre, orientation. */
 function CadrageDeLaCible({
   r,
@@ -97,7 +71,7 @@ function CadrageDeLaCible({
   optique,
 }: {
   readonly r: Resultat
-  readonly objetCadre: ObjetCielProfond | null
+  readonly objetCadre: ObjetCielProfond
   readonly optique: ProfilOptique
 }) {
   return (

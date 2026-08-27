@@ -1679,13 +1679,18 @@ RECHERCHE DU CATALOGUE — portée entière, jamais plafonnée
   La recherche ignore horizon et verdict : chercher dans le catalogue, c'est chercher
   dans le catalogue entier, y compris sous l'horizon.
 
-CIBLE DU CATALOGUE OU CIBLE PERSONNALISÉE — deux régimes exclusifs
-  Une cible venue du catalogue ou de la liste porte ses valeurs en LECTURE SEULE :
-  magnitude, dimensions et angle de position ne se retouchent pas. Un champ éditable
-  par-dessus une donnée sourcée produit un verdict dont personne ne sait plus d'où il
-  vient.
-  Une cible personnalisée reste saisissable intégralement, pour tout objet absent du
-  catalogue embarqué.
+LA CIBLE VIENT DU CATALOGUE, ET DE NULLE PART AILLEURS
+  Désignation, type, magnitude, dimensions et angle de position sont des LECTURES :
+  ils viennent d'OpenNGC et ne se retouchent pas. Un champ éditable par-dessus une
+  donnée sourcée produit un verdict dont personne ne sait plus d'où il vient.
+  Il n'y a pas de second régime. Une cible saisie à la main n'a pas de coordonnées :
+  ni la séparation à la Lune, ni la hauteur de culmination, ni l'extinction, ni l'image
+  de l'objet ne se calculent pour elle — la moitié de la fiche serait chiffrée sous des
+  hypothèses muettes. Le catalogue embarqué compte plus de 13 000 objets et la recherche
+  porte sur son étendue entière : ce qui en manque relève d'une mise à jour du catalogue,
+  pas d'un formulaire.
+  Sans cible désignée, la fiche n'existe pas et l'écran le dit. Aucune cible de
+  démonstration n'est montée à l'ouverture : un verdict affiché est un verdict demandé.
 
 AMENER LA CIBLE AU CENTRE
   Un geste unique pointe la scène sur la cible choisie. Sans lui, la liste nomme des
@@ -1747,7 +1752,6 @@ UNE IMAGE DE L'OBJET, ET CE QU'ELLE COÛTE
 | `type_retenu` | enum ou nul | — | types présents | filtre |
 | `visibles` | array | — | sortie | objet, azimut, hauteur, verdict |
 | `types_presents` | array | — | sortie | sous-ensemble de §6.3 |
-| `origine_cible` | enum | — | CATALOGUE / PERSONNALISEE | pilote la lecture seule |
 | `image_objet` | blob ou nul | — | sortie | nul = aucune image, pas une erreur |
 | `image_origine` | enum | — | ENCYCLOPEDIE / RELEVE | sortie, pilote l'attribution |
 | `image_credit` | string ou nul | — | sortie | auteur, licence, lien du fichier source |
@@ -1782,8 +1786,13 @@ Et un objet dont le nom COMMENCE par la saisie passe devant un objet où elle es
 
 Étant donné une cible venue du catalogue
 Quand j'ouvre sa fiche
-Alors sa magnitude et ses dimensions sont en lecture seule
-Et seule une cible personnalisée reste saisissable
+Alors sa magnitude et ses dimensions sont des lectures
+Et aucun champ de la fiche ne se saisit
+
+Étant donné qu'aucune cible n'a été désignée                        # cas limite
+Quand je regarde la fiche
+Alors elle annonce qu'il n'y a pas de cible et comment en choisir une
+Et aucun verdict n'est affiché pour une cible de démonstration
 
 Étant donné une cible choisie dans la liste
 Quand je demande à la voir

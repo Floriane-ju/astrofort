@@ -31,7 +31,6 @@ import {
   evalue,
   type ContexteFiche,
   type LuneFiche,
-  type SaisieCible,
 } from '../src/ui/fiche-cible-calcul.ts'
 import { lunePourCible } from '../src/ui/fiche-cible-lune.ts'
 
@@ -110,23 +109,11 @@ function contexteFiche(sbCiel: number): ContexteFiche {
     sbCiel,
     mLimOeil: M_LIM_OEIL,
     tMaxS: T_MAX_S,
-    catalogue: CATALOGUE,
     // Bortle 4 : sous le seuil C-22 du conseil filtre. Ce qui déclenche le conseil dans ce
     // fichier ne peut donc être que la Lune.
     bortle: 4,
     suiviActif: true,
     focaleMm: 120,
-  }
-}
-
-/** Les champs de la fiche, garnis depuis le catalogue comme `fiche-cible-saisie` le fait. */
-function saisieDe(objet: ObjetCielProfond, typeObjet: TypeObjet = objet.type): SaisieCible {
-  return {
-    typeObjet,
-    mInt: String(objet.vMag),
-    aArcmin: String(objet.majAxArcmin),
-    bArcmin: String(objet.minAxArcmin),
-    posAngDeg: '',
   }
 }
 
@@ -149,7 +136,7 @@ describe('T-0089 — la fiche et le plan dosent la même nuit', () => {
   const instant = instantLune(etape.creneau, etape.creneauAlloue.debut)
   const sbBase = sbCielBase(contexte)
   const lune = lunePourCible({ site: SITE, instant, objet: etape.objet, sbCielNoirMag: sbBase })
-  const fiche = evalue(contexteFiche(sbBase), saisieDe(etape.objet), SNR_PLAN, ISO, lune)
+  const fiche = evalue(contexteFiche(sbBase), etape.objet, SNR_PLAN, ISO, lune)
 
   it('emploie le même deltaSbLune que le plan, au même instant et sur la même cible', () => {
     expect(lune.evaluee).toBe(true)
@@ -201,7 +188,7 @@ describe('T-0089 — la fiche et le plan dosent la même nuit', () => {
 
   it('divergerait si la fiche ignorait la Lune — c’est le défaut que ce test garde fermé', () => {
     const ignoree: LuneFiche = { evaluee: false, cause: 'Lune ignorée, comme avant T-0089.' }
-    const sansLune = evalue(contexteFiche(sbBase), saisieDe(etape.objet), SNR_PLAN, ISO, ignoree)
+    const sansLune = evalue(contexteFiche(sbBase), etape.objet, SNR_PLAN, ISO, ignoree)
     expect(sansLune.integration?.tRequisS.value).not.toBeCloseTo(
       etape.integration.tRequisS.value,
       6,
@@ -232,7 +219,7 @@ describe('§6.3 — une Lune sous l’horizon ne dégrade rien, et la fiche le d
     objet: NGC7000,
     sbCielNoirMag: SB_CIEL_NOIR,
   })
-  const fiche = evalue(contexteFiche(SB_CIEL_NOIR), saisieDe(NGC7000), SNR_PLAN, ISO, lune)
+  const fiche = evalue(contexteFiche(SB_CIEL_NOIR), NGC7000, SNR_PLAN, ISO, lune)
 
   it('laisse le fond de ciel intact, quelle que soit la phase', () => {
     expect(lune.evaluee && lune.ciel.delta.value).toBe(0)
@@ -257,8 +244,8 @@ describe('§6.3 et §7.5 — la même Lune ne pénalise pas tous les types de la
 
   function conseilPour(typeObjet: TypeObjet) {
     const ctx = contexteFiche(sbBase)
-    const saisie = saisieDe(etape.objet, typeObjet)
-    const r = evalue(ctx, saisie, SNR_PLAN, ISO, lune)
+    // Le type de l'objet décide du conseil : il est imposé ici, la cible restant la même.
+    const r = evalue(ctx, { ...etape.objet, type: typeObjet }, SNR_PLAN, ISO, lune)
     return {
       r,
       conseils: conseilsCible(ctx, r, {
@@ -292,19 +279,20 @@ describe('§6.3 et §7.5 — la même Lune ne pénalise pas tous les types de la
   })
 })
 
-describe('T-0089 — une cible sans coordonnées ne se voit pas inventer une Lune', () => {
-  const lune = lunePourCible({
-    site: SITE,
-    instant: new Date('2026-08-01T22:00:00Z'),
-    objet: null,
-    sbCielNoirMag: SB_CIEL_NOIR,
-  })
-  const fiche = evalue(contexteFiche(SB_CIEL_NOIR), saisieDe(NGC7000), SNR_PLAN, ISO, lune)
+describe('T-0089 — une Lune non évaluée ne se voit pas inventer un fond de ciel', () => {
+  /**
+   * §12.5 — l'instant sorti du domaine des séries est le seul refus qui subsiste depuis
+   * T-0156 : une cible a toujours ses coordonnées. La cause vient du moteur, pas d'ici.
+   */
+  const lune: LuneFiche = {
+    evaluee: false,
+    cause: 'Instant hors du domaine des séries : la Lune n’est pas chiffrée.',
+  }
+  const fiche = evalue(contexteFiche(SB_CIEL_NOIR), NGC7000, SNR_PLAN, ISO, lune)
 
-  it('garde le fond de ciel du site et nomme la cause plutôt que de deviner', () => {
-    expect(lune.evaluee).toBe(false)
-    expect(!lune.evaluee && lune.cause).toMatch(/sans coordonnées/)
+  it('garde le fond de ciel du site plutôt que de deviner la dégradation', () => {
     expect(fiche.sbCielEffectif).toBe(SB_CIEL_NOIR)
+    expect(fiche.hauteurEvaluationDeg).toBeNull()
   })
 
   it('ne produit alors aucune note lunaire : rien n’a été évalué', () => {
