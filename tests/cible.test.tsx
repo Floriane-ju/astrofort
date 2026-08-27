@@ -199,11 +199,42 @@ describe('T-0158 — « À propos », et des dimensions qui ne meublent pas', ()
     const rendu = ficheDe(
       objetForge('SANS_FORME', 85, { majAxArcmin: null, minAxArcmin: null, posAngDeg: null }),
     )
-    // Les verdicts en aval nomment aussi ce qui leur manque : on ne juge que la section.
-    const aPropos = rendu.slice(0, rendu.indexOf('Valeurs du catalogue OpenNGC.'))
+    // Les verdicts en aval nomment aussi ce qui leur manque : on ne juge que la section. Elle
+    // se borne à sa fermeture, et non au renvoi à OpenNGC — qui disparaît avec les valeurs.
+    const aPropos = rendu.slice(0, rendu.indexOf('</section>'))
     expect(aPropos).not.toContain('Grand axe')
     expect(aPropos).not.toContain('Petit axe')
     expect(aPropos.match(/DONNÉE MANQUANTE/g) ?? []).toHaveLength(1)
+    // Le renvoi à la source ne survit pas aux valeurs qu'il source.
+    expect(aPropos).not.toContain('Valeurs du catalogue OpenNGC.')
+    expect(ficheDe(AU_DESSUS)).toContain('Valeurs du catalogue OpenNGC.')
+  })
+
+  it('retire la région « Cadrage de la cible » quand le catalogue ne donne pas les dimensions', () => {
+    // Sans grand axe, §6.2 n'a aucune entrée : remplissage, diamètre en pixels et focale
+    // nécessaire décriraient la taille nulle qu'on aurait substituée, pas la cible. Le reste
+    // de la fiche, lui, ne dépend pas des dimensions et reste dû.
+    const rendu = ficheDe(objetForge('SANS_DIMENSIONS', 85, { majAxArcmin: null, minAxArcmin: null }))
+    expect(rendu).not.toContain('Cadrage de la cible')
+    expect(rendu).not.toContain('focale')
+    expect(ficheDe(AU_DESSUS)).toContain('Cadrage de la cible')
+  })
+
+  it('réduit « Détectabilité » à une seule absence et retire « Pose » faute de donnée source', () => {
+    // §6.3 — sans magnitude ni dimensions, brillance de surface, contraste et magnitude
+    // limite portent tous la même absence : elle se nomme une fois. La pose qui en découlait
+    // disparaît avec elle, plutôt que d'exposer le point zéro et le fond de ciel du setup
+    // comme s'ils décrivaient cette cible.
+    const rendu = ficheDe(objetForge('SANS_MAGNITUDE', 85, { vMag: null }))
+    const detectabilite = rendu.slice(rendu.indexOf('<h2>Détectabilité</h2>'))
+    expect(detectabilite.match(/DONNÉE MANQUANTE/g) ?? []).toHaveLength(1)
+    expect(detectabilite).not.toContain('Brillance de surface')
+    expect(rendu).not.toContain('<h2>Pose</h2>')
+
+    // La même fiche, magnitude au catalogue : les deux régions sont dues.
+    const complet = ficheDe(AU_DESSUS)
+    expect(complet).toContain('Brillance de surface')
+    expect(complet).toContain('<h2>Pose</h2>')
   })
 })
 

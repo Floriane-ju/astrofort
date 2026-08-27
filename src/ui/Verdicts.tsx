@@ -14,6 +14,7 @@ import { libelleZpSource, type PointZeroSysteme } from '../data/equipment.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { ProfilOptique } from '../core/optics.ts'
 import { ApercuCadre } from './ApercuCadre.tsx'
+import { MANQUANTE } from './ChampsCible.tsx'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, Terme } from './Terme.tsx'
 import { heure } from './horaire.ts'
@@ -44,13 +45,18 @@ export function Verdicts(props: VerdictsProps) {
     <>
       <CadrageDeLaCible r={r} objetCadre={props.objetCadre} optique={props.optique} />
       <Detectabilite r={r} />
-      <PoseUnitaire
-        r={r}
-        isoLibelle={props.isoLibelle}
-        zeroSysteme={props.zeroSysteme}
-        permissif={props.permissif}
-        surPermissif={props.surPermissif}
-      />
+      {/* Sans donnée de détectabilité, aucune pose n'est chiffrable : la région n'aurait plus
+          que le point zéro du boîtier et le fond de ciel à montrer, deux grandeurs du setup
+          qui ne disent rien de cette cible-là. */}
+      {r.detect.verdict !== null && (
+        <PoseUnitaire
+          r={r}
+          isoLibelle={props.isoLibelle}
+          zeroSysteme={props.zeroSysteme}
+          permissif={props.permissif}
+          surPermissif={props.surPermissif}
+        />
+      )}
       <CombienDePhotos r={r} snrCible={props.snrCible} surSnr={props.surSnr} />
       <PlanDeCalibration r={r} />
       <PourquoiCeVerdict
@@ -74,20 +80,26 @@ function CadrageDeLaCible({
   readonly objetCadre: ObjetCielProfond
   readonly optique: ProfilOptique
 }) {
+  // Pas de dimensions au catalogue, donc pas de cadrage calculé (§6.2) : la région entière
+  // disparaît. Un remplissage, un diamètre en pixels et un aperçu de cadre tirés d'une taille
+  // absente décriraient une cible qui n'est pas celle-là.
+  const cadrage = r.cadrage
+  if (cadrage === null) return null
+
   return (
     <section>
       <h2>Cadrage de la cible</h2>
-      <p className="etat">verdict : {r.cadrage.verdict}</p>
-      <TracedValue terme="remplissage" trace={r.cadrage.remplissage} decimales={3} />
-      <TracedValue terme="diametre_pixels" trace={r.cadrage.diamPx} decimales={0} unite="px" />
-      {r.cadrage.nTuiles !== undefined && (
-        <TracedValue terme="mosaique" trace={r.cadrage.nTuiles} decimales={0} unite="tuiles" />
+      <p className="etat">verdict : {cadrage.verdict}</p>
+      <TracedValue terme="remplissage" trace={cadrage.remplissage} decimales={3} />
+      <TracedValue terme="diametre_pixels" trace={cadrage.diamPx} decimales={0} unite="px" />
+      {cadrage.nTuiles !== undefined && (
+        <TracedValue terme="mosaique" trace={cadrage.nTuiles} decimales={0} unite="tuiles" />
       )}
-      <p className={r.cadrage.faisable ? 'etat' : 'cause'}>{r.cadrage.message}</p>
-      <p className="etat">{r.cadrage.noteOrientation}</p>
-      {r.cadrage.cause !== undefined && <p className="cause">{r.cadrage.cause}</p>}
-      {r.cadrage.focaleIdealeMm !== undefined && (
-        <TracedValue terme="focale_ideale" trace={r.cadrage.focaleIdealeMm} decimales={0} unite="mm" />
+      <p className={cadrage.faisable ? 'etat' : 'cause'}>{cadrage.message}</p>
+      <p className="etat">{cadrage.noteOrientation}</p>
+      {cadrage.cause !== undefined && <p className="cause">{cadrage.cause}</p>}
+      {cadrage.focaleIdealeMm !== undefined && (
+        <TracedValue terme="focale_ideale" trace={cadrage.focaleIdealeMm} decimales={0} unite="mm" />
       )}
       {/* L'aperçu vient APRÈS les nombres : il les illustre, il ne les remplace pas. Hors
           réseau il ne rend rien, et la dégradation nommée par §12.5 est le cadre schématique
@@ -96,7 +108,7 @@ function CadrageDeLaCible({
         objet={objetCadre}
         fovLDeg={optique.fovLDeg.value}
         fovHDeg={optique.fovHDeg.value}
-        angleBoitierDeg={r.cadrage.angleBoitierDeg}
+        angleBoitierDeg={cadrage.angleBoitierDeg}
       />
     </section>
   )
@@ -122,10 +134,23 @@ function CielSousLaLune({ r }: { readonly r: Resultat }) {
 
 /** §6.3 — ce qui verra la cible : l'œil, des jumelles, un télescope, ou la photo seule. */
 function Detectabilite({ r }: { readonly r: Resultat }) {
+  // Verdict nul = magnitude ou dimensions absentes du catalogue. Tout ce que la région
+  // porterait alors — brillance de surface, contraste, magnitude limite — vaut lui aussi
+  // « donnée manquante », et quatre fois la même absence n'en apprend pas plus qu'une. La
+  // région se nomme une fois vide, comme les dimensions de « À propos ».
+  if (r.detect.verdict === null) {
+    return (
+      <section>
+        <h2>Détectabilité</h2>
+        <p className="etat">{MANQUANTE}</p>
+      </section>
+    )
+  }
+
   return (
     <section>
       <h2>Détectabilité</h2>
-      <p className="etat">verdict : {r.detect.verdict ?? '[DONNÉE MANQUANTE]'}</p>
+      <p className="etat">verdict : {r.detect.verdict}</p>
       <CielSousLaLune r={r} />
       <TracedValue terme="brillance_surface" trace={r.detect.sbObj} unite="mag/as²" />
       <TracedValue terme="contraste_ciel" trace={r.detect.deltaSb} unite="mag/as²" />

@@ -17,7 +17,7 @@ import { Etiquette } from './Terme.tsx'
 import { LIBELLE_TYPE_OBJET } from './libelles-objet.ts'
 
 /** §6.3 — ce que le catalogue ne porte pas se nomme, et aucune saisie n'y changera rien. */
-const MANQUANTE = '[DONNÉE MANQUANTE]'
+export const MANQUANTE = '[DONNÉE MANQUANTE]'
 
 export interface ChampsCibleProps {
   readonly objet: ObjetCielProfond
@@ -38,19 +38,24 @@ function Lecture({
   )
 }
 
-/**
- * Les dimensions apparentes du catalogue. Une valeur absente ne s'affiche pas : OpenNGC en
- * manque souvent, et trois lignes de « donnée manquante » occupent la place de trois lectures
- * sans rien en dire. Le vide complet, lui, se nomme une fois.
- */
-function Dimensions({ objet }: ChampsCibleProps) {
-  const lignes = [
+/** Les dimensions que le catalogue porte réellement — une absente ne produit pas de ligne. */
+function lignesDimensions(objet: ObjetCielProfond) {
+  return [
     objet.majAxArcmin === null ? null : { libelle: 'Grand axe', valeur: `${objet.majAxArcmin} ’` },
     objet.minAxArcmin === null ? null : { libelle: 'Petit axe', valeur: `${objet.minAxArcmin} ’` },
     objet.posAngDeg === null
       ? null
       : { libelle: 'Angle de position', valeur: `${objet.posAngDeg} °` },
   ].filter((ligne) => ligne !== null)
+}
+
+/**
+ * Les dimensions apparentes du catalogue. Une valeur absente ne s'affiche pas : OpenNGC en
+ * manque souvent, et trois lignes de « donnée manquante » occupent la place de trois lectures
+ * sans rien en dire. Le vide complet, lui, se nomme une fois.
+ */
+function Dimensions({ objet }: ChampsCibleProps) {
+  const lignes = lignesDimensions(objet)
 
   return (
     <>
@@ -81,7 +86,12 @@ export function ChampsCible({ objet }: ChampsCibleProps) {
         </span>
       </p>
       <Dimensions objet={objet} />
-      <p className="etat">Valeurs du catalogue OpenNGC.</p>
+      {/* Le renvoi à la source accompagne des valeurs. Aucune dimension au catalogue : il
+          n'accompagne plus rien, et une provenance annoncée sous une absence donne à croire
+          qu'OpenNGC porte ces mesures. */}
+      {lignesDimensions(objet).length > 0 && (
+        <p className="etat">Valeurs du catalogue OpenNGC.</p>
+      )}
     </section>
   )
 }

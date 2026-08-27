@@ -73,7 +73,8 @@ export interface Resultat {
   readonly lune: LuneFiche
   /** Fond de ciel effectivement employé : celui du site, dégradé par la Lune si elle l'est. */
   readonly sbCielEffectif: number
-  readonly cadrage: FicheCadrage
+  /** `null` quand le catalogue ne donne pas les dimensions : §6.2 n'a alors rien à dire. */
+  readonly cadrage: FicheCadrage | null
   readonly detect: Detectabilite
   readonly eCiel: Traced<number>
   readonly eObj: Traced<number> | null
@@ -116,14 +117,21 @@ export function evalue(
   const b = objet.minAxArcmin
   const m = objet.vMag
 
-  const cadrage = ficheCadrage({
-    fovHDeg,
-    echApx: contexte.optique.echApx.value,
-    capteurHMm: contexte.capteurHMm,
-    tailleMajArcmin: a ?? 0,
-    tailleMinArcmin: b,
-    posAngDeg: objet.posAngDeg,
-  })
+  // Sans grand axe au catalogue, aucun cadrage n'est produit — comme le plan de séance et la
+  // liste de cibles le font déjà. Substituer une taille nulle donnerait un remplissage de 0 %,
+  // un refus « trop petit » et une focale nécessaire infinie : trois verdicts sur une donnée
+  // inventée, ce qui est pire que l'absence.
+  const cadrage =
+    a === null || a <= 0
+      ? null
+      : ficheCadrage({
+          fovHDeg,
+          echApx: contexte.optique.echApx.value,
+          capteurHMm: contexte.capteurHMm,
+          tailleMajArcmin: a,
+          tailleMinArcmin: b,
+          posAngDeg: objet.posAngDeg,
+        })
 
   const detect = detectabilite({
     mInt: m,
@@ -291,7 +299,7 @@ function expliqueVerdict(
   objet: ObjetCielProfond,
   snrCible: number,
   r: {
-    readonly cadrage: FicheCadrage
+    readonly cadrage: FicheCadrage | null
     readonly detect: Detectabilite
     readonly eCiel: Traced<number>
     readonly eObj: Traced<number>
@@ -353,7 +361,7 @@ function expliqueVerdict(
       verdict: r.detect.verdict,
       typeObjet: objet.type,
       cibleImposee: true,
-      cadrageRefuse: !r.cadrage.faisable,
+      cadrageRefuse: r.cadrage?.faisable === false,
       // §7.6 — sous le seuil d'imagerie, le créneau devient un levier chiffré et non une
       // recommandation de principe : l'extinction y double le temps d'intégration.
       hauteurFaible:
@@ -387,7 +395,8 @@ export function conseilsCible(
     // Bortle : une nébuleuse en émission reste faisable sous Lune gibbeuse avec un
     // bi-bande, et c'est là que ça se dit.
     deltaSbLuneMag: r.lune.evaluee ? r.lune.ciel.delta.value : 0,
-    cadragePlanifiable: r.cadrage.faisable,
+    // Sans cadrage, rien ne dit que le cadrage bloque : le conseil filtre reste ouvert.
+    cadragePlanifiable: r.cadrage === null || r.cadrage.faisable,
     explicationDepliee: entree.explicationDepliee,
     eObj: r.eObj.value,
     eCiel: r.eCiel.value,
@@ -400,13 +409,13 @@ export function conseilsCible(
     filtre,
     recommandations: recommandationsEquipement({
       conseilFiltre: filtre,
-      verdictDefavorable: r.detect.verdict === 'PHOTO_SEULE' || !r.cadrage.faisable,
+      verdictDefavorable: r.detect.verdict === 'PHOTO_SEULE' || r.cadrage?.faisable === false,
       explicationDepliee: entree.explicationDepliee,
       leviersPresentes: (r.explique?.leviers ?? []).map((l) => l.code),
-      verdictCadrage: r.cadrage.verdict,
+      verdictCadrage: r.cadrage?.verdict ?? null,
       focaleActuelleMm: contexte.focaleMm,
-      focaleIdealeMm: r.cadrage.focaleIdealeMm?.value ?? null,
-      nTuiles: r.cadrage.nTuiles?.value ?? null,
+      focaleIdealeMm: r.cadrage?.focaleIdealeMm?.value ?? null,
+      nTuiles: r.cadrage?.nTuiles?.value ?? null,
       regimeLimiteSuivi: r.pose.regime === 'LIMITE_SUIVI',
       suiviActif: contexte.suiviActif,
       tOptS: r.pose.tOptS.value,

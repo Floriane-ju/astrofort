@@ -174,7 +174,8 @@ export interface EntreeRecommandations {
   readonly explicationDepliee: boolean
   /** Leviers de coût inférieur déjà présentés à l'utilisateur (§10.3, condition 3). */
   readonly leviersPresentes: readonly string[]
-  readonly verdictCadrage: VerdictCadrage
+  /** `null` sans dimensions au catalogue : aucun conseil de focale ne s'appuie sur rien. */
+  readonly verdictCadrage: VerdictCadrage | null
   readonly focaleActuelleMm: number
   readonly focaleIdealeMm: number | null
   readonly nTuiles: number | null
