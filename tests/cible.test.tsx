@@ -173,16 +173,37 @@ describe('T-0128 — la fiche décrit la cible, elle ne la choisit plus', () => 
     expect(rendu).not.toMatch(/<optgroup/)
   })
 
-  it('garde les six champs qui décrivent la cible', () => {
-    for (const champ of [
-      'Désignation',
-      'Type d’objet',
-      'Grand axe',
-      'Petit axe',
-      'Angle de position',
-    ]) {
+  it('garde les champs qui décrivent la cible', () => {
+    for (const champ of ['Désignation', 'Type d’objet', 'Grand axe', 'Petit axe']) {
       expect(rendu, champ).toContain(champ)
     }
+  })
+})
+
+describe('T-0158 — « À propos », et des dimensions qui ne meublent pas', () => {
+  it('titre la section « À propos » et groupe les dimensions sous leur sous-titre', () => {
+    const rendu = ficheDe(AU_DESSUS)
+    expect(rendu).toContain('<h2>À propos</h2>')
+    expect(rendu).toContain('<h3>Dimensions</h3>')
+  })
+
+  it('n’affiche pas la ligne d’une dimension absente du catalogue', () => {
+    // AU_DESSUS n'a pas d'angle de position : une ligne « [DONNÉE MANQUANTE] » de plus
+    // n'apprendrait rien de la cible.
+    const rendu = ficheDe(AU_DESSUS)
+    expect(rendu).toContain('Grand axe')
+    expect(rendu).not.toContain('Angle de position')
+  })
+
+  it('ne nomme qu’une fois l’absence quand les trois dimensions manquent', () => {
+    const rendu = ficheDe(
+      objetForge('SANS_FORME', 85, { majAxArcmin: null, minAxArcmin: null, posAngDeg: null }),
+    )
+    // Les verdicts en aval nomment aussi ce qui leur manque : on ne juge que la section.
+    const aPropos = rendu.slice(0, rendu.indexOf('Valeurs du catalogue OpenNGC.'))
+    expect(aPropos).not.toContain('Grand axe')
+    expect(aPropos).not.toContain('Petit axe')
+    expect(aPropos.match(/DONNÉE MANQUANTE/g) ?? []).toHaveLength(1)
   })
 })
 
@@ -251,8 +272,9 @@ describe('T-0156 — la cible ne se saisit plus du tout', () => {
   })
 
   it('nomme ce que le catalogue ne porte pas plutôt que de laisser un champ vide', () => {
-    // L'objet forgé n'a pas d'angle de position : §6.3 le dit, et rien ne permet de le saisir.
-    expect(rendu).toContain('[DONNÉE MANQUANTE]')
+    // L'objet forgé n'a pas de magnitude : §6.3 le dit, et rien ne permet de le saisir.
+    // T-0158 — les dimensions, elles, s'effacent au lieu de meubler.
+    expect(ficheDe(objetForge('SANS_MAG', 85, { vMag: null }))).toContain('[DONNÉE MANQUANTE]')
   })
 })
 
