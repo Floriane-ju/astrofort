@@ -7,10 +7,15 @@
  * `evalueCandidate` est ce qui empêche la liste de le réintroduire.
  *
  * Aucun temps n'est écrit en dur : le test compare deux sorties de moteur.
+ *
+ * Depuis T-0161, `etatsCibles` porte aussi la NOTE de facilité (§6.4), et les cibles écartées
+ * entrent dans la map avec la note 0 au lieu d'en être absentes. « Aucune pose » se lit donc
+ * `pose === null`, jamais `has() === false` : l'absence d'entrée veut dire « pas évaluée ».
  */
 
 import { describe, expect, it } from 'vitest'
-import { posesRequises } from '../src/core/cibles-liste.ts'
+import { etatsCibles } from '../src/core/cibles-liste.ts'
+import { preFiltre } from '../src/core/session-candidates.ts'
 import { detectabilite } from '../src/core/detectability.ts'
 import { DOMAINES } from '../src/registry/domains.ts'
 import { fenetreNocturne } from '../src/core/night.ts'
@@ -80,7 +85,7 @@ const CATALOGUE: readonly ObjetCielProfond[] = [
  * 26 mag/as² du domaine de §7.1. `fluxObjet` refuse — c'est son rôle — et la liste doit
  * écarter la cible avec sa cause, comme le plan de séance le fait depuis toujours.
  */
-describe('posesRequises — un refus de domaine écarte la cible, il ne casse pas l’écran', () => {
+describe('etatsCibles — un refus de domaine écarte la cible, il ne casse pas l’écran', () => {
   // 300 mm sur le même plein format : la fenêtre de cadrage descend, et des objets que le
   // grand champ écartait sur leur taille arrivent jusqu'aux moteurs de flux.
   const LONGUE_FOCALE: ContexteSession = { ...CONTEXTE, fovHDeg: 4.56, echApx: 3.5 }
@@ -114,15 +119,21 @@ describe('posesRequises — un refus de domaine écarte la cible, il ne casse pa
   })
 
   it('n’annonce aucune pose pour elle, sans lever d’erreur', () => {
-    expect(() => posesRequises(LONGUE_FOCALE, [...CATALOGUE, DIFFUSE])).not.toThrow()
-    expect(posesRequises(LONGUE_FOCALE, [...CATALOGUE, DIFFUSE]).has(DIFFUSE.designation)).toBe(
-      false,
-    )
+    expect(() => etatsCibles(LONGUE_FOCALE, [...CATALOGUE, DIFFUSE])).not.toThrow()
+    expect(etatsCibles(LONGUE_FOCALE, [...CATALOGUE, DIFFUSE]).get(DIFFUSE.designation)?.pose)
+      .toBeNull()
+  })
+
+  it('lui donne la note 0 et sa cause, pas un tiret muet', () => {
+    const etat = etatsCibles(LONGUE_FOCALE, [...CATALOGUE, DIFFUSE]).get(DIFFUSE.designation)
+    expect(etat).toBeDefined()
+    expect(etat!.note).toBe(0)
+    expect(etat!.cause).not.toBeNull()
   })
 
   it('ne prive pas les autres cibles de leur pose : le refus est individuel', () => {
-    const poses = posesRequises(LONGUE_FOCALE, [...CATALOGUE, DIFFUSE])
-    expect(poses.size).toBeGreaterThan(0)
+    const etats = etatsCibles(LONGUE_FOCALE, [...CATALOGUE, DIFFUSE])
+    expect([...etats.values()].filter((e) => e.pose !== null).length).toBeGreaterThan(0)
   })
 
   it('la range parmi les écartées du plan, avec sa cause', () => {
@@ -133,8 +144,8 @@ describe('posesRequises — un refus de domaine écarte la cible, il ne casse pa
   })
 })
 
-describe('posesRequises — la liste et le plan annoncent la même pose', () => {
-  const POSES = posesRequises(CONTEXTE, CATALOGUE)
+describe('etatsCibles — la liste et le plan annoncent la même pose', () => {
+  const POSES = etatsCibles(CONTEXTE, CATALOGUE)
   const PLAN = planSession(CONTEXTE, CATALOGUE)
 
   it('rend une pose pour chaque cible que le plan a retenue', () => {
@@ -146,7 +157,7 @@ describe('posesRequises — la liste et le plan annoncent la même pose', () => 
 
   it('annonce exactement l’intégration requise de l’étape du plan', () => {
     for (const etape of PLAN.etapes) {
-      const pose = POSES.get(etape.objet.designation)!
+      const pose = POSES.get(etape.objet.designation)!.pose!
       expect(pose.tRequisS, etape.objet.designation).toBeCloseTo(
         etape.integration.tRequisS.value,
         9,
@@ -157,7 +168,9 @@ describe('posesRequises — la liste et le plan annoncent la même pose', () => 
   })
 
   it('n’annonce aucune pose pour une cible qui ne se lève jamais depuis ce site', () => {
-    expect(POSES.has('INVISIBLE')).toBe(false)
+    // Elle est bien DANS la map — écartée, notée 0 — mais sans pose : le pré-filtrage l'a
+    // refusée sur sa culmination, ce qui est un verdict et pas une absence de réponse.
+    expect(POSES.get('INVISIBLE')?.pose ?? null).toBeNull()
   })
 
   it('n’évalue jamais plus de cibles que son propre plafond, celui de §6.4', () => {
@@ -169,6 +182,75 @@ describe('posesRequises — la liste et le plan annoncent la même pose', () => 
       ...CONTEXTE,
       nuit: { ...NUIT, debutReference: null, finReference: null },
     }
-    expect(posesRequises(sansNuit, CATALOGUE).size).toBe(0)
+    expect(etatsCibles(sansNuit, CATALOGUE).size).toBe(0)
+  })
+})
+
+/**
+ * §6.4 — la note de facilité, et sa COUVERTURE.
+ *
+ * Aucune note n'est recopiée : le test vérifie les invariants de l'échelle et le fait que
+ * chaque cible refusée au pré-filtrage reçoive quand même sa note. C'est cette couverture qui
+ * a manqué : sur un 120 mm plein format, onze objets du catalogue seulement vont jusqu'au
+ * calcul de créneau — noter ces onze seuls laissait la liste presque vide de notes pendant que
+ * la carte Cible en affichait une pour tout ce qu'on clique.
+ */
+describe('etatsCibles — la note de facilité', () => {
+  const ETATS = etatsCibles(CONTEXTE, CATALOGUE)
+
+  it('reste dans l’échelle du registre', () => {
+    expect(ETATS.size).toBeGreaterThan(0)
+    for (const [designation, etat] of ETATS) {
+      expect(etat.note, designation).toBeGreaterThanOrEqual(0)
+      expect(etat.note, designation).toBeLessThanOrEqual(K('FACILITE_NOTE_MAX'))
+      expect(Number.isInteger(etat.note), designation).toBe(true)
+      expect(etat.libelle, designation).not.toBe('')
+    }
+  })
+
+  it('lie la note à la pose : une cible évaluée n’est jamais 0, une écartée n’est jamais notée', () => {
+    for (const [designation, etat] of ETATS) {
+      if (etat.pose === null) {
+        expect(etat.note, designation).toBe(0)
+        expect(etat.cause, designation).not.toBeNull()
+      } else {
+        expect(etat.note, designation).toBeGreaterThanOrEqual(1)
+        expect(etat.cause, designation).toBeNull()
+      }
+    }
+  })
+
+  it('note TOUTE cible refusée au pré-filtrage, et pas seulement les candidates', () => {
+    // La borne d'écartées du pré-filtrage est celle du catalogue entier : nommer un refus ne
+    // coûte qu'une chaîne, alors que retenir une candidate coûte une éphéméride.
+    const { candidates, ecartees } = preFiltre(CONTEXTE, CATALOGUE, CATALOGUE.length)
+    expect(ecartees.length).toBeGreaterThan(0)
+
+    for (const ecartee of ecartees) {
+      if (ecartee.code === 'DONNEE_MANQUANTE') continue
+      const etat = ETATS.get(ecartee.designation)
+      expect(etat, ecartee.designation).toBeDefined()
+      expect(etat!.note, ecartee.designation).toBe(0)
+      expect(etat!.cause, ecartee.designation).toBe(ecartee.cause)
+    }
+
+    // La couverture dépasse donc les candidates : c'est tout l'objet du correctif.
+    expect(ETATS.size).toBeGreaterThan(candidates.length)
+  })
+
+  it('ne note aucune cible dont le catalogue ne donne ni magnitude ni dimensions', () => {
+    // Non documenté n'est pas difficile : ces cibles n'ont pas de note, ni ici ni sur la carte.
+    for (const objet of CATALOGUE) {
+      if (objet.majAxArcmin !== null && objet.vMag !== null) continue
+      expect(ETATS.has(objet.designation), objet.designation).toBe(false)
+    }
+  })
+
+  it('ne note rien quand la nuit n’a pas de fenêtre de référence', () => {
+    const sansNuit: ContexteSession = {
+      ...CONTEXTE,
+      nuit: { ...NUIT, debutReference: null, finReference: null },
+    }
+    expect(etatsCibles(sansNuit, CATALOGUE).size).toBe(0)
   })
 })

@@ -11,17 +11,18 @@
  * la vue une cible qui sera bonne dans deux heures ». Une galaxie à 12° au-dessus de
  * l'horizon maintenant, qui culmine à 60° avant l'aube, est photographiable — et le reste.
  *
- * Aucun calcul ici. Les lectures viennent de `cibles-liste.ts` et la pose de `posesRequises`,
- * qui réemploie le moteur du plan de séance : la liste et le plan ne peuvent pas annoncer
- * deux poses différentes pour la même cible.
+ * Aucun calcul ici. Les lectures viennent de `cibles-liste.ts` ; la pose et la note de
+ * facilité arrivent en props, calculées une fois par la chaîne, qui réemploie le moteur du
+ * plan de séance : la liste, la carte Cible et le plan ne peuvent pas annoncer deux poses —
+ * ni deux notes — différentes pour la même cible.
  */
 
 import { useMemo, useState } from 'react'
 import {
   filtreLignes,
   lignesCatalogue,
-  posesRequises,
   typesPresents,
+  type EtatCible,
   type LigneCible,
   type PoseCible,
 } from '../core/cibles-liste.ts'
@@ -35,6 +36,7 @@ import type { ObjetCielProfond, TypeObjet } from '../data/deepsky.ts'
 import { Bulle } from './Bulle.tsx'
 import { Icone } from './Icone.tsx'
 import { VignetteCible } from './ImageCible.tsx'
+import { Pastilles } from './Pastilles.tsx'
 import { LIBELLE_TYPE_OBJET, nomCommun } from './libelles-objet.ts'
 import { ouvreCible } from './seance-etat.ts'
 import { majVue, minuteAffichee, useTrancheScene, MS_PAR_MINUTE } from './scene-etat.ts'
@@ -64,10 +66,16 @@ export interface PanneauCiblesProps {
   readonly capteurHMm: number
   /** §8.3 — absent tant que la nuit n'est pas chiffrable : aucune pose n'est alors annoncée. */
   readonly contexteSession: ContexteSession | null
+  /**
+   * §6.4 — la pose et la note par désignation, calculées par la chaîne. Ce panneau ne les
+   * calcule pas : la carte Cible lit la MÊME map, et deux calculs séparés se sont déjà
+   * contredits une fois — la carte notait ce que la liste laissait vide.
+   */
+  readonly etats: ReadonlyMap<string, EtatCible>
 }
 
 export function PanneauCibles(props: PanneauCiblesProps) {
-  const { catalogue, site, sbCiel, mLimOeil, dMm, fovHDeg, echApx, capteurHMm } = props
+  const { catalogue, site, sbCiel, mLimOeil, dMm, fovHDeg, echApx, capteurHMm, etats } = props
   const [portee, setPortee] = useState<Portee>('CATALOGUE')
   const [recherche, setRecherche] = useState('')
   const [type, setType] = useState<TypeObjet | null>(null)
@@ -95,30 +103,15 @@ export function PanneauCibles(props: PanneauCiblesProps) {
     [catalogue, site, minute, sbCiel, mLimOeil, dMm, fovHDeg, echApx, capteurHMm],
   )
 
-  /**
-   * Le poste coûteux : une éphéméride de créneau par cible. Il ne dépend pas de la minute
-   * affichée — un créneau est une propriété de la NUIT — donc bouger le curseur de temps ne
-   * le relance pas.
-   *
-   * ponytail: environ une seconde à la première ouverture, sur le thread de rendu, comme le
-   * plan de séance (§12.1 le veut en Web Worker). C'est un coût par changement de site ou de
-   * matériel, pas par geste : la bascule et la frappe retombent sous les 100 ms. Le jour où
-   * il faut le déporter, c'est ce memo-là et celui du plan, pas le rendu de la liste.
-   */
-  const poses = useMemo(
-    () =>
-      props.contexteSession === null
-        ? new Map<string, PoseCible>()
-        : posesRequises(props.contexteSession, catalogue),
-    [props.contexteSession, catalogue],
-  )
-
   const typesOfferts = useMemo(() => typesPresents(lignes), [lignes])
 
   const retenues = useMemo(() => {
     const filtrees = filtreLignes(lignes, { type, magMax, recherche })
-    return portee === 'CATALOGUE' ? filtrees : filtrees.filter((l) => poses.has(l.objet.designation))
-  }, [lignes, type, magMax, recherche, portee, poses])
+    if (portee === 'CATALOGUE') return filtrees
+    // Une cible écartée porte une note et pas de pose : elle n'est pas photographiable, donc
+    // elle ne passe pas cette portée-là. C'est la POSE qui décide, pas la présence d'une note.
+    return filtrees.filter((l) => etats.get(l.objet.designation)?.pose != null)
+  }, [lignes, type, magMax, recherche, portee, etats])
 
   const plafond = K('CIBLES_LISTEES_MAX')
   const listees = retenues.slice(0, plafond)
@@ -199,7 +192,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
           <LigneListe
             key={ligne.objet.designation}
             ligne={ligne}
-            pose={poses.get(ligne.objet.designation) ?? null}
+            etat={etats.get(ligne.objet.designation) ?? null}
           />
         ))}
       </ul>
@@ -217,7 +210,8 @@ export function PanneauCibles(props: PanneauCiblesProps) {
           La pose requise vise un rapport signal sur bruit de {props.contexteSession.snrCible} avec
           le matériel courant et le fond de ciel du site. Elle double si le site perd
           0,75 mag/as². La magnitude ordonne la liste ; c’est la brillance de surface qui dit la
-          difficulté.
+          difficulté. La note de facilité lit les poids de scoring réglés au plan de séance — un
+          tiret dit que la cible n’a pas été évaluée, pas qu’elle est impossible.
         </p>
       )}
     </section>
@@ -231,7 +225,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
  * Deux boutons distincts et non imbriqués : choisir la cible n'est pas la même intention que
  * pointer la scène dessus, et un `<button>` dans un `<button>` n'est pas du HTML valide.
  */
-function LigneListe({ ligne, pose }: { readonly ligne: LigneCible; readonly pose: PoseCible | null }) {
+function LigneListe({ ligne, etat }: { readonly ligne: LigneCible; readonly etat: EtatCible | null }) {
   const { objet } = ligne
   const nom = nomCommun(objet)
 
@@ -243,8 +237,13 @@ function LigneListe({ ligne, pose }: { readonly ligne: LigneCible; readonly pose
       <button type="button" className="cible-ligne" onClick={() => ouvreCible(objet)}>
         <span className="cible-tete">
           <span className="cible-designation">{objet.designation}</span>
-          <span className="cible-pose">{libellePose(pose)}</span>
+          <span className="cible-pose">{libellePose(etat?.pose ?? null)}</span>
         </span>
+        {/* Sans note, aucune pastille : cinq pastilles vides se lisent « impossible », ce qui
+            serait faux d'une cible que le moteur n'a simplement pas évaluée. */}
+        {etat !== null && (
+          <Pastilles note={etat.note} libelle={etat.libelle} cause={etat.cause} />
+        )}
         <span className="cible-tete">
           <span className="cible-commun">{nom === '' ? LIBELLE_TYPE_OBJET[objet.type] : nom}</span>
           <span className="cible-mag">

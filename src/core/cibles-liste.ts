@@ -6,10 +6,11 @@
  * et azimut à l'instant affiché (§3.1). Ce ne sont que des appels aux moteurs existants et
  * une multiplication de matrice — donc il passe sur les 14 000 entrées sans éphéméride.
  *
- * La POSE REQUISE n'est pas ici, et c'est délibéré : elle demande le créneau de la nuit,
- * donc une éphéméride par cible. Elle vient de `evalueCandidate` (§8.3), appelée sur les
- * seules lignes rendues. Une seule convention d'extinction traverse ainsi l'application —
- * celle du plan de séance — et la liste ne peut pas annoncer une autre pose que lui.
+ * La POSE REQUISE et la NOTE DE FACILITÉ ne sont pas ici, et c'est délibéré : elles demandent
+ * le créneau de la nuit, donc une éphéméride par cible. Elles viennent de `evalueCandidate`
+ * (§8.3), appelée sur les seules candidates. Une seule convention d'extinction traverse ainsi
+ * l'application — celle du plan de séance — et la liste ne peut pas annoncer une autre pose,
+ * ni une autre note, que lui.
  *
  * Aucun objet n'est écarté. Sous l'horizon, sans magnitude, sans dimensions : la ligne
  * existe et dit ce qui manque. C'est `filtreLignes` qui restreint, sur demande explicite.
@@ -20,8 +21,16 @@ import { detectabilite, type VerdictDetectabilite } from './detectability.ts'
 import { applique, versSpherique, versVecteur, type Mat3 } from './mat3.ts'
 import { chercheCatalogue } from './recherche-catalogue.ts'
 import { evalueCandidate, preFiltre } from './session-candidates.ts'
+import { faciliteCible } from './facilite.ts'
 import type { Intervalle } from './creneaux.ts'
-import { normalisePoids, poidsParDefaut, type ContexteSession } from './session-types.ts'
+import {
+  normalisePoids,
+  poidsParDefaut,
+  type Candidate,
+  type CibleEcartee,
+  type ContexteSession,
+  type PoidsScoring,
+} from './session-types.ts'
 import { K } from '../registry/constants.ts'
 import { DOMAINES } from '../registry/domains.ts'
 import type { VerdictCadrage } from '../registry/verdicts.ts'
@@ -181,7 +190,7 @@ export function filtreLignes(
 }
 
 // ---------------------------------------------------------------------------
-// Second étage — la pose requise, qui coûte une éphéméride par cible
+// Second étage — le créneau et la note, qui coûtent une éphéméride par cible
 // ---------------------------------------------------------------------------
 
 /** Ce qu'une cible photographiable ce soir demande, avec le créneau qui le permet. */
@@ -196,7 +205,72 @@ export interface PoseCible {
 }
 
 /**
- * §6.4 — les cibles photographiables ce soir, et le temps que chacune demande.
+ * §6.4 — ce que le moteur a répondu sur une cible : sa note, et ce qu'elle coûte.
+ *
+ * Une entrée ABSENTE de la map n'est pas une cible impossible : c'est une cible que le moteur
+ * n'a pas évaluée — hors des `CIBLES_EVALUEES_MAX` candidates, ou sans magnitude ni dimensions
+ * au catalogue. La distinction porte tout le sens de l'affichage : « — » n'est pas 0.
+ */
+export interface EtatCible {
+  /** 0 à `FACILITE_NOTE_MAX`. 0 ne vient jamais d'un score, seulement d'une cause d'écart. */
+  readonly note: number
+  readonly libelle: string
+  /** `null` quand la cible est écartée : il n'y a alors pas de pose à annoncer. */
+  readonly pose: PoseCible | null
+  /** Renseignée pour la note 0 seulement — la cause vient du moteur, jamais d'ici. */
+  readonly cause: string | null
+}
+
+/** Les trois dérivations qu'une évaluation demande, faites en un seul endroit. */
+export interface EntreeEvaluation {
+  readonly fenetre: Intervalle
+  readonly sbCielBase: number
+  readonly poids: PoidsScoring
+}
+
+/**
+ * Les trois dérivations que `planSession` fait de son contexte, refaites à l'identique plutôt
+ * que reçues en paramètre : un appelant libre de les fournir est un appelant libre de les
+ * fournir autrement, donc d'annoncer une pose — et une note — que le plan ne reconnaît pas.
+ *
+ * `null` quand la nuit n'est pas chiffrable : sans fenêtre de référence, aucun créneau n'existe.
+ */
+export function prepareEvaluation(contexte: ContexteSession): EntreeEvaluation | null {
+  const debut = contexte.nuit.debutReference
+  const fin = contexte.nuit.finReference
+  if (debut === null || fin === null) return null
+  return {
+    fenetre: { debut, fin },
+    sbCielBase: contexte.sbCielNoir - contexte.nuit.penaliteSbMag,
+    poids: normalisePoids(contexte.poids ?? poidsParDefaut()),
+  }
+}
+
+function etat(r: Candidate | CibleEcartee): EtatCible | null {
+  // Une écartée du PRÉ-filtrage arrive ici par le même chemin qu'une écartée de l'évaluation
+  // complète : les deux sont des `CibleEcartee`, portent le même code et la même cause. C'est
+  // ce qui permet à la liste de nommer 4 500 refus de cadrage sans payer 4 500 éphémérides.
+  const facilite = faciliteCible(r)
+  if (facilite === null) return null
+  if (!('objet' in r)) {
+    return { note: facilite.note, libelle: facilite.libelle, pose: null, cause: r.cause }
+  }
+  return {
+    note: facilite.note,
+    libelle: facilite.libelle,
+    pose: {
+      tRequisS: r.integration.tRequisS.value,
+      nPoses: r.integration.nPoses.value,
+      tPoseS: r.pose.tAfficheeS,
+      dureeCreneauMin: r.creneau.dureeTotaleMin.value,
+      nNuits: r.integration.nNuits?.value ?? 1,
+    },
+    cause: null,
+  }
+}
+
+/**
+ * §6.4 — les cibles que la nuit permet, le temps que chacune demande, et sa note de facilité.
  *
  * Photographiable ne veut pas dire « levée maintenant ». Le PRD l'interdit explicitement :
  * filtrer sur la hauteur instantanée ferait disparaître une cible qui sera excellente dans
@@ -207,35 +281,40 @@ export interface PoseCible {
  * de séance, extinction par masse d'air moyenne du créneau et Lune au milieu du créneau
  * comprises. Réemployer ce moteur est ce qui garantit que la liste et le plan annoncent la
  * MÊME pose pour la même cible — le désaccord que T-0089 a corrigé une fois.
+ *
+ * Les cibles ÉCARTÉES entrent aussi, avec la note 0 et leur cause — celles du pré-filtrage
+ * comme celles de l'évaluation complète. C'est ce qui rend la carte et la liste capables de
+ * dire la même chose : sur un 120 mm plein format, ONZE objets du catalogue passent jusqu'au
+ * calcul de créneau et quatre mille cinq cents sont refusés au cadrage. Ne noter que les onze
+ * laissait la liste presque vide de notes pendant que la carte en affichait une pour tout ce
+ * qu'on clique — deux réponses à la même question.
+ *
+ * Un 0 muet serait le pire des deux : sans cause affichée, l'utilisateur ne sait pas quel
+ * levier tirer.
  */
-export function posesRequises(
+export function etatsCibles(
   contexte: ContexteSession,
   catalogue: readonly ObjetCielProfond[],
-): ReadonlyMap<string, PoseCible> {
-  const poses = new Map<string, PoseCible>()
-  const debut = contexte.nuit.debutReference
-  const fin = contexte.nuit.finReference
-  if (debut === null || fin === null) return poses
+): ReadonlyMap<string, EtatCible> {
+  const etats = new Map<string, EtatCible>()
+  const entree = prepareEvaluation(contexte)
+  if (entree === null) return etats
 
-  // Les trois dérivations que `planSession` fait de son contexte, refaites à l'identique
-  // plutôt que reçues en paramètre : un appelant libre de les fournir est un appelant libre
-  // de les fournir autrement, donc d'annoncer une pose que le plan ne reconnaît pas.
-  const fenetre: Intervalle = { debut, fin }
-  const sbCielBase = contexte.sbCielNoir - contexte.nuit.penaliteSbMag
-  const poids = normalisePoids(contexte.poids ?? poidsParDefaut())
-  const { candidates } = preFiltre(contexte, catalogue, K('CIBLES_EVALUEES_MAX'))
+  // Toutes les causes, mais pas tous les créneaux : nommer une écartée ne coûte qu'une chaîne.
+  const { candidates, ecartees } = preFiltre(
+    contexte,
+    catalogue,
+    K('CIBLES_EVALUEES_MAX'),
+    catalogue.length,
+  )
 
-  for (const objet of candidates) {
-    const r = evalueCandidate(contexte, objet, fenetre, sbCielBase, poids)
-    if (!('objet' in r)) continue
-    poses.set(objet.designation, {
-      tRequisS: r.integration.tRequisS.value,
-      nPoses: r.integration.nPoses.value,
-      tPoseS: r.pose.tAfficheeS,
-      dureeCreneauMin: r.creneau.dureeTotaleMin.value,
-      nNuits: r.integration.nNuits?.value ?? 1,
-    })
+  for (const ecartee of ecartees) {
+    const e = etat(ecartee)
+    if (e !== null) etats.set(ecartee.designation, e)
   }
-
-  return poses
+  for (const objet of candidates) {
+    const e = etat(evalueCandidate(contexte, objet, entree.fenetre, entree.sbCielBase, entree.poids))
+    if (e !== null) etats.set(objet.designation, e)
+  }
+  return etats
 }

@@ -605,6 +605,27 @@ input.barretemps-instant {
   color: var(--attenue);
 }
 
+/* Le rappel se serre contre la marque de repli plutôt que de flotter au centre : l'en-tête est
+   une ligne qui se lit de gauche à droite — le nom, puis ce que la carte retient d'elle-même.
+
+   Deux règles et non une : l'enveloppe place et habille, la glose aligne son contenu. Entre
+   les deux, `Bulle` insère son ancre — la mise en page ne peut donc pas vivre au même niveau
+   que le placement. */
+.carte-rappel {
+  margin-inline-start: auto;
+  color: var(--attenue);
+  font-size: 0.7rem;
+  letter-spacing: var(--suivi-micro);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.carte-rappel-glose {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 /* Une carte ne pousse jamais la coque : son corps défile chez lui. La borne est la place
    laissée par les deux barres — une carte seule sur son flanc peut la prendre entière. */
 .carte-corps {
@@ -1670,6 +1691,42 @@ button:disabled {
 
    Chaque mesure est un bloc insécable dans un `flex-wrap` : sur un panneau étroit, la ligne
    passe à la suivante ENTRE deux mesures, jamais au milieu de « 1841 × 1841 px ». */
+/* §6.4 — la note de facilité. Les pastilles n'ont pas de forme propre : elles héritent de
+   `.icone`, et seules leur taille et leur teinte changent ici. Une pastille vide s'atténue au
+   lieu de disparaître — cinq emplacements se comptent, quatre pleines sur cinq se lisent. */
+
+.facilite {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.05rem;
+  white-space: nowrap;
+}
+
+.facilite .icone {
+  font-size: 0.8rem;
+}
+
+/* Le remplissage porte la différence, pas la teinte : au corps d'une pastille, une nuance de
+   couleur ne se compte pas, un disque plein contre un cercle vide se compte. `FILL` est l'axe
+   de la police qui le fait sans changer la géométrie du glyphe. */
+.facilite-pleine {
+  color: var(--accent);
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.facilite-vide {
+  color: var(--attenue);
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+
+/* En fiche, la note se lit en clair à côté des pastilles : sur un écran, cinq disques ne
+   disent pas leur total, et « 4 sur 5 » se recopie dans un carnet. */
+.facilite-ligne {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .cible-lectures {
   display: flex;
   flex-wrap: wrap;

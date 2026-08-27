@@ -314,3 +314,33 @@ export const CATALOGUE_LEVIERS: readonly LevierCatalogue[] = Object.freeze(
     },
   ].map(Object.freeze) as LevierCatalogue[],
 )
+
+// ---------------------------------------------------------------------------
+// §6.4 — facilité de prise de vue, lue sur le score de §8.3
+// ---------------------------------------------------------------------------
+
+export interface LigneFacilite {
+  readonly note: number
+  readonly libelle: string
+}
+
+/**
+ * Les libellés de l'échelle, un par note de 0 à C-20 `FACILITE_NOTE_MAX`.
+ *
+ * Aucune borne de score n'est déclarée ici, et c'est le point : la note est un quintile de
+ * l'échelle elle-même (§6.4). Une table de seuils aurait fait entrer des nombres arbitraires
+ * dans un moteur, et aurait tassé le catalogue sur une seule classe.
+ *
+ * La note 0 ne se calcule pas — elle est réservée aux causes d'écart que le moteur nomme
+ * (§8.3). Une cible évaluée avec succès plancher à 1 : « impossible » n'existe presque jamais.
+ */
+export const TABLE_FACILITE: readonly LigneFacilite[] = Object.freeze(
+  [
+    { note: 0, libelle: 'hors de portée' },
+    { note: 1, libelle: 'très exigeante' },
+    { note: 2, libelle: 'exigeante' },
+    { note: 3, libelle: 'accessible' },
+    { note: 4, libelle: 'confortable' },
+    { note: 5, libelle: 'idéale' },
+  ].map(Object.freeze) as LigneFacilite[],
+)

@@ -9,6 +9,7 @@
 
 import { useMemo } from 'react'
 import { fenetreNocturne, offsetMidiSolaireMin, type FenetreNocturne } from '../core/night.ts'
+import { etatsCibles, type EtatCible } from '../core/cibles-liste.ts'
 import { fenetreUtile as calculeFenetreUtile, type FenetreUtile } from '../core/moon.ts'
 import {
   planSession,
@@ -113,6 +114,15 @@ export interface ChaineCalcul {
   /** §8.3 — le contexte de la nuit, partagé par le plan de séance et la liste du catalogue. */
   readonly contexteSession: ContexteSession | null
   readonly plan: PlanSession | null
+  /**
+   * §6.4 — la note de facilité par désignation, calculée UNE fois pour toute l'application.
+   *
+   * Elle vit ici et pas dans un écran parce que DEUX surfaces l'affichent — la liste du
+   * catalogue et l'en-tête de la carte Cible. Deux appels au moteur, même identiques, sont
+   * deux couvertures à garder d'accord : la carte notait des cibles que la liste laissait
+   * vides. Une seule map les rend incapables de se contredire.
+   */
+  readonly etatsCibles: ReadonlyMap<string, EtatCible>
   /** Le matériel et le ciel sous lesquels la fiche évalue une cible (§6, §7). */
   readonly contexteFiche: ContexteFiche | null
   /**
@@ -283,6 +293,18 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     return planSession(contexteSession, catalogue)
   }, [contexteSession, catalogue])
 
+  /**
+   * §6.4 — même dépendances que le plan, et pour la même raison : un créneau est une propriété
+   * de la NUIT, donc bouger le curseur de temps ne relance rien.
+   */
+  const etats = useMemo(
+    () =>
+      contexteSession === null
+        ? new Map<string, EtatCible>()
+        : etatsCibles(contexteSession, catalogue),
+    [contexteSession, catalogue],
+  )
+
   const domaineCadrage = useMemo(
     () => (calcul.ok ? verdictDomaine(calcul.optique.fovHDeg.value, catalogue) : null),
     [calcul, catalogue],
@@ -299,6 +321,7 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     materielFile,
     contexteSession,
     plan,
+    etatsCibles: etats,
     contexteFiche:
       calcul.ok && ciel.ok ? contexteFiche(calcul, ciel, materiel, lieu) : null,
     domaineCadrage,

@@ -259,11 +259,17 @@ export interface PreFiltrage {
  * `plafond` est la borne de calcul de l'APPELANT, pas une propriété du pré-filtrage : le plan
  * de séance retient C-20 candidates (§8.3), la liste du catalogue en évalue davantage (§6.4).
  * Chacun paie ses éphémérides, aucun n'hérite du budget de l'autre.
+ *
+ * `plafondEcartees` est SÉPARÉ, et il le fallait : les deux bornes ne bornent pas le même
+ * coût. Retenir plus de candidates coûte une éphéméride chacune ; nommer plus d'écartées ne
+ * coûte qu'une chaîne. Un appelant qui doit répondre « pourquoi pas celle-là ? » sur tout le
+ * catalogue — la liste de §6.4 — a besoin de toutes les causes sans payer tous les créneaux.
  */
 export function preFiltre(
   contexte: ContexteSession,
   catalogue: readonly ObjetCielProfond[],
   plafond = K('CIBLES_CANDIDATES_MAX'),
+  plafondEcartees = plafond,
 ): PreFiltrage {
   const seuil = contexte.seuilHauteurDeg ?? K('SEUIL_HAUTEUR_IMAGERIE_DEG')
   const tailleMin = contexte.fovHDeg * REMPLISSAGE_MIN_PLANIFIABLE * ARCMIN_PAR_DEG
@@ -277,7 +283,9 @@ export function preFiltre(
 
   const ecarte = (objet: ObjetCielProfond, code: CauseEcart, cause: string): void => {
     comptes.set(code, (comptes.get(code) ?? 0) + 1)
-    if (ecartees.length < cap) ecartees.push({ designation: objet.designation, code, cause })
+    if (ecartees.length < plafondEcartees) {
+      ecartees.push({ designation: objet.designation, code, cause })
+    }
   }
 
   for (const objet of catalogue) {

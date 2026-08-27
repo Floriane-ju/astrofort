@@ -773,6 +773,18 @@ const PLANIFICATION = {
     ordreDeGrandeur: false,
     sections: ['6.4'],
   }),
+  FACILITE_NOTE_MAX: entree({
+    ref: 'C-20',
+    libelle: 'Note maximale de facilité de prise de vue',
+    valeur: 5,
+    unite: '—',
+    source:
+      '§6.4 — échelle affichée. La note découpe le score C-15 de §8.3 en parts égales : ' +
+      'l’échelle EST le seuillage, donc aucune borne de classe n’est à déclarer',
+    tolerance: 'convention produit',
+    ordreDeGrandeur: false,
+    sections: ['6.4', '8.3'],
+  }),
 } as const
 
 /** §8.4 — cheminement d'étoiles et carte de pointage. */

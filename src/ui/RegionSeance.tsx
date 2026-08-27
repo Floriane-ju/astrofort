@@ -13,6 +13,7 @@
 
 import type { ReactNode } from 'react'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
+import type { EtatCible } from '../core/cibles-liste.ts'
 import type { Etoile } from '../data/catalog.ts'
 import { libelleZpSource } from '../data/equipment.ts'
 import { Carte } from './Carte.tsx'
@@ -21,6 +22,8 @@ import { PanneauLateral } from './PanneauLateral.tsx'
 import { PanneauCibles } from './PanneauCibles.tsx'
 import { PanneauFile } from './PanneauFile.tsx'
 import { FicheCible } from './FicheCible.tsx'
+import { Pastilles } from './Pastilles.tsx'
+import { Bulle } from './Bulle.tsx'
 import { PlanSessionVue } from './PlanSession.tsx'
 import { RegionNuit } from './RegionNuit.tsx'
 import { modeObjectif } from './PanneauMateriel.tsx'
@@ -58,6 +61,20 @@ export function CartesSeance(props: CartesSeanceProps) {
   const { chaine, materiel } = props
   const sbCiel = chaine.ciel.ok ? chaine.ciel.ciel.sbCiel.value : null
 
+  /**
+   * §6.4 — la note se LIT dans la map de la chaîne, elle ne se recalcule pas ici : c'est la
+   * même entrée que la ligne de la liste du catalogue montre pour cette cible. Deux appels au
+   * moteur, même identiques, étaient deux couvertures à garder d'accord — et elles ne
+   * l'étaient pas.
+   *
+   * Elle ne vit QUE dans l'en-tête de la carte : la fiche détaille déjà cadrage, pose et
+   * intégration, et une note qui agrège ces trois-là n'y ajoutait qu'une ligne à faire défiler.
+   */
+  const facilite =
+    props.cibleDuCiel === null
+      ? null
+      : chaine.etatsCibles.get(props.cibleDuCiel.designation) ?? null
+
   return (
     <>
       <Carte cle="MATERIEL" titre="Matériel">
@@ -75,7 +92,12 @@ export function CartesSeance(props: CartesSeanceProps) {
         />
       </Carte>
 
-      <Carte cle="CIBLE" titre="Cible" accent="cible">
+      <Carte
+        cle="CIBLE"
+        titre="Cible"
+        accent="cible"
+        rappel={facilite === null ? null : <RappelFacilite etat={facilite} />}
+      >
         {chaine.contexteFiche === null || props.cibleDuCiel === null ? (
           /* T-0149 — deux absences distinctes : rien de cliqué, ou rien de chiffrable. Le
              matériel passe devant : une cible désignée ne se chiffrerait pas davantage. */
@@ -85,10 +107,44 @@ export function CartesSeance(props: CartesSeanceProps) {
               : AIDE_MATERIEL_INCOMPLET}
           </p>
         ) : (
-          <FicheCible {...chaine.contexteFiche} objet={props.cibleDuCiel} site={chaine.site} />
+          <FicheCible
+            {...chaine.contexteFiche}
+            objet={props.cibleDuCiel}
+            site={chaine.site}
+          />
         )}
       </Carte>
     </>
+  )
+}
+
+/**
+ * §6.4 — le rappel de facilité, et la glose qui dit de quoi on parle.
+ *
+ * « Facilité » seul est ambigu — facilité de quoi, à trouver, à cadrer, à traiter ? La bulle
+ * le ferme en une phrase, et la cause d'écart s'y ajoute sur une note 0 : un zéro qui ne dit
+ * pas ce qui bloque n'indique aucun levier à tirer.
+ *
+ * `Bulle` plutôt qu'un `title` : T-0147 — l'infobulle native est la seule surface que la
+ * palette de §11.1 ne peut pas atteindre, donc une lampe blanche en pleine interface de nuit.
+ */
+function RappelFacilite({ etat }: { readonly etat: EtatCible }) {
+  const glose =
+    etat.cause === null
+      ? 'Facilité de prise de vue avec ce matériel, cette nuit.'
+      : `Facilité de prise de vue avec ce matériel, cette nuit. ${etat.cause}`
+  return (
+    <Bulle texte={glose} place="bas">
+      <span className="carte-rappel-glose">
+        {/* §10.1 — le pointillé d'`Etiquette`, réemployé tel quel : c'est le signe que l'app
+            emploie partout pour dire « une glose attend ici ». Le redessiner ailleurs en ferait
+            une seconde convention, donc un mot souligné que l'utilisateur n'a plus à survoler. */}
+        <span className="terme">
+          <abbr>Facilité</abbr>
+        </span>
+        <Pastilles note={etat.note} libelle={etat.libelle} />
+      </span>
+    </Bulle>
   )
 }
 
@@ -112,6 +168,7 @@ export function LateralSeance(props: RegionSeanceProps) {
           echApx={calcul.optique.echApx.value}
           capteurHMm={calcul.capteur.capteurHMm}
           contexteSession={chaine.contexteSession}
+          etats={chaine.etatsCibles}
         />
       ) : (
         <p className="etat">{AIDE_MATERIEL_INCOMPLET}</p>
