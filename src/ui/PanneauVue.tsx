@@ -40,12 +40,17 @@ export interface PanneauVueProps {
   readonly masque: MasqueHorizon
 }
 
+/**
+ * Les couches qui se décident. L'horizon n'en fait pas partie : c'est la ligne à laquelle se
+ * lisent les hauteurs et l'azimut, donc le repère du reste — l'effacer rendait la scène
+ * illisible sans rien libérer. Il reste une passe de rendu (`CouchesActives.horizon`), toujours
+ * allumée dans l'état de scène, que les tests de tracé isolent couche par couche.
+ */
 const COUCHES: readonly (readonly [keyof CouchesActives, string])[] = [
   ['figures', 'Figures IAU'],
   ['frontieres', 'Frontières IAU'],
   ['asterismes', 'Astérismes'],
   ['cadre', 'Cadre matériel'],
-  ['horizon', 'Horizon'],
   ['sol', 'Sol — masque ce qui est sous l’horizon'],
   ['voieLactee', 'Voie lactée'],
 ]
