@@ -299,11 +299,12 @@ body {
   background: linear-gradient(var(--surface), var(--surface-haute));
 }
 
-/* T-0145 — seule la marque tient le bord gauche ; tout le reste — la lecture du matériel puis
-   les commandes — forme un bloc calé à droite. La poussée est portée par la lecture : ce qui la
-   suit reste soudé, quelle que soit la largeur de la fenêtre. Le sélecteur cite la barre :
-   `.etat` repose ses marges plus bas dans la feuille, et une classe seule perdrait l'arbitrage. */
-.coque-topbar > .barrehaut-lectures-fin {
+/* T-0145 — la marque et la lecture du matériel tiennent ensemble le bord gauche ; les commandes
+   forment un bloc calé à droite. La poussée est portée par le premier élément qui suit la
+   lecture : ce qui vient après reste soudé, quelle que soit la largeur de la fenêtre. Le
+   sélecteur cite la barre : `.etat` repose ses marges plus bas dans la feuille, et une classe
+   seule perdrait l'arbitrage. */
+.coque-topbar > .barrehaut-lectures-fin + * {
   margin-left: auto;
 }
 
@@ -839,6 +840,7 @@ input.barretemps-instant {
 .tiroir > summary {
   display: flex;
   align-items: center;
+  gap: 0.35rem;
   min-height: var(--cible-clic);
   padding: 0.35rem 0.7rem;
   background: transparent;

@@ -17,6 +17,7 @@ import type { SaisiePoids } from './app-saisie.ts'
 import { Verification } from './Verification.tsx'
 import { ModeNuit, type EtatModeNuit } from './ModeNuit.tsx'
 import { Inconnu } from './Inconnu.tsx'
+import { Icone } from './Icone.tsx'
 import type { Persistance } from './app-donnees.ts'
 import { TITRES_PANNEAU } from './PanneauLateral.tsx'
 import { basculePanneau, useCoque, type PanneauLateral } from './coque-etat.ts'
@@ -57,7 +58,13 @@ export function BarreHaut(props: BarreHautProps) {
 
       {/* §11.1 — le mode nuit est un geste de terrain : il reste à portée, dans la barre. */}
       <details className="tiroir tiroir-nuit">
-        <summary>{props.modeNuit.actif ? 'mode nuit — actif' : 'mode nuit'}</summary>
+        <summary>
+          <Icone
+            nom={props.modeNuit.actif ? 'dark_mode' : 'light_mode'}
+            libelle={props.modeNuit.actif ? 'actif' : 'inactif'}
+          />
+          mode nuit
+        </summary>
         <div className="tiroir-contenu">
           <ModeNuit etat={props.modeNuit} surChangement={props.surModeNuit} />
         </div>
