@@ -120,10 +120,7 @@ export function ModeNuit({ etat, surChangement }: ModeNuitProps) {
             value={etat.luminance}
             onChange={(e) => surChangement({ ...etat, luminance: Number(e.target.value) })}
           />
-          <span className="etat">
-            {(etat.luminance * 100).toFixed(0)} % de la luminance nominale, plancher{' '}
-            {(plancher * 100).toFixed(0)} %
-          </span>
+          <span className="etat">{(etat.luminance * 100).toFixed(0)} %</span>
         </label>
       </div>
 
