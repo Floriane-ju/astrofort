@@ -115,7 +115,6 @@ describe('§9.3 — longueur des arcs', () => {
       decMinAbsDeg: 0,
       decMaxAbsDeg: 60,
       hauteurCadreDeg: 100.2,
-      arcsTronques: 0,
     })
     expect(diagnostic.longueurArcMaxDeg.value).toBeCloseTo(5.01, 2)
     // 5 % de la hauteur du cadre : des étoiles étirées, pas un filé.
@@ -160,21 +159,10 @@ describe('§9.3 — géométrie des arcs', () => {
     expect(dispersion('MODE_CADRE', 20, 55)).toBeGreaterThan(0.02)
   })
 
-  it('tronque les arcs au bord du cadre et le signale', () => {
+  it('tronque les arcs au bord du cadre', () => {
     // Quatre heures : l'étoile traverse le champ et en sort.
     const arc = arcEtoile(proj({ azimutDeg: 180, hauteurDeg: 30, fovDeg: 40 }), etoile, 240, AXE_POLE)
     expect(arc.tronque).toBe(true)
-    const diagnostic = diagnosticFile({
-      projecteur: proj({ azimutDeg: 180, hauteurDeg: 30, fovDeg: 40 }),
-      latitudeDeg: SITE.latitudeDeg,
-      axePoleNord: AXE_POLE,
-      dureeMin: 240,
-      decMinAbsDeg: 0,
-      decMaxAbsDeg: 40,
-      hauteurCadreDeg: 30,
-      arcsTronques: 12,
-    })
-    expect(diagnostic.messages.join(' ')).toMatch(/entrent et sortent du champ/)
   })
 
   it('suit le sens de rotation du ciel : les étoiles dérivent vers l’ouest', () => {

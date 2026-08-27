@@ -55,9 +55,13 @@ const MATERIEL = {
 } as const
 
 /** La ligne d'état du grand champ porte la visée en ascension droite et déclinaison. */
-function viseeAffichee(): string {
-  const html = renderToStaticMarkup(createElement(PanneauFile, MATERIEL))
-  return /visée[^<]*/.exec(html)?.[0] ?? ''
+/**
+ * T-0154 — le panneau ne réécrit plus la visée : elle se lit au centre de la barre basse. Ce qui
+ * atteste qu'il suit le pointage, ce sont ses nombres — pose maximale du cadre, longueur des arcs,
+ * position du pôle — donc c'est le rendu entier qui se compare, pas une phrase.
+ */
+function cadrageAffiche(): string {
+  return renderToStaticMarkup(createElement(PanneauFile, MATERIEL))
 }
 
 describe('§3 — le magasin de scène', () => {
@@ -109,10 +113,10 @@ describe('§9 — le grand champ suit la visée de la scène', () => {
   })
 
   it('change de cadrage quand le pointage est déplacé ailleurs', () => {
-    const initiale = viseeAffichee()
-    expect(initiale).not.toBe('')
+    const initial = cadrageAffiche()
+    expect(initial).not.toBe('')
     majVue({ azimutDeg: 90, hauteurDeg: 70 })
-    expect(viseeAffichee()).not.toBe(initiale)
+    expect(cadrageAffiche()).not.toBe(initial)
   })
 })
 

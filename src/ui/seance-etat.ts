@@ -35,11 +35,15 @@ export interface ReglagesFile {
   readonly poseDansCadre: boolean
 }
 
-/** Ce que la dernière passe de filé a effectivement tracé. `null` tant qu'aucune n'a eu lieu. */
+/**
+ * Ce que la dernière passe de filé a effectivement tracé. `null` tant qu'aucune n'a eu lieu.
+ *
+ * T-0154 — seul l'effectif du catalogue réel subsiste : c'est lui qui dit si le cadre offre un
+ * repère brillant pour un pointage manuel. Le semis et les arcs tronqués ne se comptaient que
+ * pour une phrase de panneau, et la phrase est partie.
+ */
 export interface RenduFile {
   readonly reelles: number
-  readonly generees: number
-  readonly tronques: number
 }
 
 export interface EtatSeance {
@@ -118,8 +122,7 @@ export function publicateurRenduFile(
   let cle: string | null = null
   let amorce = false
   return (rendu) => {
-    const suivante =
-      rendu === null ? null : `${rendu.reelles}|${rendu.generees}|${rendu.tronques}`
+    const suivante = rendu === null ? null : `${rendu.reelles}`
     if (amorce && suivante === cle) return
     amorce = true
     cle = suivante

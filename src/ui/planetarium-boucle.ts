@@ -233,11 +233,7 @@ export function useBoucleRendu(entree: {
         publieFile(
           rendu === null
             ? null
-            : {
-                reelles: rendu.etoilesReelles,
-                generees: rendu.etoilesGenerees,
-                tronques: rendu.arcsTronques,
-              },
+            : { reelles: rendu.etoilesReelles },
         )
         images = 0
         dernierDiag = ts

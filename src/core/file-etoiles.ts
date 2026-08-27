@@ -663,7 +663,6 @@ export interface EntreeDiagnosticFile {
   readonly decMaxAbsDeg: number
   /** Hauteur du champ couvert par le cadre, en degrés. */
   readonly hauteurCadreDeg: number
-  readonly arcsTronques: number
 }
 
 export interface DiagnosticFile {
@@ -690,32 +689,6 @@ export function diagnosticFile(entree: EntreeDiagnosticFile): DiagnosticFile {
         'de la hauteur du cadre : le résultat ressemblera à des étoiles légèrement étirées, pas ' +
         `à un filé. Un filé lisible demande typiquement au moins ${K('DUREE_FILE_LISIBLE_MIN')} min, ` +
         `et devient spectaculaire à partir de ${K('DUREE_FILE_SPECTACULAIRE_MIN')} min.`,
-    )
-  } else {
-    messages.push(
-      `L’arc le plus long fait ${longueurArcMaxDeg.value.toFixed(2)}° et le plus court ` +
-        `${longueurArcMinDeg.value.toFixed(2)}°, soit ${pourcent} % de la hauteur du cadre pour le ` +
-        'premier. Cette différence de longueur dans un même cadre est l’effet le plus ' +
-        'caractéristique du filé.',
-    )
-  }
-  const mode = entree.projecteur.vue.mode
-  messages.push(
-    mode === 'MODE_FISHEYE'
-      ? 'Objectif fisheye : la projection équidistante est utilisée et les arcs restent quasi ' +
-          'circulaires autour du pôle, contrairement au rendu rectilinéaire.'
-      : mode === 'MODE_PLANETARIUM'
-        ? 'Projection stéréographique : elle est conforme et conserve les cercles, donc chaque ' +
-          'arc est un cercle EXACT du plan — non concentriques entre eux, chacun centré à sa ' +
-          'place. Ce n’est pas un raccourci de tracé, c’est la géométrie de cette projection.'
-        : 'Projection rectilinéaire : un cercle de déclinaison s’y projette en conique, et les ' +
-          'arcs proches du bord ne sont visiblement pas circulaires. Les tracer en cercles ' +
-          'concentriques serait faux à grand champ.',
-  )
-  if (entree.arcsTronques > 0) {
-    messages.push(
-      `${entree.arcsTronques} étoiles entrent et sortent du champ pendant la séquence : leurs ` +
-        'arcs sont tronqués au bord du cadre, ils ne s’arrêtent pas là dans la réalité.',
     )
   }
 

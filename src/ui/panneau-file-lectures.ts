@@ -18,7 +18,7 @@ import { DEG, versSpherique } from '../core/mat3.ts'
 import { projecteur, rayonProjete, type ModeProjection, type Vue } from '../core/projection.ts'
 import type { Traced } from '../core/traced.ts'
 import type { VueScene } from './scene-etat.ts'
-import type { ReglagesFile, RenduFile } from './seance-etat.ts'
+import type { ReglagesFile } from './seance-etat.ts'
 import { mentionProjection } from './scene-overlay.ts'
 
 /**
@@ -62,7 +62,6 @@ export function useLecturesFile(
   materiel: MaterielCadre,
   vue: VueScene,
   file: ReglagesFile,
-  renduFile: RenduFile | null,
 ): LecturesFile {
   const mode = materiel.modeObjectif
   const { azimutDeg, hauteurDeg, rotationCadreDeg: rotationDeg } = vue
@@ -126,17 +125,8 @@ export function useLecturesFile(
         decMinAbsDeg: carte.decMinAbsDeg,
         decMaxAbsDeg: carte.decMaxAbsDeg,
         hauteurCadreDeg: materiel.fovHDeg,
-        arcsTronques: renduFile?.tronques ?? 0,
       }),
-    [
-      proj,
-      materiel.site.latitudeDeg,
-      axePoleNord,
-      materiel.fovHDeg,
-      file.dureeTotaleMin,
-      carte,
-      renduFile,
-    ],
+    [proj, materiel.site.latitudeDeg, axePoleNord, materiel.fovHDeg, file.dureeTotaleMin, carte],
   )
 
   const sequence = useMemo(

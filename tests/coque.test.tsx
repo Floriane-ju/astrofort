@@ -295,7 +295,7 @@ describe('§9.3 — l’incrustation fige le temps', () => {
  * publicateur qu'au rythme du diagnostic, et il coupe tout ce qui n'a pas bougé.
  */
 describe('T-0116 — les compteurs du filé ne rendent pas par image', () => {
-  const RENDU: RenduFile = { reelles: 12, generees: 340, tronques: 5 }
+  const RENDU: RenduFile = { reelles: 12 }
 
   it('ne publie qu’une fois tant que les compteurs ne bougent pas', () => {
     const publies: (RenduFile | null)[] = []
@@ -310,7 +310,7 @@ describe('T-0116 — les compteurs du filé ne rendent pas par image', () => {
     const publies: (RenduFile | null)[] = []
     const publie = publicateurRenduFile((r) => publies.push(r))
     publie(RENDU)
-    publie({ ...RENDU, tronques: RENDU.tronques + 1 })
+    publie({ ...RENDU, reelles: RENDU.reelles + 1 })
     publie(null)
     publie(null)
     expect(publies).toHaveLength(3)

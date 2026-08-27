@@ -11,11 +11,7 @@ import { libelleZpSource, type PointZeroSysteme } from '../data/equipment.ts'
 import type { ModeProjection } from '../core/projection.ts'
 import type { ActionsScene } from './scene-etat.ts'
 import { activeIncrustation, majFile, type ModeApercu, type ReglagesFile, type RenduFile } from './seance-etat.ts'
-import {
-  MENTION_PLAFOND_CHAMP,
-  MENTION_PLAFOND_FILE,
-  MENTION_VIGNETTAGE_FILE,
-} from './scene-overlay.ts'
+import { MENTION_PLAFOND_CHAMP, MENTION_PLAFOND_FILE } from './scene-overlay.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette } from './Terme.tsx'
 import type { LecturesFile } from './panneau-file-lectures.ts'
@@ -31,9 +27,7 @@ function formatePose(tS: number): string {
 interface CadrageProps {
   readonly lectures: LecturesFile
   readonly file: ReglagesFile
-  readonly renduFile: RenduFile | null
   readonly fovLDeg: number
-  readonly fovHDeg: number
   readonly rotationDeg: number
   readonly mode: ModeProjection
   readonly actions: ActionsScene
@@ -43,9 +37,7 @@ interface CadrageProps {
 export function CadrageDuFile({
   lectures,
   file,
-  renduFile,
   fovLDeg,
-  fovHDeg,
   rotationDeg,
   mode,
   actions,
@@ -54,13 +46,6 @@ export function CadrageDuFile({
     <section>
       <h2>Grand champ et filé</h2>
 
-      <p className="etat">
-        visée {lectures.visee.longitudeDeg.toFixed(2)}° AD /{' '}
-        {lectures.visee.latitudeDeg.toFixed(2)}° δ · cadre {fovLDeg.toFixed(1)}° ×{' '}
-        {fovHDeg.toFixed(1)}°
-        {renduFile !== null &&
-          ` · ${renduFile.reelles} étoiles réelles et ${renduFile.generees} générées tracées`}
-      </p>
       <p className="etat">
         {file.apercu === 'FILE' ? MENTION_PLAFOND_FILE : MENTION_PLAFOND_CHAMP}
       </p>
@@ -86,7 +71,7 @@ export function CadrageDuFile({
         </label>
         {/* Azimut et hauteur n'ont pas de curseur ici : le pointage se fait à la scène,
             en faisant glisser le planétarium. Ce panneau les lit, il ne les commande
-            pas — la visée courante se relit en tête de section. */}
+            pas — la visée courante se lit au centre de la barre basse (§11.1). */}
         <label>
           Rotation du boîtier : {rotationDeg.toFixed(0)}°
           <input
@@ -106,7 +91,6 @@ export function CadrageDuFile({
             Le temps de la scène est figé : un filé est une composition fixe, la vue animée
             reste celui du planétarium.
           </p>
-          <p className="cause">{MENTION_VIGNETTAGE_FILE}</p>
           {lectures.mentionProj !== null && (
             <>
               <p className="cause">{lectures.mentionProj}</p>

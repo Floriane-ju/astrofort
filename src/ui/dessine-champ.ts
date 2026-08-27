@@ -107,7 +107,6 @@ export interface EntreeDessinChamp extends ParametresFile {
 export interface SortieDessinChamp {
   readonly etoilesReelles: number
   readonly etoilesGenerees: number
-  readonly arcsTronques: number
   /**
    * Étoiles lues par la sélection, tracées ou non. C'est ce compteur, et pas le nombre
    * d'étoiles dessinées, qui dit ce que la passe a coûté : sans lui, un gain de sélection se
@@ -226,7 +225,6 @@ function peintEnAttente(
 
 interface Compteur {
   dessinees: number
-  tronques: number
   /** Étoiles lues par `selectionne`, avant tout tri : le coût de la passe se lit ici. */
   visitees: number
   /** Surface peinte, en pixels carrés : longueur visible × largeur de trait. */
@@ -416,7 +414,6 @@ function dessineCouche(
       }
     }
     compteur.dessinees++
-    if (arc.tronque) compteur.tronques++
   })
   compteur.visitees += stats.etoilesExaminees
 }
@@ -426,8 +423,8 @@ export function dessineChamp(entree: EntreeDessinChamp): SortieDessinChamp {
   const teintes = paletteScene(entree.modeNuit, entree.vueRealiste, entree.sbCiel)
 
   const seuilReel = K('SEUIL_MAG_ETOILES_REELLES')
-  const reelles: Compteur = { dessinees: 0, tronques: 0, visitees: 0, surfacePx: 0 }
-  const generees: Compteur = { dessinees: 0, tronques: 0, visitees: 0, surfacePx: 0 }
+  const reelles: Compteur = { dessinees: 0, visitees: 0, surfacePx: 0 }
+  const generees: Compteur = { dessinees: 0, visitees: 0, surfacePx: 0 }
   const vue = sceneCourante(entree)
 
   // T-0119 — le plafond porte sur la SURFACE peinte, et il porte sur les DEUX couches.
@@ -505,7 +502,6 @@ export function dessineChamp(entree: EntreeDessinChamp): SortieDessinChamp {
   return {
     etoilesReelles: reelles.dessinees,
     etoilesGenerees: generees.dessinees,
-    arcsTronques: reelles.tronques + generees.tronques,
     etoilesVisitees: reelles.visitees + generees.visitees,
     couverturePeinte:
       (reelles.surfacePx + generees.surfacePx) /

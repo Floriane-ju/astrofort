@@ -2,21 +2,12 @@
  * §9.2, §9.3 et §9.5 — ce que la scène doit DIRE de l'aperçu qu'elle porte.
  *
  * Depuis T-0116 la passe de filé ne passe plus par ici : elle se dessine à même le canevas du
- * planétarium, dans la boucle, par `dessineChamp`. Ne restent que les deux mentions que le
- * panneau doit afficher, parce qu'elles portent sur un écart entre ce que la scène montre et
- * ce que le capteur enregistrerait — un écart qui se déclare, il ne se corrige pas en douce.
+ * planétarium, dans la boucle, par `dessineChamp`. Ne restent que les mentions que le panneau
+ * doit afficher, parce qu'elles portent sur un écart entre ce que la scène montre et ce que le
+ * capteur enregistrerait — un écart qui se déclare, il ne se corrige pas en douce.
  */
 
 import type { ModeProjection } from '../core/projection.ts'
-
-/**
- * §9.2 — le vignettage n'est pas peint sur la scène : il se centre sur le canevas, et le
- * canevas n'est pas le capteur. Appliqué au ciel, il assombrirait les coins du PLANÉTARIUM,
- * pas ceux de l'image. Son chiffre en diaphragmes reste lisible au panneau.
- */
-export const MENTION_VIGNETTAGE_FILE =
-  'Vignettage non peint sur la scène : il appartient au cadre du capteur, pas au ciel. ' +
-  'Son atténuation en diaphragmes reste chiffrée ci-dessus.'
 
 /**
  * §9.3 — T-0118 : le plafond du filé est déclaré, jamais silencieux. Sans cette phrase, un ciel
@@ -43,8 +34,7 @@ export const MENTION_PLAFOND_CHAMP =
 export const MENTION_PLAFOND_FILE =
   'L’aperçu du filé ne peint que les traces qui restent lisibles : au-delà, elles se recouvrent ' +
   'et la longueur du filé cesse d’être visible. Plus le filé est long, moins il montre ' +
-  'd’étoiles — le capteur, lui, en enregistrerait davantage. Les compteurs disent ce qui est ' +
-  'peint, pas ce que la pose atteindrait.'
+  'd’étoiles — le capteur, lui, en enregistrerait davantage.'
 
 /** §5.1 — la projection de la scène n'est pas toujours celle que l'objectif produirait. */
 export function mentionProjection(
