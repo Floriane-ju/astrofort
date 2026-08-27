@@ -209,8 +209,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
         <p className="etat cibles-note">
           La pose requise vise un rapport signal sur bruit de {props.contexteSession.snrCible} avec
           le matériel courant et le fond de ciel du site. Elle double si le site perd
-          0,75 mag/as². La magnitude ordonne la liste ; c’est la brillance de surface qui dit la
-          difficulté. La note de facilité lit les poids de scoring réglés au plan de séance — un
+          0,75 mag/as². La note de facilité lit les poids de scoring réglés au plan de séance — un
           tiret dit que la cible n’a pas été évaluée, pas qu’elle est impossible.
         </p>
       )}
@@ -219,8 +218,10 @@ export function PanneauCibles(props: PanneauCiblesProps) {
 }
 
 /**
- * Une ligne : ce qui décide, dans l'ordre où on le lit. Le nom, ce que ça coûte, puis les
- * lectures qui l'expliquent — brillance de surface, hauteur, encombrement sur le capteur.
+ * Une ligne : ce qui décide, dans l'ordre où on le lit. Le nom, la note, puis l'encombrement
+ * sur le capteur et le temps de pose. Magnitude, hauteur et brillance de surface n'y sont plus :
+ * elles filtrent et ordonnent la liste, elles ne disent rien de la prise de vue que la note et
+ * le temps de pose ne disent mieux.
  *
  * Deux boutons distincts et non imbriqués : choisir la cible n'est pas la même intention que
  * pointer la scène dessus, et un `<button>` dans un `<button>` n'est pas du HTML valide.
@@ -235,23 +236,15 @@ function LigneListe({ ligne, etat }: { readonly ligne: LigneCible; readonly etat
           Hors du bouton, pour que l'image ne soit pas un contenu cliquable de plus. */}
       <VignetteCible objet={objet} />
       <button type="button" className="cible-ligne" onClick={() => ouvreCible(objet)}>
-        <span className="cible-tete">
-          <span className="cible-designation">{objet.designation}</span>
-          <span className="cible-pose">{libellePose(etat?.pose ?? null)}</span>
-        </span>
+        <span className="cible-designation">{objet.designation}</span>
         {/* Sans note, aucune pastille : cinq pastilles vides se lisent « impossible », ce qui
             serait faux d'une cible que le moteur n'a simplement pas évaluée. */}
         {etat !== null && (
           <Pastilles note={etat.note} libelle={etat.libelle} cause={etat.cause} />
         )}
-        <span className="cible-tete">
-          <span className="cible-commun">{nom === '' ? LIBELLE_TYPE_OBJET[objet.type] : nom}</span>
-          <span className="cible-mag">
-            {objet.vMag === null ? 'mag —' : objet.vMag.toFixed(1)}
-          </span>
-        </span>
+        <span className="cible-commun">{nom === '' ? LIBELLE_TYPE_OBJET[objet.type] : nom}</span>
         <span className="cible-lectures">
-          {lectures(ligne).map((mesure) => (
+          {lectures(ligne, etat).map((mesure) => (
             <span key={mesure}>{mesure}</span>
           ))}
         </span>
@@ -284,22 +277,22 @@ function libelleVisee(ligne: LigneCible): string {
 }
 
 /**
- * Une pose absente n'est pas un tiret muet : elle dit ce qui manque. « — » sans raison est
- * la lecture qui pousse à croire l'application en panne.
+ * Les lectures d'une ligne, séparées : chacune doit pouvoir tenir sur une ligne. Le temps de
+ * pose vient en dernier parce qu'il dépend de tout le reste — sans évaluation du moteur, il ne
+ * s'invente pas, et la lecture disparaît plutôt que d'annoncer un tiret de plus.
  */
-function libellePose(pose: PoseCible | null): string {
-  if (pose === null) return '—'
-  const total = dureeLisible(pose.tRequisS)
-  return pose.nNuits > 1 ? `${total} · ${pose.nNuits} nuits` : total
+function lectures(ligne: LigneCible, etat: EtatCible | null): readonly string[] {
+  const pose = etat?.pose ?? null
+  return [
+    libelleEncombrement(ligne),
+    ...(pose === null ? [] : [libellePose(pose)]),
+  ]
 }
 
-/** Les trois lectures d'une ligne, séparées : chacune doit pouvoir tenir sur une ligne. */
-function lectures(ligne: LigneCible): readonly string[] {
-  return [
-    ligne.sbObj === null ? 'SB absente' : `SB ${ligne.sbObj.toFixed(1)} mag/as²`,
-    ligne.hauteurDeg > 0 ? `h ${ligne.hauteurDeg.toFixed(0)}°` : 'sous l’horizon',
-    libelleEncombrement(ligne),
-  ]
+/** §7.3 — plus d'une nuit change la nature du plan, pas seulement sa durée : ça se dit. */
+function libellePose(pose: PoseCible): string {
+  const total = `temps de pose ${dureeLisible(pose.tRequisS)}`
+  return pose.nNuits > 1 ? `${total} · ${pose.nNuits} nuits` : total
 }
 
 /**

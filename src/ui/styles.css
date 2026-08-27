@@ -1655,13 +1655,6 @@ button:disabled {
   background: var(--fond-accent);
 }
 
-.cible-tete {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
 .cible-designation {
   font-family: var(--police-titre);
   font-size: 0.95rem;
@@ -1669,24 +1662,12 @@ button:disabled {
   text-transform: uppercase;
 }
 
-/* La pose est ce qu'on compare d'une ligne à l'autre : elle est la seule à porter l'accent. */
-.cible-pose {
-  color: var(--accent);
-  font-family: var(--police-mono);
-  font-size: 0.85rem;
-  white-space: nowrap;
-}
-
-.cible-commun,
-.cible-mag {
+.cible-commun {
   color: var(--attenue);
   font-size: 0.78rem;
 }
-.cible-mag {
-  font-family: var(--police-mono);
-}
 
-/* Les lectures qui expliquent la pose : brillance de surface, hauteur, encombrement. Elles
+/* Les lectures qui expliquent la pose : encombrement, temps de pose. Elles
    se lisent après le nom et la pose, pas avant — d'où le corps le plus petit.
 
    Chaque mesure est un bloc insécable dans un `flex-wrap` : sur un panneau étroit, la ligne
