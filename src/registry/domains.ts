@@ -77,7 +77,13 @@ export const DOMAINES = Object.freeze({
     section: '5.1',
   }),
   zp_sys: domaine({ champ: 'le point zéro système', min: 18, max: 22, unite: 'mag', section: '5.1' }),
-  taille_raw_mo: domaine({ champ: 'la taille RAW', min: 5, max: 120, unite: 'Mo', section: '5.1' }),
+  taille_raw_mo: domaine({
+    champ: 'le poids d’une image',
+    min: 5,
+    max: 120,
+    unite: 'Mo',
+    section: '5.1',
+  }),
 
   iso_capture: domaine({ champ: 'l’ISO de capture', min: 100, max: 6400, unite: 'ISO', section: '7.2' }),
 

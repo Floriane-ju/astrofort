@@ -129,7 +129,7 @@ function ChampCapteur({
   )
 }
 
-/** §5.1 — les six grandeurs du mode avancé : facultatives, repliées derrière un dépliant. */
+/** §5.1 — les grandeurs du mode avancé : facultatives, repliées derrière un dépliant. */
 function ChampsAvances({
   boitier,
   surChamp,
@@ -155,11 +155,6 @@ function ChampsAvances({
         surValeur={surChamp('fullWellE')}
       />
       <ChampCapteur domaine="zp_sys" valeur={boitier.zpSys} surValeur={surChamp('zpSys')} />
-      <ChampCapteur
-        domaine="taille_raw_mo"
-        valeur={boitier.tailleRawMo}
-        surValeur={surChamp('tailleRawMo')}
-      />
     </div>
   )
 }
@@ -219,6 +214,14 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
             valeur={props.boitier.resolutionMpx}
             surValeur={surChamp('resolutionMpx')}
             requis
+          />
+          {/* T-0155 — §7.3 tient le budget de stockage pour « bloquant en pratique ». Un chiffre
+              qui décide de la sortie ne se range pas sous un dépliant : il varie d'un boîtier à
+              l'autre, et c'est la seule grandeur avancée dont l'absence fausse un volume affiché. */}
+          <ChampCapteur
+            domaine="taille_raw_mo"
+            valeur={props.boitier.tailleRawMo}
+            surValeur={surChamp('tailleRawMo')}
           />
         </div>
         <ApercuPitch

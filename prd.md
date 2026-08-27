@@ -1246,7 +1246,7 @@ DIAGNOSTIC D'ÉCHANTILLONNAGE (seeing courant 2–3", constante C-04)
 | `dawes_as`, `D_mm` | float | ", mm | sortie | |
 | `diag_ech` | enum | — | 4 valeurs | sortie |
 
-Les champs `read_noise_e`, `full_well_e`, `zp_sys`, `seuil_double_gain_iso` et `taille_raw_mo` sont invisibles pour le débutant : facultatifs, éditables en mode avancé, remplacés par le repli générique du registre quand ils sont absents.
+Les champs `read_noise_e`, `full_well_e`, `zp_sys` et `seuil_double_gain_iso` sont invisibles pour le débutant : facultatifs, éditables en mode avancé, remplacés par le repli générique du registre quand ils sont absents. `taille_raw_mo` est facultatif de la même manière, mais il se saisit EN CLAIR, sous le libellé « poids d'une image » : c'est la seule de ces grandeurs qui commande une sortie affichée — le budget de stockage, que §7.3 tient pour bloquant en pratique. Replié sous un dépliant, il laisse tout volume annoncé reposer sur un repli générique.
 
 ### Critères d'acceptation
 
