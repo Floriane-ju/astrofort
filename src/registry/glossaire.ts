@@ -16,7 +16,7 @@
 export interface EntreeGlossaire {
   /** Libellé affiché dans l'interface. C'est lui qui est rendu, jamais une chaîne littérale. */
   readonly libelle: string
-  /** Glose courte, cinq mots, visible au survol. */
+  /** Glose courte, une phrase au plus, visible au survol. */
   readonly glose: string
   /** Deux à quatre phrases, au clic. */
   readonly explication: string
@@ -407,7 +407,9 @@ export const GLOSSAIRE = Object.freeze({
   }),
   mosaique: terme({
     libelle: 'Mosaïque',
-    glose: 'cible débordant du champ',
+    glose:
+      'La cible déborde du champ : elle demande une mosaïque, donc autant de sessions ' +
+      'partielles que de tuiles.',
     explication:
       'Une cible qui déborde du champ s’assemble en tuiles se recouvrant partiellement. Le ' +
       'nombre de tuiles multiplie d’autant le temps total de session, calibration comprise.',

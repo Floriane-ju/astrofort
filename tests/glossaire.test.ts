@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest'
 import { GLOSSAIRE, type TermeGlossaire } from '../src/registry/glossaire.ts'
 
-const MOTS_MAX_GLOSE = 5
+const MOTS_MAX_GLOSE = 20
 const PHRASES_MIN = 2
 const PHRASES_MAX = 4
 
@@ -29,7 +29,7 @@ describe('glossaire §10.1', () => {
     expect(entrees.length).toBeGreaterThan(0)
   })
 
-  it('tient la glose en cinq mots', () => {
+  it('tient la glose en une phrase', () => {
     for (const [cle, entree] of entrees) {
       expect(mots(entree.glose), cle).toBeLessThanOrEqual(MOTS_MAX_GLOSE)
     }

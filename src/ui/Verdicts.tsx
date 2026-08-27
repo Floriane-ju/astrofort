@@ -81,7 +81,11 @@ function CadrageDeLaCible({ r }: { readonly r: Resultat }) {
       {cadrage.nTuiles !== undefined && (
         <TracedValue terme="mosaique" trace={cadrage.nTuiles} decimales={0} unite="tuiles" />
       )}
-      <p className={cadrage.faisable ? 'etat' : 'cause'}>{cadrage.message}</p>
+      {/* La ligne « Mosaïque » porte déjà le message du verdict dans sa glose : le répéter
+          en clair sous elle ferait lire deux fois la même phrase. */}
+      {cadrage.nTuiles === undefined && (
+        <p className={cadrage.faisable ? 'etat' : 'cause'}>{cadrage.message}</p>
+      )}
       <p className="etat">{cadrage.noteOrientation}</p>
       {cadrage.cause !== undefined && <p className="cause">{cadrage.cause}</p>}
       {cadrage.focaleIdealeMm !== undefined && (
