@@ -119,12 +119,6 @@ export function PanneauCibles(props: PanneauCiblesProps) {
 
   return (
     <section className="cibles">
-      <p className="etat">
-        {portee === 'CATALOGUE'
-          ? `Le catalogue embarqué, ${catalogue.length.toLocaleString('fr-FR')} entrées, sans contrainte de date.`
-          : `Cibles ayant un créneau au-dessus de ${seuil}° cette nuit, cadrables par ce capteur.`}
-      </p>
-
       <input
         className="cibles-recherche"
         type="search"
@@ -148,6 +142,12 @@ export function PanneauCibles(props: PanneauCiblesProps) {
           </button>
         ))}
       </div>
+
+      <p className="etat">
+        {portee === 'CATALOGUE'
+          ? `Le catalogue embarqué, ${catalogue.length.toLocaleString('fr-FR')} entrées, sans contrainte de date.`
+          : `Cibles ayant un créneau au-dessus de ${seuil}° cette nuit, cadrables par ce capteur.`}
+      </p>
 
       <div className="cibles-filtres">
         <label>
@@ -257,20 +257,30 @@ function LigneListe({ ligne, etat }: { readonly ligne: LigneCible; readonly etat
         </span>
       </button>
       {/* T-0046 — « Voir » centre, et rien d'autre : ni le champ, ni l'horloge ne bougent.
-          Sous l'horizon, il n'y a pas de direction à viser : le bouton disparaît. */}
-      {ligne.hauteurDeg > 0 && (
-        <Bulle texte={`Centrer la scène sur ${objet.designation}`} place="gauche" nomme>
-          <button
-            type="button"
-            className="cible-voir"
-            onClick={() => majVue({ azimutDeg: ligne.azimutDeg, hauteurDeg: ligne.hauteurDeg })}
-          >
-            <Icone nom="my_location" />
-          </button>
-        </Bulle>
-      )}
+          Sous l'horizon, la direction existe quand même — la vue descend jusqu'à −90° — et
+          c'est elle qu'on veut connaître pour savoir de quel côté attendre le lever. Le
+          bouton reste donc offert sur toute ligne ; la couche Sol continue de masquer ce
+          qu'elle recouvre, et la bulle dit pourquoi la cible n'apparaîtra pas. */}
+      <Bulle texte={libelleVisee(ligne)} place="gauche" nomme>
+        <button
+          type="button"
+          className="cible-voir"
+          onClick={() => majVue({ azimutDeg: ligne.azimutDeg, hauteurDeg: ligne.hauteurDeg })}
+        >
+          <Icone nom="my_location" />
+        </button>
+      </Bulle>
     </li>
   )
+}
+
+/**
+ * Viser sous l'horizon centre une direction sans objet à voir : le sol la recouvre. La bulle
+ * l'annonce avant le clic, sinon le geste se lit comme un bouton cassé.
+ */
+function libelleVisee(ligne: LigneCible): string {
+  const cible = `Centrer la scène sur ${ligne.objet.designation}`
+  return ligne.hauteurDeg > 0 ? cible : `${cible} — sous l’horizon, masquée par le sol`
 }
 
 /**
