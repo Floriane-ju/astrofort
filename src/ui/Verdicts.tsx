@@ -11,9 +11,6 @@ import { PRESETS_SNR } from '../registry/verdicts.ts'
 import { SOURCE_TABLE_CONTRASTE } from '../registry/contrast.ts'
 import { SOURCE_TABLE_FILTRES } from '../registry/filters.ts'
 import { libelleZpSource, type PointZeroSysteme } from '../data/equipment.ts'
-import type { ObjetCielProfond } from '../data/deepsky.ts'
-import type { ProfilOptique } from '../core/optics.ts'
-import { ApercuCadre } from './ApercuCadre.tsx'
 import { MANQUANTE } from './ChampsCible.tsx'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, Terme } from './Terme.tsx'
@@ -28,9 +25,6 @@ export interface VerdictsProps {
   /** §7.1 — `zp_source` accompagne toute pose affichée. */
   readonly zeroSysteme: PointZeroSysteme
   readonly conseils: Conseils | null
-  /** §6.2 — la cible du catalogue et le champ sous lequel l'aperçu de cadrage est demandé. */
-  readonly objetCadre: ObjetCielProfond
-  readonly optique: ProfilOptique
   /** §7.2 — mode permissif C-03 : demandé, jamais déduit. */
   readonly permissif: boolean
   readonly surPermissif: (valeur: boolean) => void
@@ -43,7 +37,7 @@ export function Verdicts(props: VerdictsProps) {
   const { r } = props
   return (
     <>
-      <CadrageDeLaCible r={r} objetCadre={props.objetCadre} optique={props.optique} />
+      <CadrageDeLaCible r={r} />
       <Detectabilite r={r} />
       {/* Sans donnée de détectabilité, aucune pose n'est chiffrable : la région n'aurait plus
           que le point zéro du boîtier et le fond de ciel à montrer, deux grandeurs du setup
@@ -71,18 +65,10 @@ export function Verdicts(props: VerdictsProps) {
 }
 
 /** §6.2 — comment la cible tombe dans le cadre : remplissage, diamètre, orientation. */
-function CadrageDeLaCible({
-  r,
-  objetCadre,
-  optique,
-}: {
-  readonly r: Resultat
-  readonly objetCadre: ObjetCielProfond
-  readonly optique: ProfilOptique
-}) {
+function CadrageDeLaCible({ r }: { readonly r: Resultat }) {
   // Pas de dimensions au catalogue, donc pas de cadrage calculé (§6.2) : la région entière
-  // disparaît. Un remplissage, un diamètre en pixels et un aperçu de cadre tirés d'une taille
-  // absente décriraient une cible qui n'est pas celle-là.
+  // disparaît, et l'image de tête de fiche perd son cadre pour la même raison. Un remplissage
+  // ou un diamètre en pixels tirés d'une taille absente décriraient une autre cible.
   const cadrage = r.cadrage
   if (cadrage === null) return null
 
@@ -101,15 +87,6 @@ function CadrageDeLaCible({
       {cadrage.focaleIdealeMm !== undefined && (
         <TracedValue terme="focale_ideale" trace={cadrage.focaleIdealeMm} decimales={0} unite="mm" />
       )}
-      {/* L'aperçu vient APRÈS les nombres : il les illustre, il ne les remplace pas. Hors
-          réseau il ne rend rien, et la dégradation nommée par §12.5 est le cadre schématique
-          de §9.2, déjà dessiné sur la scène. */}
-      <ApercuCadre
-        objet={objetCadre}
-        fovLDeg={optique.fovLDeg.value}
-        fovHDeg={optique.fovHDeg.value}
-        angleBoitierDeg={cadrage.angleBoitierDeg}
-      />
     </section>
   )
 }

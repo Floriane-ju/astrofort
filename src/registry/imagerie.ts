@@ -1,5 +1,5 @@
 /**
- * §6.4 — Origines, cadrage et refus de l'image d'objet.
+ * §6.4, §6.2 — Origine, cadrage et poids de l'image d'objet.
  *
  * Ce module existe pour deux raisons distinctes, et la seconde est la vraie.
  *
@@ -15,6 +15,12 @@
  * Une seule directive s'ouvre, et c'est `connect-src` : les octets sont téléchargés puis
  * rangés en IndexedDB, et affichés depuis un `blob:`. Aucun hôte tiers n'a donc à figurer
  * dans `img-src` — une surface à surveiller au lieu de deux.
+ *
+ * La liste ne compte plus qu'une origine, et ce n'est pas un allègement cosmétique : l'image
+ * d'objet est désormais toujours une découpe de relevé, parce qu'elle porte le cadre de §6.2
+ * et qu'un cadre ne se pose qu'à une échelle connue. Une image d'encyclopédie est cadrée par
+ * son auteur, son champ n'est écrit nulle part. §6.4 décrit encore deux sources : l'écart est
+ * assumé et arbitré à part, il ne s'amende pas depuis ce fichier.
  */
 
 export interface OrigineImagerie {
@@ -25,18 +31,6 @@ export interface OrigineImagerie {
 
 export const ORIGINES_IMAGERIE: readonly OrigineImagerie[] = Object.freeze(
   [
-    {
-      origine: 'https://fr.wikipedia.org',
-      transmis: 'la désignation de la cible consultée',
-    },
-    {
-      origine: 'https://commons.wikimedia.org',
-      transmis: 'le nom du fichier image de la cible consultée',
-    },
-    {
-      origine: 'https://upload.wikimedia.org',
-      transmis: 'le nom du fichier image de la cible consultée',
-    },
     {
       origine: 'https://alasky.cds.unistra.fr',
       transmis: 'les coordonnées équatoriales de la cible consultée',
@@ -58,8 +52,6 @@ export const CHEMIN_DECOUPE = '/hips-image-services/hips2fits'
 /** Le relevé interrogé. Le même que celui que §6.2 nomme pour la prévisualisation du cadre. */
 export const RELEVE_DECOUPE = 'CDS/P/DSS2/color'
 
-export const LANGUE_ENCYCLOPEDIE = 'fr'
-
 export interface ValeurImagerie {
   readonly valeur: number
   readonly unite: string
@@ -73,7 +65,7 @@ function valeur(v: ValeurImagerie): ValeurImagerie {
 
 export const IMAGERIE = Object.freeze({
   /**
-   * La largeur demandée aux deux sources. Une vignette d'illustration, pas une planche :
+   * La largeur demandée à la découpe. Une vignette d'illustration, pas une planche :
    * à cette largeur une découpe DSS2 pèse une dizaine de kilo-octets, ce qui rend le cache
    * par objet tenable.
    */
@@ -121,21 +113,25 @@ export const IMAGERIE = Object.freeze({
   }),
 
   /**
-   * §6.2 — la marge autour du cadre dans l'aperçu de cadrage. Elle ne sert pas à décorer : à
-   * 2, le cadre occupe la moitié de la largeur, donc un objet jusqu'à deux fois le cadre reste
-   * ENTIÈREMENT visible. C'est la borne au-delà de laquelle le verdict MOSAIQUE_REQUISE
-   * cesserait d'être lisible — un objet rogné par le bord ne montre pas qu'il débordait.
+   * §6.2 — la largeur de l'encart de cadre, en part de la largeur de l'image.
+   *
+   * L'encart porte le cadre du capteur, avec la cible à sa taille réelle dedans. C'est la
+   * seule façon dont le cadre se lit — au repos du moins, puisque le survol l'agrandit. Au
+   * tiers, il reste assez grand pour qu'une cible de la moitié du cadre s'y distingue, sans
+   * masquer la vue qu'il commente.
    */
-  MARGE_APERCU_CADRE: valeur({
-    valeur: 2,
+  PART_ENCART_CADRE: valeur({
+    valeur: 0.33,
     unite: '—',
-    source: 'borne de lisibilité du verdict MOSAIQUE_REQUISE de §6.2 (remplissage > 1)',
+    source: 'convention d’affichage — un tiers de la largeur, l’encart commente sans couvrir',
     tolerance: 'sans objet — cadrage d’illustration',
   }),
 
   /**
-   * Plafond d'un fichier accepté. Une image encyclopédique d'origine peut peser des dizaines
-   * de méga-octets ; la ranger dans IndexedDB mettrait §12.3 en défaut pour une vignette.
+   * Plafond d'un fichier accepté. Une découpe reste sous les dizaines de kilo-octets ; ce
+   * plafond n'existe donc pas pour elle, mais pour la réponse qui ne serait pas celle qu'on
+   * croit — ranger dans IndexedDB ce que le service a rendu sans le peser mettrait §12.3 en
+   * défaut pour une vignette.
    */
   POIDS_VIGNETTE_MAX_KO: valeur({
     valeur: 512,
@@ -151,22 +147,6 @@ export type IdImagerie = keyof typeof IMAGERIE
 export function I(id: IdImagerie): number {
   return IMAGERIE[id].valeur
 }
-
-/**
- * Ce qui trahit un diagramme et non l'objet, dans le nom du fichier d'origine.
- *
- * Le motif décisif est `_IAU` : les pages Sharpless portent en tête la carte de leur
- * constellation — `Cassiopeia_IAU.svg` pour Sh2-180 — et une carte affichée comme une photo
- * de nébuleuse est un mensonge de l'interface, pas une approximation. Le format vectoriel
- * est refusé en bloc pour la même raison : un relevé du ciel n'est jamais vectoriel.
- */
-export const MOTIFS_FICHIER_REFUSE: readonly RegExp[] = Object.freeze([
-  /\.svgz?$/i,
-  /_IAU\b/i,
-  /\b(chart|map|atlas|diagram|schema|scheme)\b/i,
-  /\b(constellation|starmap|skymap|finder)\b/i,
-  /\blocation\b/i,
-])
 
 /** Crédit d'une découpe de relevé : elle n'a pas d'auteur individuel à nommer. */
 export const CREDIT_RELEVE = Object.freeze({

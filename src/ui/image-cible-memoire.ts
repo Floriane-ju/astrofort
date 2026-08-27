@@ -18,13 +18,7 @@
 import { useEffect, useState } from 'react'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { ImageStockee } from '../data/db.ts'
-import {
-  champApercuCadreDeg,
-  cleApercuCadre,
-  imageEnCache,
-  resoudApercuCadre,
-  resoudImage,
-} from '../data/imagerie-cible.ts'
+import { imageEnCache, resoudImage } from '../data/imagerie-cible.ts'
 
 export interface ImageAffichable {
   readonly image: ImageStockee
@@ -103,46 +97,6 @@ export function useImageCible(
       vivant = false
     }
   }, [objet, designation, portee])
-
-  return affichable
-}
-
-/**
- * §6.2 — l'aperçu de cadrage. Même mémoire, autre clé : elle porte le champ, donc le matériel.
- * Changer de focale redemande la vue, et la vignette de §6.4 — rangée sous la désignation nue —
- * n'en est pas affectée.
- */
-export function useApercuCadre(
-  objet: ObjetCielProfond | null,
-  fovLDeg: number,
-): ImageAffichable | null {
-  const cle = objet === null ? '' : cleApercuCadre(objet.designation, champApercuCadreDeg(fovLDeg))
-  const [affichable, setAffichable] = useState<ImageAffichable | null>(
-    () => trouvees.get(cle) ?? null,
-  )
-
-  useEffect(() => {
-    if (objet === null) {
-      setAffichable(null)
-      return
-    }
-    const connue = trouvees.get(cle)
-    if (connue !== undefined) {
-      setAffichable(connue)
-      return
-    }
-
-    let vivant = true
-    setAffichable(null)
-    void resoudApercuCadre(objet, fovLDeg).then((image) => {
-      if (image === null) return
-      const retenue = retient(image)
-      if (vivant) setAffichable(retenue)
-    })
-    return () => {
-      vivant = false
-    }
-  }, [objet, fovLDeg, cle])
 
   return affichable
 }

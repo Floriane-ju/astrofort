@@ -372,6 +372,12 @@ describe('mouvement réduit — WCAG 2.3.3', () => {
     return CSS.slice(debut, CSS.indexOf('\n}', debut) + 2)
   }
 
+  /** Le bloc `@media (prefers-reduced-motion: no-preference)`, accolade fermante comprise. */
+  function blocMouvementAccepte(): string {
+    const debut = CSS.search(/@media\s*\(prefers-reduced-motion:\s*no-preference\)/)
+    return debut === -1 ? '' : CSS.slice(debut, CSS.indexOf('\n}', debut) + 2)
+  }
+
   it('raccourcit la transition du mode nuit sans la supprimer', () => {
     const bloc = blocMouvementReduit()
     const durees = [...bloc.matchAll(/(\d+)ms/g)].map((m) => Number(m[1]))
@@ -387,12 +393,41 @@ describe('mouvement réduit — WCAG 2.3.3', () => {
   it('ne laisse aucune autre animation s’imposer', () => {
     // Rien ne bouge en dehors du fondu de bascule : ni image clé, ni défilement lissé,
     // ni transition sur une propriété de position.
-    expect(CSS).not.toMatch(/@keyframes/)
-    expect(CSS).not.toMatch(/\banimation(-name)?:/)
-    expect(CSS).not.toMatch(/scroll-behavior:\s*smooth/)
-    const transitions = [...CSS.matchAll(/transition:\s*([^;]+);/g)].map((m) => m[1]!)
+    //
+    // Le bloc `no-preference` est retiré du décompte, et c'est le seul assouplissement : ce
+    // qu'il contient ne s'IMPOSE à personne, puisqu'il ne s'applique qu'aux réglages qui
+    // acceptent le mouvement. Tout ce qui vit hors de ce bloc reste tenu à la règle stricte.
+    const accepte = blocMouvementAccepte()
+    const impose = accepte === '' ? CSS : CSS.replace(accepte, '')
+
+    expect(impose).not.toMatch(/@keyframes/)
+    expect(impose).not.toMatch(/\banimation(-name)?:/)
+    expect(impose).not.toMatch(/scroll-behavior:\s*smooth/)
+    const transitions = [...impose.matchAll(/transition:\s*([^;]+);/g)].map((m) => m[1]!)
     for (const declaration of transitions) {
       expect(declaration, declaration).toMatch(/^(background-color|color)\b/)
+    }
+  })
+
+  it('n’accepte de mouvement que déclenché par un geste, jamais au repos', () => {
+    // La porte ouverte ci-dessus ne doit pas devenir un fourre-tout. Ce qui s'anime sous
+    // `no-preference` s'anime en réponse à une interaction : la transition est portée par la
+    // règle de base — sinon le retour serait brutal — mais c'est un état de geste qui change
+    // la valeur, et cet état doit exister quelque part dans la feuille.
+    const accepte = blocMouvementAccepte()
+    if (accepte === '') return
+
+    expect(accepte).not.toMatch(/@keyframes/)
+    expect(accepte).not.toMatch(/\banimation(-name)?:/)
+
+    const gestes = [...CSS.matchAll(/^[^{}\n]*:(?:hover|focus)[^{}\n]*\{/gm)].map((m) => m[0])
+    const animes = [...accepte.matchAll(/^ {2}([^\s{][^{\n]*)\{/gm)].map((m) => m[1]!.trim())
+    expect(animes.length, 'le bloc n’anime rien').toBeGreaterThan(0)
+    for (const selecteur of animes) {
+      expect(
+        gestes.some((geste) => geste.includes(selecteur)),
+        `${selecteur} s’anime sans geste qui le déclenche`,
+      ).toBe(true)
     }
   })
 

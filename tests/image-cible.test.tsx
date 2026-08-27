@@ -16,9 +16,6 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { decodeObjets, type ObjetCielProfond } from '../src/data/deepsky.ts'
 import { ImageCible, VignetteCible, alternativeCible } from '../src/ui/ImageCible.tsx'
-import { ApercuCadre } from '../src/ui/ApercuCadre.tsx'
-import { fovDeg } from '../src/core/optics.ts'
-import { DOMAINES } from '../src/registry/domains.ts'
 import { LIBELLE_TYPE_OBJET, nomCommun } from '../src/ui/libelles-objet.ts'
 
 const CSS = readFileSync(join(import.meta.dirname, '..', 'src', 'ui', 'styles.css'), 'utf8')
@@ -67,16 +64,16 @@ describe('absence d’image §12.5', () => {
   const objet = CATALOGUE[0]!
 
   it('ne pose ni cadre vide ni gabarit tant qu’il n’y a rien à montrer', () => {
-    expect(renderToStaticMarkup(<ImageCible objet={objet} />)).toBe('')
+    expect(renderToStaticMarkup(<ImageCible objet={objet} cadre={null} />)).toBe('')
     expect(renderToStaticMarkup(<VignetteCible objet={objet} />)).toBe('')
   })
 
   it('ne rend rien du tout sans objet : la vignette d’une ligne vide n’est pas un gabarit', () => {
-    expect(renderToStaticMarkup(<ImageCible objet={null} />)).toBe('')
+    expect(renderToStaticMarkup(<ImageCible objet={null} cadre={null} />)).toBe('')
   })
 
   it('ne signale l’absence par aucun message', () => {
-    const rendu = renderToStaticMarkup(<ImageCible objet={objet} />)
+    const rendu = renderToStaticMarkup(<ImageCible objet={objet} cadre={null} />)
     expect(rendu).not.toMatch(/erreur|indisponible|introuvable/i)
   })
 })
@@ -90,9 +87,14 @@ describe('lisibilité en mode nuit §11.1', () => {
   })
 
   it('multiplie contre un jeton de palette, donc contre du rouge pur la nuit', () => {
-    const fond = regle(":root[data-mode-nuit='true'] .image-cible-vue")
+    const fond = regle(
+      ":root[data-mode-nuit='true'] .image-cible-vue,\n:root[data-mode-nuit='true'] .image-cible-encart",
+    )
     // Une couleur écrite en dur ici survivrait au basculement et ruinerait le fondu.
     expect(fond).toMatch(/background:\s*var\(--[a-z-]+\)/)
+    // L'encart bascule avec la vue : un fond sombre qui lui resterait propre noircirait son
+    // image, puisque c'est contre ce fond que le fondu multiplicatif se joue.
+    expect(fond).toContain('.image-cible-encart')
   })
 
   it('garde à la vignette de liste la hauteur d’une cible de clic', () => {
@@ -102,55 +104,83 @@ describe('lisibilité en mode nuit §11.1', () => {
 })
 
 // ---------------------------------------------------------------------------
-// §6.2 — l'aperçu du cadre
+// §6.2 — le cadre du capteur sur l'image
 // ---------------------------------------------------------------------------
 
-const COTE_CAPTEUR_MM = 36
-const FOV_L = fovDeg(COTE_CAPTEUR_MM, DOMAINES.focale_mm.max).value
-const FOV_H = fovDeg(COTE_CAPTEUR_MM * (2 / 3), DOMAINES.focale_mm.max).value
-
-describe('aperçu du cadre §6.2', () => {
-  const objet = CATALOGUE[0]!
-
-  it('ne pose rien tant que la découpe n’est pas là', () => {
-    // Hors réseau, c'est l'état permanent : §12.5 dit que la vue tombe, et sa dégradation
-    // nommée est le cadre schématique de §9.2 — déjà dessiné sur la scène, pas ici.
-    const rendu = renderToStaticMarkup(
-      <ApercuCadre objet={objet} fovLDeg={FOV_L} fovHDeg={FOV_H} angleBoitierDeg={null} />,
-    )
-    expect(rendu).toBe('')
-  })
-
-  it('ne pose rien sans objet à cadrer', () => {
-    expect(
-      renderToStaticMarkup(
-        <ApercuCadre objet={null} fovLDeg={FOV_L} fovHDeg={FOV_H} angleBoitierDeg={null} />,
-      ),
-    ).toBe('')
-  })
-
-  it('pose le rectangle du cadre en surimpression, pas à côté', () => {
-    // Sans `position: relative` sur le conteneur, le rectangle se placerait par rapport à la
+describe('cadre du capteur §6.2', () => {
+  it('pose l’encart sur l’image, pas à côté', () => {
+    // Sans `position: relative` sur le conteneur, l'encart se placerait par rapport à la
     // page : il quitterait l'image sans qu'aucun test ne le remarque.
     expect(regle('.image-cible-vue')).toMatch(/position: relative/)
-    expect(regle('.apercu-cadre-rectangle')).toMatch(/position: absolute/)
+    expect(regle('.image-cible-encart')).toMatch(/position: absolute/)
+  })
+
+  it('ne pose aucun cadre sur la grande image : une seule façon de lire le cadrage', () => {
+    // Un rectangle en surimpression changeait de nature selon la cible — tantôt un cadre dans
+    // l'image, tantôt une image dans le cadre — et demandait un autre geste pour la même
+    // question. L'encart y répond seul.
+    expect(CSS).not.toContain('image-cible-cadre')
   })
 
   it('trace le cadre par un jeton de palette, donc en rouge la nuit', () => {
-    expect(regle('.apercu-cadre-rectangle')).toMatch(/border:[^;]*var\(--[a-z-]+\)/)
+    expect(regle('.image-cible-encart')).toMatch(/border:[^;]*var\(--[a-z-]+\)/)
   })
 
-  it('ne remplit pas le cadre : ce qu’on regarde est ce qui déborde', () => {
-    const rectangle = regle('.apercu-cadre-rectangle')
-    expect(rectangle).not.toMatch(/background/)
-    // Un rectangle qui capte le clic bloquerait l'interaction avec ce qu'il recouvre.
-    expect(rectangle).toMatch(/pointer-events: none/)
+  it('rend l’encart opaque : deux champs superposés ne se lisent pas', () => {
+    // L'encart est une AUTRE vue, à une autre échelle. Sans fond, la grande image transparaît
+    // dans ses marges et plus rien ne dit où finit l'objet réduit.
+    expect(regle('.image-cible-encart')).toMatch(/background:\s*var\(--[a-z-]+\)/)
+  })
+
+  it('laisse l’encart recevoir le pointeur : c’est ce qui l’agrandit', () => {
+    expect(regle('.image-cible-encart')).not.toMatch(/pointer-events: none/)
+  })
+
+  it('agrandit l’encart au survol sans rien déplacer dans la page', () => {
+    // La vue ne change pas de taille et l'encart y est en position absolue : seule sa largeur
+    // grandit. Une règle qui toucherait à la vue elle-même décalerait le texte de la fiche.
+    const survol = regle('.image-cible-encart:hover')
+    expect(survol).toMatch(/width:/)
+    expect(regle('.image-cible-vue')).not.toMatch(/:hover/)
+  })
+
+  it('laisse voir la vue autour de l’encart agrandi, sans la recouvrir', () => {
+    // L'encart reste opaque — deux échelles superposées DANS le cadre ne se lisent pas — mais
+    // rien ne peint par-dessus le reste de la vue : ce qui dépasse rappelle de quel champ le
+    // cadre est découpé.
+    expect(regle('.image-cible-encart:hover')).not.toMatch(/box-shadow/)
+  })
+
+  it('n’anime l’agrandissement que si la préférence système accepte le mouvement', () => {
+    // WCAG 2.3.3 : une animation déclenchée par l'interaction doit pouvoir être coupée. Ici
+    // elle n'est pas raccourcie sous préférence, elle n'est pas DÉCLARÉE — l'agrandissement
+    // redevient instantané. Une transition écrite sur la règle de base s'imposerait à tous.
+    expect(regle('.image-cible-encart')).not.toMatch(/transition/)
+    expect(regle('.image-cible-encart:hover')).not.toMatch(/transition/)
+
+    const debut = CSS.indexOf('@media (prefers-reduced-motion: no-preference)')
+    expect(debut, 'aucun bloc de mouvement accepté').toBeGreaterThan(-1)
+    const bloc = CSS.slice(debut, CSS.indexOf('\n}', debut))
+    expect(bloc).toMatch(/transition:\s*width/)
+    expect(bloc).toContain('.image-cible-encart')
+  })
+
+  it('dit que l’agrandissement est le champ du capteur, pas un zoom sur l’image', () => {
+    // La mention n'existe qu'au survol : elle se vérifie sur la feuille de style, comme tout
+    // ce que le rendu statique ne peut pas atteindre.
+    expect(regle('.image-cible-encart-mention')).toMatch(/opacity: 0/)
+    expect(regle('.image-cible-encart:hover .image-cible-encart-mention')).toMatch(/opacity: 1/)
+  })
+
+
+  it('coupe la cible qui déborde du cadre, c’est ce qui donne l’image d’une mosaïque', () => {
+    expect(regle('.image-cible-encart')).toMatch(/overflow: hidden/)
   })
 
   it('réutilise le traitement nocturne de la vignette, sans le redéfinir', () => {
-    // Le fondu multiplicatif est déclaré une fois, sur `.image-cible-vue img`, et l'aperçu
-    // porte cette classe. Une seconde règle propre à l'aperçu serait une occasion de divergence.
+    // Le fondu multiplicatif est déclaré une fois, sur `.image-cible-vue img` — et l'image de
+    // l'encart est dedans. Une seconde règle propre à l'encart serait une divergence en
+    // puissance.
     expect(CSS.match(/mix-blend-mode:\s*multiply/g)).toHaveLength(1)
-    expect(CSS).toContain('apercu-cadre')
   })
 })

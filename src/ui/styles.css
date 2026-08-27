@@ -1734,7 +1734,10 @@ button:disabled {
   height: auto;
 }
 
-:root[data-mode-nuit='true'] .image-cible-vue {
+/* L'encart porte le même fond que la vue : c'est contre lui que le fondu multiplicatif de
+   l'image se joue, et un fond sombre propre à l'encart la rendrait noire la nuit. */
+:root[data-mode-nuit='true'] .image-cible-vue,
+:root[data-mode-nuit='true'] .image-cible-encart {
   background: var(--texte);
 }
 
@@ -1763,31 +1766,89 @@ button:disabled {
   object-fit: cover;
 }
 
-/* §6.2 — l'aperçu du cadre sur imagerie de fond.
+/* §6.2 — le cadre du capteur, et ce que la cible y occupe.
 
-   Le rectangle est le CADRE, pas l'image : sa largeur est la fraction que la marge du registre
-   laisse au capteur, sa hauteur suit le rapport des deux champs, et sa rotation est l'angle de
-   boîtier suggéré. Les trois viennent du profil, donc du style en ligne — une classe ne peut
-   pas porter un nombre qui dépend de la focale.
+   Toujours un encart, jamais un rectangle posé sur la grande image : la même question se pose
+   pour toute cible, elle demande donc le même geste. Il se place en bas à droite, là où une
+   image de ciel profond a le moins de chances de porter son sujet.
 
-   Il ne remplit rien : ce qu'on regarde est ce qui déborde. */
-.apercu-cadre {
-  margin: 0.6rem 0 0;
-  display: grid;
-  gap: 0.3rem;
+   La cible plus grande que le cadre déborde de l'encart et s'y fait couper — c'est le cadre
+   plein, l'objet qui sort, ce que MOSAIQUE_REQUISE décrit. */
+.image-cible-encart {
+  position: absolute;
+  right: 0.4rem;
+  bottom: 0.4rem;
+  /* La largeur passe par une variable, pas par le style en ligne : c'est ce qui permet au
+     survol ci-dessous de la surcharger. Un `width` en ligne gagnerait contre toute règle. */
+  width: var(--encart-largeur);
+  border: var(--trait) dashed var(--accent);
+  overflow: hidden;
+  /* Opaque, contrairement au cadre en surimpression. L'encart est une AUTRE vue, à une autre
+     échelle : laisser la grande image transparaître dans ses marges superposerait deux champs
+     sans rapport, et on ne saurait plus où finit l'objet réduit. */
+  background: var(--fond);
 }
 
-.apercu-cadre-rectangle {
+/* Au survol, l'encart prend toute la vue : le cadre du capteur devient lisible, avec la cible
+   à sa taille réelle dedans.
+
+   Rien ne se déplace dans la page. L'encart est en position absolue dans une vue qui ne change
+   pas de taille : seule sa largeur grandit, depuis son ancrage en bas à droite. La hauteur
+   suit le rapport du capteur, donc le cadre reste le cadre.
+
+   Rien ne masque la vue autour de l'encart : le peu de grande image qui dépasse reste là, et
+   c'est ce qui rappelle de quel champ le cadre est découpé. L'encart lui-même reste opaque —
+   ce qui ne doit pas se superposer, ce sont les deux échelles DANS le cadre.
+
+   Le lissé du passage est déclaré plus bas, sous la préférence de mouvement. */
+.image-cible-encart:hover {
+  width: calc(100% - 0.8rem);
+}
+
+/* Ce que le survol montre n'est pas la même vue à la même échelle : sans cette mention, un
+   agrandissement se lirait comme un zoom sur l'image, pas comme le champ du capteur. */
+.image-cible-encart-mention {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 0.15rem 0.3rem;
+  background: var(--fond);
+  color: var(--attenue);
+  font-size: 0.65rem;
+  opacity: 0;
+}
+
+.image-cible-encart:hover .image-cible-encart-mention {
+  opacity: 1;
+}
+
+/* T-0072, WCAG 2.3.3 — le seul mouvement de la feuille en dehors du fondu de bascule.
+
+   §11.2 refuse l'animation NON SOLLICITÉE ; celle-ci ne part qu'au survol de l'encart, donc
+   d'un geste. Ce qui la rend acceptable n'est pas sa brièveté, c'est le média : hors
+   `no-preference`, la déclaration n'existe pas, et l'agrandissement redevient instantané. Une
+   durée raccourcie ne suffirait pas — un changement de TAILLE reste un mouvement, contrairement
+   au fondu de luminance de §11.1 qui, lui, ne déplace rien.
+
+   La transition porte la règle de base, pas le survol : sans quoi l'encart s'agrandirait en
+   douceur et se rétracterait d'un coup. */
+@media (prefers-reduced-motion: no-preference) {
+  .image-cible-encart {
+    transition: width 140ms ease;
+  }
+
+  .image-cible-encart-mention {
+    transition: opacity 140ms ease;
+  }
+}
+
+
+.image-cible-encart img {
   position: absolute;
   top: 50%;
   left: 50%;
-  border: var(--trait) solid var(--accent);
-  pointer-events: none;
-}
-
-.apercu-cadre figcaption {
-  font-size: 0.7rem;
-  color: var(--attenue);
+  height: auto;
 }
 
 /* Un titre de carte qui porte une aide au survol : même repère visuel qu'un terme du

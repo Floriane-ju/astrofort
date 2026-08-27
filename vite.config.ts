@@ -9,11 +9,11 @@ import { ORIGINES_IMAGERIE } from './src/registry/imagerie.ts'
 // une dépendance qui appellerait un tiers demain est refusée sans qu'une revue de code ait à la
 // rattraper.
 //
-// §6.4 — la liste n'est plus vide pour autant. L'image d'objet joint deux services publics, et
-// les origines viennent de `ORIGINES_IMAGERIE` : elles ne sont pas réécrites ici, parce que la
-// même liste sert de garantie de confidentialité en §13.1. Ce qui leur est transmis est une
-// désignation ou un couple de coordonnées — jamais un profil, un site ou un plan de séance,
-// donc le critère de §13.3 tient toujours.
+// §6.4 — la liste n'est plus vide pour autant. L'image d'objet joint un service public, et son
+// origine vient de `ORIGINES_IMAGERIE` : elle n'est pas réécrite ici, parce que la même liste
+// sert de garantie de confidentialité en §13.1. Ce qui lui est transmis est un couple de
+// coordonnées — jamais un profil, un site ou un plan de séance, donc le critère de §13.3 tient
+// toujours.
 //
 // Une seule directive s'ouvre. Les vignettes sont téléchargées, rangées en IndexedDB, puis
 // affichées depuis un `blob:` : `img-src` n'a aucun hôte tiers à nommer, et il n'y a qu'une

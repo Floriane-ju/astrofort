@@ -78,18 +78,27 @@ export function FicheCible(props: FicheCibleProps) {
     [calcul, filtreDualBand, explicationDepliee, objet, snrCible, props],
   )
 
+  const cadre =
+    calcul.ok && calcul.r.cadrage !== null
+      ? {
+          fovLDeg: props.optique.fovLDeg.value,
+          fovHDeg: props.optique.fovHDeg.value,
+          angleBoitierDeg: calcul.r.cadrage.angleBoitierDeg,
+        }
+      : null
+
   return (
     <>
-      {/* §6.4 — l'objet avant ses nombres. Sans image disponible, le composant ne rend rien :
-          une cible sans image reste une cible complète. */}
-      <ImageCible objet={objet} />
+      {/* §6.4, §6.2 — l'objet avant ses nombres, et le cadre du capteur posé dessus. Sans
+          image disponible, le composant ne rend rien : une cible sans image reste une cible
+          complète. Sans cadrage calculé — pas de dimensions au catalogue — l'image reste, mais
+          nue : un rectangle tracé contre un champ de repli mentirait sur l'échelle. */}
+      <ImageCible objet={objet} cadre={cadre} />
       <ChampsCible objet={objet} />
       {!calcul.ok && <p className="erreur">{calcul.erreur}</p>}
       {calcul.ok && (
         <Verdicts
           r={calcul.r}
-          objetCadre={objet}
-          optique={props.optique}
           snrCible={snrCible}
           surSnr={setSnrCible}
           isoLibelle={iso.message}
