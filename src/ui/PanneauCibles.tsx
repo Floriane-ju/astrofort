@@ -17,7 +17,7 @@
  * ni deux notes — différentes pour la même cible.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   filtreLignes,
   lignesCatalogue,
@@ -32,10 +32,12 @@ import type { Site } from '../core/ephem.ts'
 import type { ContexteSession } from '../core/session.ts'
 import { K } from '../registry/constants.ts'
 import { DOMAINES } from '../registry/domains.ts'
+import { I } from '../registry/imagerie.ts'
 import type { ObjetCielProfond, TypeObjet } from '../data/deepsky.ts'
 import { Bulle } from './Bulle.tsx'
 import { Icone } from './Icone.tsx'
 import { VignetteCible } from './ImageCible.tsx'
+import { prechargeVignettes } from './image-cible-memoire.ts'
 import { Pastilles } from './Pastilles.tsx'
 import { LIBELLE_TYPE_OBJET, nomCommun } from './libelles-objet.ts'
 import { ouvreCible } from './seance-etat.ts'
@@ -112,6 +114,19 @@ export function PanneauCibles(props: PanneauCiblesProps) {
     // elle ne passe pas cette portée-là. C'est la POSE qui décide, pas la présence d'une note.
     return filtrees.filter((l) => etats.get(l.objet.designation)?.pose != null)
   }, [lignes, type, magMax, recherche, portee, etats])
+
+  // §6.4 — le haut de la liste est demandé au réseau, une fois, après que la saisie s'est
+  // posée. Ce sont les RÉSULTATS qui déclenchent, donc les trois gestes en sont couverts :
+  // recherche, bascule de portée, filtres. Le défilement, lui, ne demande toujours rien.
+  const aPrecharger = useMemo(
+    () => retenues.slice(0, I('VIGNETTES_PRECHARGEES_MAX')).map((l) => l.objet),
+    [retenues],
+  )
+
+  useEffect(() => {
+    const attente = setTimeout(() => prechargeVignettes(aPrecharger), I('DELAI_PRECHARGE_MS'))
+    return () => clearTimeout(attente)
+  }, [aPrecharger])
 
   const plafond = K('CIBLES_LISTEES_MAX')
   const listees = retenues.slice(0, plafond)
@@ -233,6 +248,7 @@ function LigneListe({ ligne, etat }: { readonly ligne: LigneCible; readonly etat
   return (
     <li className="cible-item">
       {/* §6.4 — depuis le cache seulement : le défilement de la liste n'émet aucune requête.
+          C'est le préchargement du haut de liste qui garnit ce cache, en une salve plafonnée.
           Hors du bouton, pour que l'image ne soit pas un contenu cliquable de plus. */}
       <VignetteCible objet={objet} />
       <button type="button" className="cible-ligne" onClick={() => ouvreCible(objet)}>

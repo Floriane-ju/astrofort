@@ -1,5 +1,6 @@
 /**
- * §6.4 — la mémoire de session des images de cibles, et le crochet qui la lit.
+ * §6.4 — la mémoire de session des images de cibles, le crochet qui la lit, et le
+ * préchargement du haut de liste.
  *
  * Elle existe pour une raison de coût, pas de confort. La liste du catalogue rend jusqu'à
  * deux cents lignes et se refiltre à chaque frappe : une lecture d'IndexedDB par ligne et par
@@ -10,6 +11,15 @@
  * c'est ce qui rend instantané le retour sur une cible déjà vue. Le volume est borné par le
  * nombre de cibles CONSULTÉES, pas par la taille du catalogue.
  *
+ * LE PRÉCHARGEMENT VIT DANS LE MODULE, PAS DANS LE PANNEAU
+ *   Le panneau latéral démonte son contenu quand il se ferme. Une file portée par un composant
+ *   perdrait donc ses téléchargements au moment où l'utilisateur range le panneau — exactement
+ *   le geste qui suit une recherche. Ici, la file survit au démontage : les octets finissent en
+ *   IndexedDB et en mémoire, et la réouverture ne demande plus rien.
+ *
+ *   Le débit est plafonné par le registre, pas par la longueur de la liste : le motif du
+ *   plafond est le 429 d'un service public, et une salve par caractère frappé le déclencherait.
+ *
  * ponytail: mémoire non bornée, à la vue près. Un plafond LRU s'imposerait le jour où une
  * session consulterait des milliers de cibles — ce n'est pas le geste d'un préparateur de
  * séance, qui en ouvre quelques dizaines.
@@ -18,7 +28,9 @@
 import { useEffect, useState } from 'react'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { ImageStockee } from '../data/db.ts'
+import { modeReseauCourant } from '../data/degradation.ts'
 import { imageEnCache, resoudImage } from '../data/imagerie-cible.ts'
+import { I } from '../registry/imagerie.ts'
 
 export interface ImageAffichable {
   readonly image: ImageStockee
@@ -38,12 +50,31 @@ const trouvees = new Map<string, ImageAffichable>()
 /** Les cibles dont on sait qu'elles ne sont pas en cache. Ne concerne que la portée `CACHE`. */
 const absentesDuCache = new Set<string>()
 
+/**
+ * Les vignettes montées, à réveiller quand une image arrive par le préchargement.
+ *
+ * Sans cela le préchargement n'aurait aucun effet visible avant un remontage : une vignette qui
+ * a constaté l'absence s'est inscrite dans `absentesDuCache` et ne redemande plus jamais.
+ * Même patron que [[seance-etat]] — un magasin de module, lisible sans DOM.
+ */
+const abonnes = new Set<() => void>()
+
+/** L'abonnement du magasin : le rendu React l'emploie, les tests aussi — sans DOM. */
+export function abonneImages(notifie: () => void): () => void {
+  abonnes.add(notifie)
+  return () => {
+    abonnes.delete(notifie)
+  }
+}
+
 function retient(image: ImageStockee): ImageAffichable {
   const connue = trouvees.get(image.designation)
   if (connue !== undefined) return connue
   const affichable: ImageAffichable = { image, url: URL.createObjectURL(image.octets) }
   trouvees.set(image.designation, affichable)
   absentesDuCache.delete(image.designation)
+  // Après l'écriture, jamais avant : un abonné réveillé relit la mémoire.
+  for (const notifie of abonnes) notifie()
   return affichable
 }
 
@@ -98,7 +129,65 @@ export function useImageCible(
     }
   }, [objet, designation, portee])
 
+  // Une image préchargée arrive après que la ligne a conclu à l'absence : c'est cet abonnement
+  // qui la fait paraître, sans que la ligne redemande quoi que ce soit.
+  useEffect(() => {
+    if (designation === '') return
+    return abonneImages(() => {
+      const su = dejaSu(designation, portee)
+      if (su !== undefined && su !== null) setAffichable(su)
+    })
+  }, [designation, portee])
+
   return affichable
+}
+
+/** Ce qui reste à télécharger. Vidé, jamais recréé : les consommateurs tiennent la référence. */
+const enAttente: ObjetCielProfond[] = []
+let consommateurs = 0
+let dernierJeu: string | null = null
+
+async function consomme(): Promise<void> {
+  try {
+    for (;;) {
+      const objet = enAttente.shift()
+      if (objet === undefined) return
+      // Un échec ne se signale pas : la ligne reste complète sans son image (§12.5).
+      const image = await resoudImage(objet).catch(() => null)
+      if (image !== null) retient(image)
+    }
+  } finally {
+    consommateurs -= 1
+  }
+}
+
+/**
+ * §6.4 — demande les images du haut d'une liste de résultats, une fois.
+ *
+ * Le jeu précédent est ABANDONNÉ, pas achevé : la liste a changé, ses images ne sont plus
+ * celles qu'on regarde. Les requêtes déjà parties, elles, servent quand même — leur résultat
+ * est rangé.
+ *
+ * Hors ligne, rien ne part et rien n'est retenu comme fait : le retour du réseau doit pouvoir
+ * redemander le même jeu (§12.5).
+ */
+export function prechargeVignettes(objets: readonly ObjetCielProfond[]): void {
+  const jeu = objets.map((o) => o.designation).join(' ')
+  // La liste se recompose à chaque minute affichée sans changer d'objets : sans cette garde,
+  // une salve partirait toutes les soixante secondes pour la même liste.
+  if (jeu === dernierJeu) return
+  if (modeReseauCourant() === 'HORS_LIGNE') return
+  dernierJeu = jeu
+
+  enAttente.length = 0
+  for (const objet of objets.slice(0, I('VIGNETTES_PRECHARGEES_MAX'))) {
+    if (!trouvees.has(objet.designation)) enAttente.push(objet)
+  }
+
+  while (consommateurs < I('PRECHARGE_SIMULTANEE_MAX') && enAttente.length > consommateurs) {
+    consommateurs += 1
+    void consomme()
+  }
 }
 
 /** Vide la mémoire — réservé aux tests, qui partagent le module d'une assertion à l'autre. */
@@ -106,4 +195,7 @@ export function oublieImages(): void {
   for (const { url } of trouvees.values()) URL.revokeObjectURL(url)
   trouvees.clear()
   absentesDuCache.clear()
+  abonnes.clear()
+  enAttente.length = 0
+  dernierJeu = null
 }

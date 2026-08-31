@@ -139,6 +139,42 @@ export const IMAGERIE = Object.freeze({
     source: 'convention — vingt fois le poids observé d’une vignette, marge pour un format lourd',
     tolerance: 'sans objet — plafond de garde',
   }),
+
+  /**
+   * §6.4 — combien de vignettes une liste de résultats demande au réseau, en une fois.
+   *
+   * La vignette de liste ne se contentait que du cache : une recherche neuve rendait donc une
+   * liste sans images, et il fallait ouvrir chaque fiche pour en obtenir une. Le motif du
+   * plafond n'est pas le volume — soixante découpes pèsent une demi-douzaine de centaines de
+   * kilo-octets au poids mesuré ci-dessus — c'est le nombre de requêtes envoyées à un service
+   * public. Il est délibérément plus bas que `CIBLES_LISTEES_MAX` : ce qui est demandé est le
+   * HAUT de la liste, pas la liste.
+   */
+  VIGNETTES_PRECHARGEES_MAX: valeur({
+    valeur: 60,
+    unite: '—',
+    source: 'convention d’affichage — le haut de liste, à ~10 ko la découpe',
+    tolerance: 'sans objet — aucun verdict ne dépend de ce plafond',
+  }),
+
+  /** Requêtes de préchargement menées de front. Le motif du plafond est le 429 du service. */
+  PRECHARGE_SIMULTANEE_MAX: valeur({
+    valeur: 2,
+    unite: '—',
+    source: 'politesse envers un service public — hips2fits répond 429 à une rafale',
+    tolerance: 'sans objet — plafond de débit',
+  }),
+
+  /**
+   * Le repos qu'attend le préchargement avant de partir. La liste se refiltre à chaque frappe :
+   * sans ce délai, « pleiades » émettrait huit salves pour la seule dernière.
+   */
+  DELAI_PRECHARGE_MS: valeur({
+    valeur: 400,
+    unite: 'ms',
+    source: 'convention d’interaction — au-dessus de la cadence de frappe soutenue',
+    tolerance: 'sans objet — temporisation d’interface',
+  }),
 } satisfies Record<string, ValeurImagerie>)
 
 export type IdImagerie = keyof typeof IMAGERIE

@@ -1732,9 +1732,24 @@ UNE IMAGE DE L'OBJET, ET CE QU'ELLE COÛTE
     dont l'auteur ou la licence n'a pas pu être lu n'est pas affichée.
 
   CE QUE L'IMAGE NE FAIT PAS
-    - elle ne se précharge pas : le catalogue embarqué compte plus de 13 000 objets, et
-      §12.2 plafonne le volume livré. Une image est demandée à la consultation d'une
-      cible, jamais au défilement d'une liste.
+    - elle n'entre dans aucun paquet livré : le catalogue embarqué compte plus de 13 000
+      objets, et §12.2 plafonne le volume livré. Une image est TÉLÉCHARGÉE, jamais
+      embarquée.
+    - elle ne se précharge que par le HAUT D'UNE LISTE DE RÉSULTATS, et sous quatre
+      bornes. Rendre atteignable une désignation qu'on ne reconnaît pas ne sert à rien si
+      l'image n'arrive qu'à l'ouverture de la fiche : c'est le premier écran de résultats
+      qui doit être reconnaissable.
+        1. les N premiers résultats seulement — N est une valeur de registre, plus basse
+           que le plafond d'affichage : ce qui est demandé est le haut de la liste, pas la
+           liste ;
+        2. une fois par jeu de résultats, après un délai de repos de registre — la liste
+           se refiltre à chaque frappe, et une salve par caractère est le défaut que ce
+           délai empêche ;
+        3. à débit plafonné, valeur de registre — le motif du plafond est le 429 d'un
+           service public, pas le volume ;
+        4. jamais au défilement, et jamais hors ligne (§12.5).
+      Un jeu de résultats abandonné n'est pas achevé : changer la liste abandonne ce qui
+      n'est pas encore parti.
     - elle ne bloque rien : son absence n'est pas une erreur, et la fiche reste complète
       sans elle. C'est la formulation que §12.5 emploie déjà pour l'imagerie de fond.
     - elle ne quitte pas le cadre de §13 : ce qui sort est une désignation ou un couple
@@ -1797,6 +1812,21 @@ Et aucun verdict n'est affiché pour une cible de démonstration
 Étant donné une cible choisie dans la liste
 Quand je demande à la voir
 Alors la scène se pointe sur elle sans changer l'instant affiché
+
+Étant donné une recherche qui rend plus de résultats que le plafond de préchargement
+Quand la saisie se pose
+Alors les images des N premiers résultats sont demandées, et aucune autre
+Et le nombre de requêtes menées de front ne dépasse pas le plafond de débit du registre
+Et fermer le panneau n'abandonne pas les téléchargements déjà lancés
+
+Étant donné une liste de résultats inchangée                        # cas limite
+Quand l'instant affiché avance d'une minute et recompose la liste
+Alors aucune image n'est demandée une seconde fois
+
+Étant donné le mode hors ligne de §12.5                             # cas limite
+Quand une liste de résultats s'affiche
+Alors aucune requête d'image n'est émise
+Et les lignes restent complètes, sans image et sans message d'erreur
 
 Étant donné une cible Messier dont la page encyclopédique porte une image
 Quand j'ouvre sa fiche
