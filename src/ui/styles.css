@@ -360,6 +360,22 @@ body {
   text-overflow: ellipsis;
 }
 
+/* T-0162 — un compteur est un nombre qu'on tire à l'horizontale. Le curseur l'annonce avant
+   le clic : sans `ew-resize`, rien ne distingue une valeur réglable d'une lecture. La
+   sélection est coupée — un glisser sur du texte surligne au lieu de compter — et
+   `touch-action: none` retire le geste au défilement de la page, sans quoi le doigt ferait
+   glisser la page plutôt que la valeur. */
+.compteur {
+  cursor: ew-resize;
+  touch-action: none;
+  user-select: none;
+  border-bottom: var(--trait) dotted transparent;
+}
+
+.compteur:hover {
+  border-bottom-color: var(--accent);
+}
+
 .barrebas-lieu {
   font-size: 0.7rem;
   letter-spacing: var(--suivi-micro);

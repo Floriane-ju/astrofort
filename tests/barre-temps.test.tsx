@@ -54,7 +54,10 @@ describe('T-0137 — la barre basse pilote le temps', () => {
     for (const libelle of ['Reculer vite', 'Reculer', 'Avancer', 'Avancer vite']) {
       expect(place(html, libelle), libelle).toBeGreaterThan(-1)
     }
-    expect(html).toContain('Changer la date et l’heure')
+    // T-0162 — le cadran n'est plus un bouton unique : six compteurs, un par champ réglable.
+    for (const libelle of ['Jour', 'Mois', 'Année', 'Heure', 'Minute', 'Seconde']) {
+      expect(place(html, libelle), libelle).toBeGreaterThan(-1)
+    }
     expect(html).toContain('Mettre le temps en pause')
   })
 
@@ -64,8 +67,8 @@ describe('T-0137 — la barre basse pilote le temps', () => {
     const html = barre()
     const ou = (libelle: string) => place(html, libelle)
     expect(ou('Reculer vite')).toBeLessThan(ou('Reculer'))
-    expect(ou('Reculer')).toBeLessThan(ou('Changer la date et l’heure'))
-    expect(ou('Changer la date et l’heure')).toBeLessThan(ou('Avancer'))
+    expect(ou('Reculer')).toBeLessThan(ou('Jour'))
+    expect(ou('Seconde')).toBeLessThan(ou('Avancer'))
     expect(ou('Avancer')).toBeLessThan(ou('Avancer vite'))
     expect(ou('Avancer vite')).toBeLessThan(ou('Mettre le temps en pause'))
   })
@@ -143,9 +146,11 @@ describe('T-0137 — la barre basse pilote le temps', () => {
   })
 
   it('date l’instant à la seconde, jour compris', () => {
-    const html = barre()
-    expect(html).toMatch(/\d{1,2}\s\S+\s\d{4}/)
-    expect(html).toMatch(/\d{2}:\d{2}:\d{2}/)
+    // T-0162 — chaque champ est un compteur : c'est le texte rendu, balises retirées, qui
+    // porte encore la date en toutes lettres et l'heure à la seconde.
+    const texte = barre().replaceAll('<!-- -->', '').replace(/<[^>]*>/g, '')
+    expect(texte).toMatch(/\d{1,2}\s\S+\s\d{4}/)
+    expect(texte).toMatch(/\d{2}:\d{2}:\d{2}/)
   })
 
   it('remplace le tiroir de réglages et le champ de date de la barre', () => {

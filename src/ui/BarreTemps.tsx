@@ -13,10 +13,18 @@
  * millisecondes qu'elle affiche.
  */
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { facteurDefilement, reglageVitesse } from '../core/curseur-temps.ts'
-import { heureSeconde, jourLocalIso, jourLong, pourChampDateHeure } from './horaire.ts'
+import {
+  dateAvec,
+  jourLocalIso,
+  partiesHeure,
+  partiesJour,
+  pourChampDateHeure,
+  type ChampInstant,
+} from './horaire.ts'
 import { Bulle } from './Bulle.tsx'
+import { Compteur } from './Compteur.tsx'
 import { Icone } from './Icone.tsx'
 import {
   majTemps,
@@ -115,16 +123,45 @@ export function BarreTemps(props: BarreTempsProps) {
   )
 }
 
+/** Un cran de glisser vaut une unité du champ : un jour, un mois, une seconde. */
+const PAS_INSTANT = 1
+
+/** T-0162 — les morceaux de l'instant que le glisser règle, et le nom qu'ils annoncent. */
+const CHAMPS_INSTANT: Partial<
+  Record<Intl.DateTimeFormatPartTypes, { readonly champ: ChampInstant; readonly libelle: string }>
+> = {
+  day: { champ: 'jour', libelle: 'Jour' },
+  month: { champ: 'mois', libelle: 'Mois' },
+  year: { champ: 'annee', libelle: 'Année' },
+  hour: { champ: 'heure', libelle: 'Heure' },
+  minute: { champ: 'minute', libelle: 'Minute' },
+  second: { champ: 'seconde', libelle: 'Seconde' },
+}
+
+/** Le mois est rendu humain — 1 à 12 — parce que c'est ce que le compteur annonce. */
+function valeurChamp(date: Date, champ: ChampInstant): number {
+  if (champ === 'annee') return date.getFullYear()
+  if (champ === 'mois') return date.getMonth() + 1
+  if (champ === 'jour') return date.getDate()
+  if (champ === 'heure') return date.getHours()
+  if (champ === 'minute') return date.getMinutes()
+  return date.getSeconds()
+}
+
 /**
- * Le cadran : l'instant rendu, à la seconde, et le champ qui l'édite.
+ * Le cadran : l'instant rendu, à la seconde, et les six compteurs qui le règlent.
  *
- * Un `<input type="datetime-local">` natif plutôt qu'un calendrier maison — il apporte le
- * clavier, l'annonce et le sélecteur du système. Il ne remplace le texte qu'une fois ouvert :
- * un champ de saisie posé en permanence dans la barre se lirait moins bien qu'une date.
+ * T-0162 — chaque morceau se tire à l'horizontale (§11.2) : avancer d'un jour ne demande plus
+ * d'ouvrir un champ, de viser son sous-champ et de le refermer. Le champ natif reste, sous le
+ * clic sans glisser : lui seul apporte le sélecteur du système et la frappe d'une date lointaine.
+ *
+ * `depart` gèle l'instant AU DÉBUT du geste. Sans lui, tirer les mois depuis un 31 relirait à
+ * chaque mouvement une date déjà déplacée, et le jour dériverait avec elle.
  */
 function Horloge(props: BarreTempsProps) {
   const seconde = useTrancheScene(secondeAffichee)
   const [edition, setEdition] = useState(false)
+  const depart = useRef<Date | null>(null)
   const date = new Date(seconde * 1000)
 
   if (edition) {
@@ -151,15 +188,39 @@ function Horloge(props: BarreTempsProps) {
     )
   }
 
+  function va(champ: ChampInstant, valeur: number): void {
+    const choisi = dateAvec(depart.current ?? date, champ, valeur)
+    vaA(choisi.getTime())
+    props.surDateIso(jourLocalIso(choisi))
+  }
+
+  /** Les littéraux de la locale restent du texte : seuls les nombres deviennent des compteurs. */
+  function compteurs(parties: readonly Intl.DateTimeFormatPart[]) {
+    return parties.map((partie, rang) => {
+      const reglage = CHAMPS_INSTANT[partie.type]
+      if (reglage === undefined) return partie.value
+      const champ = reglage.champ
+      return (
+        <Compteur
+          key={rang}
+          libelle={reglage.libelle}
+          valeur={valeurChamp(date, champ)}
+          texte={partie.value}
+          pas={PAS_INSTANT}
+          sur={(valeur) => va(champ, valeur)}
+          surDebut={() => {
+            depart.current = date
+          }}
+          surClic={() => setEdition(true)}
+        />
+      )
+    })
+  }
+
   return (
-    <button
-      type="button"
-      className="barretemps-instant"
-      aria-label="Changer la date et l’heure"
-      onClick={() => setEdition(true)}
-    >
-      <span className="barretemps-jour">{jourLong(date)}</span>
-      <span className="barretemps-heure">{heureSeconde(date)}</span>
-    </button>
+    <span className="barretemps-instant">
+      <span className="barretemps-jour">{compteurs(partiesJour(date))}</span>
+      <span className="barretemps-heure">{compteurs(partiesHeure(date))}</span>
+    </span>
   )
 }
