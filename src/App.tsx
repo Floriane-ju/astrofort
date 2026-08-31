@@ -193,6 +193,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       surSqm={lieu.surSqm}
       surDateIso={lieu.surDateIso}
       site={chaine.site}
+      gaiaCharge={gaia}
       masque={chaine.masque}
       pointsMasque={lieu.pointsMasque}
       surPointsMasque={lieu.surPointsMasque}

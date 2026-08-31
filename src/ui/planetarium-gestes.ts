@@ -40,8 +40,9 @@ const MEMOIRE_PAVE_MS = 400
 /** T-0069 — pas d'une touche fléchée, en fraction du champ affiché (§3.3, registre). */
 const PAS_VISEE_FRACTION = K('PAS_VISEE_CLAVIER_FRACTION')
 const POURCENT = 100
-const HAUTEUR_MIN_DEG = -90
-const HAUTEUR_MAX_DEG = 90
+/** Les bornes du pointage, partagées avec les compteurs de la barre basse (T-0163). */
+export const HAUTEUR_MIN_DEG = -90
+export const HAUTEUR_MAX_DEG = 90
 const TOUR_DEG = 360
 
 /**
@@ -123,7 +124,7 @@ interface EvenementGeste extends Event {
 }
 
 /** Un tour complet ramené dans 0–360°, la plage de §3.5 comme celle de l'azimut. */
-function tourBorne(deg: number): number {
+export function tourBorne(deg: number): number {
   return ((deg % TOUR_DEG) + TOUR_DEG) % TOUR_DEG
 }
 
