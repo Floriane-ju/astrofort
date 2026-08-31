@@ -145,6 +145,9 @@ body {
   --suivi-titre: 0.24em;
   --suivi-marque: 0.4em;
   --trait: 1px;
+  /* Écart entre un nombre réglable et le trait qui l'annonce. Cité deux fois : par le
+     compteur, et par la phrase qui le contient et doit réserver la place du trait. */
+  --jour-trait: 0.2em;
   /* T-0113 — les gabarits de la coque. Les deux barres et le panneau sont posés en absolu
      sur la scène : leur encombrement doit être connu d'ailleurs — le panneau part sous la
      barre haute, les cartes s'ancrent entre les deux. Un seul endroit le déclare, et le
@@ -351,9 +354,13 @@ body {
 /* T-0153 — la phrase qui date l'image tient le centre de la barre basse : elle prend ce que le
    lieu et le transport laissent, et s'y centre. Elle est la SEULE chose qui se rogne ici — un
    transport amputé ne se rattrape pas, une phrase tronquée se relit en élargissant la fenêtre. */
+/* Le rognage est horizontal par intention, mais `overflow: hidden` rogne aussi en bas : sans
+   cette réserve, le soulignement des compteurs de la phrase serait coupé alors que celui du
+   transport, dans une boîte non rognée, resterait visible. */
 .coque-barrebas > .barrebas-visee {
   flex: 1;
   min-width: 0;
+  padding: calc(var(--jour-trait) + var(--trait)) 0;
   text-align: center;
   overflow: hidden;
   white-space: nowrap;
@@ -372,7 +379,7 @@ body {
   touch-action: none;
   user-select: none;
   border-bottom: var(--trait) solid var(--alerte);
-  padding-bottom: 0.2em;
+  padding-bottom: var(--jour-trait);
 }
 
 .compteur:hover {
