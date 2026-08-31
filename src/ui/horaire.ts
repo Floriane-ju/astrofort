@@ -7,8 +7,8 @@
  * les datent au même format n'est pas une coïncidence à entretenir à la main.
  *
  * T-0162 — la barre basse ne se contente plus d'écrire l'instant, elle le règle champ par
- * champ. Les mêmes options servent donc au texte (`jourLong`) et à ses morceaux
- * (`partiesJour`) : découper l'instant en compteurs ne doit pas en changer le format.
+ * champ : le format est celui de la locale, et `partiesJour` en rend les morceaux sans le
+ * réécrire — découper l'instant en compteurs ne doit pas en changer l'ordre ni la ponctuation.
  */
 
 /** L'heure seule, sans la date : les deux bornes d'un créneau tombent dans la même nuit. */
@@ -16,9 +16,14 @@ export function heure(date: Date): string {
   return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
+/**
+ * T-0164 — le jour en chiffres, et non plus le mois en toutes lettres : « août » et « mai »
+ * n'ont pas la même largeur, et la date de la barre basse se tire champ par champ. Un mois
+ * littéral déplacerait les compteurs voisins sous le doigt d'un cran à l'autre.
+ */
 const OPTIONS_JOUR: Intl.DateTimeFormatOptions = {
-  day: 'numeric',
-  month: 'long',
+  day: '2-digit',
+  month: '2-digit',
   year: 'numeric',
 }
 
@@ -30,18 +35,13 @@ const OPTIONS_HEURE: Intl.DateTimeFormatOptions = {
   second: '2-digit',
 }
 
-/** Le jour en toutes lettres : la barre basse date l'instant, pas seulement l'heure. */
-export function jourLong(date: Date): string {
-  return date.toLocaleDateString('fr-FR', OPTIONS_JOUR)
-}
-
 export function heureSeconde(date: Date): string {
   return date.toLocaleTimeString('fr-FR', OPTIONS_HEURE)
 }
 
 /**
  * Les morceaux du jour et de l'heure, séparateurs compris — l'ordre et la ponctuation restent
- * ceux de la locale, que ce soit « 31 août 2026 » ou une autre langue un jour.
+ * ceux de la locale, que ce soit « 31/08/2026 » ou une autre langue un jour.
  */
 export function partiesJour(date: Date): readonly Intl.DateTimeFormatPart[] {
   return new Intl.DateTimeFormat('fr-FR', OPTIONS_JOUR).formatToParts(date)

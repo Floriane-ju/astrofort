@@ -147,9 +147,9 @@ describe('T-0137 — la barre basse pilote le temps', () => {
 
   it('date l’instant à la seconde, jour compris', () => {
     // T-0162 — chaque champ est un compteur : c'est le texte rendu, balises retirées, qui
-    // porte encore la date en toutes lettres et l'heure à la seconde.
+    // porte encore la date et l'heure à la seconde. T-0164 — le jour est tout en chiffres.
     const texte = barre().replaceAll('<!-- -->', '').replace(/<[^>]*>/g, '')
-    expect(texte).toMatch(/\d{1,2}\s\S+\s\d{4}/)
+    expect(texte).toMatch(/\d{2}\/\d{2}\/\d{4}/)
     expect(texte).toMatch(/\d{2}:\d{2}:\d{2}/)
   })
 

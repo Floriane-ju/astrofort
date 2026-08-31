@@ -117,8 +117,8 @@ describe('T-0162 — un champ de l’instant réécrit', () => {
     const recompose = (parties: readonly Intl.DateTimeFormatPart[]) =>
       parties.map((p) => p.value).join('')
     expect(recompose(partiesJour(nuit))).toBe(nuit.toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'long',
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
     }))
     expect(recompose(partiesHeure(nuit))).toMatch(/\d{2}:\d{2}:\d{2}/)

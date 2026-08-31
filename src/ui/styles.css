@@ -430,29 +430,41 @@ body {
   border-color: var(--accent);
 }
 
+/* La boîte fait la hauteur de cible gantée (§11.2), plus haute que sa ligne de texte : sans
+   centrage, cette ligne se colle en haut et l'instant flotte au-dessus des chevrons.
+   Le jour et l'heure partagent désormais la même taille — leur ligne de base coïncide avec
+   leur centre, et l'alignement sur la ligne de base n'apporte plus rien. */
 .barretemps-instant {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.5rem;
   padding: 0.2rem 0.5rem;
-  color: var(--texte);
+  font-size: 0.78rem;
+  color: var(--attenue);
   text-transform: none;
   letter-spacing: normal;
 }
 
+/* En saisie, l'instant n'est plus une lecture : il reprend la couleur du texte actif. */
 input.barretemps-instant {
   font: 0.9rem/1.4 var(--police-mono);
   font-variant-numeric: tabular-nums;
+  color: var(--texte);
 }
 
-.barretemps-jour {
-  font-size: 0.8rem;
-  color: var(--attenue);
-}
-
+/* T-0164 — un seul instant, donc une seule typographie, et c'est celle des autres lectures
+   de la barre : la visée dit son azimut en `.etat`, le transport dit son heure de même. La
+   date atténuée en 0,8 rem devant une heure en 1 rem se lisait comme deux informations. Le
+   point médian les sépare sans les distinguer. */
+.barretemps-jour,
 .barretemps-heure {
-  font-size: 1rem;
   font-variant-numeric: tabular-nums;
+}
+
+.barretemps-heure::before {
+  content: '·';
+  margin-right: 0.5rem;
+  color: var(--attenue);
 }
 
 .barretemps-facteur {
