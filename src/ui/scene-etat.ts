@@ -277,6 +277,10 @@ export function afficheInstant(ms: number, diagnostic?: DiagnosticRendu): void {
 export function vaA(ms: number): void {
   instant.ms = ms
   majTemps({ modeTemps: 'FIGE' })
+  // L'horloge d'affichage saute avec l'instant, sans attendre l'image suivante : seule la
+  // boucle du canevas republiait `msAffiche`, si bien qu'un écran rendu sans boucle — rendu
+  // serveur, test — datait ses lectures de l'instant de démarrage plutôt que de la destination.
+  afficheInstant(ms)
 }
 
 /**
