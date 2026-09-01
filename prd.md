@@ -2746,10 +2746,9 @@ NPF COMPLÈTE — c'est celle-ci que le moteur implémente
   k = 1,0 strict (étoiles ponctuelles à 100 % en visualisation pixel)
   k = 2,0 tolérant (acceptable pour un tirage ou un affichage écran)   C-06
 
-RÈGLE DES 500 — repère historique, JAMAIS moteur de calcul
-  t_500 = 500 / focale_equivalente_24x36
-  Grossière et laxiste sur capteurs denses. Affichée à titre pédagogique parce que
-  l'utilisateur l'a lue partout : montrer l'écart vaut mieux que l'ignorer.
+FOCALE ÉQUIVALENTE 24×36 — repère de comparaison entre formats, jamais un dénominateur
+  Elle situe un objectif d'un format à l'autre, et rien de plus. Aucune pose ne s'en
+  déduit : la NPF part de la focale réelle et du pitch, qui décrivent déjà le capteur.
 
 SORTIE — une carte, pas un nombre
   Sur un grand champ, la déclinaison varie de plusieurs dizaines de degrés d'un bord
@@ -2764,14 +2763,14 @@ AVEC SUIVI
 
 **Application au setup grand angle de référence** — 10 mm f/2,8, pitch 5,12 µm, k = 1. Base : `(35 × 2,8 + 30 × 5,12) / 10 = 25,16 s` à δ = 0, divisé par cos δ.
 
-| Zone visée | δ | cos δ | Pose max (NPF) | Repère règle 500 |
-|---|---|---|---|---|
-| Équateur céleste | 0° | 1,000 | **25,2 s** | 50 s |
-| Voie lactée d'été | −25° | 0,906 | **27,8 s** | 50 s |
-| Cygne / Cassiopée | +50° | 0,643 | **39,1 s** | 50 s |
-| Circumpolaire | +89° | 0,017 | **1 442 s** | 50 s |
+| Zone visée | δ | cos δ | Pose max (NPF) |
+|---|---|---|---|
+| Équateur céleste | 0° | 1,000 | **25,2 s** |
+| Voie lactée d'été | −25° | 0,906 | **27,8 s** |
+| Cygne / Cassiopée | +50° | 0,643 | **39,1 s** |
+| Circumpolaire | +89° | 0,017 | **1 442 s** |
 
-La règle des 500 donne une valeur unique de 50 s pour tout le ciel : le double de la valeur correcte sur l'équateur céleste, et trente fois trop peu près du pôle. Inutilisable comme moteur.
+D'un bord du ciel à l'autre, la pose max varie d'un facteur 57 : 25,2 s sur l'équateur céleste contre 1 442 s près du pôle. Aucune valeur unique ne couvre cet écart — annoncer une pose globale, c'est filer les étoiles d'un côté du ciel et jeter du signal de l'autre. La pose se lit par zone visée.
 
 ### Entrées / Sorties
 
@@ -2783,7 +2782,6 @@ La règle des 500 donne une valeur unique de 50 s pour tout le ciel : le double 
 | `k_tolerance` | float | — | 1,0 / 2,0 | C-06 |
 | `t_max_cadre_s` | float | s | sortie | zone la plus contraignante |
 | `carte_pose_max` | grille | s | sortie | valeur par cellule du champ |
-| `t_500_s` | float | s | sortie | repère, non opérant |
 | `zone_limitante` | string | — | sortie | nommée, ex. « bord bas, δ = −8° » |
 
 ### Critères d'acceptation
@@ -2792,7 +2790,6 @@ La règle des 500 donne une valeur unique de 50 s pour tout le ciel : le double 
 Étant donné un 10 mm f/2,8, pitch 5,12 µm, k = 1, cadre centré sur δ = 0°
 Quand je consulte la pose max
 Alors l'app affiche 25,2 s
-Et la règle des 500 à 50 s en repère explicitement non retenu
 
 Étant donné le même objectif pointé près du pôle
 Quand je consulte la pose max
@@ -3272,7 +3269,7 @@ TERMES OBLIGATOIRES — dérivés des sorties des moteurs, non exhaustif
      darks · flats · offsets · dithering · saturation
   §8 nuit astronomique · crépuscule nautique · culmination · méridien · masse d'air ·
      circumpolaire · déclinaison · ascension droite · angle horaire
-  §9 NPF · règle des 500 · filé · latitude galactique · projection rectilinéaire
+  §9 NPF · filé · latitude galactique · projection rectilinéaire
   §3 temps sidéral · précession · astérisme · frontière IAU · indice B−V
 
 DENSITÉ D'EXPLICATION — une seule, pour tous
@@ -4419,7 +4416,6 @@ Valeurs de travail : RN ≈ 1,5 e⁻ au-delà du seuil de double gain (≈ ISO 6
 | NPF à δ = 0 (k = 1) | 25,2 s |
 | NPF à δ = −25° | 27,8 s |
 | NPF à δ = +50° | 39,1 s |
-| Règle des 500 (repère) | 50 s, uniforme et donc fausse |
 | Arc de filé, 20 min à δ = 0 | 5,01° ≈ 234 px, soit 5 % de la hauteur |
 | Arc de filé, 1 h à δ = 0 | 15,04° ≈ 701 px |
 | Séquence 2 h à 25 s + 1 s | 276 poses, ≈ 8,9 Go, arc 30,1° |
@@ -4474,7 +4470,6 @@ t_max_suivi  = t_ref × (200 / focale_mm), plafonné à 240 s
                 t_ref = 120 s (soigné) ou 45 s (approximatif)
 trace_arcsec = 15,041 × t_s × cos(δ)
 t_npf        = k × (35 × N + 30 × pitch_um) / ( focale_mm × cos(δ) )
-t_500        = 500 / focale_equivalente_24x36            repère, non opérant
 arc_deg      = 15,041 × duree_h × cos(δ)
 n_poses_file = floor( duree_s / (t_pose_s + intervalle_s) )
 ```
