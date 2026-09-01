@@ -1729,6 +1729,42 @@ const GRAND_CHAMP = {
     ordreDeGrandeur: false,
     sections: ['9.3'],
   }),
+  PAS_ARC_FILE_PX: entree({
+    ref: 'C-35',
+    libelle: 'Corde maximale d’un segment d’arc de filé',
+    valeur: 4,
+    unite: 'px',
+    source:
+      '§9.3 — flèche c²/8R : à 4 px de corde, l’écart à la conique reste sous le pixel dès ' +
+      'que le rayon projeté dépasse 2 px, donc pour tout arc visible (T-0024)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['9.3'],
+  }),
+  PRE_ECHANTILLONS_ARC_FILE: entree({
+    ref: 'C-35',
+    libelle: 'Segments du pré-échantillonnage de longueur d’arc',
+    valeur: 4,
+    unite: '—',
+    source:
+      '§9.3 — la longueur projetée s’estime avant d’être parcourue, pour ne pas parcourir ' +
+      'un arc qu’on écartera (T-0022)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['9.3'],
+  }),
+  ECHANTILLONS_CERCLE_FILE: entree({
+    ref: 'C-35',
+    libelle: 'Positions projetées qui déterminent le cercle d’un arc',
+    valeur: 5,
+    unite: '—',
+    source:
+      '§9.3 — début, quarts, milieu et fin : trois d’entre elles déterminent le cercle ' +
+      'stéréographique, les cinq donnent le balayage (T-0115)',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['9.3'],
+  }),
   DUREE_FILE_LISIBLE_MIN: entree({
     ref: 'C-35',
     libelle: 'Durée sous laquelle un filé ne se lit pas comme un filé',

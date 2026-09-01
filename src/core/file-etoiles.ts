@@ -299,9 +299,9 @@ export function arcsVisibles(
  * corde, l'écart à la conique reste sous le pixel dès que le rayon dépasse 2 px, donc pour
  * tout arc visible. C'est la fidélité que §9.3 demande, tenue là où elle se juge.
  */
-const PAS_ARC_PX = 4
+const PAS_ARC_PX = K('PAS_ARC_FILE_PX')
 /** Segments du pré-échantillonnage qui estime la longueur projetée avant de la parcourir. */
-const PRE_ECHANTILLONS = 4
+const PRE_ECHANTILLONS = K('PRE_ECHANTILLONS_ARC_FILE')
 
 /**
  * Longueur projetée approchée de l'arc, ou `null` si l'étoile n'est pas projetable partout.
@@ -337,7 +337,7 @@ function longueurApprocheePx(
  * T-0115 — positions projetées qui suffisent à un arc stéréographique : début, quarts,
  * milieu, fin. Trois d'entre elles déterminent le cercle, les cinq donnent le balayage.
  */
-const ECHANTILLONS_CERCLE = 5
+const ECHANTILLONS_CERCLE = K('ECHANTILLONS_CERCLE_FILE')
 /**
  * Tampons de passe, hissés hors de la fonction pour le motif de `pointEcran` (T-0065) :
  * cinq positions et quatre écarts par étoile, des milliers d'étoiles par image — autant de
@@ -402,8 +402,8 @@ function arcStereographique(
   const ay = ysCercle[0]!
   const bx = xsCercle[2]!
   const by = ysCercle[2]!
-  const cx = xsCercle[4]!
-  const cy = ysCercle[4]!
+  const cx = xsCercle[ECHANTILLONS_CERCLE - 1]!
+  const cy = ysCercle[ECHANTILLONS_CERCLE - 1]!
   const det = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by))
   // Positions confondues (durée nulle) ou alignées : il n'y a pas de cercle à tracer.
   if (det === 0) return null
@@ -447,8 +447,7 @@ function arcStereographique(
   let maxX = Math.max(ax, cx)
   let minY = Math.min(ay, cy)
   let maxY = Math.max(ay, cy)
-  for (let k = 0; k < 4; k++) {
-    const angle = (k * Math.PI) / 2
+  for (let angle = 0; angle < TOUR_RAD; angle += Math.PI / 2) {
     if (!dansBalayage(angle, debutRad, balayageRad)) continue
     const x = centreX + rayonPx * Math.cos(angle)
     const y = centreY + rayonPx * Math.sin(angle)
