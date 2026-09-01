@@ -246,11 +246,6 @@ export const FORMULES = Object.freeze({
       'l’autre : la pose est dictée par la zone la plus contraignante du cadre, jamais par ' +
       'son centre.',
   },
-  FOCALE_EQUIVALENTE: {
-    expression: 'focale_equiv = focale_mm × diagonale_24x36 / diagonale_capteur',
-    unite: 'mm',
-    section: '9.1',
-  },
   MAGNITUDE_LIMITE_PREVISU: {
     expression:
       'm_lim = zp_sys − 2,5 × log10( F_seuil × (206 265 / (1000 × D_mm))² ) · ' +

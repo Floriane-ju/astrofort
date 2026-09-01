@@ -58,26 +58,6 @@ export function fovDeg(dimensionMm: number, focaleMm: number): Traced<number> {
   })
 }
 
-/**
- * Focale équivalente 24 × 36 — §9.1. Repère de comparaison entre formats de capteur, et rien
- * de plus : aucun verdict de cadrage ni de pose n'en dépend, et le champ reste calculé sur
- * les dimensions réelles du capteur.
- */
-export function focaleEquivalente24x36(
-  focaleMm: number,
-  capteurLMm: number,
-  capteurHMm: number,
-): Traced<number> {
-  const diagonaleReference = Math.hypot(K('FORMAT_REFERENCE_L_MM'), K('FORMAT_REFERENCE_H_MM'))
-  const diagonale = Math.hypot(valide('capteur_mm', capteurLMm), valide('capteur_mm', capteurHMm))
-  return trace({
-    value: (valide('focale_mm', focaleMm) * diagonaleReference) / diagonale,
-    formula: 'FOCALE_EQUIVALENTE',
-    inputs: { focale_mm: focaleMm, capteur_L_mm: capteurLMm, capteur_H_mm: capteurHMm },
-    constants: ['FORMAT_REFERENCE_L_MM', 'FORMAT_REFERENCE_H_MM'],
-  })
-}
-
 interface Diagnostic {
   readonly diagEch: DiagnosticEchantillonnage
   readonly messageDiag: string

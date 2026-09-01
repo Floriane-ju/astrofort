@@ -11,7 +11,6 @@ import { axePoleDeDate, cielInstantane } from '../core/horloges.ts'
 import { cartePoseMax, traceePx, type CartePoseMax } from '../core/grand-champ.ts'
 import { diagnosticFile, type DiagnosticFile } from '../core/file-etoiles.ts'
 import { magnitudeLimitePrevisu, type EntreeProfondeur } from '../core/galactique.ts'
-import { focaleEquivalente24x36 } from '../core/optics.ts'
 import { sequenceFile, type SequenceFile } from '../core/sequence-file.ts'
 import type { Site } from '../core/ephem.ts'
 import { DEG, versSpherique } from '../core/mat3.ts'
@@ -46,7 +45,6 @@ export interface MaterielCadre {
 export interface LecturesFile {
   /** Centre du cadre en coordonnées équatoriales : ce que le boîtier vise vraiment. */
   readonly visee: { readonly longitudeDeg: number; readonly latitudeDeg: number }
-  readonly focaleEquivalente: Traced<number>
   readonly carte: CartePoseMax
   readonly profondeur: Traced<number>
   readonly trainee: Traced<number>
@@ -89,12 +87,6 @@ export function useLecturesFile(
   const visee = useMemo(
     () => versSpherique(proj.inverse(LARGEUR_CADRE_PX / 2, hauteurCadrePx / 2)),
     [proj, hauteurCadrePx],
-  )
-
-  const focaleEquivalente = focaleEquivalente24x36(
-    materiel.focaleMm,
-    materiel.capteurLMm,
-    materiel.capteurHMm,
   )
 
   const carte = useMemo(
@@ -143,7 +135,6 @@ export function useLecturesFile(
 
   return {
     visee,
-    focaleEquivalente,
     carte,
     profondeur: magnitudeLimitePrevisu(materiel.profondeur),
     trainee: traceePx(file.tPoseS, carte.decMinAbsDeg, materiel.echApx),

@@ -924,18 +924,6 @@ export const GLOSSAIRE = Object.freeze({
       'La prévisualisation ovalise les étoiles dès que la pose dépasse la pose max du cadre.',
     sections: ['9.1', '9.2'],
   }),
-  focale_equivalente: terme({
-    libelle: 'Focale équivalente',
-    glose: 'focale ramenée au plein format',
-    explication:
-      'La focale équivalente compare des cadrages entre formats de capteur différents : elle ' +
-      'traduit la focale de ce boîtier en focale d’un plein format qui donnerait le même ' +
-      'champ. Le champ réel, l’échantillonnage et la pose maximale se calculent tous sur les ' +
-      'dimensions et le pas réels du capteur, jamais sur elle.',
-    consequence:
-      'Un recadrage de capteur change la focale équivalente sans rien changer à la pose maximale.',
-    sections: ['9.1'],
-  }),
   profondeur_previsu: terme({
     libelle: 'Profondeur par photo',
     glose: 'magnitude enregistrée par la pose',

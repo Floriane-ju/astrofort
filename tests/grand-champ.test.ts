@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { cartePoseMax, traceePx } from '../src/core/grand-champ.ts'
-import { focaleEquivalente24x36, fovDeg } from '../src/core/optics.ts'
+import { fovDeg } from '../src/core/optics.ts'
 import { npf } from '../src/core/tracking.ts'
 import { K } from '../src/registry/constants.ts'
 
@@ -103,14 +103,7 @@ describe('§9.1 — pose max par déclinaison', () => {
   })
 })
 
-describe('§9.1 — focale équivalente, repère et non moteur', () => {
-  it('vaut la focale réelle en plein format et croît au recadrage', () => {
-    expect(focaleEquivalente24x36(10, CAPTEUR_L_MM, CAPTEUR_H_MM).value).toBeCloseTo(10, 1)
-    const apsc = focaleEquivalente24x36(10, 23.5, 15.6).value
-    expect(apsc).toBeGreaterThan(15)
-    expect(apsc).toBeLessThan(16)
-  })
-
+describe('§9.1 — le format du capteur ne borne pas la pose', () => {
   it('ne change pas la pose maximale, qui ne dépend que du pitch et de la focale', () => {
     const pleinFormat = carte({ centreDecDeg: 0, fovLDeg: FOV_L, fovHDeg: FOV_H })
     const recadre = carte({

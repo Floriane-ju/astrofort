@@ -1316,26 +1316,6 @@ const RENDU = {
 
 /** §9.1 à §9.4 — grand champ, prévisualisation et filé d'étoiles. */
 const GRAND_CHAMP = {
-  FORMAT_REFERENCE_L_MM: entree({
-    ref: 'A-24X36',
-    libelle: 'Grande dimension du format de référence 24 × 36',
-    valeur: 36,
-    unite: 'mm',
-    source: 'format 24 × 36, référence des focales équivalentes',
-    tolerance: null,
-    ordreDeGrandeur: false,
-    sections: ['5.1', '9.1'],
-  }),
-  FORMAT_REFERENCE_H_MM: entree({
-    ref: 'A-24X36',
-    libelle: 'Petite dimension du format de référence 24 × 36',
-    valeur: 24,
-    unite: 'mm',
-    source: 'format 24 × 36, référence des focales équivalentes',
-    tolerance: null,
-    ordreDeGrandeur: false,
-    sections: ['5.1', '9.1'],
-  }),
   CELLULES_CARTE_POSE: entree({
     ref: 'C-32',
     libelle: 'Côté de la grille de la carte de pose maximale',
