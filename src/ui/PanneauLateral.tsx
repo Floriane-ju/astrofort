@@ -9,8 +9,8 @@
  * rappel de facilité de la cible ouverte. Le retour N'EXISTE PAS sur la liste — un bouton
  * inerte resterait dans l'ordre de tabulation et annoncerait une issue qui n'en est pas une.
  *
- * Le plan de session reste ici, monté et masqué : il est la seule région imprimable, et un
- * plan démonté sortirait une page blanche. Il en sortira pour devenir une carte (T-0183).
+ * T-0183 — le plan de session n'est plus ici : il se consulte pendant qu'on regarde le ciel,
+ * pas en le parcourant pour choisir, et c'est ce qui en fait une carte.
  */
 
 import type { ReactNode } from 'react'
@@ -31,8 +31,6 @@ export interface PanneauLateralProps {
   /** §6.4 — la note de facilité de la cible ouverte, annoncée avec son libellé. */
   readonly rappel: ReactNode
   readonly children: ReactNode
-  /** Plan de session — rendu en permanence, pour l'impression et pour elle seule. */
-  readonly plan: ReactNode
 }
 
 export function PanneauLateral(props: PanneauLateralProps) {
@@ -53,7 +51,6 @@ export function PanneauLateral(props: PanneauLateralProps) {
         {props.rappel}
       </div>
       <div className="lateral-corps">{props.children}</div>
-      <div className="plan-session hors-onglet">{props.plan}</div>
     </aside>
   )
 }

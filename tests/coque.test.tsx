@@ -214,11 +214,10 @@ describe('§11.3 — le panneau est toujours ouvert et son contenu suit le mode'
     expect(carte.left + carte.width + bornes.x.max).toBe(hote.width - 8 - marges.droite)
   })
 
-  it('garde le plan monté hors de l’écran : il est la seule région imprimable', () => {
+  it('ne porte plus le plan : il a sa carte', () => {
     const html = ecran()
-    expect(html).toContain('plan-session hors-onglet')
-    const impression = CSS_COQUE.slice(CSS_COQUE.indexOf('@media print'))
-    expect(impression).toContain('.hors-onglet')
+    const panneau = html.slice(html.indexOf('coque-lateral'))
+    expect(panneau.slice(0, panneau.indexOf('</aside>'))).not.toContain('plan-session')
   })
 })
 
@@ -474,21 +473,56 @@ describe('§5.1 — la scène déclare l’écart de projection avec l’objecti
   })
 })
 
-describe('§11.2 — le plan reste imprimable', () => {
-  it('rend le plan de session dans les deux modes, masqué à l’écran', () => {
-    // T-0181 — il n'a plus d'onglet où se montrer : il attend sa carte (T-0183) et reste
-    // monté pour l'impression, qui est la seule chose qui le fait paraître.
+describe('T-0183 — le plan de nuit est une carte, et il reste imprimable', () => {
+  it('pose une carte Plan repliée au démarrage : le plan se consulte, il ne s’impose pas', () => {
+    expect(etatCoque().cartes.PLAN.ouverte).toBe(false)
+    expect(ecran()).toContain('carte-plan')
+  })
+
+  it('garde le corps du plan monté même repliée, dans les deux modes', () => {
     for (const mode of ['CIEL_PROFOND', 'PANORAMA'] as const) {
       poseMode(mode)
-      expect(ecran(), mode).toContain('plan-session hors-onglet')
+      const html = ecran()
+      // Masqué, pas démonté : démonté, imprimer la carte fermée sortirait une page blanche.
+      expect(html, mode).toMatch(/<div class="carte-corps" hidden="">/)
+      expect(html, mode).toContain('plan-session')
     }
   })
 
-  it('sort le plan du panneau à l’impression, sans quoi il sortirait blanc', () => {
+  it('déplie et replie comme les autres cartes', () => {
+    basculeCarte('PLAN')
+    expect(etatCoque().cartes.PLAN.ouverte).toBe(true)
+    expect(ecran()).not.toMatch(/<div class="carte-corps" hidden="">/)
+  })
+
+  it('n’existe qu’en un exemplaire : un seul textarea d’export dans le document', () => {
+    for (const ouverte of [false, true]) {
+      if (ouverte) basculeCarte('PLAN')
+      const html = ecran()
+      expect(html.split('plan-export').length - 1, `ouverte=${ouverte}`).toBeLessThanOrEqual(1)
+      expect(html.split('class="plan-session"').length - 1).toBe(1)
+    }
+  })
+
+  it('sort le plan à l’impression, carte repliée comprise, et rien d’autre', () => {
     const impression = CSS_COQUE.slice(CSS_COQUE.indexOf('@media print'))
-    expect(impression).toMatch(/\.coque-lateral \{/)
-    expect(impression).toContain('.coque-lateral > *:not(.plan-session)')
-    expect(impression).toContain('.hors-onglet')
+    // Ni coque, ni cartes, ni panneau, ni canevas.
+    expect(impression).toMatch(/\.coque-lateral,\n\s*\.carte \{\n\s*display: none/)
+    expect(impression).toContain('.planetarium')
+    // Sauf la carte du plan, et son corps même porteur de `hidden`.
+    expect(impression).toContain('.carte-plan > .carte-corps[hidden]')
+    expect(impression).toContain('.carte-plan .carte-corps > *:not(.plan-session)')
+  })
+
+  it('donne au plan sa propre largeur : la table du budget ne défile pas de côté', () => {
+    const debut = CSS_COQUE.indexOf('.carte-plan {')
+    expect(debut).toBeGreaterThan(-1)
+    expect(CSS_COQUE.slice(debut, CSS_COQUE.indexOf('}', debut))).toContain(
+      'width: var(--carte-plan)',
+    )
+    // Le corps défile verticalement, lui, comme toute carte.
+    const corps = CSS_COQUE.indexOf('.carte-plan .carte-corps {')
+    expect(CSS_COQUE.slice(corps, CSS_COQUE.indexOf('}', corps))).toContain('max-height')
   })
 })
 

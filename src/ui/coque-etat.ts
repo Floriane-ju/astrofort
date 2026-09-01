@@ -18,7 +18,7 @@
 import { useSyncExternalStore } from 'react'
 
 /** Les cartes posées sur la scène. Chacune est nommée d'après ce qu'elle montre. */
-export type CleCarte = 'MATERIEL' | 'VUE'
+export type CleCarte = 'MATERIEL' | 'VUE' | 'PLAN'
 
 export interface Decalage {
   readonly x: number
@@ -38,8 +38,13 @@ export interface EtatCoque {
 const SANS_DECALAGE: Decalage = Object.freeze({ x: 0, y: 0 })
 
 /**
- * La carte Vue démarre repliée : ses interrupteurs se règlent une fois puis se laissent
- * tranquilles, alors que le matériel se relit à chaque changement de focale.
+ * Deux cartes démarrent repliées, et pour deux raisons distinctes.
+ *
+ * VUE — ses interrupteurs se règlent une fois puis se laissent tranquilles, alors que le
+ * matériel se relit à chaque changement de focale.
+ *
+ * PLAN — il se consulte pendant qu'on regarde le ciel, il ne s'impose pas : déplié au
+ * démarrage, il couvrirait la moitié de la scène avant qu'on ait rien demandé.
  *
  * T-0182 — la carte Cible est partie : la fiche prend la place de la liste dans le panneau,
  * là où on l'a choisie.
@@ -48,6 +53,7 @@ const ETAT_INITIAL: EtatCoque = Object.freeze({
   cartes: Object.freeze({
     MATERIEL: { ouverte: true, decalage: SANS_DECALAGE },
     VUE: { ouverte: false, decalage: SANS_DECALAGE },
+    PLAN: { ouverte: false, decalage: SANS_DECALAGE },
   }),
 })
 

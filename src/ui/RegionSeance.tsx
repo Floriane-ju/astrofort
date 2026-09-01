@@ -26,6 +26,7 @@ import { FicheCible } from './FicheCible.tsx'
 import { Pastilles } from './Pastilles.tsx'
 import { Bulle } from './Bulle.tsx'
 import { PlanSessionVue } from './PlanSession.tsx'
+import { RegionNuit } from './RegionNuit.tsx'
 import { modeObjectif } from './PanneauMateriel.tsx'
 import { montreListeCibles, useSeance } from './seance-etat.ts'
 import { AIDE_MATERIEL_INCOMPLET } from './Inconnu.tsx'
@@ -58,8 +59,30 @@ export interface CartesSeanceProps extends RegionSeanceProps {
  * chaque geste de visée. C'est ce qui rend le repli utile et pas seulement discret.
  */
 export function CartesSeance(props: CartesSeanceProps) {
-  const { chaine, materiel } = props
-  const sbCiel = chaine.ciel.ok ? chaine.ciel.ciel.sbCiel.value : null
+  const { chaine, lieu, materiel } = props
+  const { calcul, ciel } = chaine
+  const sbCiel = ciel.ok ? ciel.ciel.sbCiel.value : null
+
+  /* §11.2 — la seule région qui survit à l'impression : elle est nommée pour ça. */
+  const planImprimable =
+    calcul.ok && ciel.ok && chaine.plan !== null && chaine.fenetreUtile !== null ? (
+      <PlanSessionVue
+        plan={chaine.plan}
+        fenetreUtile={chaine.fenetreUtile}
+        site={chaine.site}
+        fovHDeg={calcul.optique.fovHDeg.value}
+        fovLDeg={calcul.optique.fovLDeg.value}
+        mLimOeil={ciel.ciel.mLimOeil.value}
+        etoiles={props.etoiles}
+        enTete={{
+          dateIso: lieu.dateIso,
+          lieu: `${lieu.latitude}° / ${lieu.longitude}° — Bortle ${lieu.bortle}`,
+          materiel:
+            `${materiel.focale} mm f/${materiel.ouverture} — ${calcul.boitier.libelle} · ` +
+            `ISO ${calcul.iso.iso} · ${libelleZpSource(calcul.zeroSysteme)}`,
+        }}
+      />
+    ) : null
 
   return (
     <>
@@ -78,6 +101,21 @@ export function CartesSeance(props: CartesSeanceProps) {
         />
       </Carte>
 
+      {/* T-0183 — le plan se consulte pendant qu'on regarde le ciel : vérifier l'heure du
+          prochain créneau, la pose retenue, ce qui a été écarté. C'est ce qui en fait une
+          carte, et non une colonne qu'on parcourt. Son corps reste monté replié — il est la
+          seule région imprimable (§11.2). */}
+      <Carte cle="PLAN" titre="Plan de nuit">
+        {ciel.ok && (
+          <RegionNuit
+            nuit={ciel.nuit}
+            ciel={ciel.ciel}
+            offsetMidi={ciel.offsetMidi}
+            planIndisponible={chaine.plan === null && props.catalogue.length === 0}
+          />
+        )}
+        <div className="plan-session">{planImprimable}</div>
+      </Carte>
     </>
   )
 }
@@ -119,7 +157,7 @@ function RappelFacilite({ etat }: { readonly etat: EtatCible }) {
  * cible dans le catalogue, en Panorama on règle le panorama, et rien d'autre n'est monté.
  */
 export function LateralSeance(props: RegionSeanceProps) {
-  const { chaine, lieu, materiel, catalogue } = props
+  const { chaine, catalogue } = props
   const { calcul, ciel } = chaine
   const { mode, vueCibles } = useSeance()
 
@@ -141,33 +179,11 @@ export function LateralSeance(props: RegionSeanceProps) {
       ? null
       : chaine.etatsCibles.get(props.cibleDuCiel.designation) ?? null
 
-  /* §11.2 — la seule région qui survit à l'impression : elle est nommée pour ça. */
-  const planImprimable =
-    calcul.ok && ciel.ok && chaine.plan !== null && chaine.fenetreUtile !== null ? (
-      <PlanSessionVue
-        plan={chaine.plan}
-        fenetreUtile={chaine.fenetreUtile}
-        site={chaine.site}
-        fovHDeg={calcul.optique.fovHDeg.value}
-        fovLDeg={calcul.optique.fovLDeg.value}
-        mLimOeil={ciel.ciel.mLimOeil.value}
-        etoiles={props.etoiles}
-        enTete={{
-          dateIso: lieu.dateIso,
-          lieu: `${lieu.latitude}° / ${lieu.longitude}° — Bortle ${lieu.bortle}`,
-          materiel:
-            `${materiel.focale} mm f/${materiel.ouverture} — ${calcul.boitier.libelle} · ` +
-            `ISO ${calcul.iso.iso} · ${libelleZpSource(calcul.zeroSysteme)}`,
-        }}
-      />
-    ) : null
-
   return (
     <PanneauLateral
       titre={fiche && props.cibleDuCiel !== null ? props.cibleDuCiel.designation : TITRES_LATERAL[mode]}
       retour={fiche ? montreListeCibles : null}
       rappel={fiche && facilite !== null ? <RappelFacilite etat={facilite} /> : null}
-      plan={planImprimable}
     >
       {fiche && props.cibleDuCiel !== null ? (
         /* T-0149 — sans optique chiffrable, la fiche dit ce qui manque plutôt que de meubler. */

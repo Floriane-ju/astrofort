@@ -156,6 +156,10 @@ body {
   --barre-bas: 3rem;
   --lateral: 22rem;
   --carte-large: 19rem;
+  /* T-0183 — le plan porte une table de budget de nuit : à 19 rem elle défilerait
+     horizontalement, et un tableau qu'on fait glisser ne se compare plus d'une ligne à
+     l'autre. Sa carte a donc son propre gabarit. */
+  --carte-plan: 29rem;
   --jour-carte: 0.75rem;
   /* T-0145 — l'écart entre deux éléments d'une barre. Nommé parce que la bande de commandes
      l'annule par marge négative : la valeur doit être lue au même endroit des deux côtés. */
@@ -594,6 +598,14 @@ input.barretemps-instant {
   bottom: calc(var(--barre-bas) + var(--jour-carte));
 }
 
+/* T-0183 — le plan s'ancre en bas à droite, calé sur le panneau : c'est le bord libre, et
+   celui d'où il ne recouvre ni le matériel ni la vue. */
+.carte-plan {
+  width: var(--carte-plan);
+  right: calc(var(--lateral) + var(--jour-carte));
+  bottom: calc(var(--barre-bas) + var(--jour-carte));
+}
+
 /* L'en-tête est à la fois la poignée et l'interrupteur : `grab` annonce la première,
    `aria-expanded` annonce le second. */
 .carte-entete {
@@ -652,6 +664,11 @@ input.barretemps-instant {
   max-height: calc(100dvh - var(--barre-haut) - var(--barre-bas) - 4 * var(--jour-carte));
   overflow-y: auto;
   padding: 0.25rem 0.6rem 0.75rem;
+}
+
+/* Le plan est seul sur son flanc : il prend toute la hauteur laissée par les deux barres. */
+.carte-plan .carte-corps {
+  max-height: calc(100dvh - var(--barre-haut) - var(--barre-bas) - 6 * var(--jour-carte));
 }
 
 /* Le flanc gauche en porte DEUX — Matériel ancrée en haut, Vue ancrée en bas. Chacune ne
@@ -856,12 +873,6 @@ input.barretemps-instant {
   font-weight: 700;
   border-bottom-color: var(--accent);
   box-shadow: none;
-}
-
-/* Le plan de session échappe aux onglets : masqué à l'écran hors de l'onglet Nuit, il reste
-   imprimable depuis n'importe lequel — sinon imprimer sortirait une page blanche. */
-.hors-onglet {
-  display: none;
 }
 
 /* Tiroirs de la barre haute : mode nuit et vérification du socle. L'élément natif porte
@@ -1623,8 +1634,8 @@ button:disabled {
     display: none;
   }
 
-  /* La coque elle-même ne s'imprime pas : ni barres, ni scène, ni cartes. Du panneau
-     latéral ne survit que le plan de session. */
+  /* La coque elle-même ne s'imprime pas : ni barres, ni scène, ni panneau, ni cartes. De
+     tout cela ne survit que le plan de session, dans sa carte. */
   .coque {
     display: block;
     height: auto;
@@ -1634,27 +1645,33 @@ button:disabled {
   .coque-topbar,
   .coque-barrebas,
   .coque-scene,
+  .coque-lateral,
   .carte {
     display: none;
   }
 
-  /* Le panneau porte le plan : à l'impression il perd sa colonne et ne laisse que lui. */
-  .coque-lateral {
+  /* T-0183 — la carte du plan fait exception, et son corps avec : il s'imprime replié comme
+     déplié, dans les deux modes. Le corps replié porte `hidden` ; la règle d'auteur l'emporte
+     sur celle du navigateur, sans quoi imprimer une carte fermée sortirait une page blanche. */
+  .carte-plan,
+  .carte-plan > .carte-corps,
+  .carte-plan > .carte-corps[hidden] {
     display: block;
     position: static;
     width: auto;
+    max-width: none;
+    max-height: none;
     overflow: visible;
     border: 0;
     padding: 0;
+    transform: none;
   }
 
-  .coque-lateral > *:not(.plan-session) {
+  /* De la carte ne sort que le plan : son en-tête est une poignée, et la fenêtre nocturne se
+     lit à l'écran — elle n'a jamais fait partie de la feuille de route imprimée. */
+  .carte-plan > .carte-entete,
+  .carte-plan .carte-corps > *:not(.plan-session) {
     display: none;
-  }
-
-  /* Le plan s'imprime depuis n'importe quel mode, y compris quand l'écran ne le montre pas. */
-  .hors-onglet {
-    display: block;
   }
 }
 
