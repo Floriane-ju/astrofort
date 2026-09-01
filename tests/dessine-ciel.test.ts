@@ -405,7 +405,7 @@ describe('passe de rendu §3.3', () => {
     expect(ctx.opacites.some((o) => o === 1)).toBe(true)
   })
 
-  it('peint la bande avec le fond, avant l’aperçu incrusté de §9.5', () => {
+  it('ne se peint plus sous l’aperçu incrusté de §9.5', () => {
     let rang = -1
     const { ctx } = rend({
       passeFile: (c) => {
@@ -413,10 +413,10 @@ describe('passe de rendu §3.3', () => {
       },
     })
     const fond = ctx.appels.findIndex((a) => a.nom === 'fillRect')
-    const premierTrace = ctx.appels.findIndex((a) => a.nom === 'stroke')
-    expect(premierTrace).toBeGreaterThan(fond)
-    // La bande est passée entre le fond et l'aperçu : elle ne lave pas la prévisualisation.
-    expect(rang).toBeGreaterThan(premierTrace)
+    // T-0171 — l'aperçu se dépose toujours après le fond, mais la bande ne le précède plus :
+    // la couche Voie lactée s'éteint avec les autres repères le temps qu'il soit peint.
+    expect(rang).toBeGreaterThan(fond)
+    expect(opacitesDeBande({ ctx } as ReturnType<typeof rend>)).toHaveLength(0)
   })
 
   /** Repère du centre galactique : la vue est amenée dessus pour qu'il soit dans le champ. */
@@ -947,9 +947,11 @@ describe('libellés d’un même astre T-0109', () => {
 
 /**
  * T-0116 — le filé couvre tout le planétarium, et il REMPLACE la couche d'étoiles ponctuelles.
- * Sinon chaque trace porterait un point net à une extrémité, ce qu'aucune pose ne produit. Les
- * étoiles continuent en revanche d'alimenter les cibles et les noms : sans cela le survol et le
- * clic les perdraient (T-0085, T-0107 à T-0109).
+ * Sinon chaque trace porterait un point net à une extrémité, ce qu'aucune pose ne produit.
+ *
+ * T-0171 — les étoiles continuent d'alimenter les CIBLES, mais plus les noms peints : sous
+ * l'aperçu, la scène ne porte plus d'annotation. Le clic et le survol, eux, gardent tout ce
+ * qu'ils désignaient (T-0085, T-0107 à T-0109).
  */
 describe('T-0116 — la passe de filé remplace les étoiles ponctuelles', () => {
   /** Les disques d'étoiles sont les seuls remplissages qui portent un `Path2D`. */
@@ -967,13 +969,90 @@ describe('T-0116 — la passe de filé remplace les étoiles ponctuelles', () =>
     expect(disques(avec.ctx)).toHaveLength(0)
   })
 
-  it('garde les cibles cliquables et les noms d’étoiles', () => {
+  it('garde les cibles cliquables, sans plus peindre de nom', () => {
     const sans = rend()
     const avec = rend({ passeFile: () => undefined })
     expect(avec.sortie.cibles.length).toBe(sans.sortie.cibles.length)
     expect(avec.sortie.cibles.filter((c) => c.type === 'ETOILE').length).toBeGreaterThan(0)
     expect(avec.sortie.etoilesDessinees).toBe(sans.sortie.etoilesDessinees)
-    expect(avec.sortie.labels.map((l) => l.texte)).toEqual(sans.sortie.labels.map((l) => l.texte))
+    // T-0171 — la scène ne porte plus aucun nom : le survol reste la seule façon d'en lire un.
+    expect(sans.sortie.labels.length).toBeGreaterThan(0)
+    expect(avec.sortie.labels).toHaveLength(0)
+  })
+})
+
+/**
+ * T-0171 — l'aperçu peint sur toute la scène tient lieu de prise de vue.
+ *
+ * Ce qui CADRE la vue reste — le sol, l'horizon, le contour du cadre matériel. Ce qui la
+ * COMMENTE s'efface : figures et frontières IAU, astérismes, Voie lactée, marqueurs d'objets,
+ * corps mobiles, et tous les noms. Rien de tout cela ne se trouve sur une photographie, et
+ * c'est ce que l'aperçu montre.
+ *
+ * La sélection continue de tourner sous l'aperçu : les cibles restent cliquables, et le survol
+ * reste la façon de lire un nom.
+ */
+describe('T-0171 — l’aperçu efface les repères, garde ce qui cadre', () => {
+  const CORPS: PositionCorps = {
+    corps: 'Moon' as PositionCorps['corps'],
+    adH: 0,
+    decDeg: 0,
+    azimutDeg: 180,
+    hauteurDeg: 45,
+  }
+  const scene = (options: Parameters<typeof rend>[0] = {}) =>
+    rend({ objets: [OBJET_AU_CENTRE], corps: [CORPS], masque: masquePlat(), ...options })
+
+  const sans = () => scene()
+  const avec = () => scene({ passeFile: () => undefined })
+
+  it('n’emploie plus aucune teinte de repérage', () => {
+    const teintes = palette(false)
+    const effacees = [
+      teintes.figures,
+      teintes.frontieres,
+      teintes.asterismes,
+      teintes.voieLactee,
+      teintesObjets(false, false, SB_PLANCHER_NATUREL).GALAXIE.bord,
+    ]
+    // Sans l'aperçu, la scène les emploie toutes : le critère ne se vérifie pas sur du vide.
+    for (const teinte of effacees) expect(sans().ctx.couleurs).toContain(teinte)
+    for (const teinte of effacees) expect(avec().ctx.couleurs).not.toContain(teinte)
+  })
+
+  it('garde le sol, l’horizon et le contour du cadre matériel', () => {
+    const teintes = palette(false)
+    const ctx = scene({ passeFile: () => undefined, couches: { ...COUCHES, sol: true } }).ctx
+    expect(ctx.couleurs).toContain(teintes.cadre)
+    expect(ctx.couleurs).toContain(teintes.horizon)
+    expect(ctx.couleurs).toContain(teintes.sol)
+  })
+
+  it('ne peint ni marqueur d’objet ni corps mobile', () => {
+    expect(sans().ctx.appels.filter((a) => a.nom === 'ellipse').length).toBeGreaterThan(0)
+    expect(avec().ctx.appels.filter((a) => a.nom === 'ellipse')).toHaveLength(0)
+    // Le disque d'un corps est le seul `arc` hors des `Path2D` d'étoiles, eux-mêmes éteints.
+    expect(sans().ctx.appels.filter((a) => a.nom === 'arc').length).toBeGreaterThan(0)
+    expect(avec().ctx.appels.filter((a) => a.nom === 'arc')).toHaveLength(0)
+  })
+
+  it('n’écrit aucun nom hors les points cardinaux, et garde le survol', () => {
+    const nu = avec()
+    // Les quatre cardinaux appartiennent à l'horizon, la seule couche de repérage qui reste :
+    // ce sont eux, et rien d'autre, qui survivent à l'aperçu.
+    const ecrits = (r: ReturnType<typeof rend>) =>
+      r.ctx.appels.filter((a) => a.nom === 'fillText').map((a) => a.args[0])
+    expect(ecrits(sans()).length).toBeGreaterThan(4)
+    expect(ecrits(nu).sort()).toEqual(['E', 'N', 'O', 'S'])
+    expect(nu.sortie.labels).toHaveLength(0)
+    // Les cibles, elles, sont les mêmes qu'à repères allumés : le clic ne perd rien.
+    expect(nu.sortie.cibles.length).toBe(sans().sortie.cibles.length)
+
+    const cible = nu.sortie.cibles.find((c) => c.type === 'OBJET')
+    expect(cible).toBeDefined()
+    const survole = scene({ passeFile: () => undefined, survol: { cible: cible! } })
+    expect(survole.sortie.revele).not.toBeNull()
+    expect(ecrits(survole)).toHaveLength(5)
   })
 })
 

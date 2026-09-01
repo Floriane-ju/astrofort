@@ -25,6 +25,7 @@ import type { CouchesActives } from './dessine-ciel.ts'
 import { Curseur } from './Curseur.tsx'
 import { RACCOURCIS_CLAVIER } from './planetarium-gestes.ts'
 import { useScene } from './scene-etat.ts'
+import { useSeance } from './seance-etat.ts'
 import { TracedValue } from './TracedValue.tsx'
 
 export interface PanneauVueProps {
@@ -58,6 +59,7 @@ const COUCHES: readonly (readonly [keyof CouchesActives, string])[] = [
 
 export function PanneauVue(props: PanneauVueProps) {
   const { vue, rendu, actions } = useScene()
+  const { file } = useSeance()
   const { fovDeg, rotationCadreDeg: rotationDeg, mode } = vue
   const { couches, vueRealiste } = rendu
 
@@ -148,6 +150,16 @@ export function PanneauVue(props: PanneauVueProps) {
 
       <section>
         <h2>Couches</h2>
+        {/* T-0171 — un interrupteur qui ne commande rien doit dire pourquoi : sous l'aperçu
+            peint sur toute la scène, ces couches sont éteintes quel que soit leur état. */}
+        {file.incrustation && (
+          <p className="etat">
+            L’aperçu est peint sur toute la scène : seuls le sol, l’horizon et le cadre
+            matériel s’y ajoutent. Les autres couches, les marqueurs d’objets, les corps et
+            les noms restent éteints tant qu’il est actif — le survol nomme toujours ce qu’il
+            désigne.
+          </p>
+        )}
         <div className="champs">
           {COUCHES.map(([cle, libelle]) => (
             <label className="interrupteur" key={cle}>

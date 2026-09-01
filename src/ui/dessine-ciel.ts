@@ -750,6 +750,15 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
       }
     : entreeBrute
   const { ctx, projecteur, index } = entree
+  // T-0171 — l'aperçu peint sur toute la scène tient lieu de prise de vue : ce qui la
+  // commente s'efface. Ne restent que le sol, l'horizon et le cadre matériel — ce qui CADRE le
+  // champ, pas ce qui l'annote. La sélection continue de tourner : les cibles restent
+  // cliquables et le survol nomme ce qu'il désigne ; seule la peinture des repères est
+  // suspendue, comme celle des disques d'étoiles l'était déjà depuis T-0116.
+  const peintReperes = entree.passeFile === undefined
+  const couches: CouchesActives = peintReperes
+    ? entree.couches
+    : { ...entree.couches, figures: false, frontieres: false, asterismes: false, voieLactee: false }
   const teintes = paletteScene(entree.modeNuit, entree.vueRealiste, entree.sbCiel)
   // §11.1 — le mode nuit protège l'adaptation à l'obscurité : éclaircir tout le canevas le
   // rendrait inutile. La vue réaliste n'y change donc que la magnitude limite.
@@ -771,9 +780,9 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   // Elle est tracée au projecteur BRUT, puis recouverte par le sol : filtrée, un trait de
   // cinq degrés de large s'interromprait un pas d'azimut trop tôt et laisserait une encoche
   // au-dessus de l'horizon.
-  if (entree.couches.voieLactee) traceBandeVoieLactee(entreeBrute)
+  if (couches.voieLactee) traceBandeVoieLactee(entreeBrute)
   // §4.1 — le sol, peint sur le fond et sur la bande, sous tout le reste.
-  if (entree.couches.sol) {
+  if (couches.sol) {
     dessineSol(ctx, brut, entree.matriceCiel, entree.masque, teintes.sol, teintes.horizon)
   }
   // §9.5 — la passe de filé passe APRÈS le sol, mais avec le projecteur qui l'ignore : le sol
@@ -785,17 +794,17 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   // T-0110 — le champ se prend sur le projecteur BRUT : c'est une propriété de la vue, pas du
   // filtrage par le sol. La calotte obtenue englobe donc ce que le projecteur filtré montrera.
   const champScene = champVisible(brut)
-  if (entree.couches.frontieres) {
+  if (couches.frontieres) {
     ctx.strokeStyle = teintes.frontieres
     ctx.lineWidth = 1
     traceLignes(ctx, projecteur, entree.frontieres.polylignes, champScene)
   }
-  if (entree.couches.figures) {
+  if (couches.figures) {
     ctx.strokeStyle = teintes.figures
     ctx.lineWidth = 1
     traceSegments(ctx, projecteur, entree.figures, champScene)
   }
-  if (entree.couches.asterismes) {
+  if (couches.asterismes) {
     // Couche distincte des figures IAU par la teinte et l'épaisseur, pas par des tirets :
     // le motif de tirets se rend plein sur un segment plus court que sa période, et un
     // astérisme mélange des branches longues et des chaînes de segments courts. La même
@@ -805,9 +814,9 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     traceSegments(ctx, projecteur, entree.asterismes, champScene)
     ctx.lineWidth = 1
   }
-  if (entree.couches.horizon) traceHorizon(entree, teintes.horizon, brut)
+  if (couches.horizon) traceHorizon(entree, teintes.horizon, brut)
   let labelCentreGalactique: CandidatLabel | null = null
-  if (entree.couches.voieLactee) {
+  if (couches.voieLactee) {
     ctx.strokeStyle = teintes.voieLactee
     ctx.lineWidth = 1
     traceLignes(ctx, projecteur, [PLAN_GALACTIQUE])
@@ -822,9 +831,6 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   // un chemin réutilisé accumulerait les disques des images précédentes. Contrainte de la
   // plateforme, pas négligence — huit objets par image, contre un par étoile évité plus bas.
   const chemins = Array.from({ length: TEINTES }, () => new Path2D())
-  // T-0116 — filé actif : les traces remplacent les points. La sélection tourne quand même,
-  // elle alimente `cibles` et les noms ; seule la PEINTURE des disques est suspendue.
-  const peintEtoiles = entree.passeFile === undefined
   const cibles: CibleEcran[] = []
   const candidats: CandidatLabel[] = []
   let etoilesDessinees = 0
@@ -841,7 +847,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     (x, y, z, magV, bv, source) => {
       if (!projecteur.projetteEn(x, y, z, p)) return
       if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) return
-      if (peintEtoiles) {
+      if (peintReperes) {
         const rayon = Math.max(RAYON_MIN_ETOILE_PX, rayonEtoilePx(magV))
         const chemin = chemins[teinte(bv)]!
         chemin.moveTo(p.xPx + rayon, p.yPx)
@@ -854,7 +860,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
       }
     },
   )
-  if (peintEtoiles) {
+  if (peintReperes) {
     for (let t = 0; t < TEINTES; t++) {
       ctx.fillStyle = couleurTeinte(t, entree.modeNuit)
       ctx.fill(chemins[t]!)
@@ -879,7 +885,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
       etoileNommee: nommee,
     }
     cibles.push(cible)
-    const texte = libelleCible(cible)
+    const texte = peintReperes ? libelleCible(cible) : null
     if (texte !== null) {
       candidats.push({ ...boiteLabel(cible, texte), categorie: 'ETOILE', priorite: nommee.magV })
     }
@@ -899,8 +905,11 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     // que pour ce qui se voit.
     const teintesObjet = teintesParType[objet.type]
     const geo = geometrieMarqueur(projecteur, objet, p.xPx, p.yPx)
-    if (geo === null) peintCroix(ctx, p.xPx, p.yPx, teintesObjet.bord)
-    else peintEllipse(ctx, p.xPx, p.yPx, geo, teintesObjet)
+    // La géométrie se calcule même sans peinture : c'est elle qui donne au clic son rayon.
+    if (peintReperes) {
+      if (geo === null) peintCroix(ctx, p.xPx, p.yPx, teintesObjet.bord)
+      else peintEllipse(ctx, p.xPx, p.yPx, geo, teintesObjet)
+    }
     const cible: CibleEcran = {
       type: 'OBJET',
       xPx: p.xPx,
@@ -911,7 +920,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
       rayonPx: geo === null ? MARQUEUR_OBJET_PX : geo.demiGrandPx,
     }
     cibles.push(cible)
-    const texte = libelleCible(cible)
+    const texte = peintReperes ? libelleCible(cible) : null
     if (texte !== null) {
       candidats.push({ ...boiteLabel(cible, texte), categorie: 'OBJET', priorite: objet.vMag })
     }
@@ -929,13 +938,15 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     // et son label part avec la priorité la plus haute de la scène. Sans ce test, une planète
     // qu'on ne voit pas prenait la place d'un nom qu'on voit (§3.4).
     if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
-    ctx.beginPath()
-    ctx.arc(p.xPx, p.yPx, RAYON_CORPS_PX, 0, TOUR_RAD)
-    ctx.fill()
+    if (peintReperes) {
+      ctx.beginPath()
+      ctx.arc(p.xPx, p.yPx, RAYON_CORPS_PX, 0, TOUR_RAD)
+      ctx.fill()
+    }
     const nom = entree.nomsCorps[corps.corps] ?? String(corps.corps)
     const cible: CibleEcran = { type: 'CORPS', xPx: p.xPx, yPx: p.yPx, nom, corps }
     cibles.push(cible)
-    const texte = libelleCible(cible)
+    const texte = peintReperes ? libelleCible(cible) : null
     if (texte !== null) {
       candidats.push({
         ...boiteLabel(cible, texte),
@@ -951,7 +962,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   // centre galactique passe devant le nom de la bande, pour la même raison : les deux
   // s'ancrent au même endroit quand la visée est sur le centre, et c'est le repère qui
   // porte la conséquence site-dépendante.
-  if (entree.couches.voieLactee) {
+  if (couches.voieLactee) {
     if (labelCentreGalactique !== null) candidats.push(labelCentreGalactique)
     const ancre = ancreVoieLactee(projecteur, largeur, hauteur)
     if (ancre !== null) {
@@ -969,7 +980,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   }
 
   // --- Noms de constellations ---------------------------------------------
-  for (const figure of entree.figures) {
+  for (const figure of peintReperes ? entree.figures : []) {
     if (figure.centre === null) continue
     if (!projecteur.projetteEn(figure.centre.x, figure.centre.y, figure.centre.z, p)) continue
     if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
@@ -983,7 +994,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
       hauteurPx: HAUTEUR_LABEL_PX,
     })
   }
-  if (entree.couches.asterismes) {
+  if (couches.asterismes) {
     for (const asterisme of entree.asterismes) {
       if (asterisme.centre === null) continue
       const c = asterisme.centre
@@ -1002,7 +1013,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   }
 
   // --- Cadre matériel §3.5 -------------------------------------------------
-  if (entree.couches.cadre) {
+  if (couches.cadre) {
     ctx.strokeStyle = teintes.cadre
     ctx.lineWidth = 2
     for (const cadre of entree.cadres) {
@@ -1047,7 +1058,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   // --- Carte de pose dans le cadre §9.1 / T-0142 ---------------------------
   // En DERNIER : la carte masque le cadre, traces, repères et noms compris. Peinte avec les
   // repères, elle laisserait passer par-dessus elle les labels retenus juste au-dessus.
-  if (entree.poseCadre !== undefined && entree.couches.cadre) {
+  if (entree.poseCadre !== undefined && couches.cadre) {
     for (const cadre of entree.cadres) {
       const garni = dessineCartePose({
         ctx,
