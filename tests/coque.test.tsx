@@ -38,7 +38,6 @@ import {
 } from '../src/ui/seance-etat.ts'
 import {
   basculeCarte,
-  basculePanneau,
   borne,
   bornesDeplacement,
   etatCoque,
@@ -110,16 +109,15 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
     expect(html).not.toContain('coque-seance')
   })
 
-  it('garde le lieu lisible et réglable quel que soit le panneau ouvert', () => {
+  it('garde le lieu lisible et réglable dans les deux modes', () => {
     // Les six champs du site sont descendus dans la barre basse : ce qui devait survivre au
     // déménagement n'est pas leur dépliement permanent, c'est leur accessibilité constante.
-    for (const panneau of [null, 'CIBLES', 'NUIT', 'FILE'] as const) {
-      if (panneau !== null) basculePanneau(panneau)
+    for (const mode of ['CIEL_PROFOND', 'PANORAMA'] as const) {
+      poseMode(mode)
       const html = ecran()
       const barre = html.slice(html.indexOf('coque-barrebas'))
-      expect(barre, `${panneau}`).toContain('Bortle')
-      expect(barre, `${panneau}`).toContain('horizon plat')
-      if (panneau !== null) basculePanneau(panneau)
+      expect(barre, mode).toContain('Bortle')
+      expect(barre, mode).toContain('horizon plat')
     }
   })
 
@@ -148,26 +146,15 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
 })
 
 describe('§11.2 — un seul jeu de réglages à la fois', () => {
-  it('ne monte aucun contenu de panneau tant qu’aucun n’est ouvert', () => {
-    const ferme = ecran()
-    expect(ferme).not.toContain('Séquence de filé')
-    // Le titre, pas le mot : « Fenêtre nocturne » est aussi une ligne de la matrice de
-    // dégradation, qui vit dans le tiroir de vérification et ne bouge pas d'ici.
-    expect(ferme).not.toContain('<h2>Fenêtre nocturne</h2>')
-    // La coquille reste dans le document : c'est elle qui porte le plan imprimable.
-    expect(ferme).toMatch(/<aside class="coque-lateral" id="panneau-lateral" hidden/)
-  })
+  it('ne monte que le contenu du mode courant', () => {
+    const profond = ecran()
+    expect(profond).toContain('Tout le catalogue')
+    expect(profond).not.toContain('Séquence de filé')
 
-  it('ne monte que le contenu du panneau ouvert', () => {
-    basculePanneau('NUIT')
-    const nuit = ecran()
-    expect(nuit).toContain('<h2>Fenêtre nocturne</h2>')
-    expect(nuit).not.toContain('Séquence de filé')
-
-    basculePanneau('FILE')
-    const file = ecran()
-    expect(file).toContain('Séquence de filé')
-    expect(file).not.toContain('<h2>Fenêtre nocturne</h2>')
+    poseMode('PANORAMA')
+    const panorama = ecran()
+    expect(panorama).toContain('Séquence de filé')
+    expect(panorama).not.toContain('Tout le catalogue')
   })
 
   it('ne monte pas le corps d’une carte repliée', () => {
@@ -178,17 +165,57 @@ describe('§11.2 — un seul jeu de réglages à la fois', () => {
     expect(ecran()).toContain('Vue réaliste')
   })
 
-  it('referme le panneau quand on represse son bouton', () => {
-    basculePanneau('NUIT')
-    expect(etatCoque().panneau).toBe('NUIT')
-    basculePanneau('NUIT')
-    expect(etatCoque().panneau).toBeNull()
+  it('survit à un changement de matériel : le panneau reste sur le mode courant', () => {
+    poseMode('PANORAMA')
+    ecran()
+    expect(etatSeance().mode).toBe('PANORAMA')
+  })
+})
+
+/**
+ * T-0181 — le panneau latéral n'est plus un tiroir, c'est une colonne.
+ *
+ * Ce qui se vérifie ici est la disparition de l'état fermé, et le fait que le mode — et lui
+ * seul — décide de ce que la colonne porte.
+ */
+describe('§11.3 — le panneau est toujours ouvert et son contenu suit le mode', () => {
+  it('est visible au démarrage, sans attribut de fermeture ni bouton pour le fermer', () => {
+    const html = ecran()
+    expect(html).toContain('<aside class="coque-lateral" id="panneau-lateral"')
+    expect(html).not.toMatch(/<aside class="coque-lateral"[^>]*hidden/)
+    expect(html).not.toContain('lateral-fermer')
+    expect(html).not.toContain('Fermer le panneau')
   })
 
-  it('survit à un changement de matériel : le panneau reste celui qu’on avait ouvert', () => {
-    basculePanneau('FILE')
-    ecran()
-    expect(etatCoque().panneau).toBe('FILE')
+  it('change d’en-tête et de contenu avec le mode, sans autre geste', () => {
+    expect(ecran()).toContain('<h2>Toutes les cibles</h2>')
+    poseMode('PANORAMA')
+    const panorama = ecran()
+    expect(panorama).toContain('<h2>Panorama</h2>')
+    expect(panorama).not.toContain('<h2>Toutes les cibles</h2>')
+  })
+
+  it('ne laisse plus aucun état fermé exister', () => {
+    expect(Object.keys(etatCoque())).toEqual(['cartes'])
+    // La feuille de style ne peut plus non plus décrire un panneau fermé.
+    expect(CSS_COQUE).not.toContain('.coque-lateral[hidden]')
+  })
+
+  it('arrête une carte poussée à droite au bord du panneau, jamais dessous', () => {
+    // `bornesDeplacement` déduit la largeur du panneau : la borne haute en x s'en retranche.
+    const carte = { left: 100, top: 100, width: 300, height: 200 }
+    const hote = { left: 0, top: 0, width: 1440, height: 900 }
+    const marges = { haut: 40, bas: 40, droite: 320 }
+    const bornes = bornesDeplacement(carte, hote, marges, 8)
+    // Décalage maximal : le bord droit de la carte s'arrête à la marge, panneau déduit.
+    expect(carte.left + carte.width + bornes.x.max).toBe(hote.width - 8 - marges.droite)
+  })
+
+  it('garde le plan monté hors de l’écran : il est la seule région imprimable', () => {
+    const html = ecran()
+    expect(html).toContain('plan-session hors-onglet')
+    const impression = CSS_COQUE.slice(CSS_COQUE.indexOf('@media print'))
+    expect(impression).toContain('.hors-onglet')
   })
 })
 
@@ -405,15 +432,20 @@ describe('§5.1 — la scène déclare l’écart de projection avec l’objecti
 })
 
 describe('§11.2 — le plan reste imprimable', () => {
-  it('rend le plan de session panneau fermé, masqué à l’écran seulement', () => {
-    expect(ecran()).toContain('plan-session hors-onglet')
-    basculePanneau('NUIT')
-    expect(ecran()).toMatch(/class="plan-session"/)
+  it('rend le plan de session dans les deux modes, masqué à l’écran', () => {
+    // T-0181 — il n'a plus d'onglet où se montrer : il attend sa carte (T-0183) et reste
+    // monté pour l'impression, qui est la seule chose qui le fait paraître.
+    for (const mode of ['CIEL_PROFOND', 'PANORAMA'] as const) {
+      poseMode(mode)
+      expect(ecran(), mode).toContain('plan-session hors-onglet')
+    }
   })
 
-  it('rouvre le panneau à l’impression, sans quoi le plan sortirait blanc', () => {
+  it('sort le plan du panneau à l’impression, sans quoi il sortirait blanc', () => {
     const impression = CSS_COQUE.slice(CSS_COQUE.indexOf('@media print'))
-    expect(impression).toMatch(/\.coque-lateral\[hidden\]/)
+    expect(impression).toMatch(/\.coque-lateral \{/)
+    expect(impression).toContain('.coque-lateral > *:not(.plan-session)')
+    expect(impression).toContain('.hors-onglet')
   })
 })
 
@@ -618,25 +650,18 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
  * de la coque, c'est qu'aucun des deux chemins remplacés ne subsiste — un second chemin
  * vers le catalogue est exactement le défaut que ce lot corrige.
  */
-describe('T-0128 — l’onglet Cibles remplace les deux chemins vers le catalogue', () => {
-  it('ne monte son contenu qu’une fois ouvert, comme les deux autres (§11.2)', () => {
-    expect(ecran()).not.toContain('Tout le catalogue')
-    basculePanneau('CIBLES')
+describe('T-0128 — le catalogue remplace les deux chemins vers les cibles', () => {
+  it('est le contenu du panneau en Ciel profond, et le seul monté (§11.2)', () => {
     const ouvert = ecran()
     expect(ouvert).toContain('Tout le catalogue')
     expect(ouvert).toContain('Photographiables')
-    expect(ouvert).not.toContain('<h2>Fenêtre nocturne</h2>')
-  })
-
-  it('referme sur une seconde pression de son bouton', () => {
-    basculePanneau('CIBLES')
-    expect(etatCoque().panneau).toBe('CIBLES')
-    basculePanneau('CIBLES')
-    expect(etatCoque().panneau).toBeNull()
+    expect(ouvert).not.toContain('Séquence de filé')
+    // T-0181 — il n'est plus derrière un bouton : le mode Ciel profond le porte.
+    poseMode('PANORAMA')
+    expect(ecran()).not.toContain('Tout le catalogue')
   })
 
   it('porte la recherche et les deux filtres, que plus personne d’autre ne porte', () => {
-    basculePanneau('CIBLES')
     const ouvert = ecran()
     expect(ouvert).toMatch(/<input[^>]+type="search"/)
     expect(ouvert).toContain('Tous types')
@@ -651,14 +676,12 @@ describe('T-0128 — l’onglet Cibles remplace les deux chemins vers le catalog
   })
 
   it('borne le filtre de magnitude sur le domaine du registre, sans le réécrire', () => {
-    basculePanneau('CIBLES')
     const ouvert = ecran()
     expect(ouvert).toContain(`min="${DOMAINES.m_int.min}"`)
     expect(ouvert).toContain(`max="${DOMAINES.m_int.max}"`)
   })
 
   it('nomme le SNR sur lequel la pose est calculée : un temps sans sa cible ne se lit pas', () => {
-    basculePanneau('CIBLES')
     expect(ecran()).toMatch(/rapport signal sur bruit de \d+/)
   })
 })

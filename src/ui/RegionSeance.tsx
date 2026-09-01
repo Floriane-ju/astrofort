@@ -4,11 +4,12 @@
  * T-0113 — le panneau droit à quatre onglets est démonté. Les quatre intentions n'avaient pas
  * la même nature : deux se règlent EN regardant le ciel — la vue et la cible — et deux se
  * lisent de haut en bas — le plan de nuit et le filé. Les premières sont devenues des cartes
- * posées sur la scène, repliables et déplaçables ; les secondes, un panneau latéral qui
- * s'ouvre et se ferme.
+ * posées sur la scène, repliables et déplaçables ; les secondes, un panneau latéral.
  *
  * Le partage n'est pas esthétique : une carte qu'on replie libère la scène sans perdre son
  * état, là où un onglet forçait à en abandonner un pour en lire un autre.
+ *
+ * T-0181 — le panneau ne s'ouvre plus : il est à demeure, et le mode décide de son contenu.
  */
 
 import type { ReactNode } from 'react'
@@ -25,9 +26,8 @@ import { FicheCible } from './FicheCible.tsx'
 import { Pastilles } from './Pastilles.tsx'
 import { Bulle } from './Bulle.tsx'
 import { PlanSessionVue } from './PlanSession.tsx'
-import { RegionNuit } from './RegionNuit.tsx'
 import { modeObjectif } from './PanneauMateriel.tsx'
-import { useCoque } from './coque-etat.ts'
+import { useSeance } from './seance-etat.ts'
 import { AIDE_MATERIEL_INCOMPLET } from './Inconnu.tsx'
 import type { SaisieLieu, SaisieMateriel } from './app-saisie.ts'
 import type { ChaineCalcul } from './app-calcul.ts'
@@ -148,15 +148,20 @@ function RappelFacilite({ etat }: { readonly etat: EtatCible }) {
   )
 }
 
-/** Le panneau latéral et son plan imprimable. */
+/**
+ * Le panneau latéral et son plan imprimable.
+ *
+ * T-0181 — il n'y a plus de panneau à choisir : le mode le dit. En Ciel profond on choisit une
+ * cible dans le catalogue, en Panorama on règle le panorama, et rien d'autre n'est monté.
+ */
 export function LateralSeance(props: RegionSeanceProps) {
   const { chaine, lieu, materiel, catalogue } = props
   const { calcul, ciel } = chaine
-  const { panneau } = useCoque()
+  const { mode } = useSeance()
 
   const contenus = {
     /* T-0149 — la liste chiffre un cadrage : sans optique, elle dit ce qui manque. */
-    CIBLES:
+    CIEL_PROFOND:
       calcul.ok && ciel.ok ? (
         <PanneauCibles
           catalogue={catalogue}
@@ -173,15 +178,7 @@ export function LateralSeance(props: RegionSeanceProps) {
       ) : (
         <p className="etat">{AIDE_MATERIEL_INCOMPLET}</p>
       ),
-    NUIT: ciel.ok ? (
-      <RegionNuit
-        nuit={ciel.nuit}
-        ciel={ciel.ciel}
-        offsetMidi={ciel.offsetMidi}
-        planIndisponible={chaine.plan === null && catalogue.length === 0}
-      />
-    ) : null,
-    FILE:
+    PANORAMA:
       chaine.panneauFile === null ? (
         <p className="etat">{AIDE_MATERIEL_INCOMPLET}</p>
       ) : (
@@ -210,5 +207,5 @@ export function LateralSeance(props: RegionSeanceProps) {
       />
     ) : null
 
-  return <PanneauLateral panneau={panneau} contenus={contenus} plan={planImprimable} />
+  return <PanneauLateral mode={mode} contenus={contenus} plan={planImprimable} />
 }

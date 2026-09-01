@@ -1,68 +1,42 @@
 /**
  * T-0113 — le panneau latéral : ce qui se lit en longueur, à côté de la scène.
  *
- * Trois contenus y passent — le catalogue, le plan de nuit et le filé. Ce ne sont pas des
- * réglages qu'on ajuste en regardant le ciel bouger : ce sont des listes et des séquences
- * qu'on lit de haut en bas. Le reste — matériel, vue, cible — est en carte sur la scène,
- * parce qu'on le règle EN regardant.
+ * T-0181 — il n'est plus un tiroir qu'on ouvre, c'est une colonne à demeure : le mode décide
+ * de ce qu'elle porte, et il n'y a donc plus de choix à faire ni d'état fermé. En Ciel profond
+ * on choisit une cible, en Panorama on règle un panorama — un seul contenu est monté à la
+ * fois, comme au temps des onglets (§11.2), mais la condition est désormais le mode.
  *
- * La coque monte la coquille en permanence et ne monte QUE le contenu choisi : §11.2 tient
- * toujours, un seul jeu de réglages est vivant à la fois. La coquille reste dans le document
- * même fermée pour une seule raison — le plan de session est la seule région imprimable, et
- * un plan démonté sortirait une page blanche depuis un panneau fermé.
+ * Le plan de session reste ici, monté et masqué : il est la seule région imprimable, et un
+ * plan démonté sortirait une page blanche. Il en sortira pour devenir une carte (T-0183).
  */
 
 import type { ReactNode } from 'react'
-import { fermePanneau, type PanneauLateral as ClePanneau } from './coque-etat.ts'
-import { Bulle } from './Bulle.tsx'
-import { Icone } from './Icone.tsx'
+import type { ModeInterface } from './seance-etat.ts'
 
-/** Le titre de chaque panneau : il nomme ce qu'on lit, pas l'onglet d'où l'on vient. */
-export const TITRES_PANNEAU: Readonly<Record<ClePanneau, string>> = Object.freeze({
-  CIBLES: 'Toutes les cibles',
-  NUIT: 'Plan de nuit',
-  FILE: 'Panorama',
+/** Le titre nomme ce qu'on lit — pas le mode, dont la barre haute dit déjà le nom. */
+export const TITRES_LATERAL: Readonly<Record<ModeInterface, string>> = Object.freeze({
+  CIEL_PROFOND: 'Toutes les cibles',
+  PANORAMA: 'Panorama',
 })
 
 export interface PanneauLateralProps {
-  /** Le panneau ouvert, ou `null` : la coquille reste montée, son contenu non. */
-  readonly panneau: ClePanneau | null
-  /** Contenu de chaque panneau, assemblé par l'application : un seul est monté à la fois. */
-  readonly contenus: Readonly<Record<ClePanneau, ReactNode>>
-  /** Plan de session — rendu en permanence, visible sous « Plan de nuit » et à l'impression. */
+  readonly mode: ModeInterface
+  /** Contenu de chaque mode, assemblé par l'application : un seul est monté à la fois. */
+  readonly contenus: Readonly<Record<ModeInterface, ReactNode>>
+  /** Plan de session — rendu en permanence, pour l'impression et pour elle seule. */
   readonly plan: ReactNode
 }
 
 export function PanneauLateral(props: PanneauLateralProps) {
-  const { panneau } = props
+  const { mode } = props
 
   return (
-    <aside
-      className="coque-lateral"
-      id="panneau-lateral"
-      hidden={panneau === null}
-      aria-label="Panneau de séance"
-    >
-      {panneau !== null && (
-        <>
-          <div className="lateral-entete">
-            <h2>{TITRES_PANNEAU[panneau]}</h2>
-            <Bulle
-              texte={`Fermer le panneau ${TITRES_PANNEAU[panneau].toLowerCase()}`}
-              place="gauche"
-              nomme
-            >
-              <button type="button" className="lateral-fermer" onClick={fermePanneau}>
-                <Icone nom="close" />
-              </button>
-            </Bulle>
-          </div>
-          <div className="lateral-corps">{props.contenus[panneau]}</div>
-        </>
-      )}
-      <div className={panneau === 'NUIT' ? 'plan-session' : 'plan-session hors-onglet'}>
-        {props.plan}
+    <aside className="coque-lateral" id="panneau-lateral" aria-label="Panneau de séance">
+      <div className="lateral-entete">
+        <h2>{TITRES_LATERAL[mode]}</h2>
       </div>
+      <div className="lateral-corps">{props.contenus[mode]}</div>
+      <div className="plan-session hors-onglet">{props.plan}</div>
     </aside>
   )
 }

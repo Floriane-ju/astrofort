@@ -4,8 +4,8 @@
  * La coque ne pile plus trois colonnes : la scène occupe tout, et les réglages viennent
  * dessus en cartes déplaçables ou à côté en panneau latéral. Trois choses doivent donc être
  * lisibles de plusieurs endroits sans ancêtre commun — un clic sur un objet DANS la scène
- * ouvre la carte Cible ; la barre haute commande le panneau latéral ; une carte se replie
- * depuis son propre en-tête. Même raison que [[scene-etat]] et [[seance-etat]] : l'état vit
+ * ouvre la carte Cible ; une carte se replie depuis son propre en-tête ; une carte déplacée
+ * mesure ce que la coque réserve. Même raison que [[scene-etat]] et [[seance-etat]] : l'état vit
  * dans le module, donc il se lit en rendu serveur comme dans le navigateur, et se teste sans
  * DOM.
  *
@@ -20,9 +20,6 @@ import { useSyncExternalStore } from 'react'
 /** Les trois cartes posées sur la scène. Chacune est nommée d'après ce qu'elle montre. */
 export type CleCarte = 'MATERIEL' | 'VUE' | 'CIBLE'
 
-/** Ce que le panneau latéral montre, ou rien du tout : il se ferme entièrement. */
-export type PanneauLateral = 'CIBLES' | 'NUIT' | 'FILE'
-
 export interface Decalage {
   readonly x: number
   readonly y: number
@@ -36,7 +33,6 @@ export interface EtatCarte {
 
 export interface EtatCoque {
   readonly cartes: Readonly<Record<CleCarte, EtatCarte>>
-  readonly panneau: PanneauLateral | null
 }
 
 const SANS_DECALAGE: Decalage = Object.freeze({ x: 0, y: 0 })
@@ -58,7 +54,6 @@ const ETAT_INITIAL: EtatCoque = Object.freeze({
     VUE: { ouverte: false, decalage: SANS_DECALAGE },
     CIBLE: { ouverte: false, decalage: SANS_DECALAGE },
   }),
-  panneau: null,
 })
 
 let etat: EtatCoque = ETAT_INITIAL
@@ -101,16 +96,6 @@ export function deplaceCarte(cle: CleCarte, decalage: Decalage): void {
   retoucheCarte(cle, { decalage })
 }
 
-/** Bascule le panneau latéral : le même bouton l'ouvre et le referme (§11.2). */
-export function basculePanneau(panneau: PanneauLateral): void {
-  pose({ ...etat, panneau: etat.panneau === panneau ? null : panneau })
-}
-
-export function fermePanneau(): void {
-  if (etat.panneau === null) return
-  pose({ ...etat, panneau: null })
-}
-
 /** Remet la coque dans son état de départ. Réservé aux tests. */
 export function reinitialiseCoque(): void {
   pose(ETAT_INITIAL)
@@ -132,7 +117,7 @@ export interface Rect {
   readonly height: number
 }
 
-/** Ce que la coque réserve sur ses bords : barres et panneau ouvert. */
+/** Ce que la coque réserve sur ses bords : les deux barres et le panneau, toujours là. */
 export interface MargesCoque {
   readonly haut: number
   readonly bas: number
@@ -160,6 +145,9 @@ export function borne(valeur: number, bornes: Bornes): number {
 
 /**
  * Les décalages qui gardent la carte entièrement dans la coque, barres et panneau déduits.
+ *
+ * T-0181 — le panneau ne se ferme plus : sa largeur est toujours réservée, et une carte
+ * poussée à fond vers la droite s'arrête à son bord au lieu de glisser dessous.
  *
  * Le décalage est relatif à l'ancrage CSS, pas absolu : les bornes se calculent donc à partir
  * de la position ACTUELLE de la carte, et le décalage déjà appliqué s'y ajoute à l'appel.

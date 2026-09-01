@@ -598,17 +598,12 @@ input.barretemps-instant {
   bottom: calc(var(--barre-bas) + var(--jour-carte));
 }
 
+/* T-0181 — le panneau est à demeure : la carte Cible se range devant lui plutôt que dessous,
+   toujours. Le déplacement l'apprend aussi — `bornesDeplacement` déduit la largeur du panneau
+   des bornes. */
 .carte-cible {
-  right: var(--jour-carte);
-  top: calc(var(--barre-haut) + var(--jour-carte));
-}
-
-/* Panneau ouvert, la carte Cible se range devant lui plutôt que dessous : elle décrit
-   justement l'objet dont le plan de nuit parle, la cacher au moment où on l'ouvre serait
-   exactement le mauvais moment. Le déplacement l'apprend aussi — `bornesDeplacement` déduit
-   la largeur du panneau des bornes. */
-.coque:has(.coque-lateral:not([hidden])) .carte-cible {
   right: calc(var(--lateral) + var(--jour-carte));
+  top: calc(var(--barre-haut) + var(--jour-carte));
 }
 
 /* L'en-tête est à la fois la poignée et l'interrupteur : `grab` annonce la première,
@@ -704,8 +699,8 @@ input.barretemps-instant {
 
 /* T-0113 — le panneau latéral : ce qui se lit en longueur, à côté de la scène.
 
-   Il reste dans le document même fermé — le plan de session est la seule région imprimable,
-   et un plan démonté sortirait une page blanche depuis un panneau fermé. */
+   T-0181 — il ne se ferme plus : le mode décide de son contenu, jamais de sa présence. Sa
+   largeur est donc toujours réservée, à la scène comme au bornage des cartes. */
 .coque-lateral {
   position: absolute;
   right: 0;
@@ -720,13 +715,6 @@ input.barretemps-instant {
   background: var(--surface);
 }
 
-/* `display: flex` ci-dessus l'emporte sur la règle `[hidden] { display: none }` du
-   navigateur : sans ce rappel, un panneau fermé peint une bande vide sur le flanc droit de
-   la scène. L'impression, elle, le rouvre exprès — voir @media print. */
-.coque-lateral[hidden] {
-  display: none;
-}
-
 .lateral-entete {
   display: flex;
   align-items: center;
@@ -739,13 +727,6 @@ input.barretemps-instant {
 
 .lateral-entete h2 {
   margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.lateral-fermer {
-  min-height: var(--cible-clic);
-  min-width: var(--cible-clic);
   padding: 0;
   border: 0;
 }
@@ -1668,10 +1649,8 @@ button:disabled {
     display: none;
   }
 
-  /* Le panneau est masqué par l'attribut `hidden` tant qu'il est fermé. L'impression le
-     rouvre : c'est lui qui porte le plan, et un plan démonté sortirait une page blanche. */
-  .coque-lateral,
-  .coque-lateral[hidden] {
+  /* Le panneau porte le plan : à l'impression il perd sa colonne et ne laisse que lui. */
+  .coque-lateral {
     display: block;
     position: static;
     width: auto;
@@ -1684,7 +1663,7 @@ button:disabled {
     display: none;
   }
 
-  /* Le plan s'imprime depuis n'importe quel onglet, y compris quand l'écran ne le montre pas. */
+  /* Le plan s'imprime depuis n'importe quel mode, y compris quand l'écran ne le montre pas. */
   .hors-onglet {
     display: block;
   }
