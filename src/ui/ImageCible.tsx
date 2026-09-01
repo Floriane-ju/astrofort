@@ -25,6 +25,7 @@ import type { CSSProperties } from 'react'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import { cadreSurImage } from '../data/imagerie-cible.ts'
 import { I } from '../registry/imagerie.ts'
+import { Icone } from './Icone.tsx'
 import { useImageCible } from './image-cible-memoire.ts'
 import { LIBELLE_TYPE_OBJET, nomCommun } from './libelles-objet.ts'
 
@@ -114,12 +115,29 @@ function EncartCadre({
 }
 
 /**
- * La vignette d'une ligne de liste. Elle n'occupe la place que lorsqu'elle a quelque chose à
- * montrer : une case vide sur deux cents lignes serait un gabarit, pas une information.
+ * La vignette d'une ligne de liste. T-0166 — la case est TOUJOURS là, garnie ou non : les
+ * images arrivent une par une depuis le cache, et une case qui apparaît décalerait le nom,
+ * les pastilles et les lectures de sa ligne après le rendu — la liste bougerait sous le
+ * curseur pendant qu'on la pointe.
+ *
+ * La case en attente porte un GLYPHE, pas du vide. Un carré sombre entre deux vignettes de
+ * ciel profond ne se lit pas comme une place réservée : il se lit comme une pose ratée, ou
+ * comme une nébuleuse trop faible pour ressortir. Le pictogramme dit « il y aura une image
+ * ici », ce qu'un fond uni ne peut pas dire. Ce n'est pas pour autant un signalement d'échec
+ * (§12.5) : le glyphe est celui d'une image, pas d'une erreur, et il reste atténué.
+ *
+ * L'état vide ne porte pas `.image-cible-vue` : le fond clair que cette classe prend en mode
+ * nuit n'existe que pour le fondu multiplicatif de l'image. Sans image à fondre, il ne
+ * servirait qu'à noyer le glyphe dans la même teinte que lui.
  */
 export function VignetteCible({ objet }: { readonly objet: ObjetCielProfond }) {
   const affichable = useImageCible(objet, 'CACHE')
-  if (affichable === null) return null
+  if (affichable === null)
+    return (
+      <span className="cible-vignette cible-vignette-vide">
+        <Icone nom="image" />
+      </span>
+    )
   return (
     <span className="image-cible-vue cible-vignette">
       <img src={affichable.url} alt="" />

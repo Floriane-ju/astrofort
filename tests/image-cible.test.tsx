@@ -63,9 +63,24 @@ describe('alternative textuelle §6.4', () => {
 describe('absence d’image §12.5', () => {
   const objet = CATALOGUE[0]!
 
-  it('ne pose ni cadre vide ni gabarit tant qu’il n’y a rien à montrer', () => {
+  it('ne pose aucun cadre vide sur la fiche tant qu’il n’y a rien à montrer', () => {
     expect(renderToStaticMarkup(<ImageCible objet={objet} cadre={null} />)).toBe('')
-    expect(renderToStaticMarkup(<VignetteCible objet={objet} />)).toBe('')
+  })
+
+  // T-0166 — la vignette de liste est la seule exception, et pour une raison de géométrie :
+  // sa case doit exister avant l'image, sinon l'arrivée de celle-ci décale toute la ligne.
+  it('réserve la case de la vignette et y pose un glyphe, pas une image', () => {
+    const rendu = renderToStaticMarkup(<VignetteCible objet={objet} />)
+    expect(rendu).toContain('cible-vignette-vide')
+    // Rien n'est téléchargé pour une case en attente : elle n'émet aucune requête.
+    expect(rendu).not.toContain('<img')
+    expect(rendu).toContain('icone')
+  })
+
+  it('ne fait pas annoncer la case en attente : la ligature reste masquée', () => {
+    const rendu = renderToStaticMarkup(<VignetteCible objet={objet} />)
+    expect(rendu).toContain('aria-hidden="true"')
+    expect(rendu).not.toMatch(/aria-label|role="img"/)
   })
 
   it('ne rend rien du tout sans objet : la vignette d’une ligne vide n’est pas un gabarit', () => {

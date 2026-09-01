@@ -1842,6 +1842,17 @@ button:disabled {
   object-fit: cover;
 }
 
+/* T-0166 — la case en attente. Elle n'emprunte pas le fond de `.image-cible-vue` : en mode
+   nuit celui-ci passe au clair pour le fondu multiplicatif de l'image, et le glyphe y
+   disparaîtrait dans sa propre teinte. Atténué, jamais accentué : il annonce une place, pas
+   un défaut. */
+.cible-vignette-vide {
+  display: grid;
+  place-items: center;
+  border: var(--trait) solid var(--bordure-faible);
+  color: var(--attenue);
+}
+
 /* §6.2 — le cadre du capteur, et ce que la cible y occupe.
 
    Toujours un encart, jamais un rectangle posé sur la grande image : la même question se pose
