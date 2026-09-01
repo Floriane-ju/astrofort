@@ -22,6 +22,7 @@ import {
 import { bornesZoom, etatProfondeur, type ModeProjection } from '../core/projection.ts'
 import type { MasqueHorizon } from '../core/site.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
+import { Curseur } from './Curseur.tsx'
 import { RACCOURCIS_CLAVIER } from './planetarium-gestes.ts'
 import { useScene } from './scene-etat.ts'
 import { TracedValue } from './TracedValue.tsx'
@@ -86,25 +87,27 @@ export function PanneauVue(props: PanneauVueProps) {
           </label>
           <label>
             Champ : {fovDeg.toFixed(1)}°
-            <input
-              type="range"
+            <Curseur
+              libelle="Champ"
+              valeur={fovDeg}
               min={bornes.fovMinDeg}
               max={bornes.fovMaxDeg}
-              step={1}
-              value={fovDeg}
-              onChange={(e) => actions.majVue({ fovDeg: Number(e.target.value) })}
+              pas={1}
+              texte={`${fovDeg.toFixed(1)}°`}
+              sur={(valeur) => actions.majVue({ fovDeg: valeur })}
             />
           </label>
           <label>
             {/* Le geste équivalent est sur la scène ; sans mention ici, il reste introuvable. */}
             Rotation du cadre : {rotationDeg.toFixed(0)}° — ou Maj + glisser sur la scène
-            <input
-              type="range"
+            <Curseur
+              libelle="Rotation du cadre"
+              valeur={rotationDeg}
               min={0}
               max={360}
-              step={1}
-              value={rotationDeg}
-              onChange={(e) => actions.majVue({ rotationCadreDeg: Number(e.target.value) })}
+              pas={1}
+              texte={`${rotationDeg.toFixed(0)}°`}
+              sur={(valeur) => actions.majVue({ rotationCadreDeg: valeur })}
             />
           </label>
           <label className="interrupteur">

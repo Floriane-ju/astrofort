@@ -17,6 +17,7 @@
 import { normalisePoids } from '../core/session.ts'
 import { DOMAINES } from '../registry/domains.ts'
 import { CRITERES_SCORING, type CritereScoring, type SaisiePoids } from './app-saisie.ts'
+import { Curseur } from './Curseur.tsx'
 import { Etiquette } from './Terme.tsx'
 
 const POURCENT = 100
@@ -62,13 +63,14 @@ function ReglagePoids(props: SaisiePoids) {
               {(effectifs[critere] * POURCENT).toFixed(0)} %
             </span>
           </span>
-          <input
-            type="range"
+          <Curseur
+            libelle={LIBELLE_CRITERE[critere]}
+            valeur={props.poids[critere]}
             min={DOMAINE_POIDS.min}
             max={DOMAINE_POIDS.max}
-            step={PAS_CURSEUR}
-            value={props.poids[critere]}
-            onChange={(e) => props.surPoids(critere, Number(e.target.value))}
+            pas={PAS_CURSEUR}
+            texte={`${(effectifs[critere] * POURCENT).toFixed(0)} %`}
+            sur={(valeur) => props.surPoids(critere, valeur)}
           />
         </label>
       ))}

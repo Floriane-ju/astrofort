@@ -510,7 +510,9 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
 
   it('T-0087 — porte les cinq poids C-15 et le retour aux valeurs du registre', () => {
     const rendu = renderToStaticMarkup(<MenuReglages {...REGLAGES_INERTES} />)
-    expect(rendu.match(/type="range"/g)).toHaveLength(5)
+    // T-0169 — les rails sont ceux de `Curseur`, plus des `input[type=range]` : c'est le rôle
+    // qui les compte, et c'est aussi lui que la technologie d'assistance lit.
+    expect(rendu.match(/role="slider"/g)).toHaveLength(5)
     expect(rendu).toContain('Revenir aux poids C-15')
     // Le poids effectif s'affiche : c'est lui que le plan utilise, pas la position brute.
     expect(rendu).toContain('25 %')

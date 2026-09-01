@@ -1051,11 +1051,104 @@ input[type='checkbox'] {
   height: 1.1rem;
 }
 
-input[type='range'] {
+/* T-0169 — le rail de `Curseur.tsx`. Il remplace `input[type=range]`, qui ne sait pas peindre
+   un repère à une valeur arbitraire : sur la pose unitaire, ce repère est la pose maximale à
+   étoiles ponctuelles (§9.1), et c'est la seule chose que le rail avait à montrer.
+
+   Rien n'est arrondi et rien n'est peint en littéral : la palette bascule au mode nuit (§11.1),
+   le pouce reprend le rouge que le navigateur donnait au curseur natif par `accent-color`, et
+   le repère prend le vert des états actifs. `touch-action: none` retire le geste au défilement
+   de la page, sans quoi le doigt ferait glisser la page au lieu de la valeur. */
+.curseur {
+  position: relative;
+  display: flex;
+  align-items: center;
   min-height: var(--cible-clic);
-  padding: 0;
-  background: transparent;
-  border: 0;
+  cursor: ew-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+/* Le rail est peint en --alerte, comme le trait sous un nombre réglable (`.compteur`) : c'est
+   la couleur qui dit « ceci se règle » dans cette interface, et elle suit le mode nuit (§11.1).
+   Deux pixels plutôt qu'un : un filet de bordure se confondait avec les séparateurs des
+   panneaux, qui ne se règlent pas. */
+.curseur-rail {
+  width: 100%;
+  height: calc(var(--trait) * 2);
+  background: var(--alerte);
+}
+
+/* Actif, le rail éclaircit sans changer de famille : --avertissement est l'orange de la
+   palette, et il vire au rouge clair en mode nuit comme le reste (§11.1). Passer au vert
+   aurait dit « autre chose », alors qu'il ne se passe rien d'autre — c'est le même rail,
+   sous la main. */
+.curseur:hover .curseur-rail,
+.curseur:active .curseur-rail,
+.curseur:focus-visible .curseur-rail {
+  background: var(--avertissement);
+}
+
+.curseur-pouce {
+  position: absolute;
+  top: 50%;
+  width: 0.5rem;
+  height: 1.1rem;
+  translate: -50% -50%;
+  background: var(--alerte);
+}
+
+/* Le repère est plus haut que le pouce : il doit rester lisible quand le pouce est dessus. */
+.curseur-accroche {
+  position: absolute;
+  top: 50%;
+  width: var(--trait);
+  height: 1.4rem;
+  translate: -50% -50%;
+  background: var(--accent);
+}
+
+/* La légende se lit SOUS le trait, à son abscisse : posée ailleurs, il faudrait deviner à quel
+   endroit du rail elle renvoie. Le rail réserve sa place (`.avec-legende`) plutôt que de la
+   laisser déborder sur ce qui suit. */
+.curseur.avec-legende {
+  /* Marge et non remplissage : un remplissage décalerait le rail sans décaler les repères, qui
+     se positionnent, eux, sur la boîte de remplissage. */
+  margin-bottom: 1rem;
+}
+
+/* LA LÉGENDE NE SORT PAS DE LA COLONNE DE TEXTE.
+
+   Elle n'est pas centrée sur le trait par une translation — au bord du rail, une translation
+   la ferait dépasser, et un mot coupé par le bord de l'écriture ne se lit plus. Elle est
+   poussée par deux entretoises dont la base porte l'abscisse du repère et qui, elles, cèdent :
+   quand la légende n'a plus la place, c'est l'entretoise du côté serré qui se réduit, jamais
+   la légende qui sort. Au ras du bord, elle s'arrête au bord, et le trait reste au-dessus
+   d'elle. Personne ne mesure rien : le moteur de disposition le fait. */
+.curseur-legendes {
+  position: absolute;
+  top: 100%;
+  inset-inline: 0;
+  display: flex;
+}
+
+.curseur-legendes::before {
+  content: '';
+  flex: 0 1 var(--curseur-x);
+}
+
+.curseur-legendes::after {
+  content: '';
+  flex: 0 1 calc(100% - var(--curseur-x));
+}
+
+.curseur-legende {
+  flex: none;
+  white-space: nowrap;
+  font-size: 0.6rem;
+  letter-spacing: var(--suivi-micro);
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 table {

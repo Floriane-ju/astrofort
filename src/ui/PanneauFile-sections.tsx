@@ -12,6 +12,7 @@ import type { ModeProjection } from '../core/projection.ts'
 import type { ActionsScene } from './scene-etat.ts'
 import { activeIncrustation, majFile, type ModeApercu, type ReglagesFile, type RenduFile } from './seance-etat.ts'
 import { MENTION_PLAFOND_CHAMP, MENTION_PLAFOND_FILE } from './scene-overlay.ts'
+import { Curseur } from './Curseur.tsx'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette } from './Terme.tsx'
 import type { LecturesFile } from './panneau-file-lectures.ts'
@@ -151,19 +152,33 @@ export function ProfondeurDUnePose({
   readonly zeroSysteme: PointZeroSysteme
 }) {
   const { carte, trainee, poseDepassee } = lectures
+  // T-0169 — le rail porte la pose max du cadre : elle décide de tout, et jusqu'ici elle ne se
+  // manifestait qu'après coup, une fois dépassée. Arrondie vers le bas comme le bouton de
+  // correction : une accroche qui atterrirait au-dessus du seuil ovaliserait les étoiles.
+  const accroche =
+    carte.poseOperanteS === null
+      ? null
+      : {
+          valeur: Math.floor(carte.poseOperanteS),
+          // Avec suivi, la limite n'est plus la rotation du ciel mais la monture : la légende
+          // ne doit pas promettre des étoiles ponctuelles que la mise en station décide.
+          libelle: carte.regime === 'SUIVI' ? 'max monture' : 'max étoile comme des points',
+        }
   return (
     <section>
       <h3>Prévisualisation de champ</h3>
       <div className="champs">
         <label>
           Pose unitaire : {file.tPoseS.toFixed(0)} s
-          <input
-            type="range"
+          <Curseur
+            libelle="Pose unitaire"
+            valeur={file.tPoseS}
             min={1}
             max={K('PLAFOND_POSE_SANS_AUTOGUIDAGE_S')}
-            step={1}
-            value={file.tPoseS}
-            onChange={(e) => majFile({ tPoseS: Number(e.target.value) })}
+            pas={1}
+            texte={`${file.tPoseS.toFixed(0)} s`}
+            {...(accroche === null ? {} : { accroche })}
+            sur={(tPoseS) => majFile({ tPoseS })}
           />
         </label>
       </div>
@@ -226,14 +241,17 @@ export function ArcsDuFile({
       <h3>Filé d’étoiles</h3>
       <div className="champs">
         <label>
-          <Etiquette cle="duree_file" /> : {file.dureeTotaleMin.toFixed(0)} min
-          <input
-            type="range"
+          <span>
+            <Etiquette cle="duree_file" /> : {file.dureeTotaleMin.toFixed(0)} min
+          </span>
+          <Curseur
+            libelle="Durée du filé"
+            valeur={file.dureeTotaleMin}
             min={5}
             max={480}
-            step={5}
-            value={file.dureeTotaleMin}
-            onChange={(e) => majFile({ dureeTotaleMin: Number(e.target.value) })}
+            pas={5}
+            texte={`${file.dureeTotaleMin.toFixed(0)} min`}
+            sur={(dureeTotaleMin) => majFile({ dureeTotaleMin })}
           />
         </label>
       </div>

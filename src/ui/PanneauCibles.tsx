@@ -35,6 +35,7 @@ import { DOMAINES } from '../registry/domains.ts'
 import { I } from '../registry/imagerie.ts'
 import type { ObjetCielProfond, TypeObjet } from '../data/deepsky.ts'
 import { Bulle } from './Bulle.tsx'
+import { Curseur } from './Curseur.tsx'
 import { Icone } from './Icone.tsx'
 import { VignetteCible } from './ImageCible.tsx'
 import { prechargeVignettes } from './image-cible-memoire.ts'
@@ -186,13 +187,14 @@ export function PanneauCibles(props: PanneauCiblesProps) {
               {magMax >= DOMAINE_MAG.max ? 'toutes' : magMax.toFixed(1)}
             </span>
           </span>
-          <input
-            type="range"
+          <Curseur
+            libelle="Jusqu’à la magnitude"
+            valeur={magMax}
             min={DOMAINE_MAG.min}
             max={DOMAINE_MAG.max}
-            step={PAS_MAG}
-            value={magMax}
-            onChange={(e) => setMagMax(Number(e.target.value))}
+            pas={PAS_MAG}
+            texte={magMax >= DOMAINE_MAG.max ? 'toutes' : `${magMax.toFixed(1)} mag`}
+            sur={setMagMax}
           />
         </label>
       </div>

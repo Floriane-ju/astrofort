@@ -19,6 +19,7 @@
 
 import { useEffect } from 'react'
 import { K } from '../registry/constants.ts'
+import { Curseur } from './Curseur.tsx'
 import { Etiquette } from './Terme.tsx'
 
 export interface EtatModeNuit {
@@ -28,6 +29,7 @@ export interface EtatModeNuit {
 
 const CLE_STOCKAGE = 'astrofort.mode-nuit'
 const LUMINANCE_NOMINALE = 1
+const POURCENT = 100
 
 export const ETAT_INITIAL: EtatModeNuit = Object.freeze({
   actif: false,
@@ -111,16 +113,19 @@ export function ModeNuit({ etat, surChangement }: ModeNuitProps) {
           Activer le mode nuit
         </label>
         <label>
-          <Etiquette cle="luminance_mode_nuit" />
-          <input
-            type="range"
+          <span>
+            <Etiquette cle="luminance_mode_nuit" />
+          </span>
+          <Curseur
+            libelle="Luminance du mode nuit"
+            valeur={etat.luminance}
             min={plancher}
             max={LUMINANCE_NOMINALE}
-            step={plancher}
-            value={etat.luminance}
-            onChange={(e) => surChangement({ ...etat, luminance: Number(e.target.value) })}
+            pas={plancher}
+            texte={`${(etat.luminance * POURCENT).toFixed(0)} %`}
+            sur={(luminance) => surChangement({ ...etat, luminance })}
           />
-          <span className="etat">{(etat.luminance * 100).toFixed(0)} %</span>
+          <span className="etat">{(etat.luminance * POURCENT).toFixed(0)} %</span>
         </label>
       </div>
 
