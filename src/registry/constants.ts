@@ -1316,16 +1316,6 @@ const RENDU = {
 
 /** §9.1 à §9.4 — grand champ, prévisualisation et filé d'étoiles. */
 const GRAND_CHAMP = {
-  REGLE_500_NUMERATEUR: entree({
-    ref: 'C-32',
-    libelle: 'Numérateur de la règle des 500',
-    valeur: 500,
-    unite: 's·mm',
-    source: '§9.1 — t_500 = 500 / focale_equivalente_24x36',
-    tolerance: 'repère historique — jamais moteur de calcul (§9.1)',
-    ordreDeGrandeur: false,
-    sections: ['9.1'],
-  }),
   FORMAT_REFERENCE_L_MM: entree({
     ref: 'A-24X36',
     libelle: 'Grande dimension du format de référence 24 × 36',

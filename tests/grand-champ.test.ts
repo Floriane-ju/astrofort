@@ -3,7 +3,8 @@
  *
  * Le critère qui compte n'est pas qu'une formule soit appliquée, mais qu'elle soit appliquée
  * PAR RÉGION DU CIEL : le setup grand angle de référence du PRD donne 25,2 s à l'équateur
- * céleste et 1 442 s à δ = +89°, quand la règle des 500 annonce 50 s pour tout le ciel.
+ * céleste et 1 442 s à δ = +89°. Une pose unique pour tout le ciel serait fausse des deux
+ * côtés — c'est ce que le test « suit la déclinaison, et non une règle uniforme » tient.
  */
 
 import { describe, expect, it } from 'vitest'
@@ -33,11 +34,6 @@ function carte(options: {
     centreAdDeg: 0,
     centreDecDeg: options.centreDecDeg,
     rotationDeg: 0,
-    focaleEquivalenteMm: focaleEquivalente24x36(
-      GRAND_ANGLE.focaleMm,
-      CAPTEUR_L_MM,
-      CAPTEUR_H_MM,
-    ).value,
     ...(options.tMaxSuiviS === undefined ? {} : { tMaxSuiviS: options.tMaxSuiviS }),
   })
 }
@@ -48,16 +44,6 @@ describe('§9.1 — pose max par déclinaison', () => {
     expect(resultat.tMaxCadreS.value).toBeCloseTo(25.16, 1)
     expect(resultat.decMinAbsDeg).toBeCloseTo(0, 6)
     expect(resultat.zoneLimitante).toMatch(/δ = -?0°/)
-  })
-
-  it('affiche la règle des 500 en repère explicitement non retenu', () => {
-    const resultat = carte({ centreDecDeg: 0 })
-    // 500 / 10 mm équivalent plein format : la même valeur pour tout le ciel.
-    expect(resultat.t500S.value).toBeCloseTo(50, 0)
-    expect(resultat.t500S.formula.note).toMatch(/JAMAIS moteur de calcul/)
-    expect(resultat.t500S.note).toMatch(/non retenu/)
-    // Le double de la valeur correcte à l'équateur céleste.
-    expect(resultat.t500S.value / resultat.tMaxCadreS.value!).toBeCloseTo(2, 1)
   })
 
   it('suit la déclinaison, et non une règle uniforme', () => {

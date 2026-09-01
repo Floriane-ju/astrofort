@@ -108,11 +108,10 @@ export function useLecturesFile(
         centreAdDeg: visee.longitudeDeg,
         centreDecDeg: visee.latitudeDeg,
         rotationDeg,
-        focaleEquivalenteMm: focaleEquivalente.value,
         tMaxSuiviS: materiel.tMaxSuiviS,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [materiel, visee, rotationDeg, focaleEquivalente.value],
+    [materiel, visee, rotationDeg],
   )
 
   const dureeMin = dureeApercuMin(file)

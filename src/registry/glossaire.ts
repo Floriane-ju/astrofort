@@ -913,18 +913,6 @@ export const GLOSSAIRE = Object.freeze({
       'Recadrer vers le pôle rallonge la pose utile, et l’application nomme la zone qui la bride.',
     sections: ['9.1'],
   }),
-  regle_500: terme({
-    libelle: 'Règle des 500',
-    glose: 'repère historique, jamais retenu',
-    explication:
-      'La règle des 500 divise 500 par la focale équivalente et donne une valeur unique pour ' +
-      'tout le ciel. Elle vaut le double de la pose correcte à l’équateur céleste et trente ' +
-      'fois trop peu près du pôle. Elle est affichée parce qu’elle est partout, pas parce ' +
-      'qu’elle est juste.',
-    consequence:
-      'Aucun calcul de l’application ne la consomme : seule la NPF complète pilote la pose.',
-    sections: ['9.1'],
-  }),
   trainee: terme({
     libelle: 'Traînée',
     glose: 'filé inscrit sur le capteur',
@@ -940,9 +928,10 @@ export const GLOSSAIRE = Object.freeze({
     libelle: 'Focale équivalente',
     glose: 'focale ramenée au plein format',
     explication:
-      'La focale équivalente compare des cadrages entre formats de capteur différents. Elle ne ' +
-      'sert ici qu’au repère de la règle des 500. Le champ réel, l’échantillonnage et la pose ' +
-      'maximale se calculent tous sur les dimensions et le pas réels du capteur.',
+      'La focale équivalente compare des cadrages entre formats de capteur différents : elle ' +
+      'traduit la focale de ce boîtier en focale d’un plein format qui donnerait le même ' +
+      'champ. Le champ réel, l’échantillonnage et la pose maximale se calculent tous sur les ' +
+      'dimensions et le pas réels du capteur, jamais sur elle.',
     consequence:
       'Un recadrage de capteur change la focale équivalente sans rien changer à la pose maximale.',
     sections: ['9.1'],

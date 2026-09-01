@@ -91,8 +91,8 @@ export function CadrageDuFile({ lectures, file, fovLDeg, mode, actions }: Cadrag
  *
  * T-0142 — et cette carte EST le cadre : elle se lit dans le cadre du capteur, sur la scène,
  * pas dans une grille abstraite posée à côté de lui. Ne restent ici que les valeurs qui ne
- * dépendent d'aucune cellule — la pose retenue, le repère de la règle des 500, la focale
- * équivalente — et les avertissements qui portent une décision.
+ * dépendent d'aucune cellule — la pose retenue, la focale équivalente — et les
+ * avertissements qui portent une décision.
  */
 export function PoseMaximale({
   lectures,
@@ -121,7 +121,6 @@ export function PoseMaximale({
         </p>
       )}
       <TracedValue terme="pose_max_cadre" trace={carte.tMaxCadreS} decimales={1} unite="s" />
-      <TracedValue terme="regle_500" trace={carte.t500S} decimales={1} unite="s" />
       <TracedValue
         terme="focale_equivalente"
         trace={lectures.focaleEquivalente}

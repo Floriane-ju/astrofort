@@ -246,14 +246,6 @@ export const FORMULES = Object.freeze({
       'l’autre : la pose est dictée par la zone la plus contraignante du cadre, jamais par ' +
       'son centre.',
   },
-  REGLE_500: {
-    expression: 't_500 = 500 / focale_equivalente_24x36',
-    unite: 's',
-    section: '9.1',
-    note:
-      'Repère historique, JAMAIS moteur de calcul : une valeur unique pour tout le ciel, ' +
-      'double de la valeur correcte à l’équateur céleste et trente fois trop faible au pôle.',
-  },
   FOCALE_EQUIVALENTE: {
     expression: 'focale_equiv = focale_mm × diagonale_24x36 / diagonale_capteur',
     unite: 'mm',

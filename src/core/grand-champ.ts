@@ -6,9 +6,6 @@
  * est une carte, et la valeur retenue est celle de la zone la plus contraignante, c'est-à-dire
  * de plus faible déclinaison absolue.
  *
- * La règle des 500 est calculée et affichée parce que l'utilisateur l'a lue partout : montrer
- * l'écart vaut mieux que l'ignorer. Elle n'entre dans aucun calcul.
- *
  * La grille est celle du cadre matériel, projetée par la même inverse gnomonique que §3.5 :
  * la déclinaison d'une cellule n'est pas interpolée, elle est calculée.
  */
@@ -31,8 +28,6 @@ export interface EntreeCartePose {
   readonly centreAdDeg: number
   readonly centreDecDeg: number
   readonly rotationDeg: number
-  /** Focale équivalente 24 × 36, pour le seul repère de la règle des 500. */
-  readonly focaleEquivalenteMm: number
   readonly tolerance?: ToleranceNpf
   /** §5.2 — renseigné quand le suivi est actif : la pose opérante cesse d'être la NPF. */
   readonly tMaxSuiviS?: number | null
@@ -57,7 +52,6 @@ export interface CartePoseMax {
   readonly zoneLimitante: string
   readonly decMinAbsDeg: number
   readonly decMaxAbsDeg: number
-  readonly t500S: Traced<number>
   /** Pose réellement opérante : NPF sans suivi, plafond de monture avec (§5.2). */
   readonly poseOperanteS: number | null
   readonly regime: RegimeGrandChamp
@@ -151,16 +145,6 @@ export function cartePoseMax(entree: EntreeCartePose): CartePoseMax {
       : {}),
   })
 
-  const t500S = trace({
-    value: K('REGLE_500_NUMERATEUR') / entree.focaleEquivalenteMm,
-    formula: 'REGLE_500',
-    inputs: { focale_equivalente_mm: entree.focaleEquivalenteMm },
-    constants: ['REGLE_500_NUMERATEUR'],
-    note:
-      'Repère affiché, non retenu : la règle des 500 donne la même valeur pour tout le ciel, ' +
-      'alors que la pose max varie du simple au décuple entre l’équateur céleste et le pôle.',
-  })
-
   const suiviActif = entree.tMaxSuiviS !== undefined && entree.tMaxSuiviS !== null
   const regime: RegimeGrandChamp = suiviActif ? 'SUIVI' : 'NPF'
   const poseOperanteS = suiviActif ? entree.tMaxSuiviS! : (zone?.tNpfS ?? null)
@@ -192,7 +176,6 @@ export function cartePoseMax(entree: EntreeCartePose): CartePoseMax {
     zoneLimitante: zone === null ? 'aucune : le cadre ne contient que le pôle' : nommeZone(zone.uFrac, zone.vFrac, zone.decDeg),
     decMinAbsDeg: decMinAbs,
     decMaxAbsDeg: decMaxAbs,
-    t500S,
     poseOperanteS,
     regime,
     messages,

@@ -59,9 +59,9 @@ export function fovDeg(dimensionMm: number, focaleMm: number): Traced<number> {
 }
 
 /**
- * Focale équivalente 24 × 36 — §9.1. Elle ne sert QU'au repère de la règle des 500, qui
- * n'est pas un moteur : aucun verdict de cadrage ni de pose n'en dépend, et le champ reste
- * calculé sur les dimensions réelles du capteur.
+ * Focale équivalente 24 × 36 — §9.1. Repère de comparaison entre formats de capteur, et rien
+ * de plus : aucun verdict de cadrage ni de pose n'en dépend, et le champ reste calculé sur
+ * les dimensions réelles du capteur.
  */
 export function focaleEquivalente24x36(
   focaleMm: number,

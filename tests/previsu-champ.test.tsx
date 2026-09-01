@@ -337,8 +337,9 @@ describe('§9 — le panneau du filé', () => {
     expect(html).toContain('Prévisualisation de champ')
     expect(html).toContain('Filé d’étoiles')
     expect(html).toContain('Séquence de filé')
-    // La règle des 500 est affichée, et la carte de pose porte une valeur par cellule.
-    expect(html).toContain('Règle des 500')
+    // T-0174 — la règle des 500 ne s'affiche plus : un repère qu'aucun calcul ne retient
+    // n'a pas sa place à côté des valeurs qui décident.
+    expect(html).not.toContain('Règle des 500')
     // Le rappel batterie remplace le budget chiffré : une durée, pas un nombre de batteries.
     expect(html).toContain('Attention à la batterie')
   })
