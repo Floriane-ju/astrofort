@@ -948,7 +948,7 @@ export const GLOSSAIRE = Object.freeze({
     sections: ['9.1'],
   }),
   profondeur_previsu: terme({
-    libelle: 'Profondeur atteinte',
+    libelle: 'Profondeur par photo',
     glose: 'magnitude enregistrée par la pose',
     explication:
       'La profondeur atteinte dit jusqu’à quelle magnitude la pose enregistre une étoile au ' +
