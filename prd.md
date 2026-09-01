@@ -2944,6 +2944,22 @@ ARCHITECTURE RETENUE — le coût marginal du catalogue réel est nul
   FILE EST MOINS BRILLANTE PAR PIXEL qu'une étoile ponctuelle, puisque le même flux
   s'étale. Sans cette pondération, la prévisu montre des traces trop marquées et
   l'utilisateur est déçu du résultat réel.
+
+LE MODE D'APERÇU SE DÉDUIT DE LA DURÉE, IL NE SE CHOISIT PAS
+  duree_totale_min = 0  → aperçu de champ §9.2, une pose unique
+  duree_totale_min > 0  → filé §9.3, poses accumulées
+  Une commande séparée — menu ou bascule — posée à côté du curseur pouvait le
+  contredire : mode « champ » affiché avec une durée de 2 h, ou mode « filé » avec
+  une durée au minimum. Deux commandes pour une seule intention, dont l'une mentait.
+  Le curseur porte donc les deux aperçus, et 0 est le cran qui les sépare.
+
+  → CONSÉQUENCE SUR LA PLAGE : 0 est accepté au curseur alors que le filé n'est
+    VALIDE qu'à partir de 5 min. Ce n'est pas un filé plus court que la borne, c'est
+    l'autre aperçu. Le domaine du filé reste 5 – 480.
+
+  → CE QUE 0 N'EST PAS : une durée d'accumulation nulle. Une pose unique accumule sa
+    propre pose, et ses étoiles portent l'arc de cette pose (§9.1). Lire zéro
+    annoncerait un ciel figé que le cadre ne montre pas.
 ```
 
 **Application au setup grand angle** — 10 mm plein format, champ vertical 100,2°, 4 672 px de hauteur, soit 46,6 px/° :
@@ -2961,7 +2977,7 @@ ARCHITECTURE RETENUE — le coût marginal du catalogue réel est nul
 
 | Champ | Type | Unité | Plage valide | Note |
 |---|---|---|---|---|
-| `duree_totale_min` | float | min | 5 – 480 | curseur, prévisu en direct |
+| `duree_totale_min` | float | min | 0 – 480 | curseur, prévisu en direct · **0 sélectionne l'aperçu de §9.2**, le filé n'est valide qu'à partir de 5 |
 | `latitude_observateur` | float | ° | −90 – 90 | pilote la position du pôle |
 | `centre_az`, `centre_alt`, `angle_rotation` | float | ° | — | pointage |
 | `type_objectif` | enum | — | RECTILINEAIRE / FISHEYE | §5.1 |
@@ -2994,6 +3010,12 @@ Et l'app indique qu'un filé lisible demande typiquement au moins une heure
 Quand les arcs sont tracés
 Alors la projection équidistante est utilisée et les arcs restent quasi circulaires
     autour du pôle, contrairement au rendu rectilinéaire
+
+Étant donné une durée d'accumulation ramenée à 0
+Quand la prévisualisation est générée
+Alors l'aperçu rendu est celui de §9.2 — une pose unique, étoiles ponctuelles sous suivi
+Et aucune commande séparée ne permet de contredire le curseur sur le mode affiché
+Et la durée peinte est celle de la pose unitaire, jamais zéro
 
 Étant donné une durée telle que l'arc dépasse le champ              # cas limite
 Quand la prévisualisation est générée
@@ -3040,6 +3062,12 @@ BUDGET
 VOIE À SPÉCIFIER : empilement de poses courtes en mode éclaircir.
   La pose unique très longue est écartée : bruit thermique, ciel cramé en présence
   de pollution lumineuse.
+
+CETTE SECTION NE S'APPLIQUE PAS HORS DU FILÉ
+  À duree_totale_min = 0, l'aperçu est celui de §9.2 : une photo, pas une séquence.
+  Il n'y a rien à cadencer, et les compteurs ci-dessus annonceraient zéro pose et
+  zéro gigaoctet. La logistique est alors ABSENTE, pas affichée à zéro — un compteur
+  à zéro se lit comme un budget calculé, donc comme un résultat.
 ```
 
 **Séquence type, 2 h à 25 s** : `n_poses = 7200 / 26 = 276 images` · volume ≈ 8,9 Go (33 Mo par RAW `[À VÉRIFIER]`) · arc obtenu 30,1° à δ = 0, 27,3° dans la Voie lactée d'été.
@@ -3048,7 +3076,7 @@ VOIE À SPÉCIFIER : empilement de poses courtes en mode éclaircir.
 
 | Champ | Type | Unité | Plage valide | Note |
 |---|---|---|---|---|
-| `duree_totale_min` | float | min | 5 – 480 | |
+| `duree_totale_min` | float | min | 5 – 480 | hors plage, la section ne s'applique pas (§9.3) |
 | `t_pose_s` | float | s | 5 – 60 | recommandé 20–30 |
 | `intervalle_s` | float | s | 0 – 30 | refusé au-delà de C-09 |
 | `n_poses` | int | — | sortie | |
@@ -3072,6 +3100,11 @@ Alors l'app refuse et chiffre la longueur du trou produit dans chaque trace
 Quand j'ouvre la fiche de séquence
 Alors l'app rappelle de prévoir de quoi tenir la nuit en batterie
 Et n'affiche ni nombre de batteries, ni autonomie, ni température, ni facteur de froid
+
+Étant donné une durée d'accumulation ramenée à 0                     # aperçu §9.2
+Quand j'ouvre le panneau du filé
+Alors la logistique de séquence est absente du panneau
+Et aucun compteur de poses ni de volume n'est affiché à zéro
 ```
 
 ### Dépendances données

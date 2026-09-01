@@ -475,6 +475,22 @@ describe('§9.3 — T-0119, le filé plafonne la surface peinte', () => {
     }
   })
 
+  it('retire la logistique de séquence quand la durée du filé est nulle', () => {
+    const html = () => renderToStaticMarkup(createElement(PanneauFile, PROPS_PANNEAU))
+    try {
+      // §9.4 — à durée nulle l'aperçu ne décrit qu'une photo : il n'y a rien à cadencer. La
+      // section est ABSENTE, pas affichée à zéro — un compteur à zéro se lit comme un budget
+      // calculé, donc comme un résultat.
+      majFile({ dureeTotaleMin: 0 })
+      expect(html()).not.toContain('Séquence de filé')
+
+      majFile({ dureeTotaleMin: K('DUREE_FILE_SPECTACULAIRE_MIN') })
+      expect(html()).toContain('Séquence de filé')
+    } finally {
+      reinitialiseSeance()
+    }
+  })
+
   it('accumule la pose unitaire quand la durée du filé est nulle', () => {
     try {
       // Le mode ne se choisit plus : la durée le décide. Et une photo unique n'accumule pas
