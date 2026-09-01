@@ -971,8 +971,10 @@ LA BANDE, MODULÉE PAR LE FOND DE CIEL DU SITE
     fond peint par-dessus le repérage masque exactement ce qui sert à s'orienter. C'est
     l'ordre des passes, et l'aperçu incrusté de §9.5 le partage : il se dépose au même
     rang. Ce que §9.5 change, quand l'aperçu couvre TOUTE LA SCÈNE, ce n'est pas ce
-    rang — c'est que la bande, comme les autres couches de repérage, ne se peint plus
-    du tout.
+    rang — c'est que la bande, comme les autres couches de repérage, ne se peint plus du
+    tout. LE TRAIT DU PLAN, LUI, RESTE : la bande dit ce que l'utilisateur verra, et
+    l'aperçu le montre déjà ; le trait dit OÙ passe le plan, et sur une prise de vue rien
+    d'autre ne le dit.
   → ce n'est PAS une promesse photométrique : c'est un repère de lecture. La couche 3
     de §9.2 module un contraste dans une IMAGE DE CAPTURE ; §3.7 repère une région du
     ciel sur une CARTE.
@@ -3151,12 +3153,14 @@ DEUX PORTÉES, DEUX RÈGLES — l'aperçu tient dans le cadre, ou couvre toute l
   la prise de vue, et les couches de repérage s'y superposent au lieu de la situer — un
   arc de filé qui passe sous une figure de constellation ne se lit plus comme une trace.
   Les passes de repérage ne s'exécutent donc pas : frontières, figures et astérismes de
-  §3.4, plan galactique et bande de §3.7, marqueurs d'objets du ciel profond, corps
-  mobiles de §3.1, et TOUS les noms.
-  TROIS SURVIVANTS, et la raison est la même pour les trois : ils CADRENT la prise de
+  §3.4, bande de la Voie lactée et repère du centre galactique de §3.7, marqueurs
+  d'objets du ciel profond, corps mobiles de §3.1, et TOUS les noms.
+  QUATRE SURVIVANTS, et la raison est la même pour les quatre : ils CADRENT la prise de
   vue au lieu de l'annoter — le sol de §4.1, l'horizon avec ses quatre points cardinaux,
-  et le contour du cadre matériel de §3.5. Aucun d'eux ne se dessine SUR l'image : ils
-  disent où elle est prise et ce que le capteur en retient.
+  le contour du cadre matériel de §3.5, et le TRAIT du plan galactique de §3.7. Aucun
+  d'eux ne se dessine SUR l'image : ils disent où elle est prise, ce que le capteur en
+  retient, et où passe la Voie lactée qui s'y voit. Chacun garde sa couche : éteinte au
+  panneau Vue, elle l'est aussi sous l'aperçu.
   ÉTEINDRE N'EST PAS PERDRE. La sélection de §3.3 continue de tourner : les cibles
   restent cliquables au même pixel, et le survol reste la façon de lire un nom. Seule la
   PEINTURE est suspendue — même règle que les étoiles ponctuelles, que le filé remplace
@@ -3201,9 +3205,10 @@ Et les frontières, figures et labels du planétarium sont visibles par-dessus l
 
 Étant donné le même filé
 Quand l'aperçu est peint sur toute la scène
-Alors aucune couche de repérage, aucun marqueur d'objet, aucun corps et aucun nom
-  n'est peint
-Et le sol, l'horizon avec ses points cardinaux et le contour du cadre le sont
+Alors ni la bande de la Voie lactée, ni les frontières, figures et astérismes, ni
+  aucun marqueur d'objet, aucun corps et aucun nom n'est peint
+Et le sol, l'horizon avec ses points cardinaux, le contour du cadre et le trait du
+  plan galactique le sont
 Et les cibles cliquables sont les mêmes qu'à repères allumés
 Et le survol nomme toujours l'élément qu'il désigne
 

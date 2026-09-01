@@ -154,10 +154,10 @@ export function PanneauVue(props: PanneauVueProps) {
             peint sur toute la scène, ces couches sont éteintes quel que soit leur état. */}
         {file.incrustation && (
           <p className="etat">
-            L’aperçu est peint sur toute la scène : seuls le sol, l’horizon et le cadre
-            matériel s’y ajoutent. Les autres couches, les marqueurs d’objets, les corps et
-            les noms restent éteints tant qu’il est actif — le survol nomme toujours ce qu’il
-            désigne.
+            L’aperçu est peint sur toute la scène : seuls le sol, l’horizon, le cadre
+            matériel et le trait du plan galactique s’y ajoutent. La bande de la Voie lactée,
+            les autres couches, les marqueurs d’objets, les corps et les noms restent éteints
+            tant qu’il est actif — le survol nomme toujours ce qu’il désigne.
           </p>
         )}
         <div className="champs">

@@ -1012,7 +1012,6 @@ describe('T-0171 — l’aperçu efface les repères, garde ce qui cadre', () =>
       teintes.figures,
       teintes.frontieres,
       teintes.asterismes,
-      teintes.voieLactee,
       teintesObjets(false, false, SB_PLANCHER_NATUREL).GALAXIE.bord,
     ]
     // Sans l'aperçu, la scène les emploie toutes : le critère ne se vérifie pas sur du vide.
@@ -1020,12 +1019,22 @@ describe('T-0171 — l’aperçu efface les repères, garde ce qui cadre', () =>
     for (const teinte of effacees) expect(avec().ctx.couleurs).not.toContain(teinte)
   })
 
-  it('garde le sol, l’horizon et le contour du cadre matériel', () => {
+  it('garde le sol, l’horizon, le contour du cadre et le trait du plan galactique', () => {
     const teintes = palette(false)
     const ctx = scene({ passeFile: () => undefined, couches: { ...COUCHES, sol: true } }).ctx
     expect(ctx.couleurs).toContain(teintes.cadre)
     expect(ctx.couleurs).toContain(teintes.horizon)
     expect(ctx.couleurs).toContain(teintes.sol)
+    // T-0173 — le trait du plan, oui ; la bande et le repère du centre, non. Ce sont deux
+    // usages de la même teinte, que seule l'opacité partielle de la bande distingue.
+    expect(ctx.couleurs).toContain(teintes.voieLactee)
+    expect(ctx.opacites.filter((o) => o > 0 && o < 1)).toHaveLength(0)
+  })
+
+  it('éteint le trait du plan avec sa couche, comme hors aperçu', () => {
+    const couches: CouchesActives = { ...COUCHES, voieLactee: false }
+    const ctx = scene({ passeFile: () => undefined, couches }).ctx
+    expect(ctx.couleurs).not.toContain(palette(false).voieLactee)
   })
 
   it('ne peint ni marqueur d’objet ni corps mobile', () => {

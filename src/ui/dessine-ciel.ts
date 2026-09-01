@@ -815,11 +815,16 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     ctx.lineWidth = 1
   }
   if (couches.horizon) traceHorizon(entree, teintes.horizon, brut)
-  let labelCentreGalactique: CandidatLabel | null = null
-  if (couches.voieLactee) {
+  // T-0173 — le TRAIT du plan galactique survit à l'aperçu : sur une prise de vue où la Voie
+  // lactée se voit, c'est la seule ligne qui dise où elle passe. Il cadre comme l'horizon
+  // cadre. La bande, le repère du centre et les noms, eux, l'annotent : ils restent éteints.
+  if (entree.couches.voieLactee) {
     ctx.strokeStyle = teintes.voieLactee
     ctx.lineWidth = 1
     traceLignes(ctx, projecteur, [PLAN_GALACTIQUE])
+  }
+  let labelCentreGalactique: CandidatLabel | null = null
+  if (couches.voieLactee) {
     labelCentreGalactique = repereCentreGalactique(entree, teintes.voieLactee, pointEcran())
   }
 
