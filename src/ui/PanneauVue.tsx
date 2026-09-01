@@ -59,7 +59,7 @@ const COUCHES: readonly (readonly [keyof CouchesActives, string])[] = [
 
 export function PanneauVue(props: PanneauVueProps) {
   const { vue, rendu, actions } = useScene()
-  const { file } = useSeance()
+  const { mode: modeInterface } = useSeance()
   const { fovDeg, rotationCadreDeg: rotationDeg, mode } = vue
   const { couches, vueRealiste } = rendu
 
@@ -152,7 +152,7 @@ export function PanneauVue(props: PanneauVueProps) {
         <h2>Couches</h2>
         {/* T-0171 — un interrupteur qui ne commande rien doit dire pourquoi : sous l'aperçu
             peint sur toute la scène, ces couches sont éteintes quel que soit leur état. */}
-        {file.incrustation && (
+        {modeInterface === 'PANORAMA' && (
           <p className="etat">
             L’aperçu est peint sur toute la scène : seuls le sol, l’horizon, le cadre
             matériel et le trait du plan galactique s’y ajoutent. La bande de la Voie lactée,

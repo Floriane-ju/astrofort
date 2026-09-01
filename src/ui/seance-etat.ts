@@ -5,7 +5,7 @@
  *
  *   1. un clic sur un objet DANS LA SCÈNE doit ouvrir sa fiche, garnie ;
  *   2. les réglages du filé se règlent au panneau mais se dessinent dans le cadre ;
- *   3. activer l'incrustation fige le temps de la scène — un filé est une composition fixe.
+ *   3. passer en Panorama fige le temps de la scène — un filé est une composition fixe.
  *
  * Aucun de ces trois chemins ne remonte à un ancêtre commun autre que l'application. Comme
  * pour [[scene-etat]], l'état vit donc dans le module : un magasin externe se lit aussi bien
@@ -23,13 +23,19 @@ const S_PAR_MIN = 60
 /** §9.2 aperçu d'une pose, §9.3 filé d'une durée accumulée : même moteur, durée différente. */
 export type ModeApercu = 'CHAMP' | 'FILE'
 
-/** Réglages de §9.2 à §9.4. Ils pilotent le panneau ET l'incrustation dans le cadre. */
+/**
+ * T-0179 — le seul commutateur de premier rang (§11.3) : il décide de ce que la scène peint et
+ * de ce que le panneau de droite porte. C'est l'ancienne case « Peindre le filé sur toute la
+ * scène » promue en état nommé — un état de cette portée ne se règle pas au troisième niveau
+ * d'un panneau.
+ */
+export type ModeInterface = 'CIEL_PROFOND' | 'PANORAMA'
+
+/** Réglages de §9.2 à §9.4. Ils pilotent le panneau ET l'aperçu peint dans le cadre. */
 export interface ReglagesFile {
   readonly tPoseS: number
   readonly dureeTotaleMin: number
   readonly intervalleS: number
-  /** T-0116 — §9.2/§9.3 peints sur toute la scène, sous les repères, plutôt qu'à part. */
-  readonly incrustation: boolean
   /** T-0142 — §9.1 peinte DANS le cadre du capteur, qu'elle masque, plutôt qu'au panneau. */
   readonly poseDansCadre: boolean
 }
@@ -47,17 +53,18 @@ export interface RenduFile {
 
 export interface EtatSeance {
   readonly cible: ObjetCielProfond | null
+  readonly mode: ModeInterface
   readonly file: ReglagesFile
   readonly renduFile: RenduFile | null
 }
 
 const ETAT_INITIAL: EtatSeance = {
   cible: null,
+  mode: 'CIEL_PROFOND',
   file: {
     tPoseS: K('T_POSE_FILE_MAX_S'),
     dureeTotaleMin: K('DUREE_FILE_SPECTACULAIRE_MIN'),
     intervalleS: K('INTERVALLE_INTER_POSE_FILE_MAX_S'),
-    incrustation: false,
     poseDansCadre: false,
   },
   renduFile: null,
@@ -154,12 +161,15 @@ export function publicateurRenduFile(
 }
 
 /**
- * §9.3 — l'incrustation fige le temps. La vue animée reste le §3 : un filé est une
+ * §9.3 — passer en Panorama fige le temps. La vue animée reste le §3 : un filé est une
  * composition fixe, et faire défiler l'heure sous des arcs déjà accumulés ne veut rien dire.
+ *
+ * Revenir en Ciel profond ne dégèle rien : rendre le temps à l'horloge système est un geste du
+ * transport de la barre basse (§3.2), pas un effet de bord du mode.
  */
-export function activeIncrustation(actif: boolean): void {
-  majFile({ incrustation: actif })
-  if (actif) majTemps({ modeTemps: 'FIGE' })
+export function poseMode(mode: ModeInterface): void {
+  pose({ ...etat, mode })
+  if (mode === 'PANORAMA') majTemps({ modeTemps: 'FIGE' })
 }
 
 /** Remet la séance dans son état de départ. Réservé aux tests. */

@@ -143,7 +143,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
 
   /**
    * T-0149 — la scène ne dépend que du CIEL. Un matériel incomplet lui retire son cadre et
-   * son incrustation de filé — `profilsCadre` est alors vide, `materielFile` absent — mais
+   * son aperçu de filé — `profilsCadre` est alors vide, `materielFile` absent — mais
    * pas les étoiles, le sol ni le fond de ciel : ce sont des grandeurs du lieu.
    */
   const scene = ciel.ok ? (

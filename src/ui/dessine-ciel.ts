@@ -426,7 +426,7 @@ function traceLignes(
 /**
  * §3.5 — chemin fermé du contour du cadre matériel, composé mais NON peint.
  *
- * Exporté pour l'incrustation du filé (§9.3) : elle découpe le canevas sur ce chemin avant
+ * Exporté pour la passe de filé (§9.3) : elle découpe le canevas sur ce chemin avant
  * d'y déposer son rendu. Le contour est calculé une seule fois, ici, avec le projecteur de la
  * scène — §3.3 interdit qu'un second code de projection existe quelque part.
  */
@@ -775,7 +775,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     dessineHaloHorizon(ctx, brut, entree.matriceCiel, entree.sbCiel)
     if (entree.lune !== undefined) dessineHaloLune(ctx, brut, entree.sbCiel, entree.lune)
   }
-  // §3.7 — la bande appartient au fond : elle passe sous l'aperçu incrusté de §9.5 comme
+  // §3.7 — la bande appartient au fond : elle passe sous l'aperçu de §9.5 comme
   // sous les repères. Peinte plus tard, elle laverait la prévisualisation qu'elle recouvre.
   // Elle est tracée au projecteur BRUT, puis recouverte par le sol : filtrée, un trait de
   // cinq degrés de large s'interromprait un pas d'azimut trop tôt et laisserait une encoche

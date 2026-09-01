@@ -12,10 +12,10 @@ import { libelleZpSource, type PointZeroSysteme } from '../data/equipment.ts'
 import type { ModeProjection } from '../core/projection.ts'
 import type { ActionsScene } from './scene-etat.ts'
 import {
-  activeIncrustation,
   DUREE_APERCU_CHAMP_MIN,
   majFile,
   modeApercu,
+  type ModeInterface,
   type ReglagesFile,
   type RenduFile,
 } from './seance-etat.ts'
@@ -37,12 +37,21 @@ interface CadrageProps {
   readonly lectures: LecturesFile
   readonly file: ReglagesFile
   readonly fovLDeg: number
-  readonly mode: ModeProjection
+  readonly modeObjectif: ModeProjection
+  /** T-0179 — la portée de l'aperçu ne se coche plus : elle suit le mode de l'interface. */
+  readonly mode: ModeInterface
   readonly actions: ActionsScene
 }
 
-/** Ce que le boîtier vise, et les bascules qui décident de ce qu'on incruste dedans. */
-export function CadrageDuFile({ lectures, file, fovLDeg, mode, actions }: CadrageProps) {
+/** Ce que le boîtier vise, et l'écart entre ce que la scène montre et ce que le capteur voit. */
+export function CadrageDuFile({
+  lectures,
+  file,
+  fovLDeg,
+  modeObjectif,
+  mode,
+  actions,
+}: CadrageProps) {
   return (
     <section>
       <h2>Grand champ et filé</h2>
@@ -52,21 +61,13 @@ export function CadrageDuFile({ lectures, file, fovLDeg, mode, actions }: Cadrag
       </p>
 
       <div className="champs">
-        <label className="interrupteur">
-          <input
-            type="checkbox"
-            checked={file.incrustation}
-            onChange={(e) => activeIncrustation(e.target.checked)}
-          />
-          Peindre le filé sur toute la scène
-        </label>
         {/* Azimut, hauteur et rotation n'ont pas de curseur ici : le pointage se fait à la
             scène, en faisant glisser le planétarium, et la rotation se règle au panneau Vue
             ou avec Maj + glisser. Ce panneau les lit, il ne les commande pas — la visée
             courante se lit au centre de la barre basse (§11.1). */}
       </div>
 
-      {file.incrustation && (
+      {mode === 'PANORAMA' && (
         <>
           <p className="etat">
             Le temps de la scène est figé : un filé est une composition fixe, la vue animée
@@ -75,7 +76,7 @@ export function CadrageDuFile({ lectures, file, fovLDeg, mode, actions }: Cadrag
           {lectures.mentionProj !== null && (
             <>
               <p className="cause">{lectures.mentionProj}</p>
-              <button type="button" onClick={() => actions.majVue({ mode, fovDeg: fovLDeg })}>
+              <button type="button" onClick={() => actions.majVue({ mode: modeObjectif, fovDeg: fovLDeg })}>
                 Voir comme l’objectif
               </button>
             </>

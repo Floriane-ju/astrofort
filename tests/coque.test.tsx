@@ -3,7 +3,7 @@
  *
  * Ce qui est vérifié ici n'est pas une apparence, c'est la structure : les cinq régions
  * existent, un seul contenu de panneau est monté à la fois, une carte repliée ne monte pas
- * son corps, un objet cliqué dans la scène déplie sa fiche, l'incrustation du filé fige le
+ * son corps, un objet cliqué dans la scène déplie sa fiche, le mode Panorama fige le
  * temps, et le plan de session reste imprimable panneau fermé.
  *
  * Le rendu statique suffit : chaque bascule d'écran passe par un magasin de module, appelable
@@ -29,7 +29,7 @@ import { MenuReglages } from '../src/ui/MenuReglages.tsx'
 import { poidsParDefaut } from '../src/core/session.ts'
 import { DOMAINES } from '../src/registry/domains.ts'
 import {
-  activeIncrustation,
+  poseMode,
   etatSeance,
   ouvreCible,
   publicateurRenduFile,
@@ -271,18 +271,22 @@ describe('§3.4 — un objet cliqué ouvre sa fiche', () => {
   })
 })
 
-describe('§9.3 — l’incrustation fige le temps', () => {
-  it('bascule la scène en temps figé quand l’incrustation est activée', () => {
+describe('§9.3 — le mode Panorama fige le temps', () => {
+  it('démarre en Ciel profond', () => {
+    expect(etatSeance().mode).toBe('CIEL_PROFOND')
+  })
+
+  it('bascule la scène en temps figé au passage en Panorama', () => {
     expect(etatScene().temps.modeTemps).toBe('MAINTENANT')
-    activeIncrustation(true)
-    expect(etatSeance().file.incrustation).toBe(true)
+    poseMode('PANORAMA')
+    expect(etatSeance().mode).toBe('PANORAMA')
     expect(etatScene().temps.modeTemps).toBe('FIGE')
   })
 
-  it('ne redémarre pas le temps toute seule quand on la désactive', () => {
-    activeIncrustation(true)
-    activeIncrustation(false)
-    expect(etatSeance().file.incrustation).toBe(false)
+  it('ne redémarre pas le temps tout seul au retour en Ciel profond', () => {
+    poseMode('PANORAMA')
+    poseMode('CIEL_PROFOND')
+    expect(etatSeance().mode).toBe('CIEL_PROFOND')
     // Rendre le temps à l'horloge système est un geste, pas un effet de bord (§3.2).
     expect(etatScene().temps.modeTemps).toBe('FIGE')
   })

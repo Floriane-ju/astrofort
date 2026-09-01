@@ -1,5 +1,5 @@
 /**
- * §9.3 — Ce que la passe de filé tient des réglages, publié pour la boucle de rendu.
+ * §9.3 — Ce que la passe de filé du mode Panorama tient des réglages, publié pour la boucle.
  *
  * T-0116 — il n'y a plus d'image à peindre ici. La passe se dessine dans la boucle, image par
  * image, avec le projecteur de la scène : ce module ne fournit plus que la part des paramètres
@@ -16,7 +16,12 @@ import { semisGeneratif } from '../data/semis.ts'
 import { magnitudeLimitePrevisu } from '../core/galactique.ts'
 import { construitIndex, type IndexCiel } from '../core/index-ciel.ts'
 import type { Etoile } from '../data/catalog.ts'
-import { dureeApercuMin, modeApercu, type ReglagesFile } from './seance-etat.ts'
+import {
+  dureeApercuMin,
+  modeApercu,
+  type ModeInterface,
+  type ReglagesFile,
+} from './seance-etat.ts'
 import type { ParametresFile } from './dessine-champ.ts'
 import type { MaterielFile } from './planetarium-materiel.ts'
 
@@ -24,6 +29,7 @@ const S_PAR_MIN = 60
 
 export interface EntreeParametresFile {
   readonly etoiles: readonly Etoile[]
+  readonly mode: ModeInterface
   readonly file: ReglagesFile
   readonly materiel: MaterielFile | undefined
 }
@@ -40,7 +46,7 @@ export function useIndexReel(etoiles: readonly Etoile[]): IndexCiel {
 }
 
 /**
- * Les paramètres de la passe de filé, ou `null` quand elle est éteinte. La référence est lue
+ * Les paramètres de la passe de filé, ou `null` hors Panorama. La référence est lue
  * par la boucle de rendu : c'est elle qui appelle `dessineChamp` avec la vue de l'image.
  */
 export function useParametresFile(
@@ -51,7 +57,7 @@ export function useParametresFile(
   const parametres = useRef<ParametresFile | null>(null)
   const indexSemis = useRef<IndexCiel | null>(null)
 
-  if (!file.incrustation || materiel === undefined) {
+  if (entree.mode !== 'PANORAMA' || materiel === undefined) {
     parametres.current = null
     return parametres
   }

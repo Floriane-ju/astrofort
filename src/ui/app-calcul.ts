@@ -235,9 +235,9 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
   /**
    * Ce que la scène doit savoir du filé pour l'incruster dans le cadre.
    *
-   * Mémoïsée, et pas assemblée dans le JSX : l'incrustation republie ses compteurs de rendu
+   * Mémoïsée, et pas assemblée dans le JSX : la passe de filé republie ses compteurs de rendu
    * dans le magasin de séance, ce qui rend l'application. Une identité neuve à chaque rendu
-   * relancerait donc l'incrustation, qui republierait, sans fin.
+   * relancerait donc la passe, qui republierait, sans fin.
    */
   const materielFile = useMemo(() => {
     if (!calcul.ok || !ciel.ok || profondeurFile === null) return null

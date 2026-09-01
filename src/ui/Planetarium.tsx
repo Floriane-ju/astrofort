@@ -1,6 +1,6 @@
 /**
  * §3 — La scène : pipeline à deux horloges, moteur unifié, trois couches de tracés,
- * superposition du cadre matériel et incrustation du filé de §9 dans ce cadre.
+ * superposition du cadre matériel et aperçu du filé de §9 peint dans ce cadre.
  *
  * Ce n'est pas une vue décorative : c'est le point d'entrée vers les moteurs. Un clic sur un
  * objet du ciel profond ouvre l'onglet Cible garni (§6.2 / §6.3 / §7), et le cadre superposé
@@ -10,10 +10,10 @@
  * hauteur d'œil de l'image qu'ils modifient. Depuis T-0038 elle ne porte plus non plus ses
  * lectures ; depuis T-0153 il n'en reste qu'une, la phrase qui date l'image, au centre de la
  * barre basse. Ce composant publie dans le magasin de scène ce qu'il est seul à savoir —
- * l'objet cliqué, l'attente d'une incrustation.
+ * l'objet cliqué, l'attente d'une passe de filé.
  *
  * Ne reste ici que le canevas et l'assemblage : la boucle de rendu est dans
- * `planetarium-boucle.ts`, l'incrustation du filé dans `planetarium-incrustation.ts`, les
+ * `planetarium-boucle.ts`, l'aperçu du filé dans `planetarium-panorama.ts`, les
  * gestes dans `planetarium-gestes.ts`.
  */
 
@@ -38,7 +38,7 @@ import { positionCorps, type Site } from '../core/ephem.ts'
 import type { MasqueHorizon } from '../core/site.ts'
 import type { SurvolEcran } from './dessine-ciel.ts'
 import { useBoucleRendu, type EtatBoucle } from './planetarium-boucle.ts'
-import { useParametresFile } from './planetarium-incrustation.ts'
+import { useParametresFile } from './planetarium-panorama.ts'
 import {
   RACCOURCIS_CLAVIER,
   useGestesZoom,
@@ -125,7 +125,7 @@ export function Planetarium(props: PlanetariumProps) {
   // Pointage, temps et couches sont ceux de la scène, réglés depuis le panneau droit.
   const { vue: pointage, temps, rendu, msAffiche, instant, actions } = useScene()
   const { fovDeg, largeurPx, hauteurPx } = pointage
-  const { file } = useSeance()
+  const { file, mode } = useSeance()
 
   const figures = useMemo(() => coucheFigures(props.constellations.figures), [props.constellations])
   const asterismes = useMemo(
@@ -231,6 +231,7 @@ export function Planetarium(props: PlanetariumProps) {
   // ce qu'il tient du matériel et du panneau. La vue, le fond et le pôle viennent de l'image.
   const parametresFile = useParametresFile({
     etoiles: props.etoiles,
+    mode,
     file,
     materiel: props.file,
   })
