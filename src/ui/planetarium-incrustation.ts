@@ -16,7 +16,7 @@ import { semisGeneratif } from '../data/semis.ts'
 import { magnitudeLimitePrevisu } from '../core/galactique.ts'
 import { construitIndex, type IndexCiel } from '../core/index-ciel.ts'
 import type { Etoile } from '../data/catalog.ts'
-import type { ReglagesFile } from './seance-etat.ts'
+import { dureeApercuMin, modeApercu, type ReglagesFile } from './seance-etat.ts'
 import type { ParametresFile } from './dessine-champ.ts'
 import type { MaterielFile } from './planetarium-materiel.ts'
 
@@ -55,6 +55,7 @@ export function useParametresFile(
     parametres.current = null
     return parametres
   }
+  const apercu = modeApercu(file)
   // Le semis n'est construit qu'à la première passe : sans elle, il ne sert à rien.
   indexSemis.current ??= construitIndex(semisGeneratif())
   parametres.current = {
@@ -65,9 +66,8 @@ export function useParametresFile(
     echApx: materiel.echApx,
     // Un filé se fait sans suivi par construction : la bascule ne vaut que pour l'aperçu
     // de champ, où une monture qui suit rend les étoiles ponctuelles.
-    suiviActif: file.apercu === 'CHAMP' && materiel.tMaxSuiviS !== null,
-    dureeS:
-      file.apercu === 'FILE' ? file.dureeTotaleMin * S_PAR_MIN : materiel.profondeur.tPoseS,
+    suiviActif: apercu === 'CHAMP' && materiel.tMaxSuiviS !== null,
+    dureeS: dureeApercuMin(file) * S_PAR_MIN,
     // T-0119 — deux plafonds, deux portées. La LISIBILITÉ ne concerne que le filé : l'aperçu de
     // champ montre des points, qui ne se recouvrent pas et dont aucune longueur ne se lit. Le
     // COÛT concerne les deux : l'aperçu de champ lisait le catalogue à pleine profondeur, soit
@@ -76,7 +76,7 @@ export function useParametresFile(
     // Ce que T-0118 exigeait tient dans les deux cas : aucun des deux plafonds ne dépend du
     // geste. Ils suivent le champ et la durée, donc ils bougent au zoom comme le champ lui-même,
     // jamais sous un panoramique.
-    couvertureMax: file.apercu === 'FILE' ? K('COUVERTURE_TRACES_MAX') : null,
+    couvertureMax: apercu === 'FILE' ? K('COUVERTURE_TRACES_MAX') : null,
     effectifMax: K('EFFECTIF_CIEL_MAX_APERCU'),
   }
   return parametres

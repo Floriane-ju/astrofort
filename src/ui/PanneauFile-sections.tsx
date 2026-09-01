@@ -10,7 +10,13 @@ import { vignettageDiaph } from '../core/galactique.ts'
 import { libelleZpSource, type PointZeroSysteme } from '../data/equipment.ts'
 import type { ModeProjection } from '../core/projection.ts'
 import type { ActionsScene } from './scene-etat.ts'
-import { activeIncrustation, majFile, type ModeApercu, type ReglagesFile, type RenduFile } from './seance-etat.ts'
+import {
+  activeIncrustation,
+  majFile,
+  modeApercu,
+  type ReglagesFile,
+  type RenduFile,
+} from './seance-etat.ts'
 import { MENTION_PLAFOND_CHAMP, MENTION_PLAFOND_FILE } from './scene-overlay.ts'
 import { Curseur } from './Curseur.tsx'
 import { TracedValue } from './TracedValue.tsx'
@@ -40,7 +46,7 @@ export function CadrageDuFile({ lectures, file, fovLDeg, mode, actions }: Cadrag
       <h2>Grand champ et filé</h2>
 
       <p className="etat">
-        {file.apercu === 'FILE' ? MENTION_PLAFOND_FILE : MENTION_PLAFOND_CHAMP}
+        {modeApercu(file) === 'FILE' ? MENTION_PLAFOND_FILE : MENTION_PLAFOND_CHAMP}
       </p>
 
       <div className="champs">
@@ -51,16 +57,6 @@ export function CadrageDuFile({ lectures, file, fovLDeg, mode, actions }: Cadrag
             onChange={(e) => activeIncrustation(e.target.checked)}
           />
           Peindre le filé sur toute la scène
-        </label>
-        <label>
-          Aperçu
-          <select
-            value={file.apercu}
-            onChange={(e) => majFile({ apercu: e.target.value as ModeApercu })}
-          >
-            <option value="CHAMP">Champ à étoiles fixes — une pose</option>
-            <option value="FILE">Filé — durée totale accumulée</option>
-          </select>
         </label>
         {/* Azimut, hauteur et rotation n'ont pas de curseur ici : le pointage se fait à la
             scène, en faisant glisser le planétarium, et la rotation se règle au panneau Vue
@@ -247,7 +243,7 @@ export function ArcsDuFile({
           <Curseur
             libelle="Durée du filé"
             valeur={file.dureeTotaleMin}
-            min={5}
+            min={0}
             max={480}
             pas={5}
             texte={`${file.dureeTotaleMin.toFixed(0)} min`}
@@ -257,7 +253,7 @@ export function ArcsDuFile({
       </div>
       <p className="etat">
         durée dessinée dans le cadre :{' '}
-        {file.apercu === 'FILE'
+        {modeApercu(file) === 'FILE'
           ? `${(file.dureeTotaleMin * S_PAR_MIN).toFixed(0)} s accumulées`
           : `${file.tPoseS.toFixed(0)} s de pose unitaire`}
       </p>

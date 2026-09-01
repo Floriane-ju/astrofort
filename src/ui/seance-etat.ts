@@ -18,12 +18,13 @@ import type { ObjetCielProfond } from '../data/deepsky.ts'
 import { ouvreCarte } from './coque-etat.ts'
 import { majTemps } from './scene-etat.ts'
 
+const S_PAR_MIN = 60
+
 /** §9.2 aperçu d'une pose, §9.3 filé d'une durée accumulée : même moteur, durée différente. */
 export type ModeApercu = 'CHAMP' | 'FILE'
 
 /** Réglages de §9.2 à §9.4. Ils pilotent le panneau ET l'incrustation dans le cadre. */
 export interface ReglagesFile {
-  readonly apercu: ModeApercu
   readonly tPoseS: number
   readonly dureeTotaleMin: number
   readonly intervalleS: number
@@ -53,7 +54,6 @@ export interface EtatSeance {
 const ETAT_INITIAL: EtatSeance = {
   cible: null,
   file: {
-    apercu: 'CHAMP',
     tPoseS: K('T_POSE_FILE_MAX_S'),
     dureeTotaleMin: K('DUREE_FILE_SPECTACULAIRE_MIN'),
     intervalleS: K('INTERVALLE_INTER_POSE_FILE_MAX_S'),
@@ -93,6 +93,25 @@ function pose(suivant: EtatSeance): void {
 export function ouvreCible(cible: ObjetCielProfond): void {
   pose({ ...etat, cible })
   ouvreCarte('CIBLE')
+}
+
+/**
+ * Le mode d'aperçu se DÉDUIT de la durée d'accumulation, il ne se choisit pas : une durée nulle
+ * ne décrit qu'une photo, une durée non nulle décrit des poses qu'on additionne. Un menu à côté
+ * du curseur pouvait contredire le curseur — deux commandes pour une seule intention.
+ */
+export function modeApercu(file: ReglagesFile): ModeApercu {
+  return file.dureeTotaleMin > 0 ? 'FILE' : 'CHAMP'
+}
+
+/**
+ * La durée que l'aperçu accumule, en minutes — une seule source pour la passe qui la peint et
+ * pour le diagnostic qui la chiffre. Une photo unique n'accumule pas rien : elle accumule sa
+ * pose, et ses étoiles portent l'arc de cette pose. Les lire à zéro annonçait un ciel figé que
+ * le cadre ne montre pas.
+ */
+export function dureeApercuMin(file: ReglagesFile): number {
+  return modeApercu(file) === 'FILE' ? file.dureeTotaleMin : file.tPoseS / S_PAR_MIN
 }
 
 export function majFile(retouche: Partial<ReglagesFile>): void {

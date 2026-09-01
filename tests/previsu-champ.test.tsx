@@ -31,11 +31,12 @@ import { dessineChamp, type EntreeDessinChamp } from '../src/ui/dessine-champ.ts
 import { pointZeroSysteme } from '../src/data/equipment.ts'
 import { PanneauFile, type PanneauFileProps } from '../src/ui/PanneauFile.tsx'
 import { MENTION_PLAFOND_CHAMP, MENTION_PLAFOND_FILE } from '../src/ui/scene-overlay.ts'
-import { majFile, reinitialiseSeance } from '../src/ui/seance-etat.ts'
+import { dureeApercuMin, etatSeance, majFile, reinitialiseSeance } from '../src/ui/seance-etat.ts'
 import { K } from '../src/registry/constants.ts'
 
 const SITE: Site = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
 const DATE = new Date('2026-08-15T22:00:00Z')
+const SECONDES_PAR_MINUTE = 60
 const LARGEUR = 800
 const HAUTEUR = 600
 const AXE_POLE = axePoleDeDate(epoqueAnnee(DATE))
@@ -463,12 +464,28 @@ describe('§9.3 — T-0119, le filé plafonne la surface peinte', () => {
       // Les deux aperçus sont plafonnés, pour deux raisons : un plafond muet se lit comme un ciel
       // pauvre, donc comme un bug de rendu. Mais la raison n'est pas la même, donc la phrase non
       // plus — lisibilité pour le filé, coût de lecture pour l'aperçu de champ.
-      majFile({ apercu: 'CHAMP' })
+      majFile({ dureeTotaleMin: 0 })
       expect(html()).toContain(MENTION_PLAFOND_CHAMP)
       expect(html()).not.toContain(MENTION_PLAFOND_FILE)
-      majFile({ apercu: 'FILE' })
+      majFile({ dureeTotaleMin: K('DUREE_FILE_SPECTACULAIRE_MIN') })
       expect(html()).toContain(MENTION_PLAFOND_FILE)
       expect(html()).not.toContain(MENTION_PLAFOND_CHAMP)
+    } finally {
+      reinitialiseSeance()
+    }
+  })
+
+  it('accumule la pose unitaire quand la durée du filé est nulle', () => {
+    try {
+      // Le mode ne se choisit plus : la durée le décide. Et une photo unique n'accumule pas
+      // rien — elle accumule sa pose, donc l'arc lu au panneau est celui de cette pose, pas
+      // zéro. Le peintre et le diagnostic lisent cette même durée.
+      majFile({ dureeTotaleMin: 0 })
+      const { file } = etatSeance()
+      expect(dureeApercuMin(file) * SECONDES_PAR_MINUTE).toBeCloseTo(file.tPoseS, 9)
+
+      majFile({ dureeTotaleMin: K('DUREE_FILE_SPECTACULAIRE_MIN') })
+      expect(dureeApercuMin(etatSeance().file)).toBe(K('DUREE_FILE_SPECTACULAIRE_MIN'))
     } finally {
       reinitialiseSeance()
     }

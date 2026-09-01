@@ -15,7 +15,7 @@ import type { PointZeroSysteme } from '../data/equipment.ts'
 import type { ModeProjection } from '../core/projection.ts'
 import type { Site } from '../core/ephem.ts'
 import { useScene } from './scene-etat.ts'
-import { useSeance } from './seance-etat.ts'
+import { modeApercu, useSeance } from './seance-etat.ts'
 import { useLecturesFile } from './panneau-file-lectures.ts'
 import {
   ArcsDuFile,
@@ -69,7 +69,9 @@ export function PanneauFile(props: PanneauFileProps) {
         zeroSysteme={props.zeroSysteme}
       />
       <ArcsDuFile lectures={lectures} file={file} />
-      <SequenceDePrises lectures={lectures} file={file} />
+      {/* Une durée d'accumulation nulle ne décrit qu'une photo : il n'y a pas de séquence à
+          cadencer, et les compteurs de §9.4 y annonceraient zéro pose. */}
+      {modeApercu(file) === 'FILE' && <SequenceDePrises lectures={lectures} file={file} />}
     </>
   )
 }
