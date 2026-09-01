@@ -3637,9 +3637,9 @@ Aucune. Fallback : total.
 
 ---
 
-## 11.3 Feature — Coque : la scène au centre, les réglages sur les côtés
+## 11.3 Feature — Coque : la scène occupe l'écran, le mode commande le reste
 
-**Feature** — Disposition d'ensemble de l'application : une scène centrale qui ne bouge jamais, le matériel à gauche, l'intention à droite, les gestes de terrain dans la barre haute. Persona : tous. C'est ce qui rend l'effet d'un réglage immédiatement visible.
+**Feature** — Disposition d'ensemble de l'application : une scène qui prend toute la surface, les réglages posés dessus en cartes déplaçables, un panneau latéral toujours ouvert dont le contenu suit le mode courant, et les gestes de terrain dans les deux barres. Persona : tous. C'est ce qui rend l'effet d'un réglage immédiatement visible.
 
 ### Règle métier
 
@@ -3648,19 +3648,54 @@ PRINCIPE — l'application est un planétarium, elle doit se lire comme un plan�
   Une pile de sections dans une colonne unique oblige à faire défiler pour voir l'effet
   d'un changement de focale sur un cadre. Le geste et sa conséquence doivent tenir dans
   le même écran, sans défilement — sinon l'utilisateur ne relie pas les deux.
+  Trois colonnes ne tenaient la promesse qu'à moitié : deux panneaux latéraux laissaient
+  à la scène la moitié de la fenêtre, et un cadre de 0,8° se jugeait dans ce qui restait.
+  La scène prend donc TOUTE la surface, et ce qui la commande se pose dessus.
 
-QUATRE RÉGIONS, ET LA COQUE N'EN CONNAÎT AUCUN CONTENU
-  BARRE HAUTE   identité, niveau d'explication, gestes de terrain
-  GAUCHE        le matériel et ce qu'il donne (§5)
-  CENTRE        la scène. ELLE NE DÉFILE PAS, et sa taille ne dépend pas de la
-                longueur des lectures affichées ailleurs.
-  DROITE        la séance : où, quand, sous quel ciel, puis l'intention
+LE MODE EST L'ÉTAT DE PREMIER RANG — et il est le seul de ce rang
+  CIEL PROFOND (défaut)  planétarium complet, temps libre
+  PANORAMA               l'aperçu de §9.5 peint sur toute la scène, temps figé, repérage
+                         réduit à ses quatre survivants
+  Le mode commande DEUX choses à la fois : ce que la scène peint (§9.5) et ce que le
+  panneau latéral porte. Un état de cette portée ne se règle pas dans une case à cocher
+  de troisième niveau — il se bascule depuis la barre haute, d'un seul geste.
+  Il n'existe aucun autre commutateur de ce rang, et aucun choix de panneau à faire.
 
-ORDRE DES GESTES DANS LA BARRE — c'est un contrat, pas une mise en page
-  1. mode nuit      : il se cherche dans le noir, il vient donc en premier
-  2. vérification   : l'état des paquets, du stockage et du réseau (§12.1, §12.3)
-  3. réglages       : ce qui sort du chemin principal, et dernier élément — donc le
-                      plus à droite, et SANS HAUTEUR tant qu'il est fermé
+CINQ RÉGIONS, ET LA COQUE N'EN CONNAÎT AUCUN CONTENU
+  BARRE HAUTE  identité, lecture du matériel, bascule de mode, gestes de terrain
+  SCÈNE        toute la surface. ELLE NE DÉFILE PAS, et sa taille ne dépend pas de la
+               longueur des lectures affichées ailleurs.
+  CARTES       posées SUR la scène : ce qui se règle ou se consulte en la regardant
+  PANNEAU      à droite, à demeure : ce qui se lit en longueur, selon le mode
+  BARRE BASSE  le lieu, la visée, le transport du temps
+  L'ordre du DOM est l'ordre de tabulation, et il suit la lecture, pas la position à
+  l'écran : barre haute, scène, cartes, panneau, barre basse.
+
+LE PANNEAU LATÉRAL EST TOUJOURS OUVERT — dans les deux modes
+  Il ne se ferme pas : ce qu'il porte est ce que le mode courant demande de lire, et une
+  région dont le mode décide le rôle n'a pas à être ouverte à la main.
+  EN CIEL PROFOND, deux états : la LISTE des cibles, et la FICHE de la cible désignée qui
+  prend sa place. Un geste de retour rend la liste. Un clic sur un objet de la scène ouvre
+  la fiche : le contrat de §3.4 est tenu par le panneau, plus par une carte — la fiche est
+  une lecture longue, elle ne tient pas dans un conteneur étroit posé sur le ciel qu'on
+  vient justement de désigner.
+  EN PANORAMA, un seul état : les réglages du panorama.
+
+LES CARTES — Matériel, Vue, Plan de nuit
+  Déplaçables, repliables, non persistées : leur position est un confort de séance, pas un
+  réglage. Elles portent ce qui se règle en regardant la scène — matériel, vue — et ce qui
+  se consulte en la regardant : on vérifie l'heure du prochain créneau sans quitter le ciel
+  des yeux. Repliée, une carte ne monte pas son corps — c'est ce qui garantit que rien
+  d'invisible ne se recalcule.
+
+ORDRE DES GESTES DANS LA BARRE HAUTE — c'est un contrat, pas une mise en page
+  1. mode nuit       : il se cherche dans le noir, il vient donc en premier
+  2. bascule de mode : l'état le plus lourd de l'écran ne se cherche pas dans un coin —
+                       elle occupe le centre de la barre, et son centrage ne dépend pas
+                       de la longueur de ce qui la précède
+  3. un seul menu    : vérification (§12.1, §12.3) puis réglages — ce qui sort du chemin
+                       principal, dernier élément, donc le plus à droite, et SANS HAUTEUR
+                       tant qu'il est fermé
   Un menu fermé qui porte une alerte le signale sur lui-même : sinon l'information
   n'existe que pour qui pense à ouvrir le menu.
 
@@ -3677,40 +3712,42 @@ UNE SEULE LECTURE PERMANENTE — au centre de la barre basse
   diagnostic de rendu — n'est PAS affiché : ce sont des lectures d'atelier, et aucune
   des personas de §1 ne mesure le rendu.
 
-ONGLETS D'INTENTION — un seul jeu de réglages à l'écran à la fois
-  Explorer · Cible · Nuit · Panorama. Un clic sur un objet de la scène ouvre l'onglet Cible
-  garni : le geste part de la scène et arrive dans le panneau, l'état de l'onglet est
-  donc partagé, pas local au panneau.
-  Le groupe « Séance » — lieu, date, ciel — reste visible SOUS TOUS LES ONGLETS : ces
-  champs commandent tout le reste, les masquer obligerait à y revenir sans cesse.
-
-LE PLAN DE SESSION ÉCHAPPE AUX ONGLETS
-  Il est rendu en permanence, masqué à l'écran hors de l'onglet Nuit, et reste la seule
-  région imprimable (§11.2). Sans cela, imprimer depuis un autre onglet sortirait une
-  page blanche.
+LE PLAN DE SESSION EST RENDU EN PERMANENCE
+  Il reste la SEULE région imprimable (§11.2), y compris carte repliée et y compris en mode
+  Panorama. Un plan démonté sortirait une page blanche ; un second exemplaire monté ailleurs
+  doublerait son export et son étiquette accessible. Il y en a donc UN seul, toujours dans
+  le document, masqué et non démonté quand sa carte est repliée — c'est l'exception explicite
+  à la règle de démontage ci-dessus, et la seule.
 
 REPLI EN UNE COLONNE — sous une largeur seuil
-  Les deux panneaux latéraux redeviennent des accordéons repliables sous la scène. Ils
-  sont portés par l'élément natif dépliable, dont l'état est dans le document : aucune
-  détection de largeur en JavaScript, donc aucun écart entre la mise en page et l'état
-  réel des panneaux.
+  Les cartes et le panneau quittent la scène et se dépilent sous elle dans le flux vertical ;
+  la scène redevient une image en 16/9. Un écran étroit n'a pas la place d'une carte
+  déplaçable, et le déplacement n'ouvre l'accès à aucune fonction : il n'y a rien à remplacer.
+  Le repli est porté par la seule feuille de style — aucune détection de largeur en
+  JavaScript, donc aucun écart entre la mise en page et l'état réel des régions.
 ```
 
 ### Entrées / Sorties
 
 | Champ | Type | Unité | Plage valide | Note |
 |---|---|---|---|---|
-| `onglet_actif` | enum | — | EXPLORER / CIBLE / NUIT / FILE | état partagé avec la scène |
-| `menus_ouverts` | set | — | nuit / vérification / réglages | |
-| `alerte_menu` | bool | — | par menu | signalée sur le menu fermé |
+| `mode` | enum | — | CIEL_PROFOND / PANORAMA | état de premier rang, partagé avec la scène |
+| `panneau_etat` | enum | — | LISTE / FICHE | Ciel profond seulement ; le retour rend LISTE |
+| `cartes_repliees` | set | — | matériel / vue / plan | non persisté |
+| `menu_ouvert` | bool | — | — | menu unique de la barre haute |
+| `alerte_menu` | bool | — | — | signalée sur le menu fermé |
 
 ### Critères d'acceptation
 
 ```gherkin
 Étant donné l'application ouverte au-dessus de la largeur seuil
-Quand je change la focale au panneau gauche
+Quand je change la focale à la carte Matériel
 Alors le cadre de la scène change sans aucun défilement
 Et la scène n'a pas changé de taille
+
+Étant donné l'application au premier démarrage
+Quand elle s'affiche
+Alors le mode est Ciel profond et le panneau latéral porte la liste des cibles
 
 Étant donné l'application ouverte
 Quand je regarde la barre basse
@@ -3723,18 +3760,24 @@ Alors c'est la phrase de visée qui se rogne, pas le transport du temps
 
 Étant donné un clic sur un objet du ciel profond dans la scène
 Quand la fiche s'ouvre
-Alors l'onglet Cible est activé et garni de cet objet
+Alors elle prend la place de la liste dans le panneau latéral, garnie de cet objet
+Et un geste de retour rend la liste
 
-Étant donné l'onglet Panorama actif et un plan de session produit
+Étant donné le mode Panorama
+Quand je regarde le panneau latéral
+Alors il est ouvert et porte les réglages du panorama
+Et aucun geste ne permet de le fermer
+
+Étant donné le mode Panorama, un plan de session produit et sa carte repliée  # cas limite
 Quand je lance l'impression
 Alors le plan de session est imprimé, pas une page blanche
 
 Étant donné une largeur d'écran sous le seuil de repli              # cas limite
 Quand j'affiche l'application
-Alors la grille passe à une colonne et les panneaux deviennent des accordéons
+Alors les cartes et le panneau se dépilent sous la scène dans le flux vertical
 Et la scène reste au-dessus d'eux
 
-Étant donné une alerte de vérification et le menu correspondant fermé  # cas limite
+Étant donné une alerte de vérification et le menu de la barre haute fermé  # cas limite
 Quand je regarde la barre haute
 Alors le menu fermé porte le signalement
 ```
