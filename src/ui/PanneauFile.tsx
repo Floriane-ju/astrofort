@@ -58,7 +58,6 @@ export function PanneauFile(props: PanneauFileProps) {
         lectures={lectures}
         file={file}
         fovLDeg={props.fovLDeg}
-        rotationDeg={vue.rotationCadreDeg}
         mode={props.modeObjectif}
         actions={actions}
       />

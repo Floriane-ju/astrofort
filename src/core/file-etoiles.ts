@@ -40,15 +40,6 @@ export interface PositionPole {
   readonly yPx: number | null
   readonly altitudeDeg: number
   readonly azimutDeg: number
-  readonly distanceCentreDeg: number
-  /** Direction dans l'image, en degrés depuis le haut du cadre, sens horaire. */
-  readonly directionDeg: number | null
-  readonly message: string
-}
-
-function angleImageDeg(dxPx: number, dyPx: number): number {
-  const brut = Math.atan2(dxPx, -dyPx) / DEG
-  return ((brut % 360) + 360) % 360
 }
 
 /**
@@ -66,8 +57,6 @@ export function positionPole(
     : { x: -axePoleNord.x, y: -axePoleNord.y, z: -axePoleNord.z }
   const largeur = projecteur.vue.largeurPx
   const hauteur = projecteur.vue.hauteurPx
-  const centreX = largeur / 2
-  const centreY = hauteur / 2
   const point = projecteur.projette(pole)
   const dansCadre =
     point !== null &&
@@ -76,43 +65,12 @@ export function positionPole(
     point.xPx <= largeur &&
     point.yPx <= hauteur
 
-  const visee = projecteur.inverse(centreX, centreY)
-  const distanceCentreDeg = separationDeg(visee, pole)
-
-  // Direction du pôle dans l'image, prise sur un point intermédiaire : elle reste définie
-  // même quand le pôle lui-même n'est pas projetable.
-  let directionDeg: number | null = null
-  if (distanceCentreDeg > 0) {
-    const fraction = Math.min(1, K('PAS_ANGLE_HORAIRE_FILE_DEG') / distanceCentreDeg)
-    const melange: Vec3 = {
-      x: visee.x + (pole.x - visee.x) * fraction,
-      y: visee.y + (pole.y - visee.y) * fraction,
-      z: visee.z + (pole.z - visee.z) * fraction,
-    }
-    const voisin = projecteur.projette(melange)
-    if (voisin !== null) directionDeg = angleImageDeg(voisin.xPx - centreX, voisin.yPx - centreY)
-  }
-
-  const altitudeDeg = Math.abs(latitudeDeg)
-  const azimutDeg = nord ? 0 : DEMI_TOUR
-  const message = dansCadre
-    ? `Centre de rotation dans le cadre, à ${altitudeDeg.toFixed(1)}° de hauteur, azimut ` +
-      `${azimutDeg}° — les arcs sont concentriques autour de ce point et s’allongent avec la ` +
-      'distance au pôle.'
-    : `Pôle hors du cadre : il est à ${distanceCentreDeg.toFixed(1)}° du centre de visée` +
-      `${directionDeg === null ? '' : `, direction ${directionDeg.toFixed(0)}° depuis le haut de l’image`}. ` +
-      'Les arcs restent concentriques autour de ce point situé hors du canevas : l’application ' +
-      'ne le recentre pas, sans quoi le cadrage préparé ici ne serait pas celui obtenu.'
-
   return {
     dansCadre,
     xPx: point?.xPx ?? null,
     yPx: point?.yPx ?? null,
-    altitudeDeg,
-    azimutDeg,
-    distanceCentreDeg,
-    directionDeg,
-    message,
+    altitudeDeg: Math.abs(latitudeDeg),
+    azimutDeg: nord ? 0 : DEMI_TOUR,
   }
 }
 
@@ -680,7 +638,7 @@ export function diagnosticFile(entree: EntreeDiagnosticFile): DiagnosticFile {
   const longueurArcMinDeg = longueurArcDeg(entree.dureeMin, entree.decMaxAbsDeg)
   const fractionHauteurCadre = longueurArcMaxDeg.value / entree.hauteurCadreDeg
 
-  const messages: string[] = [pole.message]
+  const messages: string[] = []
   const pourcent = (fractionHauteurCadre * 100).toFixed(0)
   if (entree.dureeMin < K('DUREE_FILE_LISIBLE_MIN')) {
     messages.push(

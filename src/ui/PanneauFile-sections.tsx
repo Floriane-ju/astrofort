@@ -28,20 +28,12 @@ interface CadrageProps {
   readonly lectures: LecturesFile
   readonly file: ReglagesFile
   readonly fovLDeg: number
-  readonly rotationDeg: number
   readonly mode: ModeProjection
   readonly actions: ActionsScene
 }
 
 /** Ce que le boîtier vise, et les bascules qui décident de ce qu'on incruste dedans. */
-export function CadrageDuFile({
-  lectures,
-  file,
-  fovLDeg,
-  rotationDeg,
-  mode,
-  actions,
-}: CadrageProps) {
+export function CadrageDuFile({ lectures, file, fovLDeg, mode, actions }: CadrageProps) {
   return (
     <section>
       <h2>Grand champ et filé</h2>
@@ -69,20 +61,10 @@ export function CadrageDuFile({
             <option value="FILE">Filé — durée totale accumulée</option>
           </select>
         </label>
-        {/* Azimut et hauteur n'ont pas de curseur ici : le pointage se fait à la scène,
-            en faisant glisser le planétarium. Ce panneau les lit, il ne les commande
-            pas — la visée courante se lit au centre de la barre basse (§11.1). */}
-        <label>
-          Rotation du boîtier : {rotationDeg.toFixed(0)}°
-          <input
-            type="range"
-            min={0}
-            max={360}
-            step={1}
-            value={rotationDeg}
-            onChange={(e) => actions.majVue({ rotationCadreDeg: Number(e.target.value) })}
-          />
-        </label>
+        {/* Azimut, hauteur et rotation n'ont pas de curseur ici : le pointage se fait à la
+            scène, en faisant glisser le planétarium, et la rotation se règle au panneau Vue
+            ou avec Maj + glisser. Ce panneau les lit, il ne les commande pas — la visée
+            courante se lit au centre de la barre basse (§11.1). */}
       </div>
 
       {file.incrustation && (
@@ -290,7 +272,7 @@ export function ArcsDuFile({
   )
 }
 
-/** §9.4 — combien de photos, combien de gigaoctets, et ce que la carte tiendra. */
+/** §9.4 — combien de photos, combien de gigaoctets, et ce qu'il faut avoir désactivé. */
 export function SequenceDePrises({
   lectures,
   file,
@@ -313,30 +295,11 @@ export function SequenceDePrises({
             onChange={(e) => majFile({ intervalleS: Number(e.target.value) })}
           />
         </label>
-        <label>
-          <Etiquette cle="espace_carte" />
-          <input
-            value={file.espaceLibreGo}
-            placeholder="Go libres"
-            onChange={(e) => majFile({ espaceLibreGo: e.target.value })}
-          />
-        </label>
-        <label className="interrupteur">
-          <input
-            type="checkbox"
-            checked={file.reductionBruit}
-            onChange={(e) => majFile({ reductionBruit: e.target.checked })}
-          />
-          Réduction de bruit longue exposition active sur le boîtier
-        </label>
       </div>
 
       {sequence.intervalleRefuse !== null && <p className="erreur">{sequence.intervalleRefuse}</p>}
       <TracedValue terme="n_poses_file" trace={sequence.nPoses} decimales={0} />
       <TracedValue terme="volume_stockage" trace={sequence.volumeGo} decimales={1} unite="Go" />
-      {sequence.interruptionStockage !== null && (
-        <p className="cause">{sequence.interruptionStockage.message}</p>
-      )}
       <ul>
         {sequence.consignesBloquantes.map((consigne) => (
           <li key={consigne}>{consigne}</li>

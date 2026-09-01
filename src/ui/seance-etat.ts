@@ -27,8 +27,6 @@ export interface ReglagesFile {
   readonly tPoseS: number
   readonly dureeTotaleMin: number
   readonly intervalleS: number
-  readonly espaceLibreGo: string
-  readonly reductionBruit: boolean
   /** T-0116 — §9.2/§9.3 peints sur toute la scène, sous les repères, plutôt qu'à part. */
   readonly incrustation: boolean
   /** T-0142 — §9.1 peinte DANS le cadre du capteur, qu'elle masque, plutôt qu'au panneau. */
@@ -59,8 +57,6 @@ const ETAT_INITIAL: EtatSeance = {
     tPoseS: K('T_POSE_FILE_MAX_S'),
     dureeTotaleMin: K('DUREE_FILE_SPECTACULAIRE_MIN'),
     intervalleS: K('INTERVALLE_INTER_POSE_FILE_MAX_S'),
-    espaceLibreGo: '',
-    reductionBruit: false,
     incrustation: false,
     poseDansCadre: false,
   },

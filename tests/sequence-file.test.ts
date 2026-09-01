@@ -2,8 +2,8 @@
  * §9.4 — Logistique de séquence de filé.
  *
  * La séquence type du PRD sert de référence : 2 h à 25 s donnent 276 images et environ
- * 8,9 Go. Le reste du test porte sur les refus — intervalle trop long, carte trop petite —
- * parce que ce sont eux qui évitent une sortie ratée.
+ * 8,9 Go. Le reste du test porte sur ce qui évite une sortie ratée : le refus de l'intervalle
+ * trop long et la consigne de désactivation du dark automatique.
  */
 
 import { describe, expect, it } from 'vitest'
@@ -37,10 +37,9 @@ describe('§9.4 — séquence type du PRD', () => {
     expect(resultat.intervalleRefuse).toBeNull()
   })
 
-  it('chiffre le désastre quand la réduction de bruit reste active', () => {
-    const resultat = sequence({ reductionBruitActive: true })
-    expect(resultat.consignesBloquantes.length).toBe(2)
-    expect(resultat.consignesBloquantes[1]).toMatch(/intervalle effectif/)
+  it('prescrit la désactivation sans condition, quel que soit le réglage déclaré', () => {
+    expect(sequence().consignesBloquantes.length).toBe(1)
+    expect(sequence({ tPoseS: 10 }).consignesBloquantes.length).toBe(1)
   })
 })
 
@@ -76,24 +75,6 @@ describe('§9.4 — rappel batterie', () => {
       ' ',
     )
     expect(rappel).not.toMatch(/CIPA|°C|batteries à emporter/)
-  })
-})
-
-describe('§9.4 — carte pleine', () => {
-  it('annonce l’interruption et l’arc réellement obtenu', () => {
-    // Carte de 32 Go déjà remplie à 28 Go : il reste 4 Go, soit 124 images.
-    const resultat = sequence({ espaceLibreGo: 4 })
-    const interruption = resultat.interruptionStockage
-    expect(interruption).not.toBeNull()
-    expect(interruption!.nPosesTenues).toBe(Math.floor((4 * K('MO_PAR_GO')) / TAILLE_RAW_MO))
-    expect(interruption!.dureeTenueMin).toBeCloseTo((interruption!.nPosesTenues * 26) / 60, 6)
-    // L'arc obtenu est proportionnellement plus court que celui de la durée visée.
-    expect(interruption!.arcObtenuDeg.value).toBeLessThan(resultat.arcObtenuDeg.value)
-    expect(interruption!.message).toMatch(/s’interrompra/)
-  })
-
-  it('ne signale rien quand la carte tient la séquence entière', () => {
-    expect(sequence({ espaceLibreGo: 64 }).interruptionStockage).toBeNull()
   })
 })
 

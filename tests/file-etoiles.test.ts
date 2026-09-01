@@ -75,16 +75,13 @@ describe('§9.3 — centre de rotation', () => {
     expect(pole.azimutDeg).toBe(0)
     expect(pole.xPx).toBeCloseTo(LARGEUR / 2, 0)
     expect(pole.yPx).toBeCloseTo(HAUTEUR / 2, 0)
-    expect(pole.distanceCentreDeg).toBeCloseTo(0, 1)
   })
 
-  it('ne recentre pas le pôle quand il est hors du cadre, et dit où il est', () => {
+  it('ne recentre pas le pôle quand il est hors du cadre', () => {
     const pole = positionPole(proj({ azimutDeg: 180, hauteurDeg: 30 }), SITE.latitudeDeg, AXE_POLE)
     expect(pole.dansCadre).toBe(false)
-    expect(pole.distanceCentreDeg).toBeGreaterThan(90)
-    expect(pole.directionDeg).not.toBeNull()
-    expect(pole.message).toMatch(/hors du cadre/)
-    expect(pole.message).toMatch(/ne le recentre pas/)
+    // Le point projeté reste où la projection le met, hors bornes du canevas comprises.
+    expect(pole.xPx === null || pole.xPx < 0 || pole.xPx > LARGEUR).toBe(true)
   })
 
   it('place le pôle sud sous l’horizon austral pour un site de l’hémisphère sud', () => {

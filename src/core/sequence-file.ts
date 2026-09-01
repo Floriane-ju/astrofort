@@ -8,10 +8,12 @@
  *      dans chaque trace. C'est un défaut irréparable en post-traitement.
  *   2. La réduction de bruit sur longue exposition du boîtier occupe un temps égal à la pose
  *      après chaque image : l'intervalle effectif devient supérieur à la pose, et la séquence
- *      est ruinée. Sa désactivation est une consigne bloquante, pas un conseil.
+ *      est ruinée. Sa désactivation est une consigne bloquante, prescrite sans condition —
+ *      T-0167, la déclarer active ne changeait pas la consigne, elle la rédigeait deux fois.
  *
  * Aucune autonomie de batterie n'est modélisée (T-0150) : seule la durée de prise de vue est
- * connue, et elle sert de rappel, pas de prédiction.
+ * connue, et elle sert de rappel, pas de prédiction. Aucun budget de carte non plus (T-0167) :
+ * le volume nécessaire est calculé, l'espace restant se saisissait à la main.
  */
 
 import { K } from '../registry/constants.ts'
@@ -27,19 +29,8 @@ export interface EntreeSequenceFile {
   readonly tPoseS: number
   readonly intervalleS: number
   readonly tailleRawMo: number
-  /** Espace disponible sur la carte. Absent : aucune interruption n'est annoncée. */
-  readonly espaceLibreGo?: number | null
   /** Déclinaison de la zone visée : elle fixe l'arc obtenu et la longueur d'un trou. */
   readonly decDeg: number
-  /** Réduction de bruit longue exposition déclarée active sur le boîtier. */
-  readonly reductionBruitActive?: boolean
-}
-
-export interface InterruptionStockage {
-  readonly nPosesTenues: number
-  readonly dureeTenueMin: number
-  readonly arcObtenuDeg: Traced<number>
-  readonly message: string
 }
 
 export interface SequenceFile {
@@ -49,7 +40,6 @@ export interface SequenceFile {
   /** Renseigné quand l'intervalle dépasse C-09 : la séquence est refusée, le trou chiffré. */
   readonly intervalleRefuse: string | null
   readonly consignesBloquantes: readonly string[]
-  readonly interruptionStockage: InterruptionStockage | null
   readonly messages: readonly string[]
 }
 
@@ -99,38 +89,11 @@ export function sequenceFile(entree: EntreeSequenceFile): SequenceFile {
         'en post-traitement.'
       : null
 
-  const consignesBloquantes: string[] = [
+  const consignesBloquantes: readonly string[] = [
     'Désactiver la réduction de bruit sur longue exposition du boîtier avant de partir : ' +
       'activée, elle occupe un temps égal à la pose après chaque image, l’intervalle effectif ' +
       'dépasse la pose et les traces sortent pointillées.',
   ]
-  if (entree.reductionBruitActive === true) {
-    consignesBloquantes.push(
-      `Réduction de bruit déclarée active : l’intervalle effectif serait d’au moins ` +
-        `${entree.tPoseS} s au lieu de ${entree.intervalleS} s, soit un trou de ` +
-        `${trouTraceDeg(entree.tPoseS, entree.decDeg).value.toFixed(2)}° dans chaque trace. ` +
-        'La séquence est à refaire entièrement si elle part comme ça.',
-    )
-  }
-
-  let interruptionStockage: InterruptionStockage | null = null
-  const espaceLibre = entree.espaceLibreGo ?? null
-  if (espaceLibre !== null) {
-    const nTenues = Math.floor((espaceLibre * K('MO_PAR_GO')) / entree.tailleRawMo)
-    if (nTenues < nPosesValeur) {
-      const dureeTenueMin = (nTenues * cadenceS) / S_PAR_MIN
-      const arc = longueurArcDeg(dureeTenueMin, entree.decDeg)
-      interruptionStockage = {
-        nPosesTenues: nTenues,
-        dureeTenueMin,
-        arcObtenuDeg: arc,
-        message:
-          `La carte n’accepte que ${nTenues} images : la séquence s’interrompra après ` +
-          `${dureeTenueMin.toFixed(0)} min, pour un arc réellement obtenu de ` +
-          `${arc.value.toFixed(2)}° au lieu de ${arcObtenuDeg.value.toFixed(2)}°.`,
-      }
-    }
-  }
 
   const messages: string[] = []
   if (entree.tPoseS < K('T_POSE_FILE_MIN_S') || entree.tPoseS > K('T_POSE_FILE_MAX_S')) {
@@ -155,7 +118,6 @@ export function sequenceFile(entree: EntreeSequenceFile): SequenceFile {
     arcObtenuDeg,
     intervalleRefuse,
     consignesBloquantes,
-    interruptionStockage,
     messages,
   }
 }

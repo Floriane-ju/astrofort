@@ -1006,7 +1006,7 @@ export const GLOSSAIRE = Object.freeze({
       'point situé en dehors de l’image. L’application ne le ramène jamais artificiellement ' +
       'dans le cadre.',
     consequence:
-      'La direction et la distance du pôle hors champ sont indiquées pour préparer le cadrage.',
+      'Le panneau dit si le pôle tombe dans le cadre, à quelle hauteur et à quel azimut.',
     sections: ['9.3'],
   }),
   longueur_arc: terme({
@@ -1053,17 +1053,6 @@ export const GLOSSAIRE = Object.freeze({
       'écartée : bruit thermique et ciel cramé en présence de pollution lumineuse.',
     consequence:
       'Les poses courtes s’empilent ensuite en mode éclaircir pour reconstituer le filé complet.',
-    sections: ['9.4'],
-  }),
-  espace_carte: terme({
-    libelle: 'Espace libre sur la carte',
-    glose: 'gigaoctets encore disponibles',
-    explication:
-      'Une séquence de filé produit plusieurs centaines de fichiers bruts. La carte se remplit ' +
-      'souvent avant la fin de la durée visée, et la séquence s’arrête alors sans prévenir. Le ' +
-      'budget de stockage se vérifie avant la sortie, pas pendant.',
-    consequence:
-      'L’application chiffre l’arc réellement obtenu si la carte s’avère trop petite.',
     sections: ['9.4'],
   }),
 

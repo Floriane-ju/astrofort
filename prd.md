@@ -2984,7 +2984,6 @@ Quand la prévisualisation est générée
 Alors pole_dans_cadre vaut faux et les arcs sont concentriques autour d'un point
     situé hors du canevas
 Et l'app ne recentre PAS artificiellement le pôle dans l'image
-Et elle indique la direction et la distance angulaire du pôle hors cadre
 
 Étant donné une durée de 20 min à δ = 0
 Quand la prévisualisation est générée
@@ -3052,7 +3051,6 @@ VOIE À SPÉCIFIER : empilement de poses courtes en mode éclaircir.
 | `duree_totale_min` | float | min | 5 – 480 | |
 | `t_pose_s` | float | s | 5 – 60 | recommandé 20–30 |
 | `intervalle_s` | float | s | 0 – 30 | refusé au-delà de C-09 |
-| `capacite_carte_go`, `espace_libre_go` | float | Go | — | déclaratif |
 | `n_poses` | int | — | sortie | |
 | `volume_go` | float | Go | sortie | |
 | `rappel_batterie` | string | — | sortie | au-delà de C-16, sinon absent |
@@ -3069,11 +3067,6 @@ Et liste en consigne bloquante la désactivation de la réduction de bruit longu
 Étant donné un intervalle saisi à 3 s
 Quand je valide
 Alors l'app refuse et chiffre la longueur du trou produit dans chaque trace
-
-Étant donné une carte de 32 Go déjà remplie à 28 Go                 # cas limite
-Quand je planifie la séquence
-Alors l'app annonce que la séquence sera interrompue après un nombre d'images donné
-Et indique la durée d'arc réellement obtenue dans ce cas
 
 Étant donné une durée d'accumulation dépassant le seuil C-16
 Quand j'ouvre la fiche de séquence

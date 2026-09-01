@@ -136,9 +136,7 @@ export function useLecturesFile(
         tPoseS: file.tPoseS,
         intervalleS: file.intervalleS,
         tailleRawMo: materiel.tailleRawMo,
-        espaceLibreGo: file.espaceLibreGo.trim() === '' ? null : Number(file.espaceLibreGo),
         decDeg: carte.decMinAbsDeg,
-        reductionBruitActive: file.reductionBruit,
       }),
     [file, materiel.tailleRawMo, carte.decMinAbsDeg],
   )
