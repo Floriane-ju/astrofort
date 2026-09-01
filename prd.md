@@ -967,9 +967,12 @@ LA BANDE, MODULÉE PAR LE FOND DE CIEL DU SITE
      contraste   ← SB_ciel : visible mais atténuée à Bortle 4–5, effacée à Bortle 8
   → à Bortle 8 la bande disparaît, et c'est l'information juste : l'application montre
     le ciel de ce site, pas une carte de référence idéale.
-  → la bande est peinte AVEC LE FOND, sous les repères, les étoiles et les labels —
-    même règle d'ordre que l'aperçu incrusté de §9.5. Un fond peint par-dessus le
-    repérage masque exactement ce qui sert à s'orienter.
+  → la bande est peinte AVEC LE FOND, sous les repères, les étoiles et les labels. Un
+    fond peint par-dessus le repérage masque exactement ce qui sert à s'orienter. C'est
+    l'ordre des passes, et l'aperçu incrusté de §9.5 le partage : il se dépose au même
+    rang. Ce que §9.5 change, quand l'aperçu couvre TOUTE LA SCÈNE, ce n'est pas ce
+    rang — c'est que la bande, comme les autres couches de repérage, ne se peint plus
+    du tout.
   → ce n'est PAS une promesse photométrique : c'est un repère de lecture. La couche 3
     de §9.2 module un contraste dans une IMAGE DE CAPTURE ; §3.7 repère une région du
     ciel sur une CARTE.
@@ -3137,6 +3140,28 @@ ORDRE DES PASSES — l'aperçu est un fond, pas un calque de tête
   corps, cadres, labels.
   Les repères du planétarium passent donc PAR-DESSUS l'aperçu. Un aperçu déposé en
   dernier masquerait le repérage au moment précis où l'utilisateur en a besoin.
+  Ce rang ne bouge jamais ; ce qui varie, c'est quelles passes de repérage s'exécutent —
+  voir la portée juste en dessous.
+
+DEUX PORTÉES, DEUX RÈGLES — l'aperçu tient dans le cadre, ou couvre toute la scène
+  DANS LE CADRE : ce qui précède s'applique intégralement. L'aperçu se lit CONTRE le
+  ciel qui l'entoure, et le repérage est justement ce qui fait le lien entre les deux.
+
+  SUR TOUTE LA SCÈNE : il n'y a plus d'entour, donc plus de lien à faire. L'aperçu EST
+  la prise de vue, et les couches de repérage s'y superposent au lieu de la situer — un
+  arc de filé qui passe sous une figure de constellation ne se lit plus comme une trace.
+  Les passes de repérage ne s'exécutent donc pas : frontières, figures et astérismes de
+  §3.4, plan galactique et bande de §3.7, marqueurs d'objets du ciel profond, corps
+  mobiles de §3.1, et TOUS les noms.
+  TROIS SURVIVANTS, et la raison est la même pour les trois : ils CADRENT la prise de
+  vue au lieu de l'annoter — le sol de §4.1, l'horizon avec ses quatre points cardinaux,
+  et le contour du cadre matériel de §3.5. Aucun d'eux ne se dessine SUR l'image : ils
+  disent où elle est prise et ce que le capteur en retient.
+  ÉTEINDRE N'EST PAS PERDRE. La sélection de §3.3 continue de tourner : les cibles
+  restent cliquables au même pixel, et le survol reste la façon de lire un nom. Seule la
+  PEINTURE est suspendue — même règle que les étoiles ponctuelles, que le filé remplace
+  par ses arcs sans cesser de les désigner. §11.2 tient malgré tout : rien de critique ne
+  dépend du seul survol, puisque décocher la case rend l'intégralité du repérage.
 
 CADENCE — une image par changement de réglage, jamais soixante par seconde
   L'aperçu est recalculé au changement de pointage, de champ, de mode, d'instant, de
@@ -3170,9 +3195,17 @@ DEUX MENTIONS OBLIGATOIRES, parce que l'incrustation change ce qui est vrai
 
 ```gherkin
 Étant donné un filé d'une heure et un cadre posé sur la scène
-Quand l'aperçu est incrusté
+Quand l'aperçu est incrusté dans le cadre
 Alors chaque arc part de la position réelle de son étoile sur la scène
 Et les frontières, figures et labels du planétarium sont visibles par-dessus l'aperçu
+
+Étant donné le même filé
+Quand l'aperçu est peint sur toute la scène
+Alors aucune couche de repérage, aucun marqueur d'objet, aucun corps et aucun nom
+  n'est peint
+Et le sol, l'horizon avec ses points cardinaux et le contour du cadre le sont
+Et les cibles cliquables sont les mêmes qu'à repères allumés
+Et le survol nomme toujours l'élément qu'il désigne
 
 Étant donné un aperçu incrusté et une animation du curseur temporel
 Quand la scène est rendue
