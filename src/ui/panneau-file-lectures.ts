@@ -115,18 +115,19 @@ export function useLecturesFile(
     [materiel, visee, rotationDeg, focaleEquivalente.value],
   )
 
+  const dureeMin = dureeApercuMin(file)
   const diagnostic = useMemo(
     () =>
       diagnosticFile({
         projecteur: proj,
         latitudeDeg: materiel.site.latitudeDeg,
         axePoleNord,
-        dureeMin: dureeApercuMin(file),
+        dureeMin,
         decMinAbsDeg: carte.decMinAbsDeg,
         decMaxAbsDeg: carte.decMaxAbsDeg,
         hauteurCadreDeg: materiel.fovHDeg,
       }),
-    [proj, materiel.site.latitudeDeg, axePoleNord, materiel.fovHDeg, dureeApercuMin(file), carte],
+    [proj, materiel.site.latitudeDeg, axePoleNord, materiel.fovHDeg, dureeMin, carte],
   )
 
   const sequence = useMemo(

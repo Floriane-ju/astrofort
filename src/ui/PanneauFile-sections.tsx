@@ -6,12 +6,14 @@
  */
 
 import { K } from '../registry/constants.ts'
+import { DOMAINES } from '../registry/domains.ts'
 import { vignettageDiaph } from '../core/galactique.ts'
 import { libelleZpSource, type PointZeroSysteme } from '../data/equipment.ts'
 import type { ModeProjection } from '../core/projection.ts'
 import type { ActionsScene } from './scene-etat.ts'
 import {
   activeIncrustation,
+  DUREE_APERCU_CHAMP_MIN,
   majFile,
   modeApercu,
   type ReglagesFile,
@@ -240,11 +242,14 @@ export function ArcsDuFile({
           <span>
             <Etiquette cle="duree_file" /> : {file.dureeTotaleMin.toFixed(0)} min
           </span>
+          {/* La borne basse n'est pas celle de §9.3 : le domaine ouvre le filé à 5 min, mais
+              0 n'est pas un filé plus court — c'est l'aperçu de champ, l'autre bout de la même
+              commande. La borne haute, elle, est bien celle que le PRD déclare. */}
           <Curseur
             libelle="Durée du filé"
             valeur={file.dureeTotaleMin}
-            min={0}
-            max={480}
+            min={DUREE_APERCU_CHAMP_MIN}
+            max={DOMAINES.duree_file_min.max}
             pas={5}
             texte={`${file.dureeTotaleMin.toFixed(0)} min`}
             sur={(dureeTotaleMin) => majFile({ dureeTotaleMin })}

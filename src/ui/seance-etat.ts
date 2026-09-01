@@ -96,12 +96,20 @@ export function ouvreCible(cible: ObjetCielProfond): void {
 }
 
 /**
+ * Durée d'accumulation qui désigne l'aperçu de champ plutôt qu'un filé. Ce n'est pas la borne
+ * basse de §9.3 — le domaine `duree_file_min` ouvre le filé à 5 min — mais la valeur hors
+ * domaine par laquelle le curseur bascule d'un aperçu à l'autre. Le prédicat et le curseur la
+ * lisent au même endroit, faute de quoi une borne pourrait rendre le mode CHAMP inatteignable.
+ */
+export const DUREE_APERCU_CHAMP_MIN = 0
+
+/**
  * Le mode d'aperçu se DÉDUIT de la durée d'accumulation, il ne se choisit pas : une durée nulle
  * ne décrit qu'une photo, une durée non nulle décrit des poses qu'on additionne. Un menu à côté
  * du curseur pouvait contredire le curseur — deux commandes pour une seule intention.
  */
 export function modeApercu(file: ReglagesFile): ModeApercu {
-  return file.dureeTotaleMin > 0 ? 'FILE' : 'CHAMP'
+  return file.dureeTotaleMin > DUREE_APERCU_CHAMP_MIN ? 'FILE' : 'CHAMP'
 }
 
 /**
