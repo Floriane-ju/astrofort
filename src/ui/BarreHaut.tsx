@@ -1,13 +1,17 @@
 /**
- * La barre haute : la marque, le matériel en une ligne, et ce qui ouvre le reste.
+ * La barre haute : la marque, le matériel en une ligne, et le commutateur de mode.
  *
- * T-0113 — elle ne porte plus de réglage, seulement des bascules : des tiroirs de terrain et
- * des boutons de panneau. L'ordre est un contrat : le mode nuit d'abord parce qu'il se cherche
- * dans le noir, les panneaux ensuite, puis la vérification et les réglages en dernier (T-0047).
+ * T-0113 — elle ne porte plus de réglage, seulement des bascules. L'ordre est un contrat : le
+ * mode nuit d'abord parce qu'il se cherche dans le noir, la bascule de mode ensuite, puis la
+ * vérification et les réglages en dernier (§11.3, T-0047).
  *
  * T-0153 — le tiroir des lectures est démonté. Il portait une phrase utile et quatre lectures
  * d'atelier ; la phrase est descendue au centre de la barre basse, où elle se lit sans un clic,
  * et la mention « az · h · champ » qui la répétait ici part avec elle.
+ *
+ * T-0180 — les trois boutons de panneau sont partis avec le tiroir qu'ils ouvraient : le mode
+ * décide seul de ce que le panneau porte. Ne reste qu'une bascule à deux positions, et elle
+ * tient le centre — c'est l'état le plus lourd de l'écran, il ne se cherche pas dans un coin.
  */
 
 import type { EtatDemarrage } from '../data/bootstrap.ts'
@@ -19,8 +23,7 @@ import { ModeNuit, type EtatModeNuit } from './ModeNuit.tsx'
 import { Inconnu } from './Inconnu.tsx'
 import { Icone } from './Icone.tsx'
 import type { Persistance } from './app-donnees.ts'
-import { TITRES_PANNEAU } from './PanneauLateral.tsx'
-import { basculePanneau, useCoque, type PanneauLateral } from './coque-etat.ts'
+import { poseMode, useSeance, type ModeInterface } from './seance-etat.ts'
 
 export interface BarreHautProps {
   readonly focale: string
@@ -36,13 +39,16 @@ export interface BarreHautProps {
 }
 
 /**
- * Les panneaux que la barre commande, dans l'ordre où ils s'ouvrent. L'ordre est un
- * contrat : on choisit une cible avant de lire le plan qui l'ordonne.
+ * Les deux positions de la bascule, dans l'ordre du segment. L'ordre est un contrat : le
+ * défaut d'abord, à gauche — la position dit laquelle est active autant que le fond.
  */
-const PANNEAUX: readonly PanneauLateral[] = ['CIBLES', 'NUIT', 'FILE']
+const MODES: readonly (readonly [ModeInterface, string])[] = [
+  ['CIEL_PROFOND', 'Ciel profond'],
+  ['PANORAMA', 'Panorama'],
+]
 
 export function BarreHaut(props: BarreHautProps) {
-  const { panneau } = useCoque()
+  const { mode } = useSeance()
 
   return (
     <>
@@ -70,19 +76,19 @@ export function BarreHaut(props: BarreHautProps) {
         </div>
       </details>
 
-      {/* Les panneaux latéraux. Un bouton pressé rouvre le panneau qu'il a ouvert : la
-          bascule referme, elle ne rouvre pas un autre panneau par surprise. */}
-      <div className="barrehaut-panneaux">
-        {PANNEAUX.map((cle) => (
+      {/* §11.3 — le commutateur de premier rang. `aria-pressed` plutôt qu'`aria-expanded` :
+          ces deux boutons ne déplient rien, ils choisissent lequel des deux états l'écran
+          tient — et l'un des deux est toujours vrai. */}
+      <div className="barrehaut-mode" role="group" aria-label="Mode d’interface">
+        {MODES.map(([cle, libelle]) => (
           <button
             key={cle}
             type="button"
-            className={panneau === cle ? 'onglet actif' : 'onglet'}
-            aria-expanded={panneau === cle}
-            aria-controls="panneau-lateral"
-            onClick={() => basculePanneau(cle)}
+            className={mode === cle ? 'onglet actif' : 'onglet'}
+            aria-pressed={mode === cle}
+            onClick={() => poseMode(cle)}
           >
-            {TITRES_PANNEAU[cle]}
+            {libelle}
           </button>
         ))}
       </div>

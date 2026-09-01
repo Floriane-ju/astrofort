@@ -178,11 +178,6 @@ describe('§11.2 — un seul jeu de réglages à la fois', () => {
     expect(ecran()).toContain('Vue réaliste')
   })
 
-  it('marque le bouton du panneau ouvert autrement que par la seule couleur', () => {
-    basculePanneau('NUIT')
-    expect(ecran()).toMatch(/class="onglet actif"[^>]*aria-expanded="true"/)
-  })
-
   it('referme le panneau quand on represse son bouton', () => {
     basculePanneau('NUIT')
     expect(etatCoque().panneau).toBe('NUIT')
@@ -194,6 +189,77 @@ describe('§11.2 — un seul jeu de réglages à la fois', () => {
     basculePanneau('FILE')
     ecran()
     expect(etatCoque().panneau).toBe('FILE')
+  })
+})
+
+/**
+ * T-0180 — la barre haute ne commande plus des panneaux, elle commande le MODE.
+ *
+ * Ce qui se vérifie ici est le remplacement et son annonce : un état de premier rang porté par
+ * deux boutons pressés, au centre, et plus aucun bouton de panneau. Le contenu que le mode
+ * décide, lui, est vérifié là où il se monte.
+ */
+describe('§11.3 — la bascule de mode occupe le centre de la barre haute', () => {
+  it('porte les deux positions et plus aucun bouton de panneau latéral', () => {
+    const topbar = barreHaute(ecran())
+    expect(topbar).toContain('barrehaut-mode')
+    expect(topbar).toContain('Ciel profond')
+    expect(topbar).toContain('Panorama')
+    // Les trois boutons de panneau sont partis avec le tiroir qu'ils ouvraient.
+    expect(topbar).not.toContain('barrehaut-panneaux')
+    expect(topbar).not.toContain('Toutes les cibles')
+    expect(topbar).not.toContain('Plan de nuit')
+    expect(topbar).not.toContain('aria-controls="panneau-lateral"')
+  })
+
+  it('annonce la position active par aria-pressed, et elle seule', () => {
+    const profond = barreHaute(ecran())
+    expect(profond).toMatch(/aria-pressed="true">Ciel profond/)
+    expect(profond).toMatch(/aria-pressed="false">Panorama/)
+    poseMode('PANORAMA')
+    const panorama = barreHaute(ecran())
+    expect(panorama).toMatch(/aria-pressed="false">Ciel profond/)
+    expect(panorama).toMatch(/aria-pressed="true">Panorama/)
+  })
+
+  it('marque la position active autrement que par la seule couleur', () => {
+    poseMode('PANORAMA')
+    // La classe porte le fond accentué et la graisse ; la position dans le segment, l'ordre.
+    expect(barreHaute(ecran())).toMatch(/class="onglet actif"[^>]*aria-pressed="true">Panorama/)
+    const debut = CSS_COQUE.indexOf('.coque-topbar .onglet.actif,')
+    expect(debut).toBeGreaterThan(-1)
+    expect(CSS_COQUE.slice(debut, CSS_COQUE.indexOf('}', debut))).toContain(
+      'background: var(--fond-accent)',
+    )
+  })
+
+  it('la centre sur la barre, pas sur ce que la lecture matériel laisse', () => {
+    const debut = CSS_COQUE.indexOf('.barrehaut-mode {')
+    expect(debut).toBeGreaterThan(-1)
+    const corps = CSS_COQUE.slice(debut, CSS_COQUE.indexOf('}', debut))
+    // Hors du flux : la focale peut passer de 8 à 300 mm, le centre ne bouge pas.
+    expect(corps).toContain('position: absolute')
+    expect(corps).toContain('left: 50%')
+    expect(corps).toContain('translateX(-50%)')
+    // Et la bande de commandes ne lui pose pas sa marge négative, qui la décentrerait.
+    expect(CSS_COQUE).toContain('~ * ~ *:not(.barrehaut-mode)')
+  })
+
+  it('ne peint la bascule qu’avec des jetons de palette, donc rouges en mode nuit', () => {
+    const debut = CSS_COQUE.indexOf('.barrehaut-mode {')
+    const corps = CSS_COQUE.slice(debut, CSS_COQUE.indexOf('.coque-topbar .onglet,', debut))
+    // §11.1 — aucune couleur littérale : le mode nuit repeint par la variable, sans quoi un
+    // canal vert ou bleu survivrait dans la barre.
+    expect(corps).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
+    expect(corps).not.toMatch(/\brgba?\(/)
+  })
+
+  it('garde la cible de clic gantée sur les deux positions (§11.2)', () => {
+    const debut = CSS_COQUE.indexOf('.coque-topbar .onglet,')
+    expect(debut).toBeGreaterThan(-1)
+    expect(CSS_COQUE.slice(debut, CSS_COQUE.indexOf('}', debut))).toContain(
+      'min-height: var(--cible-clic)',
+    )
   })
 })
 
@@ -553,13 +619,6 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
  * vers le catalogue est exactement le défaut que ce lot corrige.
  */
 describe('T-0128 — l’onglet Cibles remplace les deux chemins vers le catalogue', () => {
-  it('ouvre un troisième panneau latéral, en tête des onglets', () => {
-    const topbar = barreHaute(ecran())
-    expect(topbar).toContain('Toutes les cibles')
-    expect(topbar.indexOf('Toutes les cibles')).toBeLessThan(topbar.indexOf('Plan de nuit'))
-    expect(topbar.indexOf('Plan de nuit')).toBeLessThan(topbar.indexOf('Panorama'))
-  })
-
   it('ne monte son contenu qu’une fois ouvert, comme les deux autres (§11.2)', () => {
     expect(ecran()).not.toContain('Tout le catalogue')
     basculePanneau('CIBLES')

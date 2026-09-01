@@ -321,27 +321,38 @@ body {
 }
 
 .coque-topbar > h1,
-.coque-topbar > .tiroir,
-.barrehaut-panneaux {
-  flex: none;
-}
-
-.barrehaut-panneaux {
-  display: flex;
-  gap: 0;
+.coque-topbar > .tiroir {
   flex: none;
 }
 
 /* T-0145 — les commandes de la barre forment une bande continue : ni jour, ni double filet.
    La marge négative absorbe le `gap` de la barre et superpose les deux traits voisins, si bien
    qu'une pastille et sa suivante ne partagent qu'un trait. La règle démarre au DEUXIÈME élément
-   qui suit la lecture — le premier garde son jour, sinon la bande collerait au texte. */
-.coque-topbar > .barrehaut-lectures-fin ~ * ~ * {
+   qui suit la lecture — le premier garde son jour, sinon la bande collerait au texte.
+
+   T-0180 — la bascule de mode est exclue de la bande : elle en est sortie, et une marge
+   négative déplacerait une boîte centrée sur la fenêtre. */
+.coque-topbar > .barrehaut-lectures-fin ~ * ~ *:not(.barrehaut-mode) {
   margin-left: calc(-1 * (var(--jour-barre) + var(--trait)));
 }
 
-.barrehaut-panneaux > .onglet + .onglet {
-  margin-left: calc(-1 * var(--trait));
+/* T-0180 — le centre de la BARRE, pas celui de ce que la lecture matériel laisse : hors du
+   flux, la bascule ne bouge donc pas quand la focale passe de 8 à 300 mm. Le segment porte le
+   filet que ses positions n'ont pas (T-0145) — sans lui, deux boutons voisins ne se lisent pas
+   comme les deux positions d'un même commutateur. */
+.barrehaut-mode {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0;
+  border: var(--trait) solid var(--bordure);
+}
+
+/* Le filet du segment sépare aussi ses deux positions : le trait dit où l'une finit et où
+   l'autre commence, ce que le seul fond accentué ne dirait pas au premier coup d'œil. */
+.barrehaut-mode > .onglet + .onglet {
+  border-left: var(--trait) solid var(--bordure);
 }
 
 /* T-0145 — dans la barre, un onglet n'a pas de rangée sous laquelle se poser : il prend le
