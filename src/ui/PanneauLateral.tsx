@@ -2,40 +2,57 @@
  * T-0113 — le panneau latéral : ce qui se lit en longueur, à côté de la scène.
  *
  * T-0181 — il n'est plus un tiroir qu'on ouvre, c'est une colonne à demeure : le mode décide
- * de ce qu'elle porte, et il n'y a donc plus de choix à faire ni d'état fermé. En Ciel profond
- * on choisit une cible, en Panorama on règle un panorama — un seul contenu est monté à la
- * fois, comme au temps des onglets (§11.2), mais la condition est désormais le mode.
+ * de ce qu'elle porte, et il n'y a donc plus de choix à faire ni d'état fermé.
+ *
+ * T-0182 — en Ciel profond elle porte deux lectures successives, la liste puis la fiche, et
+ * l'en-tête suit : il nomme ce qu'on lit, porte le retour quand il y a d'où revenir, et le
+ * rappel de facilité de la cible ouverte. Le retour N'EXISTE PAS sur la liste — un bouton
+ * inerte resterait dans l'ordre de tabulation et annoncerait une issue qui n'en est pas une.
  *
  * Le plan de session reste ici, monté et masqué : il est la seule région imprimable, et un
  * plan démonté sortirait une page blanche. Il en sortira pour devenir une carte (T-0183).
  */
 
 import type { ReactNode } from 'react'
+import { Icone } from './Icone.tsx'
 import type { ModeInterface } from './seance-etat.ts'
 
-/** Le titre nomme ce qu'on lit — pas le mode, dont la barre haute dit déjà le nom. */
+/** Ce que la colonne porte dans chaque mode, quand aucune fiche n'a pris sa place. */
 export const TITRES_LATERAL: Readonly<Record<ModeInterface, string>> = Object.freeze({
   CIEL_PROFOND: 'Toutes les cibles',
   PANORAMA: 'Panorama',
 })
 
 export interface PanneauLateralProps {
-  readonly mode: ModeInterface
-  /** Contenu de chaque mode, assemblé par l'application : un seul est monté à la fois. */
-  readonly contenus: Readonly<Record<ModeInterface, ReactNode>>
+  /** Ce qu'on lit, pas le mode d'où l'on vient : la barre haute dit déjà le nom du mode. */
+  readonly titre: string
+  /** Le retour vers la liste, ou `null` quand il n'y a rien derrière. */
+  readonly retour: (() => void) | null
+  /** §6.4 — la note de facilité de la cible ouverte, annoncée avec son libellé. */
+  readonly rappel: ReactNode
+  readonly children: ReactNode
   /** Plan de session — rendu en permanence, pour l'impression et pour elle seule. */
   readonly plan: ReactNode
 }
 
 export function PanneauLateral(props: PanneauLateralProps) {
-  const { mode } = props
-
   return (
     <aside className="coque-lateral" id="panneau-lateral" aria-label="Panneau de séance">
       <div className="lateral-entete">
-        <h2>{TITRES_LATERAL[mode]}</h2>
+        {props.retour !== null && (
+          <button
+            type="button"
+            className="lateral-retour"
+            aria-label="Revenir à la liste des cibles"
+            onClick={props.retour}
+          >
+            <Icone nom="arrow_back" />
+          </button>
+        )}
+        <h2>{props.titre}</h2>
+        {props.rappel}
       </div>
-      <div className="lateral-corps">{props.contenus[mode]}</div>
+      <div className="lateral-corps">{props.children}</div>
       <div className="plan-session hors-onglet">{props.plan}</div>
     </aside>
   )

@@ -43,20 +43,6 @@ const MARGE_COQUE_PX = 10
 export interface CarteProps {
   readonly cle: CleCarte
   readonly titre: string
-  /** Repère de couleur : la cible est la seule carte qui porte l'accent de visée. */
-  readonly accent?: 'cible'
-  /**
-   * Rappel posé dans l'en-tête : ce que la carte dit encore quand elle est REPLIÉE.
-   *
-   * Il est masqué aux lecteurs d'écran : l'en-tête est un bouton, et le nom d'un bouton doit
-   * décrire son action — « Cible », pas « Cible facilité 4 sur 5, confortable, replier ».
-   *
-   * ponytail: le rappel est donc un repère VISUEL, et l'information qu'il porte n'est annoncée
-   * que là où elle a son propre nom accessible — la liste du catalogue de §6.4. Le jour où un
-   * rappel portera une lecture qu'aucun autre écran ne donne, il faudra le sortir du bouton
-   * plutôt que le dé-masquer : c'est le périmètre de T-0067.
-   */
-  readonly rappel?: ReactNode
   readonly children: ReactNode
 }
 
@@ -145,7 +131,6 @@ export function Carte(props: CarteProps) {
     <section
       className={`carte carte-${props.cle.toLowerCase()}`}
       data-ouverte={etat.ouverte}
-      {...(props.accent === undefined ? {} : { 'data-accent': props.accent })}
       {...(style === undefined ? {} : { style })}
     >
       <button
@@ -156,11 +141,6 @@ export function Carte(props: CarteProps) {
         onClick={surClic}
       >
         <span className="carte-titre">{props.titre}</span>
-        {props.rappel !== undefined && props.rappel !== null && (
-          <span className="carte-rappel" aria-hidden="true">
-            {props.rappel}
-          </span>
-        )}
         {/* Le signe dit l'action à venir, pas l'état courant : replier, ou déplier. */}
         <span className="carte-marque" aria-hidden="true">
           {etat.ouverte ? '—' : '+'}

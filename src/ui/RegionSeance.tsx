@@ -19,7 +19,7 @@ import type { Etoile } from '../data/catalog.ts'
 import { libelleZpSource } from '../data/equipment.ts'
 import { Carte } from './Carte.tsx'
 import { PanneauVue } from './PanneauVue.tsx'
-import { PanneauLateral } from './PanneauLateral.tsx'
+import { PanneauLateral, TITRES_LATERAL } from './PanneauLateral.tsx'
 import { PanneauCibles } from './PanneauCibles.tsx'
 import { PanneauFile } from './PanneauFile.tsx'
 import { FicheCible } from './FicheCible.tsx'
@@ -27,7 +27,7 @@ import { Pastilles } from './Pastilles.tsx'
 import { Bulle } from './Bulle.tsx'
 import { PlanSessionVue } from './PlanSession.tsx'
 import { modeObjectif } from './PanneauMateriel.tsx'
-import { useSeance } from './seance-etat.ts'
+import { montreListeCibles, useSeance } from './seance-etat.ts'
 import { AIDE_MATERIEL_INCOMPLET } from './Inconnu.tsx'
 import type { SaisieLieu, SaisieMateriel } from './app-saisie.ts'
 import type { ChaineCalcul } from './app-calcul.ts'
@@ -51,7 +51,7 @@ export interface CartesSeanceProps extends RegionSeanceProps {
 }
 
 /**
- * Les trois cartes de la scène.
+ * Les cartes de la scène.
  *
  * Le corps d'une carte repliée n'est PAS monté : replier la carte Vue ne la cache pas, elle
  * cesse d'exister — donc de s'abonner au magasin de scène et d'y recalculer une profondeur à
@@ -60,20 +60,6 @@ export interface CartesSeanceProps extends RegionSeanceProps {
 export function CartesSeance(props: CartesSeanceProps) {
   const { chaine, materiel } = props
   const sbCiel = chaine.ciel.ok ? chaine.ciel.ciel.sbCiel.value : null
-
-  /**
-   * §6.4 — la note se LIT dans la map de la chaîne, elle ne se recalcule pas ici : c'est la
-   * même entrée que la ligne de la liste du catalogue montre pour cette cible. Deux appels au
-   * moteur, même identiques, étaient deux couvertures à garder d'accord — et elles ne
-   * l'étaient pas.
-   *
-   * Elle ne vit QUE dans l'en-tête de la carte : la fiche détaille déjà cadrage, pose et
-   * intégration, et une note qui agrège ces trois-là n'y ajoutait qu'une ligne à faire défiler.
-   */
-  const facilite =
-    props.cibleDuCiel === null
-      ? null
-      : chaine.etatsCibles.get(props.cibleDuCiel.designation) ?? null
 
   return (
     <>
@@ -92,28 +78,6 @@ export function CartesSeance(props: CartesSeanceProps) {
         />
       </Carte>
 
-      <Carte
-        cle="CIBLE"
-        titre="Cible"
-        accent="cible"
-        rappel={facilite === null ? null : <RappelFacilite etat={facilite} />}
-      >
-        {chaine.contexteFiche === null || props.cibleDuCiel === null ? (
-          /* T-0149 — deux absences distinctes : rien de cliqué, ou rien de chiffrable. Le
-             matériel passe devant : une cible désignée ne se chiffrerait pas davantage. */
-          <p className="etat">
-            {chaine.calcul.ok
-              ? 'Aucune cible : cliquez un objet sur la scène.'
-              : AIDE_MATERIEL_INCOMPLET}
-          </p>
-        ) : (
-          <FicheCible
-            {...chaine.contexteFiche}
-            objet={props.cibleDuCiel}
-            site={chaine.site}
-          />
-        )}
-      </Carte>
     </>
   )
 }
@@ -157,34 +121,25 @@ function RappelFacilite({ etat }: { readonly etat: EtatCible }) {
 export function LateralSeance(props: RegionSeanceProps) {
   const { chaine, lieu, materiel, catalogue } = props
   const { calcul, ciel } = chaine
-  const { mode } = useSeance()
+  const { mode, vueCibles } = useSeance()
 
-  const contenus = {
-    /* T-0149 — la liste chiffre un cadrage : sans optique, elle dit ce qui manque. */
-    CIEL_PROFOND:
-      calcul.ok && ciel.ok ? (
-        <PanneauCibles
-          catalogue={catalogue}
-          site={chaine.site}
-          sbCiel={ciel.ciel.sbCiel.value}
-          mLimOeil={ciel.ciel.mLimOeil.value}
-          dMm={calcul.optique.dMm.value}
-          fovHDeg={calcul.optique.fovHDeg.value}
-          echApx={calcul.optique.echApx.value}
-          capteurHMm={calcul.capteur.capteurHMm}
-          contexteSession={chaine.contexteSession}
-          etats={chaine.etatsCibles}
-        />
-      ) : (
-        <p className="etat">{AIDE_MATERIEL_INCOMPLET}</p>
-      ),
-    PANORAMA:
-      chaine.panneauFile === null ? (
-        <p className="etat">{AIDE_MATERIEL_INCOMPLET}</p>
-      ) : (
-        <PanneauFile {...chaine.panneauFile} />
-      ),
-  }
+  /* §3.4 — la fiche n'existe que sur une cible désignée : `ouvreCible` pose les deux d'un
+     coup, et rien d'autre ne mène ici. */
+  const fiche = mode === 'CIEL_PROFOND' && vueCibles === 'FICHE' && props.cibleDuCiel !== null
+
+  /**
+   * §6.4 — la note se LIT dans la map de la chaîne, elle ne se recalcule pas ici : c'est la
+   * même entrée que la ligne de la liste du catalogue montre pour cette cible. Deux appels au
+   * moteur, même identiques, étaient deux couvertures à garder d'accord — et elles ne
+   * l'étaient pas.
+   *
+   * Elle ne vit QUE dans l'en-tête : la fiche détaille déjà cadrage, pose et intégration, et
+   * une note qui agrège ces trois-là n'y ajoutait qu'une ligne à faire défiler.
+   */
+  const facilite =
+    props.cibleDuCiel === null
+      ? null
+      : chaine.etatsCibles.get(props.cibleDuCiel.designation) ?? null
 
   /* §11.2 — la seule région qui survit à l'impression : elle est nommée pour ça. */
   const planImprimable =
@@ -207,5 +162,43 @@ export function LateralSeance(props: RegionSeanceProps) {
       />
     ) : null
 
-  return <PanneauLateral mode={mode} contenus={contenus} plan={planImprimable} />
+  return (
+    <PanneauLateral
+      titre={fiche && props.cibleDuCiel !== null ? props.cibleDuCiel.designation : TITRES_LATERAL[mode]}
+      retour={fiche ? montreListeCibles : null}
+      rappel={fiche && facilite !== null ? <RappelFacilite etat={facilite} /> : null}
+      plan={planImprimable}
+    >
+      {fiche && props.cibleDuCiel !== null ? (
+        /* T-0149 — sans optique chiffrable, la fiche dit ce qui manque plutôt que de meubler. */
+        chaine.contexteFiche === null ? (
+          <p className="etat">{AIDE_MATERIEL_INCOMPLET}</p>
+        ) : (
+          <FicheCible {...chaine.contexteFiche} objet={props.cibleDuCiel} site={chaine.site} />
+        )
+      ) : mode === 'PANORAMA' ? (
+        chaine.panneauFile === null ? (
+          <p className="etat">{AIDE_MATERIEL_INCOMPLET}</p>
+        ) : (
+          <PanneauFile {...chaine.panneauFile} />
+        )
+      ) : /* T-0149 — la liste chiffre un cadrage : sans optique, elle dit ce qui manque. */
+      calcul.ok && ciel.ok ? (
+        <PanneauCibles
+          catalogue={catalogue}
+          site={chaine.site}
+          sbCiel={ciel.ciel.sbCiel.value}
+          mLimOeil={ciel.ciel.mLimOeil.value}
+          dMm={calcul.optique.dMm.value}
+          fovHDeg={calcul.optique.fovHDeg.value}
+          echApx={calcul.optique.echApx.value}
+          capteurHMm={calcul.capteur.capteurHMm}
+          contexteSession={chaine.contexteSession}
+          etats={chaine.etatsCibles}
+        />
+      ) : (
+        <p className="etat">{AIDE_MATERIEL_INCOMPLET}</p>
+      )}
+    </PanneauLateral>
+  )
 }

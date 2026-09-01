@@ -29,6 +29,7 @@ import { MenuReglages } from '../src/ui/MenuReglages.tsx'
 import { poidsParDefaut } from '../src/core/session.ts'
 import { DOMAINES } from '../src/registry/domains.ts'
 import {
+  montreListeCibles,
   poseMode,
   etatSeance,
   ouvreCible,
@@ -36,6 +37,7 @@ import {
   reinitialiseSeance,
   type RenduFile,
 } from '../src/ui/seance-etat.ts'
+import { majCatalogue, reinitialiseCatalogue } from '../src/ui/catalogue-etat.ts'
 import {
   basculeCarte,
   borne,
@@ -69,6 +71,7 @@ afterEach(() => {
   reinitialiseSeance()
   reinitialiseScene()
   reinitialiseCoque()
+  reinitialiseCatalogue()
 })
 
 /** Les réglages de poids n'ont pas d'état dans un rendu statique : commandes inertes. */
@@ -99,9 +102,9 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
     expect(html).toContain('class="planetarium"')
   })
 
-  it('pose les trois cartes sur la scène, matériel compris', () => {
+  it('pose les cartes sur la scène, matériel compris', () => {
     const html = ecran()
-    for (const carte of ['carte-materiel', 'carte-vue', 'carte-cible']) {
+    for (const carte of ['carte-materiel', 'carte-vue']) {
       expect(html, carte).toContain(carte)
     }
     // Le matériel n'est plus une colonne : c'est une carte, avec les deux autres.
@@ -348,12 +351,13 @@ describe('T-0113 — les cartes posées sur la scène', () => {
 })
 
 describe('§3.4 — un objet cliqué ouvre sa fiche', () => {
-  it('déplie la carte Cible et la garnit', () => {
-    // Repliée tant qu'aucun objet n'a été désigné : le clic sur la scène doit la déplier,
-    // sinon le geste se termine sans que rien ne se voie.
-    expect(etatCoque().cartes.CIBLE.ouverte).toBe(false)
+  it('met la fiche à la place de la liste, garnie, sans autre geste', () => {
+    // La liste tient le panneau tant qu'aucun objet n'a été désigné : le clic sur la scène
+    // doit y mettre la fiche, sinon le geste se termine sans que rien ne se voie.
+    expect(etatSeance().vueCibles).toBe('LISTE')
+    expect(ecran()).toContain('Tout le catalogue')
     ouvreCible(M31)
-    expect(etatCoque().cartes.CIBLE.ouverte).toBe(true)
+    expect(etatSeance().vueCibles).toBe('FICHE')
     expect(etatSeance().cible?.designation).toBe('M31')
     // C'est bien la fiche §6.2 / §6.3 / §7 qui s'ouvre, pas un simple nom affiché.
     // (Le garnissage des champs par l'objet est posé par un effet de montage : il ne joue
@@ -361,6 +365,45 @@ describe('§3.4 — un objet cliqué ouvre sa fiche', () => {
     const html = ecran()
     expect(html).toContain('Détectabilité')
     expect(html).toContain('Cadrage')
+    // La liste est démontée : elle ne reste pas vivante derrière la fiche.
+    expect(html).not.toContain('Tout le catalogue')
+  })
+
+  it('rend la liste au retour, recherche et filtre intacts', () => {
+    majCatalogue({ recherche: 'andro', portee: 'PHOTOGRAPHIABLES' })
+    ouvreCible(M31)
+    montreListeCibles()
+    const html = ecran()
+    expect(html).toContain('Tout le catalogue')
+    expect(html).toContain('value="andro"')
+    // La cible reste désignée : c'est la LECTURE qui change, pas le choix.
+    expect(etatSeance().cible?.designation).toBe('M31')
+  })
+
+  it('n’offre le retour que sur la fiche, jamais sur la liste', () => {
+    expect(ecran()).not.toContain('lateral-retour')
+    ouvreCible(M31)
+    const fiche = ecran()
+    expect(fiche).toContain('lateral-retour')
+    expect(fiche).toContain('aria-label="Revenir à la liste des cibles"')
+    // L'en-tête nomme la cible et porte sa note, hors de tout bouton : elle est annoncée.
+    expect(fiche).toContain('<h2>M31</h2>')
+  })
+
+  it('garde l’état du panneau d’un mode à l’autre', () => {
+    ouvreCible(M31)
+    poseMode('PANORAMA')
+    expect(ecran()).toContain('Séquence de filé')
+    poseMode('CIEL_PROFOND')
+    expect(etatSeance().vueCibles).toBe('FICHE')
+    expect(ecran()).toContain('<h2>M31</h2>')
+  })
+
+  it('ne pose plus aucune carte Cible sur la scène', () => {
+    ouvreCible(M31)
+    const html = ecran()
+    expect(html).not.toContain('carte-cible')
+    expect(html).not.toContain('data-accent')
   })
 })
 
@@ -668,11 +711,11 @@ describe('T-0128 — le catalogue remplace les deux chemins vers les cibles', ()
     expect(ouvert).toContain('Jusqu’à la magnitude')
   })
 
-  it('a vidé la carte Cible de son choix de cible : elle ne fait plus que décrire', () => {
-    ouvreCarte('CIBLE')
-    const carte = ecran().slice(ecran().indexOf('carte-cible'))
-    expect(carte).not.toContain('Cibles visibles')
-    expect(carte).not.toContain('Type listé')
+  it('a vidé la fiche de son choix de cible : elle ne fait plus que décrire', () => {
+    ouvreCible(M31)
+    const fiche = ecran()
+    expect(fiche).not.toContain('Cibles visibles')
+    expect(fiche).not.toContain('Type listé')
   })
 
   it('borne le filtre de magnitude sur le domaine du registre, sans le réécrire', () => {

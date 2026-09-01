@@ -10,7 +10,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
-import { ouvreCarte } from '../src/ui/coque-etat.ts'
 import { TracedValue } from '../src/ui/TracedValue.tsx'
 import { trace } from '../src/core/traced.ts'
 import {
@@ -35,8 +34,7 @@ const OPTIQUE = profilOptique({
 })
 
 describe('entrées tracées sans valeur — §6.3', () => {
-  it('ne laisse aucun NaN dans l’écran, carte Cible dépliée sans objet désigné', () => {
-    ouvreCarte('CIBLE')
+  it('ne laisse aucun NaN dans l’écran, panneau sur la liste sans objet désigné', () => {
     expect(renderToStaticMarkup(<App />)).not.toContain('NaN')
   })
 

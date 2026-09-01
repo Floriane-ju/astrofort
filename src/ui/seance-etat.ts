@@ -15,7 +15,6 @@
 import { useSyncExternalStore } from 'react'
 import { K } from '../registry/constants.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
-import { ouvreCarte } from './coque-etat.ts'
 import { majTemps } from './scene-etat.ts'
 
 const S_PAR_MIN = 60
@@ -30,6 +29,13 @@ export type ModeApercu = 'CHAMP' | 'FILE'
  * d'un panneau.
  */
 export type ModeInterface = 'CIEL_PROFOND' | 'PANORAMA'
+
+/**
+ * T-0182 — les deux états du panneau en Ciel profond. Ce n'est pas un onglet : on parcourt
+ * pour choisir, puis on lit ce qu'on a choisi. Les deux prennent la même place, l'un après
+ * l'autre, et le retour ramène la liste telle qu'elle était.
+ */
+export type VueCibles = 'LISTE' | 'FICHE'
 
 /** Réglages de §9.2 à §9.4. Ils pilotent le panneau ET l'aperçu peint dans le cadre. */
 export interface ReglagesFile {
@@ -54,6 +60,7 @@ export interface RenduFile {
 export interface EtatSeance {
   readonly cible: ObjetCielProfond | null
   readonly mode: ModeInterface
+  readonly vueCibles: VueCibles
   readonly file: ReglagesFile
   readonly renduFile: RenduFile | null
 }
@@ -61,6 +68,7 @@ export interface EtatSeance {
 const ETAT_INITIAL: EtatSeance = {
   cible: null,
   mode: 'CIEL_PROFOND',
+  vueCibles: 'LISTE',
   file: {
     tPoseS: K('T_POSE_FILE_MAX_S'),
     dureeTotaleMin: K('DUREE_FILE_SPECTACULAIRE_MIN'),
@@ -91,15 +99,20 @@ function pose(suivant: EtatSeance): void {
 
 /**
  * §3.4 — un objet cliqué dans la scène ouvre sa fiche. Le geste ne se termine pas sur une
- * boîte de dialogue au milieu du ciel : il garnit la carte Cible et la déplie sous les yeux.
+ * boîte de dialogue au milieu du ciel : la fiche prend la place de la liste, garnie.
  *
- * T-0113 — la fiche est passée d'un onglet du panneau droit à une carte posée sur la scène.
- * Le contrat est le même et c'est lui qui compte : cliquer un objet DOIT le faire lire sans
- * autre geste. Déplier plutôt que basculer un onglet ne change que le chemin.
+ * T-0113 puis T-0182 — la fiche est passée d'un onglet à une carte, puis de la carte au
+ * panneau. Le contrat ne bouge pas et c'est lui qui compte : cliquer un objet DOIT le faire
+ * lire sans autre geste. Une ligne du catalogue passe par ici aussi — un seul chemin, deux
+ * entrées, sans quoi les deux se mettraient à diverger.
  */
 export function ouvreCible(cible: ObjetCielProfond): void {
-  pose({ ...etat, cible })
-  ouvreCarte('CIBLE')
+  pose({ ...etat, cible, vueCibles: 'FICHE' })
+}
+
+/** Le retour de la fiche : la cible reste désignée, c'est la LECTURE qui change. */
+export function montreListeCibles(): void {
+  pose({ ...etat, vueCibles: 'LISTE' })
 }
 
 /**

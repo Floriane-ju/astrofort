@@ -17,7 +17,7 @@
  * ni deux notes — différentes pour la même cible.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
   filtreLignes,
   lignesCatalogue,
@@ -42,10 +42,8 @@ import { prechargeVignettes } from './image-cible-memoire.ts'
 import { Pastilles } from './Pastilles.tsx'
 import { LIBELLE_TYPE_OBJET, nomCommun } from './libelles-objet.ts'
 import { ouvreCible } from './seance-etat.ts'
+import { majCatalogue, useCatalogue, type Portee } from './catalogue-etat.ts'
 import { majVue, minuteAffichee, useTrancheScene, MS_PAR_MINUTE } from './scene-etat.ts'
-
-/** Les deux portées de la liste. La seconde est un sur-ensemble de contraintes, pas un tri. */
-type Portee = 'CATALOGUE' | 'PHOTOGRAPHIABLES'
 
 const LIBELLE_PORTEE: Readonly<Record<Portee, string>> = Object.freeze({
   CATALOGUE: 'Tout le catalogue',
@@ -79,10 +77,9 @@ export interface PanneauCiblesProps {
 
 export function PanneauCibles(props: PanneauCiblesProps) {
   const { catalogue, site, sbCiel, mLimOeil, dMm, fovHDeg, echApx, capteurHMm, etats } = props
-  const [portee, setPortee] = useState<Portee>('CATALOGUE')
-  const [recherche, setRecherche] = useState('')
-  const [type, setType] = useState<TypeObjet | null>(null)
-  const [magMax, setMagMax] = useState(DOMAINE_MAG.max)
+  // T-0182 — la saisie vit dans le magasin : la fiche démonte cette liste, et une recherche
+  // perdue au retour ferait recommencer le tri à chaque cible consultée.
+  const { portee, recherche, type, magMax } = useCatalogue()
 
   // T-0056 — la minute affichée, pas l'instant : la scène publie deux fois par seconde, et
   // une minute de granularité ne change pas la hauteur au degré près sur 14 000 entrées.
@@ -141,7 +138,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
         aria-label="Rechercher un objet du catalogue"
         value={recherche}
         placeholder="M45, pléiades, NGC0224…"
-        onChange={(e) => setRecherche(e.target.value)}
+        onChange={(e) => majCatalogue({ recherche: e.target.value })}
       />
 
       {/* La bascule ne trie pas, elle restreint : le libellé doit dire laquelle est active. */}
@@ -152,7 +149,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
             type="button"
             className={portee === p ? 'onglet actif' : 'onglet'}
             aria-pressed={portee === p}
-            onClick={() => setPortee(p)}
+            onClick={() => majCatalogue({ portee: p })}
           >
             {LIBELLE_PORTEE[p]}
           </button>
@@ -170,7 +167,9 @@ export function PanneauCibles(props: PanneauCiblesProps) {
           Type
           <select
             value={type ?? ''}
-            onChange={(e) => setType(e.target.value === '' ? null : (e.target.value as TypeObjet))}
+            onChange={(e) =>
+              majCatalogue({ type: e.target.value === '' ? null : (e.target.value as TypeObjet) })
+            }
           >
             <option value="">Tous types</option>
             {typesOfferts.map((t) => (
@@ -194,7 +193,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
             max={DOMAINE_MAG.max}
             pas={PAS_MAG}
             texte={magMax >= DOMAINE_MAG.max ? 'toutes' : `${magMax.toFixed(1)} mag`}
-            sur={setMagMax}
+            sur={(magMax) => majCatalogue({ magMax })}
           />
         </label>
       </div>

@@ -584,10 +584,6 @@ input.barretemps-instant {
   width: max-content;
 }
 
-.carte[data-accent='cible'] {
-  border-color: var(--alerte);
-}
-
 .carte-materiel {
   left: var(--jour-carte);
   top: calc(var(--barre-haut) + var(--jour-carte));
@@ -596,14 +592,6 @@ input.barretemps-instant {
 .carte-vue {
   left: var(--jour-carte);
   bottom: calc(var(--barre-bas) + var(--jour-carte));
-}
-
-/* T-0181 — le panneau est à demeure : la carte Cible se range devant lui plutôt que dessous,
-   toujours. Le déplacement l'apprend aussi — `bornesDeplacement` déduit la largeur du panneau
-   des bornes. */
-.carte-cible {
-  right: calc(var(--lateral) + var(--jour-carte));
-  top: calc(var(--barre-haut) + var(--jour-carte));
 }
 
 /* L'en-tête est à la fois la poignée et l'interrupteur : `grab` annonce la première,
@@ -636,26 +624,14 @@ input.barretemps-instant {
   color: var(--accent);
 }
 
-.carte[data-accent='cible'] .carte-entete {
-  background: var(--fond-alerte);
-  border-bottom-color: var(--alerte);
-}
-
-.carte[data-accent='cible'] .carte-titre {
-  color: var(--alerte);
-}
-
 .carte-marque {
   color: var(--attenue);
 }
 
-/* Le rappel se serre contre la marque de repli plutôt que de flotter au centre : l'en-tête est
-   une ligne qui se lit de gauche à droite — le nom, puis ce que la carte retient d'elle-même.
-
-   Deux règles et non une : l'enveloppe place et habille, la glose aligne son contenu. Entre
-   les deux, `Bulle` insère son ancre — la mise en page ne peut donc pas vivre au même niveau
-   que le placement. */
-.carte-rappel {
+/* T-0182 — la note de facilité a quitté l'en-tête de la carte Cible pour celui du panneau, où
+   elle n'est plus dans un bouton : elle y est ANNONCÉE, plus masquée. La glose aligne son
+   contenu ; `Bulle` insère son ancre entre l'en-tête et elle, d'où deux niveaux. */
+.lateral-entete .carte-rappel-glose {
   margin-inline-start: auto;
   color: var(--attenue);
   font-size: 0.7rem;
@@ -715,14 +691,27 @@ input.barretemps-instant {
   background: var(--surface);
 }
 
+/* T-0182 — l'en-tête se lit de gauche à droite : le retour, ce qu'on lit, puis ce que la
+   cible vaut. Le rappel se serre à droite par sa marge, pas par une répartition — trois
+   éléments répartis auraient poussé le titre au milieu, loin du bouton qui le précède. */
 .lateral-entete {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  gap: 0.5rem;
   padding: 0.35rem 0.6rem;
   border-bottom: var(--trait) solid var(--bordure);
   background: var(--fond-accent);
+}
+
+/* T-0182 — le retour n'existe que sur la fiche : il ouvre l'en-tête, à gauche du titre, et
+   garde la cible de clic gantée de §11.2. */
+.lateral-retour {
+  min-height: var(--cible-clic);
+  min-width: var(--cible-clic);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
 }
 
 .lateral-entete h2 {

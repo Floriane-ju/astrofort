@@ -15,7 +15,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
-import { ouvreCarte } from '../src/ui/coque-etat.ts'
 import { FicheCible, LIBELLE_TYPE_OBJET } from '../src/ui/FicheCible.tsx'
 import { lignesCatalogue } from '../src/core/cibles-liste.ts'
 import { cielInstantane } from '../src/core/horloges.ts'
@@ -46,9 +45,8 @@ const CIBLE_REFERENCE = objetForge('CIBLE_REFERENCE', 85, {
 /** 12 janvier 2026, 1 h UTC : la Lune est sous l'horizon depuis le site de l'Annexe A. */
 const INSTANT_SANS_LUNE = Date.UTC(2026, 0, 12, 1)
 
-// T-0113 — la fiche vit dans la carte Cible, posée sur la scène. Elle démarre repliée tant
-// qu'aucun objet n'a été désigné : c'est elle que ce fichier interroge, dépliée.
-ouvreCarte('CIBLE')
+// T-0182 — la fiche vit dans le panneau de droite, à la place de la liste. `ouvreCible` l'y
+// met : c'est elle que ce fichier interroge.
 vaA(INSTANT_SANS_LUNE)
 ouvreCible(CIBLE_REFERENCE)
 const ecran = renderToStaticMarkup(<App />)
@@ -309,12 +307,12 @@ describe('T-0156 — la cible ne se saisit plus du tout', () => {
   })
 })
 
-describe('T-0156 — sans cible désignée, la carte le dit', () => {
+describe('T-0156 — sans cible désignée, il n’y a pas de fiche', () => {
   it('n’affiche aucun verdict de démonstration', () => {
     reinitialiseSeance()
-    ouvreCarte('CIBLE')
     const sansCible = renderToStaticMarkup(<App />)
-    expect(sansCible).toContain('Aucune cible : cliquez un objet sur la scène.')
+    // T-0182 — le panneau rend la liste : une fiche sans cible désignée n'existe plus.
+    expect(sansCible).toContain('Tout le catalogue')
     expect(sansCible).not.toContain('Cadrage de la cible')
     // T-0157 — le domaine, lui, ne dépend que du matériel : il se lit sans cible désignée.
     expect(sansCible).toContain('Ce que ce setup cadre')

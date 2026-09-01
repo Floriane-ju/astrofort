@@ -17,8 +17,8 @@
 
 import { useSyncExternalStore } from 'react'
 
-/** Les trois cartes posées sur la scène. Chacune est nommée d'après ce qu'elle montre. */
-export type CleCarte = 'MATERIEL' | 'VUE' | 'CIBLE'
+/** Les cartes posées sur la scène. Chacune est nommée d'après ce qu'elle montre. */
+export type CleCarte = 'MATERIEL' | 'VUE'
 
 export interface Decalage {
   readonly x: number
@@ -38,21 +38,16 @@ export interface EtatCoque {
 const SANS_DECALAGE: Decalage = Object.freeze({ x: 0, y: 0 })
 
 /**
- * Deux cartes démarrent repliées, et pour deux raisons distinctes.
+ * La carte Vue démarre repliée : ses interrupteurs se règlent une fois puis se laissent
+ * tranquilles, alors que le matériel se relit à chaque changement de focale.
  *
- * VUE — ses interrupteurs se règlent une fois puis se laissent tranquilles, alors que le
- * matériel se relit à chaque changement de focale.
- *
- * CIBLE — tant qu'aucun objet n'a été cliqué, la fiche décrit la cible de référence de §6.3,
- * pas un choix de l'utilisateur. Dépliée au démarrage, elle afficherait des lectures que
- * personne n'a demandées, sur un objet que personne n'a désigné. `ouvreCible` la déplie, et
- * c'est le seul chemin qui doit la faire apparaître.
+ * T-0182 — la carte Cible est partie : la fiche prend la place de la liste dans le panneau,
+ * là où on l'a choisie.
  */
 const ETAT_INITIAL: EtatCoque = Object.freeze({
   cartes: Object.freeze({
     MATERIEL: { ouverte: true, decalage: SANS_DECALAGE },
     VUE: { ouverte: false, decalage: SANS_DECALAGE },
-    CIBLE: { ouverte: false, decalage: SANS_DECALAGE },
   }),
 })
 
