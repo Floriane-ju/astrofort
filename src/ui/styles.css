@@ -127,11 +127,11 @@ body {
    des couleurs, il ne redessine pas la grammaire. Un jeton de forme placé dans le premier
    bloc obligerait à en déclarer un équivalent rouge, qui n'existe pas.
 
-   Les deux familles du dessin sont nommées avant leurs substituts système. Les fichiers ne
-   sont pas embarqués : §12.2 interdit d'aller les chercher sur le réseau et §13.1 le bloque.
-   La pile de repli porte donc le rendu réel tant que les polices ne sont pas installées, et
-   c'est voulu — ce qui porte l'identité est la casse, le suivi et le trait, pas le dessin
-   des lettres. */
+   T-0191 — les deux familles du dessin sont livrées avec les sources (`@font-face` plus bas),
+   puis leurs substituts système. Un jeton qui nomme une famille absente du dépôt promettrait
+   un rendu que la CSP interdit d'aller chercher (§12.2, §13.1) : le repli deviendrait le cas
+   nominal et le dessin varierait d'un poste à l'autre. `tests/polices.test.ts` tient la
+   correspondance — aucun nom sans fichier. */
 :root {
   accent-color: var(--alerte);
   caret-color: var(--texte);
@@ -172,11 +172,63 @@ body {
   --bulle-jour: 0.35rem;
 }
 
+/* T-0191 — les deux familles de texte de la charte, livrées avec les sources.
+
+   Sous-ensembles latins en WOFF2 (U+0000-00FF et les signes typographiques) : le français y
+   tient entièrement, et les 68 ko des cinq fichiers se précachent avec le reste (§12.2 —
+   `globPatterns` de `vite.config.ts` couvre déjà `woff2`). Un poids négligeable au regard de
+   la police d'icônes, pour la seule chose que le repli système ne rendait pas : le dessin.
+
+   Les graisses livrées sont celles que la feuille demande — 400/500/700 pour le corps de
+   texte et les en-têtes de colonne, 600/700 pour les titres condensés. Une graisse demandée
+   sans fichier ne casse rien de visible : le navigateur prend la voisine et le dessin part en
+   silence. Ajouter un `font-weight` à ces deux familles, c'est ajouter le fichier ici.
+
+   `font-display: swap` et non `block` comme l'icône : ces deux familles ONT une pile de repli
+   lisible, et un texte affiché tout de suite dans une police voisine vaut mieux qu'un vide. */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/IBMPlexMono-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../fonts/IBMPlexMono-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/IBMPlexMono-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/BarlowCondensed-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/BarlowCondensed-700.woff2') format('woff2');
+}
+
 /* T-0122 — les icônes viennent d'une police à ligatures, embarquée avec les sources.
 
-   C'est la SEULE police livrée dans le dépôt. Les deux familles de texte se replient sur des
-   substituts système : le dessin des lettres ne porte pas l'identité, la casse et le suivi le
-   font. Une icône n'a pas ce repli — sans le fichier, la ligature retombe sur son nom écrit en
+   Une icône n'a pas de repli — sans le fichier, la ligature retombe sur son nom écrit en
    clair (« close » au milieu d'un libellé français). §12.2 interdit d'aller la chercher sur le
    réseau et §13.1 (`default-src 'self'`) le bloque : elle voyage donc avec l'artefact.
 

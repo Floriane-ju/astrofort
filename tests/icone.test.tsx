@@ -20,6 +20,14 @@ function reglePointIcone(): string {
   return CSS.slice(debut, CSS.indexOf('}', debut))
 }
 
+/** Le corps de la `@font-face` de la police d'icônes — T-0191 en a livré d'autres. */
+function faceIcone(): string {
+  const faces = [...CSS.matchAll(/@font-face\s*\{([^}]*)\}/g)].map(([, corps]) => corps!)
+  const face = faces.find((corps) => corps.includes("'Material Symbols Sharp'"))
+  expect(face).toBeDefined()
+  return face!
+}
+
 describe('composant Icone', () => {
   it('rend la ligature demandée dans la classe de style commune', () => {
     const html = renderToStaticMarkup(<Icone nom="close" />)
@@ -64,7 +72,7 @@ describe('style des icônes §11.1', () => {
   })
 
   it('embarque le fichier de police plutôt que d’aller le chercher (§12.2, §13.1)', () => {
-    const face = CSS.slice(CSS.indexOf('@font-face {'))
+    const face = faceIcone()
     const source = /src:\s*url\('([^']+)'\)/.exec(face)?.[1]
     expect(source).toBeDefined()
     expect(source).not.toMatch(/^https?:/)
@@ -77,7 +85,6 @@ describe('style des icônes §11.1', () => {
   it('déclare la famille du fichier sous le nom que le jeton référence', () => {
     const famille = /--police-icone:\s*([^;]+);/.exec(CSS)?.[1]?.trim()
     expect(famille).toBeDefined()
-    const face = CSS.slice(CSS.indexOf('@font-face {'))
-    expect(face.slice(0, face.indexOf('}'))).toContain(`font-family: ${famille}`)
+    expect(faceIcone()).toContain(`font-family: ${famille}`)
   })
 })
