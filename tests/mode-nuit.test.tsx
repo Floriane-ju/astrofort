@@ -268,8 +268,10 @@ describe('contraste du texte — WCAG 2.2 AA', () => {
     // deux états partagent la même.
     const nuit = paletteDeNuit()
     expect(luminance(nuit['attenue']!)).toBeLessThan(luminance(nuit['texte']!))
+    // T-0194 — la taille vient désormais de l'échelle typographique : ce qui est vérifié
+    // reste qu'un rang lui est assigné, pas la forme littérale du nombre.
     for (const selecteur of ['label', '.etat']) {
-      expect(regle(selecteur), selecteur).toMatch(/font-size: 0\.\d+rem/)
+      expect(regle(selecteur), selecteur).toMatch(/font-size: var\(--texte-[a-z]+\)/)
     }
     expect(regle('.onglet.actif')).toMatch(/font-weight: 700/)
   })

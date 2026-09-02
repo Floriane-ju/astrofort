@@ -17,6 +17,12 @@
    suivis, épaisseur de trait — vivent dans le second bloc `:root`, avec les couleurs que le
    navigateur peint tout seul : ce ne sont pas des couleurs, ils n'ont rien à repeindre.
 
+   T-0194 — TOUT ÉCART ET TOUTE TAILLE DE TEXTE PASSENT PAR UN JETON, pour la même raison que
+   les couleurs : une valeur écrite en dur dans une règle est un choix que personne ne peut
+   plus comparer aux autres. Les deux échelles — sept pas d'espacement, six rangs de texte —
+   sont déclarées dans le second bloc `:root`, avec les jetons de forme. Les GABARITS (barres,
+   cartes, panneau, bulle) en sont exclus : ils mesurent des objets, pas l'air entre eux.
+
    T-0193 — POURQUOI CETTE FEUILLE RESTE D'UN SEUL TENANT, malgré le plafond de 800 lignes.
    Le plafond vise les fichiers qu'on lit pour comprendre une décision ; cette feuille est une
    TABLE, comme `registry/constants.ts` : une région par bloc, aucune logique à suivre d'un
@@ -121,6 +127,7 @@ body {
   body {
     transition: background-color 120ms ease, color 120ms ease;
   }
+
 }
 
 * {
@@ -157,6 +164,41 @@ body {
   --suivi-titre: 0.24em;
   --suivi-marque: 0.4em;
   --trait: 1px;
+  /* T-0194 — L'ÉCHELLE D'ESPACEMENT. La feuille portait vingt et une valeurs d'écart entre
+     0,05 et 2 rem : à ce grain, deux marges voisines ne se distinguent plus à l'œil mais
+     divergent au pixel, et rien ne dit laquelle est la bonne quand on en ajoute une. Sept
+     pas en multiples de 4 px suffisent à tout ce que la feuille pose — le choix redevient
+     un pas, pas un nombre. Un écart écrit en dur dans une règle est désormais un bug, au
+     même titre qu'une couleur.
+
+     Les GABARITS ci-dessous (barres, cartes, panneau, bulle) restent hors échelle : ils
+     mesurent des objets, pas l'air entre eux. */
+  --pas-0: 0.125rem;
+  --pas-1: 0.25rem;
+  --pas-2: 0.5rem;
+  --pas-3: 0.75rem;
+  --pas-4: 1rem;
+  --pas-5: 1.5rem;
+  --pas-6: 2rem;
+  /* T-0194 — L'ÉCHELLE TYPOGRAPHIQUE. Même constat sur le corps du texte : treize tailles,
+     dont cinq tenaient dans un dixième de rem. §11.1 confisque la luminance comme moyen de
+     hiérarchie (voir la palette) — la taille est donc l'un des deux seuls étages qui
+     restent, avec la casse. Un étage qu'on ne voit pas n'étage rien : six rangs, et chacun
+     porte un rôle.
+
+     `.icone` garde son corps propre (1,25 rem) : c'est la taille d'un glyphe, pas d'un
+     texte. `.tracee-plage` reste en `em` : elle se règle sur ce qui la contient. */
+  --texte-titre: 1rem;
+  --texte-corps: 0.95rem;
+  --texte-appui: 0.85rem;
+  --texte-legende: 0.78rem;
+  --texte-micro: 0.7rem;
+  --texte-mini: 0.65rem;
+  /* T-0194 — la durée du retour d'état d'un contrôle. Un survol qui bascule d'un coup se lit
+     comme un défaut d'affichage ; au-delà de ~250 ms, la commande paraît lente. Ce n'est pas
+     du mouvement — rien ne se déplace, c'est le même fondu de luminance que le basculement de
+     §11.1, et il tombe donc sous la même règle sous `prefers-reduced-motion` (T-0072). */
+  --fondu-etat: 150ms;
   /* Écart entre un nombre réglable et le trait qui l'annonce. Cité deux fois : par le
      compteur, et par la phrase qui le contient et doit réserver la place du trait. */
   --jour-trait: 0.2em;
@@ -172,16 +214,16 @@ body {
      horizontalement, et un tableau qu'on fait glisser ne se compare plus d'une ligne à
      l'autre. Sa carte a donc son propre gabarit. */
   --carte-plan: 29rem;
-  --jour-carte: 0.75rem;
+  --jour-carte: var(--pas-3);
   /* T-0145 — l'écart entre deux éléments d'une barre. Nommé parce que la bande de commandes
      l'annule par marge négative : la valeur doit être lue au même endroit des deux côtés. */
-  --jour-barre: 0.6rem;
+  --jour-barre: var(--pas-2);
   /* T-0147 — largeur maximale d'une bulle de survol. Une infobulle est une phrase, pas un
      paragraphe : au-delà, ce n'est plus un survol qu'il faut, c'est la fiche. */
   --bulle-large: 18rem;
   /* L'air entre la bulle et ce qu'elle nomme, et entre la bulle et le bord de l'écran :
      c'est le même écart des deux côtés, sans quoi une bulle rabattue paraît décollée. */
-  --bulle-jour: 0.35rem;
+  --bulle-jour: var(--pas-1);
 }
 
 /* T-0191 — les deux familles de texte de la charte, livrées avec les sources.
@@ -308,6 +350,7 @@ body {
 }
 
 
+
 /* T-0113 — chasse fixe pour tout le texte courant. Un relevé se compare en colonne : le
    chasse fixe aligne les chiffres, `tabular-nums` le garantit encore sous une police de
    repli dont les chiffres seraient proportionnels. */
@@ -315,7 +358,7 @@ body {
   margin: 0;
   background: var(--fond);
   color: var(--texte);
-  font: 0.95rem/1.6 var(--police-mono);
+  font: var(--texte-corps)/1.6 var(--police-mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -352,7 +395,7 @@ body {
   flex-wrap: nowrap;
   align-items: center;
   gap: var(--jour-barre);
-  padding: 0 0.75rem;
+  padding: 0 var(--pas-3);
   overflow: visible;
 }
 
@@ -461,12 +504,20 @@ body {
   padding-bottom: var(--jour-trait);
 }
 
-.compteur:hover {
-  border-bottom-color: var(--accent);
+/* T-0194 — le compteur et le curseur sont les deux contrôles qu'on TIRE, tous deux peints en
+   --alerte au repos (voir `.curseur-rail`). Ils répondaient pourtant au survol par deux
+   couleurs différentes — vert d'accent ici, orange d'avertissement là — alors que le geste et
+   la promesse sont les mêmes. C'est --avertissement qui est retenu : rester dans la famille du
+   rail dit « c'est la même chose, sous la main », là où le vert des états actifs disait « autre
+   chose ». Le focus au clavier ouvre le même geste, il prend donc le même retour. */
+.compteur:hover,
+.compteur:active,
+.compteur:focus-visible {
+  border-bottom-color: var(--avertissement);
 }
 
 .barrebas-lieu {
-  font-size: 0.7rem;
+  font-size: var(--texte-micro);
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
   color: var(--attenue);
@@ -480,8 +531,8 @@ body {
 
 .coque-barrebas .tiroir[open] > .tiroir-contenu {
   top: auto;
-  bottom: calc(var(--barre-bas) + 0.25rem);
-  left: 0.75rem;
+  bottom: calc(var(--barre-bas) + var(--pas-1));
+  left: var(--pas-3);
   right: auto;
   width: min(32rem, calc(100vw - 1.5rem));
   max-height: calc(100dvh - var(--barre-bas) - 1rem);
@@ -493,7 +544,7 @@ body {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 0.15rem;
+  gap: var(--pas-0);
   flex: none;
 }
 
@@ -509,7 +560,7 @@ body {
 .barretemps-cran,
 .barretemps-lecture {
   min-width: calc(var(--cible-clic) - 0.5rem);
-  padding: 0.2rem 0.3rem;
+  padding: var(--pas-1) var(--pas-1);
 }
 
 /* La vitesse active et la lecture se voient, sinon deux états identiques à l'œil font croire
@@ -526,9 +577,9 @@ body {
 .barretemps-instant {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.78rem;
+  gap: var(--pas-2);
+  padding: var(--pas-1) var(--pas-2);
+  font-size: var(--texte-legende);
   color: var(--attenue);
   text-transform: none;
   letter-spacing: normal;
@@ -536,7 +587,7 @@ body {
 
 /* En saisie, l'instant n'est plus une lecture : il reprend la couleur du texte actif. */
 input.barretemps-instant {
-  font: 0.9rem/1.4 var(--police-mono);
+  font: var(--texte-appui)/1.4 var(--police-mono);
   font-variant-numeric: tabular-nums;
   color: var(--texte);
 }
@@ -552,12 +603,12 @@ input.barretemps-instant {
 
 .barretemps-heure::before {
   content: '·';
-  margin-right: 0.5rem;
+  margin-right: var(--pas-2);
   color: var(--attenue);
 }
 
 .barretemps-facteur {
-  font-size: 0.75rem;
+  font-size: var(--texte-legende);
   font-variant-numeric: tabular-nums;
   color: var(--accent);
   letter-spacing: var(--suivi-micro);
@@ -568,10 +619,10 @@ input.barretemps-instant {
 .barretemps-message {
   position: absolute;
   right: 0;
-  bottom: calc(100% + 0.35rem);
+  bottom: calc(100% + var(--pas-1));
   width: min(28rem, calc(100vw - 1.5rem));
   margin: 0;
-  padding: 0.4rem 0.6rem;
+  padding: var(--pas-2) var(--pas-2);
   background: var(--surface-haute);
   border: var(--trait) solid var(--bordure);
 }
@@ -676,15 +727,25 @@ input.barretemps-instant {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--pas-4);
   width: 100%;
   min-height: var(--cible-clic);
-  padding: 0.35rem 0.6rem;
+  padding: var(--pas-1) var(--pas-2);
   border: 0;
   border-bottom: var(--trait) solid var(--bordure);
   background: var(--fond-accent);
   cursor: grab;
   touch-action: none;
+}
+
+/* T-0194 — l'en-tête est le seul bouton de la feuille qui n'annonçait rien au survol : il
+   changeait de curseur, et rien d'autre. Or il fait DEUX choses — il replie la carte, et il la
+   déplace — donc c'est le contrôle qu'il faut le plus désigner avant le clic. Le filet passe à
+   l'accent comme sur les autres commandes ; le fond monte d'un cran, l'en-tête étant déjà
+   teinté au repos. */
+.carte-entete:hover {
+  background: var(--surface-haute);
+  border-bottom-color: var(--accent);
 }
 
 .carte-entete:active {
@@ -693,7 +754,7 @@ input.barretemps-instant {
 
 .carte-titre {
   font-family: var(--police-titre);
-  font-size: 0.85rem;
+  font-size: var(--texte-appui);
   font-weight: 600;
   letter-spacing: var(--suivi-titre);
   text-transform: uppercase;
@@ -710,7 +771,7 @@ input.barretemps-instant {
 .lateral-entete .carte-rappel-glose {
   margin-inline-start: auto;
   color: var(--attenue);
-  font-size: 0.7rem;
+  font-size: var(--texte-micro);
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
   white-space: nowrap;
@@ -719,7 +780,7 @@ input.barretemps-instant {
 .carte-rappel-glose {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: var(--pas-1);
 }
 
 /* Une carte ne pousse jamais la coque : son corps défile chez lui. La borne est la place
@@ -727,7 +788,7 @@ input.barretemps-instant {
 .carte-corps {
   max-height: calc(100dvh - var(--barre-haut) - var(--barre-bas) - 4 * var(--jour-carte));
   overflow-y: auto;
-  padding: 0.25rem 0.6rem 0.75rem;
+  padding: var(--pas-1) var(--pas-2) var(--pas-3);
 }
 
 /* Le plan est seul sur son flanc : il prend toute la hauteur laissée par les deux barres. */
@@ -751,7 +812,7 @@ input.barretemps-instant {
    de section. */
 .carte-corps > *:first-child h2:first-child,
 .carte-corps > h2:first-child {
-  margin-top: 0.5rem;
+  margin-top: var(--pas-2);
 }
 
 /* T-0113 — le panneau latéral : ce qui se lit en longueur, à côté de la scène.
@@ -778,8 +839,8 @@ input.barretemps-instant {
 .lateral-entete {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.6rem;
+  gap: var(--pas-2);
+  padding: var(--pas-1) var(--pas-2);
   border-bottom: var(--trait) solid var(--bordure);
   background: var(--fond-accent);
 }
@@ -805,7 +866,7 @@ input.barretemps-instant {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 0.75rem 2rem;
+  padding: 0 var(--pas-3) var(--pas-6);
 }
 
 /* Repli sous 1100 px : plus rien ne flotte. Les barres, les cartes et le panneau reprennent
@@ -837,7 +898,7 @@ input.barretemps-instant {
   .coque-topbar,
   .coque-barrebas {
     min-height: var(--cible-clic);
-    padding: 0.4rem 0.75rem;
+    padding: var(--pas-2) var(--pas-3);
   }
 
   /* T-0153 — sous le repli, le lieu et le transport remplissent déjà la rangée : la phrase
@@ -905,14 +966,14 @@ input.barretemps-instant {
   display: flex;
   flex-wrap: wrap;
   gap: 0;
-  margin: 1.5rem 0 0;
+  margin: var(--pas-5) 0 0;
   border-bottom: var(--trait) solid var(--bordure);
 }
 
 .onglet {
   flex: 1 1 auto;
   min-height: var(--cible-clic);
-  padding: 0.45rem 0.6rem;
+  padding: var(--pas-2) var(--pas-2);
   background: transparent;
   color: var(--attenue);
   border: 0;
@@ -920,7 +981,7 @@ input.barretemps-instant {
   border-radius: 0;
   cursor: pointer;
   font-family: var(--police-mono);
-  font-size: 0.7rem;
+  font-size: var(--texte-micro);
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
 }
@@ -955,15 +1016,15 @@ input.barretemps-instant {
 .tiroir > summary {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--pas-1);
   min-height: var(--cible-clic);
-  padding: 0.35rem 0.7rem;
+  padding: var(--pas-1) var(--pas-3);
   background: transparent;
   color: var(--attenue);
   border: var(--trait) solid var(--bordure-controle);
   border-radius: 0;
   cursor: pointer;
-  font-size: 0.7rem;
+  font-size: var(--texte-micro);
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
   white-space: nowrap;
@@ -1014,14 +1075,14 @@ input.barretemps-instant {
    dessous sont donc le repli : bord droit de l'écran, jamais hors champ. */
 .tiroir[open] > .tiroir-contenu {
   position: fixed;
-  right: 0.75rem;
+  right: var(--pas-3);
   left: auto;
-  top: calc(var(--barre-haut) + 0.25rem);
+  top: calc(var(--barre-haut) + var(--pas-1));
   z-index: 5;
   width: min(52rem, calc(100vw - 1.5rem));
   max-height: calc(100dvh - var(--barre-haut) - 1rem);
   overflow-y: auto;
-  padding: 0 0.9rem 0.9rem;
+  padding: 0 var(--pas-4) var(--pas-4);
   background: var(--surface);
   border: var(--trait) solid var(--accent);
   border-radius: 0;
@@ -1032,7 +1093,7 @@ input.barretemps-instant {
 h1 {
   margin: 0;
   font-family: var(--police-titre);
-  font-size: 1rem;
+  font-size: var(--texte-titre);
   font-weight: 700;
   letter-spacing: var(--suivi-marque);
   text-transform: uppercase;
@@ -1042,11 +1103,11 @@ h1 {
 /* Un titre de rubrique est une étiquette, pas un poids : capitales condensées, filet
    dessous. Il n'a pas à peser plus que la valeur qu'il annonce. */
 h2 {
-  margin: 1.75rem 0 0.6rem;
-  padding-bottom: 0.3rem;
+  margin: var(--pas-5) 0 var(--pas-2);
+  padding-bottom: var(--pas-1);
   border-bottom: var(--trait) solid var(--bordure);
   font-family: var(--police-titre);
-  font-size: 0.85rem;
+  font-size: var(--texte-appui);
   font-weight: 600;
   letter-spacing: var(--suivi-titre);
   text-transform: uppercase;
@@ -1054,9 +1115,9 @@ h2 {
 }
 
 h3 {
-  margin: 1rem 0 0.4rem;
+  margin: var(--pas-4) 0 var(--pas-2);
   font-family: var(--police-titre);
-  font-size: 0.8rem;
+  font-size: var(--texte-legende);
   font-weight: 600;
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
@@ -1066,7 +1127,7 @@ h3 {
 .champs {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: 0.6rem;
+  gap: var(--pas-2);
 }
 
 /* Un libellé est une ÉTIQUETTE : petit, en capitales, espacé. Ce qui le sépare de la valeur
@@ -1074,8 +1135,8 @@ h3 {
 label {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.7rem;
+  gap: var(--pas-1);
+  font-size: var(--texte-micro);
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
   color: var(--attenue);
@@ -1086,12 +1147,12 @@ label {
 input,
 select {
   min-height: var(--cible-clic);
-  padding: 0.4rem 0.5rem;
+  padding: var(--pas-2) var(--pas-2);
   background: var(--fond-accent);
   color: var(--texte);
   border: var(--trait) solid var(--bordure-controle);
   border-radius: 0;
-  font: 0.85rem/1.4 var(--police-mono);
+  font: var(--texte-appui)/1.4 var(--police-mono);
   letter-spacing: 0.05em;
   text-transform: none;
 }
@@ -1170,7 +1231,7 @@ input[type='checkbox'] {
 .curseur.avec-legende {
   /* Marge et non remplissage : un remplissage décalerait le rail sans décaler les repères, qui
      se positionnent, eux, sur la boîte de remplissage. */
-  margin-bottom: 1rem;
+  margin-bottom: var(--pas-4);
 }
 
 /* LA LÉGENDE NE SORT PAS DE LA COLONNE DE TEXTE.
@@ -1201,7 +1262,7 @@ input[type='checkbox'] {
 .curseur-legende {
   flex: none;
   white-space: nowrap;
-  font-size: 0.6rem;
+  font-size: var(--texte-mini);
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
   color: var(--accent);
@@ -1210,13 +1271,13 @@ input[type='checkbox'] {
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8rem;
+  font-size: var(--texte-legende);
 }
 
 th,
 td {
   text-align: left;
-  padding: 0.35rem 0.5rem;
+  padding: var(--pas-1) var(--pas-2);
   border-bottom: var(--trait) solid var(--bordure-faible);
   vertical-align: top;
 }
@@ -1224,7 +1285,7 @@ td {
 /* L'en-tête de colonne est un micro-libellé, pas une cellule en gras. */
 th {
   color: var(--attenue);
-  font-size: 0.68rem;
+  font-size: var(--texte-micro);
   font-weight: 500;
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
@@ -1234,20 +1295,20 @@ th {
    Les capitales espacées sont réservées à ce qui nomme un champ ou une colonne ; appliquées
    à une explication, elles la rendent illisible et lui donnent un poids qu'elle n'a pas. */
 .etat {
-  margin: 0.25rem 0;
+  margin: var(--pas-1) 0;
   color: var(--attenue);
-  font-size: 0.78rem;
+  font-size: var(--texte-legende);
 }
 
 .cause,
 .erreur {
-  margin: 0.5rem 0;
-  padding: 0.55rem 0.7rem;
+  margin: var(--pas-2) 0;
+  padding: var(--pas-2) var(--pas-3);
   border: var(--trait) solid var(--alerte);
   border-left-width: 3px;
   background: var(--fond-alerte);
   color: var(--alerte);
-  font-size: 0.78rem;
+  font-size: var(--texte-legende);
   line-height: 1.55;
 }
 
@@ -1263,9 +1324,9 @@ th {
 .interrupteur {
   flex-direction: row;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--pas-2);
   color: var(--texte);
-  font-size: 0.78rem;
+  font-size: var(--texte-legende);
   letter-spacing: 0;
   text-transform: none;
   min-height: var(--cible-clic);
@@ -1300,11 +1361,11 @@ th {
   visibility: hidden;
   width: max-content;
   max-width: var(--bulle-large);
-  padding: 0.3rem 0.5rem;
+  padding: var(--pas-1) var(--pas-2);
   border: var(--trait) solid var(--bordure);
   background: var(--surface-haute);
   color: var(--texte);
-  font: 0.72rem/1.35 var(--police-mono);
+  font: var(--texte-micro)/1.35 var(--police-mono);
   letter-spacing: 0;
   text-transform: none;
   text-align: left;
@@ -1423,24 +1484,29 @@ th {
 .terme-detail summary {
   cursor: pointer;
   min-height: var(--cible-clic);
-  padding: 0.35rem 0;
+  padding: var(--pas-1) 0;
   color: var(--accent);
-  font-size: 0.78rem;
+  font-size: var(--texte-legende);
+}
+
+/* Le même retour qu'une lecture tracée : deux replis qui s'ouvrent au clic répondent pareil. */
+.terme-detail summary:hover {
+  color: var(--texte);
 }
 
 .glossaire {
   letter-spacing: 0;
   text-transform: none;
-  margin: 0 0 0.75rem;
-  padding: 0.55rem 0.7rem;
+  margin: 0 0 var(--pas-3);
+  padding: var(--pas-2) var(--pas-3);
   border-left: 3px solid var(--bordure);
   background: var(--fond-accent);
-  font-size: 0.78rem;
+  font-size: var(--texte-legende);
   color: var(--attenue);
 }
 
 .glossaire p {
-  margin: 0 0 0.4rem;
+  margin: 0 0 var(--pas-2);
 }
 
 .glossaire-contexte {
@@ -1461,17 +1527,17 @@ th {
 
 .tracee {
   border-bottom: var(--trait) solid var(--bordure-faible);
-  padding: 0.3rem 0;
+  padding: var(--pas-1) 0;
 }
 
 .tracee summary {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--pas-4);
   min-height: var(--cible-clic);
   align-items: center;
   cursor: pointer;
-  font-size: 0.72rem;
+  font-size: var(--texte-micro);
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
   color: var(--attenue);
@@ -1482,11 +1548,11 @@ th {
 .tracee-vide {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--pas-4);
   min-height: var(--cible-clic);
   align-items: center;
   margin: 0;
-  font-size: 0.72rem;
+  font-size: var(--texte-micro);
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
   color: var(--attenue);
@@ -1500,15 +1566,15 @@ th {
    jeton le plus lumineux. L'étiquette qui la précède fait l'inverse. */
 .tracee-valeur {
   font-variant-numeric: tabular-nums;
-  font-size: 0.95rem;
+  font-size: var(--texte-corps);
   letter-spacing: 0;
   text-transform: none;
   color: var(--texte);
 }
 
 .tracee-detail {
-  padding: 0.5rem 0 0.75rem 1rem;
-  font-size: 0.78rem;
+  padding: var(--pas-2) 0 var(--pas-3) var(--pas-4);
+  font-size: var(--texte-legende);
   letter-spacing: 0;
   text-transform: none;
   color: var(--attenue);
@@ -1521,13 +1587,13 @@ th {
 .tracee-entrees {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: 0.25rem 1rem;
-  margin: 0.5rem 0;
+  gap: var(--pas-1) var(--pas-4);
+  margin: var(--pas-2) 0;
 }
 
 .tracee-entrees div {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--pas-2);
 }
 
 .tracee-entrees dt,
@@ -1536,8 +1602,8 @@ th {
 }
 
 .tracee-constantes {
-  margin: 0.5rem 0;
-  padding-left: 1rem;
+  margin: var(--pas-2) 0;
+  padding-left: var(--pas-4);
 }
 
 .tracee-flags {
@@ -1552,8 +1618,8 @@ th {
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: var(--pas-2);
+  margin-top: var(--pas-4);
   align-items: center;
 }
 
@@ -1563,18 +1629,18 @@ th {
 button,
 .bouton-fichier {
   min-height: var(--cible-clic);
-  padding: 0.4rem 0.85rem;
+  padding: var(--pas-2) var(--pas-3);
   background: transparent;
   color: var(--accent);
   border: var(--trait) solid var(--bordure);
   border-radius: 0;
-  font: 0.72rem/1.4 var(--police-mono);
+  font: var(--texte-micro)/1.4 var(--police-mono);
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
   cursor: pointer;
 }
 
-button:hover,
+button:not(:disabled):hover,
 .bouton-fichier:hover {
   background: var(--fond-accent);
   border-color: var(--accent);
@@ -1595,7 +1661,7 @@ button:disabled {
    filet dessous, pas de cadre complet. La séquence se lit comme un tableau de départs. */
 .etape {
   margin: 0;
-  padding: 0.6rem 0;
+  padding: var(--pas-2) 0;
   border: 0;
   border-bottom: var(--trait) solid var(--bordure-faible);
   border-radius: 0;
@@ -1606,10 +1672,10 @@ button:disabled {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin: 0 0 0.35rem;
+  gap: var(--pas-2);
+  margin: 0 0 var(--pas-1);
   font-family: var(--police-titre);
-  font-size: 0.95rem;
+  font-size: var(--texte-corps);
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1626,9 +1692,9 @@ button:disabled {
 .score-detail {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  margin: 0.35rem 0;
-  font-size: 0.7rem;
+  gap: var(--pas-3);
+  margin: var(--pas-1) 0;
+  font-size: var(--texte-micro);
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
   color: var(--attenue);
@@ -1638,12 +1704,12 @@ button:disabled {
 .plan-export {
   width: 100%;
   min-height: 20rem;
-  padding: 0.75rem;
+  padding: var(--pas-3);
   background: var(--fond);
   color: var(--texte);
   border: var(--trait) solid var(--bordure);
   border-radius: 0;
-  font: 0.72rem/1.5 var(--police-mono);
+  font: var(--texte-micro)/1.5 var(--police-mono);
   white-space: pre;
 }
 
@@ -1653,7 +1719,7 @@ button:disabled {
   width: 100%;
   max-width: 22rem;
   aspect-ratio: 3 / 2;
-  margin: 0.5rem 0;
+  margin: var(--pas-2) 0;
   border: var(--trait) solid var(--bordure);
   background: var(--fond);
 }
@@ -1662,7 +1728,7 @@ button:disabled {
   position: absolute;
   transform: translate(-50%, -50%);
   color: var(--attenue);
-  font-size: 0.65rem;
+  font-size: var(--texte-mini);
   letter-spacing: var(--suivi-micro);
   line-height: 1;
 }
@@ -1742,20 +1808,20 @@ button:disabled {
 /* §4.1 — les relevés du masque d'horizon : une ligne par crête, effaçable au contact. */
 .masque-releves {
   list-style: none;
-  margin: 0.5rem 0;
+  margin: var(--pas-2) 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.75rem;
+  gap: var(--pas-1);
+  font-size: var(--texte-legende);
 }
 
 .masque-releves li {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.15rem 0;
+  gap: var(--pas-2);
+  padding: var(--pas-0) 0;
   border-bottom: var(--trait) solid var(--bordure-faible);
 }
 
@@ -1764,14 +1830,14 @@ button:disabled {
 .poids-scoring {
   border: var(--trait) solid var(--bordure);
   border-radius: 0;
-  padding: 0.5rem 0.75rem 0.75rem;
+  padding: var(--pas-2) var(--pas-3) var(--pas-3);
   background: var(--fond-accent);
 }
 
 .poids-scoring > label > span:first-child {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--pas-4);
 }
 
 .poids-effectif {
@@ -1786,23 +1852,23 @@ button:disabled {
    sépare deux cibles est un filet, et le seul relief est celui du survol. */
 .cibles-recherche {
   width: 100%;
-  margin: 0.5rem 0;
+  margin: var(--pas-2) 0;
 }
 
 .cibles-portee {
   display: flex;
-  gap: 0.25rem;
+  gap: var(--pas-1);
   border-bottom: var(--trait) solid var(--bordure-faible);
 }
 
 .cibles-filtres {
   display: grid;
-  gap: 0.4rem;
-  margin: 0.6rem 0;
+  gap: var(--pas-2);
+  margin: var(--pas-2) 0;
 }
 .cibles-filtres > label {
   display: grid;
-  gap: 0.2rem;
+  gap: var(--pas-1);
 }
 .cibles-mag-valeur {
   color: var(--accent);
@@ -1818,7 +1884,7 @@ button:disabled {
 .cible-item {
   display: flex;
   align-items: stretch;
-  gap: 0.25rem;
+  gap: var(--pas-1);
   border-top: var(--trait) solid var(--bordure-faible);
 }
 
@@ -1826,8 +1892,8 @@ button:disabled {
   flex: 1;
   min-width: 0;
   display: grid;
-  gap: 0.1rem;
-  padding: 0.5rem 0.4rem;
+  gap: var(--pas-0);
+  padding: var(--pas-2) var(--pas-2);
   min-height: var(--cible-clic);
   background: transparent;
   border: 0;
@@ -1848,14 +1914,14 @@ button:disabled {
 
 .cible-designation {
   font-family: var(--police-titre);
-  font-size: 0.95rem;
+  font-size: var(--texte-corps);
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
 }
 
 .cible-commun {
   color: var(--attenue);
-  font-size: 0.78rem;
+  font-size: var(--texte-legende);
 }
 
 /* Les lectures qui expliquent la pose : encombrement, temps de pose. Elles
@@ -1870,12 +1936,12 @@ button:disabled {
 .facilite {
   display: inline-flex;
   align-items: center;
-  gap: 0.05rem;
+  gap: var(--pas-0);
   white-space: nowrap;
 }
 
 .facilite .icone {
-  font-size: 0.8rem;
+  font-size: var(--texte-legende);
 }
 
 /* Le remplissage porte la différence, pas la teinte : au corps d'une pastille, une nuance de
@@ -1896,16 +1962,16 @@ button:disabled {
 .facilite-ligne {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--pas-2);
 }
 
 .cible-lectures {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 0.5rem;
+  gap: 0 var(--pas-2);
   color: var(--attenue);
   font-family: var(--police-mono);
-  font-size: 0.7rem;
+  font-size: var(--texte-micro);
 }
 .cible-lectures > span {
   white-space: nowrap;
@@ -1928,8 +1994,8 @@ button:disabled {
 }
 
 .cibles-note {
-  margin-top: 1rem;
-  padding-top: 0.6rem;
+  margin-top: var(--pas-4);
+  padding-top: var(--pas-2);
   border-top: var(--trait) solid var(--bordure-faible);
 }
 
@@ -1945,9 +2011,9 @@ button:disabled {
    Le fond porte donc `--texte` en mode nuit : le jeton est déjà du rouge pur au facteur de
    luminance courant, donc la vignette s'assombrit avec le reste de l'interface. */
 .image-cible {
-  margin: 0 0 0.8rem;
+  margin: 0 0 var(--pas-3);
   display: grid;
-  gap: 0.3rem;
+  gap: var(--pas-1);
 }
 
 .image-cible-vue {
@@ -1975,7 +2041,7 @@ button:disabled {
 }
 
 .image-cible figcaption {
-  font-size: 0.7rem;
+  font-size: var(--texte-micro);
   color: var(--attenue);
 }
 
@@ -2016,8 +2082,8 @@ button:disabled {
    plein, l'objet qui sort, ce que MOSAIQUE_REQUISE décrit. */
 .image-cible-encart {
   position: absolute;
-  right: 0.4rem;
-  bottom: 0.4rem;
+  right: var(--pas-2);
+  bottom: var(--pas-2);
   /* La largeur passe par une variable, pas par le style en ligne : c'est ce qui permet au
      survol ci-dessous de la surcharger. Un `width` en ligne gagnerait contre toute règle. */
   width: var(--encart-largeur);
@@ -2042,7 +2108,7 @@ button:disabled {
 
    Le lissé du passage est déclaré plus bas, sous la préférence de mouvement. */
 .image-cible-encart:hover {
-  width: calc(100% - 0.8rem);
+  width: calc(100% - 2 * var(--pas-2));
 }
 
 /* Ce que le survol montre n'est pas la même vue à la même échelle : sans cette mention, un
@@ -2052,16 +2118,78 @@ button:disabled {
   right: 0;
   bottom: 0;
   left: 0;
-  padding: 0.15rem 0.3rem;
+  padding: var(--pas-0) var(--pas-1);
   background: var(--fond);
   color: var(--attenue);
-  font-size: 0.65rem;
+  font-size: var(--texte-mini);
   opacity: 0;
 }
 
 .image-cible-encart:hover .image-cible-encart-mention {
   opacity: 1;
 }
+
+/* T-0072, T-0194 — même arbitrage que pour le fondu de bascule plus haut : sous la préférence,
+   la durée se coupe, le fondu reste. À zéro, le survol redeviendrait le basculement brutal que
+   §11.1 proscrit. La surcharge est posée ICI, après la valeur nominale : un jeton se résout à
+   l'ordre de la feuille, et le même bloc placé plus haut aurait été réécrit par elle. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fondu-etat: 80ms;
+  }
+}
+
+/* T-0194 — LE RETOUR D'ÉTAT, DÉCLARÉ UNE FOIS POUR TOUS LES CONTRÔLES.
+
+   L'anneau de focus ci-dessus était le seul état commun de la feuille : le survol et l'appui
+   étaient écrits contrôle par contrôle, et n'y étaient donc pas écrits partout. Onze commandes
+   portaient un survol, trois un appui, aucune n'annonçait la transition — un aplat qui bascule
+   d'un coup se lit comme un défaut d'affichage, pas comme une réponse au geste.
+
+   TROIS ÉTATS, TROIS RANGS. Au repos, rien ne brille — sur un écran regardé dans le noir, un
+   aplat permanent est une lampe permanente (T-0113). Au survol, le contrôle prend le fond
+   teinté et son filet passe à l'accent : il se désigne. À l'appui, il monte d'un cran sur
+   `--surface-haute` : c'est le seul moment où il pèse plus que ce qui l'entoure, et il ne dure
+   que le temps du doigt.
+
+   RIEN NE BOUGE. Pas de `transform`, pas d'ombre portée, pas de décalage : §11.2 refuse
+   l'animation, et un contrôle qui se déplace sous le doigt déplace aussi ce qui l'entoure. Ce
+   qui change est une couleur, comme au basculement de §11.1 — d'où une transition qui ne porte
+   que des couleurs, et qui vit hors du bloc `prefers-reduced-motion: no-preference` pour cette
+   raison précise.
+
+   `:disabled` est exclu : une commande éteinte qui s'allume au survol promet un clic qui
+   n'aura pas lieu. */
+button,
+.bouton-fichier,
+.onglet,
+.tiroir > summary,
+.terme-detail summary,
+.tracee summary,
+.carte-entete,
+.cible-ligne,
+.compteur,
+input,
+select,
+.curseur-rail {
+  transition: background-color var(--fondu-etat) ease, color var(--fondu-etat) ease,
+    border-color var(--fondu-etat) ease;
+}
+
+/* L'appui, pour tout ce qui se clique. Les survols restent auprès de leur composant : ils
+   disent chacun quelque chose de particulier — un filet ici, un fond là. L'appui, lui, dit la
+   même chose partout, et n'a donc rien à faire douze fois. */
+button:not(:disabled):active,
+.bouton-fichier:active,
+.onglet:active,
+.tiroir > summary:active,
+.terme-detail summary:active,
+.tracee summary:active,
+.cible-ligne:active {
+  background: var(--surface-haute);
+  color: var(--texte);
+}
+
 
 /* T-0072, WCAG 2.3.3 — le seul mouvement de la feuille en dehors du fondu de bascule.
 
