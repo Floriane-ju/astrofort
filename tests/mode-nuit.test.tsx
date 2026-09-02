@@ -106,6 +106,14 @@ describe('palette du mode nuit §11.1', () => {
     }
   })
 
+  it('inclut le jeton --bordure-controle en mode nuit', () => {
+    // T-0186 - le nouveau jeton reserve aux controles doit etre defini en rouge pur.
+    const couleursNuit = jetonsDuBloc(blocModeNuit())
+    expect(couleursNuit, '--bordure-controle manquant').toHaveProperty('bordure-controle')
+    const valeur = couleursNuit['bordure-controle']!
+    expect(valeur, valeur).toMatch(/^rgb\(\s*calc\(var\(--luminance-nuit\)\s*\*\s*\d+\)\s+0\s+0\s*\)$/)
+  })
+
   it('n’écrit aucune couleur en dur hors des blocs de palette', () => {
     // Tout ce qui suit le bloc de palette nocturne est la feuille proprement dite : elle ne
     // doit référencer que des variables. Une couleur en dur y survivrait au mode nuit.
@@ -264,6 +272,85 @@ describe('contraste du texte — WCAG 2.2 AA', () => {
       expect(regle(selecteur), selecteur).toMatch(/font-size: 0\.\d+rem/)
     }
     expect(regle('.onglet.actif')).toMatch(/font-weight: 700/)
+  })
+})
+
+/**
+ * T-0186 - le contraste des elements non textuels (bordures de controle).
+ *
+ * WCAG 2.2 critere 1.4.11 exige 3:1 entre la limite visuelle qui identifie un composant
+ * d'interface (champ, bouton, tiroir) et la surface qui la porte. Le jeton `--bordure-controle`
+ * est reserve aux controles ; `--bordure` reste sur les conteneurs (cartes) qui en sont exempts.
+ *
+ * En mode nuit, au facteur nominal, le meme seuil doit tenir. Sous le facteur, l'ecart est
+ * celui de T-0071 (effondrement au plancher de 2 %).
+ */
+describe('contraste des bordures de controle - WCAG 2.2 1.4.11', () => {
+  const CONTRASTE_BORDURE_MINIMAL = 3
+
+  const JETONS_BORDURE_CONTROLE = ['bordure-controle'] as const
+  const JETONS_FOND = ['fond', 'surface', 'surface-haute', 'fond-alerte', 'fond-accent'] as const
+
+  for (const [mode, palette] of [
+    ['normal', paletteParDefaut],
+    ['nuit', paletteDeNuit],
+  ] as const) {
+    it(`donne >= 3:1 aux bordures de controle sur toute surface, en mode ${mode}`, () => {
+      const jetons = palette()
+      for (const bordure of JETONS_BORDURE_CONTROLE) {
+        for (const fond of JETONS_FOND) {
+          expect(
+            contraste(jetons[bordure]!, jetons[fond]!),
+            `--${bordure} sur --${fond}`,
+          ).toBeGreaterThanOrEqual(CONTRASTE_BORDURE_MINIMAL)
+        }
+      }
+    })
+  }
+
+  it('ne degrade pas le contraste du texte', () => {
+    // Valider que le nouveau jeton --bordure-controle n'a pas degrade le contraste du texte
+    // qui doit rester >= 4,5:1 (AA) sur toute surface.
+    const CONTRASTE_TEXTE_MINIMAL = 4.5
+    const JETONS_TEXTE = ['texte', 'attenue', 'alerte'] as const
+    const JETONS_FOND = ['fond', 'surface', 'surface-haute', 'fond-alerte'] as const
+
+    for (const [mode, palette] of [
+      ['normal', paletteParDefaut],
+      ['nuit', paletteDeNuit],
+    ] as const) {
+      const jetons = palette()
+      for (const texte of JETONS_TEXTE) {
+        for (const fond of JETONS_FOND) {
+          expect(
+            contraste(jetons[texte]!, jetons[fond]!),
+            `${mode} - --${texte} sur --${fond}`,
+          ).toBeGreaterThanOrEqual(CONTRASTE_TEXTE_MINIMAL)
+        }
+      }
+    }
+  })
+
+  it('conserve le jeton --bordure pour les conteneurs (cartes), exempt par 1.4.11', () => {
+    // --bordure n'est plus sur les controles (input, select, .tiroir > summary) mais reste
+    // sur les bords de conteneurs ou il ne releve pas du critere 1.4.11.
+
+    // Verifier que --bordure-controle est sur les controles
+    // Le selecteur 'input,' n'a pas d'accolade directe - il est suivi de 'select {'
+    const debut = CSS.indexOf('input,')
+    expect(debut).toBeGreaterThan(-1)
+    const regleInput = CSS.slice(debut, CSS.indexOf('}', debut))
+    expect(regleInput).toMatch(/border.*var\(--bordure-controle\)/)
+
+    const regleTiroir = regle('.tiroir > summary')
+    expect(regleTiroir).toMatch(/border.*var\(--bordure-controle\)/)
+
+    const regleBarreMode = regle('.barrehaut-mode')
+    expect(regleBarreMode).toMatch(/border.*var\(--bordure-controle\)/)
+
+    // Verifier que --bordure subsiste sur les cartes
+    const regleCarte = regle('.carte')
+    expect(regleCarte).toMatch(/border.*var\(--bordure\)/)
   })
 })
 

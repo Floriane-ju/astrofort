@@ -15,7 +15,17 @@
    capitales espacées : cette grammaire distingue une ÉTIQUETTE d'une VALEUR sans recourir à
    la luminance, qui est justement ce que §11.1 confisque. Les jetons de forme — familles,
    suivis, épaisseur de trait — vivent dans le second bloc `:root`, avec les couleurs que le
-   navigateur peint tout seul : ce ne sont pas des couleurs, ils n'ont rien à repeindre. */
+   navigateur peint tout seul : ce ne sont pas des couleurs, ils n'ont rien à repeindre.
+
+   T-0193 — POURQUOI CETTE FEUILLE RESTE D'UN SEUL TENANT, malgré le plafond de 800 lignes.
+   Le plafond vise les fichiers qu'on lit pour comprendre une décision ; cette feuille est une
+   TABLE, comme `registry/constants.ts` : une région par bloc, aucune logique à suivre d'un
+   bout à l'autre. La découper coûterait davantage qu'elle ne rapporte — `mode-nuit.test.tsx`
+   et `coque.test.tsx` lisent son TEXTE pour calculer des ratios de contraste et vérifier
+   qu'aucune couleur n'est écrite en dur ; ils devraient concaténer des fragments, et cette
+   garantie-là — la seule qui rende le mode nuit total — deviendrait dépendante d'une liste de
+   fichiers à tenir à jour. Le jour où un `@import` est justifié, c'est la charge de preuve qui
+   se déplace : il faudra montrer que la garantie tient toujours. */
 
 :root {
   color-scheme: dark;
@@ -27,6 +37,7 @@
   --accent: #a9ecc9;
   --avertissement: #f4c76a;
   --bordure: #2b3a34;
+  --bordure-controle: #5a6964;
   --bordure-faible: #18211d;
   --alerte: #ff6f5e;
   --fond-alerte: #1a0f0d;
@@ -84,6 +95,7 @@
   --accent: rgb(calc(var(--luminance-nuit) * 246) 0 0);
   --avertissement: rgb(calc(var(--luminance-nuit) * 250) 0 0);
   --bordure: rgb(calc(var(--luminance-nuit) * 90) 0 0);
+  --bordure-controle: rgb(calc(var(--luminance-nuit) * 188) 0 0);
   --bordure-faible: rgb(calc(var(--luminance-nuit) * 45) 0 0);
   --alerte: rgb(calc(var(--luminance-nuit) * 255) 0 0);
   --fond-alerte: rgb(calc(var(--luminance-nuit) * 26) 0 0);
@@ -402,13 +414,13 @@ body {
   transform: translateX(-50%);
   display: flex;
   gap: 0;
-  border: var(--trait) solid var(--bordure);
+  border: var(--trait) solid var(--bordure-controle);
 }
 
 /* Le filet du segment sépare aussi ses deux positions : le trait dit où l'une finit et où
    l'autre commence, ce que le seul fond accentué ne dirait pas au premier coup d'œil. */
 .barrehaut-mode > .onglet + .onglet {
-  border-left: var(--trait) solid var(--bordure);
+  border-left: var(--trait) solid var(--bordure-controle);
 }
 
 /* T-0145 — dans la barre, un onglet n'a pas de rangée sous laquelle se poser : il prend le
@@ -948,7 +960,7 @@ input.barretemps-instant {
   padding: 0.35rem 0.7rem;
   background: transparent;
   color: var(--attenue);
-  border: var(--trait) solid var(--bordure);
+  border: var(--trait) solid var(--bordure-controle);
   border-radius: 0;
   cursor: pointer;
   font-size: 0.7rem;
@@ -1077,7 +1089,7 @@ select {
   padding: 0.4rem 0.5rem;
   background: var(--fond-accent);
   color: var(--texte);
-  border: var(--trait) solid var(--bordure);
+  border: var(--trait) solid var(--bordure-controle);
   border-radius: 0;
   font: 0.85rem/1.4 var(--police-mono);
   letter-spacing: 0.05em;
