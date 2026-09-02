@@ -348,6 +348,14 @@ function contexteMuet(): CanvasRenderingContext2D {
     arc: rien,
     stroke: rien,
     fill: rien,
+    // T-0144 — le marqueur d'un objet étendu se peint dans un repère tourné puis remis en
+    // place. Sans ces quatre ordres, le banc s'arrête sur la première galaxie du champ.
+    save: rien,
+    restore: rien,
+    translate: rien,
+    rotate: rien,
+    scale: rien,
+    ellipse: rien,
     createRadialGradient: () => ({ addColorStop: rien }),
   } as unknown as CanvasRenderingContext2D
 }

@@ -10,6 +10,15 @@
  */
 
 import { K } from '../registry/constants.ts'
+import { champVisible } from './champ-visible.ts'
+import { cheminCadre, traceHorizon, traceLignes, traceSegments } from './traces-ciel.ts'
+import {
+  ancreVoieLactee,
+  NOM_VOIE_LACTEE,
+  PLAN_GALACTIQUE,
+  repereCentreGalactique,
+  traceBandeVoieLactee,
+} from './voie-lactee.ts'
 import type { Etoile } from '../data/catalog.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { EtoileNommee } from '../data/constellations.ts'
@@ -23,30 +32,16 @@ import {
   type BoiteLabel,
   type CandidatLabel,
 } from '../core/labels.ts'
-import { depuisGalactique } from '../core/galactique.ts'
-import {
-  applique,
-  DEG,
-  transpose,
-  versSpherique,
-  versVecteur,
-  type Mat3,
-  type Vec3,
-} from '../core/mat3.ts'
+import { applique, transpose, versVecteur, type Mat3 } from '../core/mat3.ts'
 import {
   pointEcran,
-  rayonChampDeg,
   rayonEtoilePx,
   type PointEcranMut,
   type Projecteur,
 } from '../core/projection.ts'
-import { contourCadreJ2000, type Cadre } from '../core/cadre.ts'
+import type { Cadre } from '../core/cadre.ts'
 import type { PositionCorps } from '../core/ephem.ts'
-import {
-  altitudeCulmination,
-  latitudeAccessibleDeg,
-  type MasqueHorizon,
-} from '../core/site.ts'
+import type { MasqueHorizon } from '../core/site.ts'
 import { projecteurSansSol } from '../core/sol.ts'
 import { dessineSol } from './dessine-sol.ts'
 import {
@@ -58,9 +53,7 @@ import {
   MARQUEUR_OBJET_PX,
   RAYON_CORPS_PX,
 } from './libelles-cibles.ts'
-import { bandeRealiste, couleurTeinte, fondRealiste, paletteScene, teinte, TEINTES } from './couleurs.ts'
-import { brillanceVoieLacteeNl } from '../core/fond-ciel-rendu.ts'
-import { nanolamberts } from '../core/moon.ts'
+import { couleurTeinte, paletteScene, teinte, TEINTES, type PaletteCiel } from './couleurs.ts'
 import { dessineHaloHorizon, dessineHaloLune, type LuneEcran } from './dessine-fond-ciel.ts'
 import { dessineCartePose, type OptiquePose } from './dessine-pose-cadre.ts'
 import { teintesObjets } from './apparence-objets.ts'
@@ -185,539 +178,8 @@ export const RAYON_CLIC_PX = 10
 const PAS_CLE_PIXEL = 65536
 /** Sous ce rayon, l'antialiasing efface le disque : la plus faible étoile reste un point. */
 const RAYON_MIN_ETOILE_PX = 0.7
-/* Niveaux d'opacité distincts que le canevas sait composer : sa couche alpha tient sur un
-   octet. Deux tracés dont les opacités tombent dans le même niveau peignent le même pixel —
-   c'est ce qui autorise à les réunir. Fait de plateforme, pas seuil de rendu. */
-const NIVEAUX_ALPHA = 2 ** 8 - 1
 
-const NOM_VOIE_LACTEE = 'Voie lactée'
-/** Échantillonnage en azimut du cercle d'horizon. */
-const PAS_AZIMUT_HORIZON_DEG = 3
-const PAS_LONGITUDE_GALACTIQUE_DEG = 3
-/** Du plan galactique au pôle : seule borne de l'échantillonnage en latitude. */
-const QUART_TOUR_DEG = 90
-/**
- * T-0103 — pas des tranches de la bande. À 2°, la marche de couleur entre deux tranches
- * voisines vaut 1/255 sur toute la table Bortle : elle est SOUS la quantification de l'écran,
- * donc invisible sans le moindre flou. C'est mesuré, pas supposé — et c'est pourquoi cette
- * couche ne floute rien, là où l'aperçu de champ doit le faire (`dessine-champ.ts`).
- */
-const PAS_LATITUDE_BANDE_DEG = 2
 
-/**
- * T-0033 — le plan galactique `b = 0`, échantillonné en longitude comme l'horizon l'est en
- * azimut. Il est fixe en J2000 : la polyligne se calcule une fois au chargement du module,
- * jamais par image. Seule sa projection dépend de l'instant et du zoom.
- */
-const PLAN_GALACTIQUE: readonly Vec3[] = Array.from(
-  { length: 360 / PAS_LONGITUDE_GALACTIQUE_DEG + 1 },
-  (_, i) => depuisGalactique(i * PAS_LONGITUDE_GALACTIQUE_DEG, 0),
-)
-
-/**
- * T-0105 — longueur d'un segment de brillance, en longitude galactique.
- *
- * Même critère que le pas en latitude, et la même mesure : à 18°, la marche de couleur entre
- * deux segments voisins vaut au plus 1/255 sur toute la table Bortle — sous la quantification
- * de l'écran, donc invisible sans flou. À 24° elle passe à 2/255 et se verrait ; le calcul
- * analytique de la pente (0,00436 mag par degré) le laissait croire acceptable, la mesure dit
- * le contraire. C'est `tests/voie-lactee.test.ts` qui tient ce chiffre.
- *
- * Le pas est un multiple de l'échantillonnage géométrique : un segment reste une polyligne de
- * six cordes, pas une corde unique.
- */
-const PAS_LONGITUDE_BANDE_DEG = 18
-const SEGMENTS_PAR_TRANCHE = 360 / PAS_LONGITUDE_BANDE_DEG
-
-/**
- * T-0091, T-0103, T-0105 — la bande, en tranches de latitude, chacune coupée en segments de
- * longitude.
- *
- * Une tranche = une bande à latitude constante, tracée au trait épais de la largeur de la
- * tranche. Le trait, et pas le polygone rempli : une polyligne dont une partie sort du champ se
- * rompt en segments, et un polygone rompu se referme n'importe où. Le trait, lui, ne peint que
- * ce qui reste — la bande se coupe proprement au bord du champ.
- *
- * T-0105 découpe chaque tranche en longitude, parce que la brillance n'y est plus constante :
- * le bulbe du Sagittaire est une demi-magnitude au-dessus de l'anticentre. Un segment porte une
- * couleur, comme une tranche porte la sienne.
- *
- * Les raccords entre segments sont DÉCALÉS d'une tranche à l'autre. Deux segments voisins se
- * touchent bout à bout (`lineCap = 'butt'`) : sur le côté convexe du virage, l'angle entre les
- * deux bouts laisse une encoche de quelques pixels au bord de la tranche. Alignées d'une tranche
- * sur l'autre, ces encoches se liraient comme un trait sombre en travers de la bande ; décalées,
- * ce sont des accidents isolés sous le seuil de l'œil. Le décalage ne coûte rien : il est cuit
- * dans les polylignes au chargement.
- *
- * L'échelle va d'un pôle galactique à l'autre : c'est la seule borne géométrique, et elle
- * remplace la latitude de coupure qu'il fallait auparavant choisir. Ce qui décide de ce qui
- * est peint est la brillance du segment, évaluée par image — pas une étendue figée ici.
- *
- * Fixe en J2000 : les polylignes se calculent au chargement du module.
- */
-interface SegmentBande {
-  /** Longitude du milieu du segment : c'est elle qui porte sa brillance. */
-  readonly lDeg: number
-  readonly ligne: readonly Vec3[]
-  /** Milieu du segment, et rayon de la calotte qui le contient : ils servent à l'écarter. */
-  readonly centre: Vec3
-  readonly demiExtensionDeg: number
-}
-
-const TRANCHES_BANDE: readonly {
-  readonly bDeg: number
-  readonly segments: readonly SegmentBande[]
-}[] = Array.from({ length: (2 * QUART_TOUR_DEG) / PAS_LATITUDE_BANDE_DEG }, (_, i) => {
-  // Centre de la tranche : c'est lui qui porte sa brillance, comme `hauteurRepresentative`
-  // le fait pour un palier de halo.
-  const bDeg = -QUART_TOUR_DEG + (i + 0.5) * PAS_LATITUDE_BANDE_DEG
-  const decalageDeg = (i % 2) * (PAS_LONGITUDE_BANDE_DEG / 2)
-  const pointsParSegment = PAS_LONGITUDE_BANDE_DEG / PAS_LONGITUDE_GALACTIQUE_DEG + 1
-  return Object.freeze({
-    bDeg,
-    segments: Object.freeze(
-      Array.from({ length: SEGMENTS_PAR_TRANCHE }, (_unused, k) => {
-        const departDeg = decalageDeg + k * PAS_LONGITUDE_BANDE_DEG
-        const lDeg = departDeg + PAS_LONGITUDE_BANDE_DEG / 2
-        // Un segment couvre PAS_LONGITUDE de longitude — soit un arc rétréci par cos(b), les
-        // méridiens se resserrant vers les pôles — et l'épaisseur d'une tranche en latitude.
-        const demiLongueurDeg = (PAS_LONGITUDE_BANDE_DEG / 2) * Math.cos(bDeg * DEG)
-        return Object.freeze({
-          lDeg,
-          centre: depuisGalactique(lDeg, bDeg),
-          demiExtensionDeg: Math.hypot(demiLongueurDeg, PAS_LATITUDE_BANDE_DEG / 2),
-          // Le dernier point d'un segment est le premier du suivant : les deux traits se
-          // rejoignent sur le même sommet, sans recouvrement — un recouvrement se composerait
-          // deux fois et laisserait une tache claire.
-          ligne: Object.freeze(
-            Array.from({ length: pointsParSegment }, (_p, j) =>
-              depuisGalactique(departDeg + j * PAS_LONGITUDE_GALACTIQUE_DEG, bDeg),
-            ),
-          ),
-        })
-      }),
-    ),
-  })
-})
-
-/** T-0091 — le centre galactique : l = 0°, b = 0°, soit δ ≈ −29°. Calculé, jamais recopié. */
-const CENTRE_GALACTIQUE: Vec3 = depuisGalactique(0, 0)
-const NOM_CENTRE_GALACTIQUE = 'Centre galactique'
-
-interface ChampVisible {
-  readonly centre: Vec3
-  readonly rayonDeg: number
-}
-
-/**
- * La calotte céleste que le canevas montre : sa direction centrale et son rayon, diagonale
- * comprise. C'est le domaine que partagent la sélection d'étoiles de §3.3 et l'écart des
- * segments de la bande — un seul calcul, sinon deux définitions du même champ.
- */
-function champVisible(projecteur: Projecteur): ChampVisible {
-  const { largeurPx, hauteurPx } = projecteur.vue
-  return {
-    centre: projecteur.inverse(largeurPx / 2, hauteurPx / 2),
-    rayonDeg: rayonChampDeg(projecteur.vue),
-  }
-}
-
-/** Vrai quand la calotte de rayon `demiExtensionDeg` autour de `centre` ne touche pas le champ. */
-function horsDuChamp(champ: ChampVisible, centre: Vec3, demiExtensionDeg: number): boolean {
-  const cos =
-    champ.centre.x * centre.x + champ.centre.y * centre.y + champ.centre.z * centre.z
-  const separationDeg = Math.acos(Math.max(-1, Math.min(1, cos))) / DEG
-  return separationDeg > champ.rayonDeg + demiExtensionDeg
-}
-
-/**
- * T-0110 — la calotte englobante d'un jeu de points : direction moyenne, et écart angulaire
- * maximal à cette direction.
- *
- * `null` quand la direction moyenne ne veut rien dire — un grand cercle, dont les points
- * s'annulent deux à deux. Aucune calotte ne borne alors le jeu : il ne se rejette jamais.
- */
-function calotte(points: readonly Vec3[]): ChampVisible | null {
-  let sx = 0
-  let sy = 0
-  let sz = 0
-  for (const p of points) {
-    sx += p.x
-    sy += p.y
-    sz += p.z
-  }
-  const norme = Math.hypot(sx, sy, sz)
-  if (norme === 0) return null
-  const centre: Vec3 = { x: sx / norme, y: sy / norme, z: sz / norme }
-  let cosMin = 1
-  for (const p of points) {
-    const cos = centre.x * p.x + centre.y * p.y + centre.z * p.z
-    if (cos < cosMin) cosMin = cos
-  }
-  return {
-    centre,
-    rayonDeg: Math.acos(Math.max(-1, Math.min(1, cosMin))) / DEG,
-  }
-}
-
-/**
- * T-0110 — les calottes des couches de repérage, calculées une fois.
- *
- * Frontières, figures et astérismes sont une géométrie J2000 FIXE : elle ne bouge ni au zoom
- * ni au défilement, et sa calotte non plus. Sans cet écart préalable, une vue à 15° de champ
- * projetait quand même les 1 400 sommets des 88 frontières pour n'en garder qu'une poignée —
- * le même défaut que la bande de §3.7, sur la couche d'à côté. La clé est le tableau lui-même :
- * les couches sont construites une fois au chargement du paquet et ne se réallouent pas.
- */
-const calottesMemo = new WeakMap<object, readonly (ChampVisible | null)[]>()
-
-function calottesDe<T>(
-  jeu: readonly T[],
-  points: (element: T) => readonly Vec3[],
-): readonly (ChampVisible | null)[] {
-  const connu = calottesMemo.get(jeu)
-  if (connu !== undefined) return connu
-  const calculees = jeu.map((element) => calotte(points(element)))
-  calottesMemo.set(jeu, calculees)
-  return calculees
-}
-
-/** Compose le chemin sans le peindre : au tracé du ciel de le remplir, au cadre de le découper. */
-function cheminLignes(
-  ctx: CanvasRenderingContext2D,
-  projecteur: Projecteur,
-  polylignes: readonly (readonly Vec3[])[],
-  champ?: ChampVisible | null,
-): void {
-  const p = pointEcran()
-  // La calotte n'est calculée que si l'appelant demande l'écart : le contour du cadre est
-  // rebâti à chaque image, mémoriser sa calotte remplirait la table sans rien gagner.
-  const calottes = champ == null ? null : calottesDe(polylignes, (ligne) => ligne)
-  ctx.beginPath()
-  for (let i = 0; i < polylignes.length; i++) {
-    const ligne = polylignes[i]!
-    const englobe = calottes?.[i]
-    if (champ != null && englobe != null && horsDuChamp(champ, englobe.centre, englobe.rayonDeg)) {
-      continue
-    }
-    let enchaine = false
-    for (const point of ligne) {
-      if (!projecteur.projetteEn(point.x, point.y, point.z, p)) {
-        enchaine = false
-        continue
-      }
-      if (enchaine) ctx.lineTo(p.xPx, p.yPx)
-      else ctx.moveTo(p.xPx, p.yPx)
-      enchaine = true
-    }
-  }
-}
-
-function traceLignes(
-  ctx: CanvasRenderingContext2D,
-  projecteur: Projecteur,
-  polylignes: readonly (readonly Vec3[])[],
-  champ?: ChampVisible | null,
-): void {
-  cheminLignes(ctx, projecteur, polylignes, champ)
-  ctx.stroke()
-}
-
-/**
- * §3.5 — chemin fermé du contour du cadre matériel, composé mais NON peint.
- *
- * Exporté pour la passe de filé (§9.3) : elle découpe le canevas sur ce chemin avant
- * d'y déposer son rendu. Le contour est calculé une seule fois, ici, avec le projecteur de la
- * scène — §3.3 interdit qu'un second code de projection existe quelque part.
- */
-export function cheminCadre(
-  ctx: CanvasRenderingContext2D,
-  projecteur: Projecteur,
-  cadre: Cadre,
-  matriceCiel: Mat3,
-): void {
-  const contour = contourCadreJ2000(cadre, matriceCiel)
-  cheminLignes(ctx, projecteur, [[...contour, contour[0]!]])
-}
-
-function traceSegments(
-  ctx: CanvasRenderingContext2D,
-  projecteur: Projecteur,
-  couches: readonly CoucheTraces[],
-  champ: ChampVisible | null,
-): void {
-  const a = pointEcran()
-  const b = pointEcran()
-  // L'écart se fait par CONSTELLATION, pas par segment : une figure est compacte, et sa
-  // calotte rejette ses vingt segments d'un seul produit scalaire.
-  const calottes =
-    champ === null
-      ? null
-      : calottesDe(couches, (couche) =>
-          couche.segments.flatMap((segment) => [segment.a, segment.b]),
-        )
-  ctx.beginPath()
-  for (let i = 0; i < couches.length; i++) {
-    const couche = couches[i]!
-    const englobe = calottes?.[i]
-    if (champ !== null && englobe != null && horsDuChamp(champ, englobe.centre, englobe.rayonDeg)) {
-      continue
-    }
-    for (const segment of couche.segments) {
-      if (!projecteur.projetteEn(segment.a.x, segment.a.y, segment.a.z, a)) continue
-      if (!projecteur.projetteEn(segment.b.x, segment.b.y, segment.b.z, b)) continue
-      ctx.moveTo(a.xPx, a.yPx)
-      ctx.lineTo(b.xPx, b.yPx)
-    }
-  }
-  ctx.stroke()
-}
-
-/**
- * Cercle d'horizon à 0° et points cardinaux, dans le repère du site.
- *
- * Le projecteur arrive en paramètre, et c'est le projecteur BRUT : c'est un repère de lecture,
- * pas un objet posé sur le sol. Filtré comme le reste, le cercle disparaîtrait derrière chaque
- * colline du relief (§4.1) — la crête, elle, est tracée par le sol qui la porte.
- */
-function traceHorizon(entree: EntreeDessin, couleur: string, projecteur: Projecteur): void {
-  const { ctx } = entree
-  const versJ2000 = transpose(entree.matriceCiel)
-  const points: Vec3[] = []
-  for (let az = 0; az <= 360; az += PAS_AZIMUT_HORIZON_DEG) {
-    points.push(applique(versJ2000, versVecteur(az, 0)))
-  }
-  ctx.strokeStyle = couleur
-  ctx.lineWidth = 1
-  traceLignes(ctx, projecteur, [points])
-
-  ctx.fillStyle = couleur
-  const cardinaux: readonly (readonly [number, string])[] = [
-    [0, 'N'],
-    [90, 'E'],
-    [180, 'S'],
-    [270, 'O'],
-  ]
-  const p = pointEcran()
-  for (const [az, nom] of cardinaux) {
-    const v = applique(versJ2000, versVecteur(az, 0))
-    if (projecteur.projetteEn(v.x, v.y, v.z, p)) ctx.fillText(nom, p.xPx, p.yPx)
-  }
-}
-
-/**
- * T-0034 — ancre du label : le point de la ligne visible le plus proche du centre du canevas,
- * pour que le nom se pose sur la bande et non collé à un bord. `null` si la ligne ne traverse
- * pas le champ affiché — le label est alors absent, pas déporté.
- */
-function ancreVoieLactee(
-  projecteur: Projecteur,
-  largeur: number,
-  hauteur: number,
-): { xPx: number; yPx: number } | null {
-  const p = pointEcran()
-  let meilleurX = 0
-  let meilleurY = 0
-  let meilleureDistance = Infinity
-  for (const point of PLAN_GALACTIQUE) {
-    if (!projecteur.projetteEn(point.x, point.y, point.z, p)) continue
-    if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
-    const distance = Math.hypot(p.xPx - largeur / 2, p.yPx - hauteur / 2)
-    if (distance < meilleureDistance) {
-      meilleureDistance = distance
-      meilleurX = p.xPx
-      meilleurY = p.yPx
-    }
-  }
-  // L'ancre survit à la boucle : c'est le seul point de cette passe qui se copie.
-  return meilleureDistance === Infinity ? null : { xPx: meilleurX, yPx: meilleurY }
-}
-
-/**
- * §3.7 — la bande de la Voie lactée, telle qu'elle se verra DEPUIS CE SITE (T-0103).
- *
- * La bande est un CONTRIBUTEUR DE BRILLANCE, pas un calque teinté. Chaque tranche se compose
- * comme le halo lunaire de T-0100 : sa part de la brillance totale sert d'opacité, et la
- * couleur de cette totale sert de teinte. Les deux sont couplées, et c'est ce couplage qui
- * fait le rendu juste — là où la bande domine, la couleur peinte est exactement celle du
- * modèle ; là où elle s'efface, sa part multiplie une couleur devenue indiscernable du fond,
- * donc ne se voit pas.
- *
- * Rien n'est seuillé. La bande s'atténue vers les pôles galactiques et disparaît quand le site
- * est pollué parce que la physique le dit, pas parce qu'une opacité de convention et une
- * latitude de coupure ont été choisies — c'étaient les deux constantes qui donnaient à cette
- * couche ses stries à bord franc en travers du ciel.
- *
- * L'épaisseur du trait suit le zoom : une tranche de latitude couvre le même angle, donc
- * d'autant plus de pixels que le champ est serré. L'échelle est prise au centre du champ —
- * la projection l'étire vers les bords, et un repère de lecture n'en souffre pas.
- *
- * ponytail: la brillance du site est prise au zénith pour toute la bande, alors que le halo
- * d'horizon éclaircit le bas du ciel. La tranche serait donc un peu trop contrastée près de
- * l'horizon — là où le sol la recouvre et où personne n'image. Le jour où il faudra la
- * composer par direction, c'est un champ 2D à peindre, pas un trait à moduler.
- */
-interface TeinteBande {
-  readonly couleur: string
-  readonly part: number
-  readonly segments: SegmentBande[]
-}
-
-/**
- * Les 1 660 segments de la bande, regroupés par teinte peinte.
- *
- * Un `stroke()` par segment, c'était 1 660 traits larges et translucides étalés sur le canevas
- * à chaque image — le coût explose au dézoom, où tous tombent dans le champ. La teinte d'un
- * segment ne dépend QUE de sa position galactique et du fond de ciel du site : elle ne bouge
- * ni au zoom, ni au défilement. Le regroupement se calcule donc une fois par fond de ciel,
- * et l'image n'a plus qu'un tracé par teinte distincte.
- *
- * L'opacité est quantifiée au 255e, précision de la composition du canevas : deux segments
- * rangés ensemble s'y peignaient déjà à l'identique.
- */
-function teintesBande(sbCiel: number, modeNuit: boolean): readonly TeinteBande[] {
-  const brillanceCiel = nanolamberts(sbCiel)
-  // Couleur du fond seul : la tranche qui la reproduit n'ajoute rien de visible, à un
-  // 255e près. C'est la borne de peinture, et elle se déduit — elle ne se règle pas.
-  const fondSeul = fondRealiste(sbCiel)
-  const groupes = new Map<string, TeinteBande>()
-  for (const tranche of TRANCHES_BANDE) {
-    for (const segment of tranche.segments) {
-      const rendu = bandeRealiste(
-        brillanceCiel,
-        brillanceVoieLacteeNl(segment.lDeg, tranche.bDeg),
-        modeNuit,
-      )
-      // Peint sous le demi-niveau d'octet : la tranche recouvre le fond par sa propre
-      // couleur. Deux façons de ne rien changer — une couleur égale à celle du fond, ou une
-      // opacité qui ramène l'écart sous ce que l'écran sait distinguer.
-      if (rendu.couleur === fondSeul || Math.round(rendu.deltaPeintOctets) === 0) continue
-      const part = Math.round(rendu.part * NIVEAUX_ALPHA) / NIVEAUX_ALPHA
-      const cle = `${rendu.couleur}|${part}`
-      const groupe = groupes.get(cle) ?? { couleur: rendu.couleur, part, segments: [] }
-      groupe.segments.push(segment)
-      groupes.set(cle, groupe)
-    }
-  }
-  return [...groupes.values()]
-}
-
-/** Une seule entrée : le fond de ciel change à la main, jamais d'une image à l'autre. */
-let bandeMemo: { readonly cle: string; readonly teintes: readonly TeinteBande[] } | null = null
-
-function traceBandeVoieLactee(entree: EntreeDessin): void {
-  const { ctx, projecteur } = entree
-  const cle = `${entree.sbCiel}|${entree.modeNuit}`
-  if (bandeMemo === null || bandeMemo.cle !== cle) {
-    bandeMemo = { cle, teintes: teintesBande(entree.sbCiel, entree.modeNuit) }
-  }
-  const opaciteInitiale = ctx.globalAlpha
-  ctx.lineJoin = 'round'
-  // Bout franc, et pas arrondi : deux segments de longitude voisins partagent leur sommet, et
-  // un bout arrondi les ferait se recouvrir d'un demi-trait — un recouvrement translucide se
-  // compose deux fois, donc se voit comme une perle claire à chaque raccord.
-  ctx.lineCap = 'butt'
-  ctx.lineWidth = (PAS_LATITUDE_BANDE_DEG * projecteur.vue.largeurPx) / projecteur.vue.fovDeg
-  // Même écart que pour les cellules d'étoiles (§3.3) : un produit scalaire par segment plutôt
-  // que sept projections. Au dézoom, la moitié des segments est derrière l'observateur et ne
-  // se rejetait qu'après avoir été projetée point par point.
-  const champ = champVisible(projecteur)
-  const p = pointEcran()
-  for (const teinte of bandeMemo.teintes) {
-    // T-0110 — le chemin se construit AVANT que la teinte ne soit posée. Une teinte dont
-    // aucun segment n'atteint le champ ne doit rien coûter : en vue serrée, la bande n'occupe
-    // qu'une fraction du ciel, et l'écrasante majorité des teintes sort vide du test
-    // hors-champ. Poser `globalAlpha`, `strokeStyle` puis `stroke()` sur un chemin vide ne
-    // peint rien — mais chacun de ces ordres traverse quand même le pilote graphique.
-    let tracé = false
-    for (const segment of teinte.segments) {
-      if (horsDuChamp(champ, segment.centre, segment.demiExtensionDeg)) continue
-      let enchaine = false
-      for (const point of segment.ligne) {
-        if (!projecteur.projetteEn(point.x, point.y, point.z, p)) {
-          enchaine = false
-          continue
-        }
-        // Le chemin ne s'ouvre qu'au premier point retenu : une teinte entièrement hors du
-        // champ n'émet plus rien du tout, pas même l'ouverture.
-        if (!tracé) {
-          ctx.beginPath()
-          tracé = true
-        }
-        if (enchaine) ctx.lineTo(p.xPx, p.yPx)
-        else ctx.moveTo(p.xPx, p.yPx)
-        enchaine = true
-      }
-    }
-    if (!tracé) continue
-    ctx.globalAlpha = teinte.part
-    ctx.strokeStyle = teinte.couleur
-    ctx.stroke()
-  }
-  ctx.globalAlpha = opaciteInitiale
-  ctx.lineWidth = 1
-  // Rendus à leurs valeurs par défaut : les repères tracés ensuite partagent ce contexte,
-  // et un trait épais laissé arrondi arrondirait aussi les frontières et l'horizon.
-  ctx.lineJoin = 'miter'
-}
-
-/**
- * §3.7 — le repère du centre galactique et son verdict site-dépendant.
- *
- * La hauteur COURANTE dit où le chercher maintenant ; la hauteur de CULMINATION dit si le
- * chercher a un sens depuis ce site. Les deux sont nécessaires : §8.2 a déjà calculé que le
- * centre galactique culmine à 14,6° depuis le site de référence, et ce chiffre vit dans un
- * tableau que personne n'ouvre. Sous le seuil d'imagerie, le repère porte donc la cause ET
- * la latitude qui rendrait la cible atteignable.
- *
- * Le tout dans UN label : c'est le repère qui porte la conséquence, et il s'arbitre au
- * budget de §3.4 d'un seul bloc, sans passe-droit.
- */
-function repereCentreGalactique(
-  entree: EntreeDessin,
-  couleur: string,
-  p: PointEcranMut,
-): CandidatLabel | null {
-  const { ctx, projecteur } = entree
-  if (!projecteur.projetteEn(CENTRE_GALACTIQUE.x, CENTRE_GALACTIQUE.y, CENTRE_GALACTIQUE.z, p)) {
-    return null
-  }
-  const largeur = projecteur.vue.largeurPx
-  const hauteur = projecteur.vue.hauteurPx
-  if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) return null
-
-  ctx.strokeStyle = couleur
-  ctx.beginPath()
-  ctx.moveTo(p.xPx + RAYON_CORPS_PX, p.yPx)
-  ctx.arc(p.xPx, p.yPx, RAYON_CORPS_PX, 0, 2 * Math.PI)
-  ctx.moveTo(p.xPx - RAYON_CORPS_PX * 2, p.yPx)
-  ctx.lineTo(p.xPx + RAYON_CORPS_PX * 2, p.yPx)
-  ctx.moveTo(p.xPx, p.yPx - RAYON_CORPS_PX * 2)
-  ctx.lineTo(p.xPx, p.yPx + RAYON_CORPS_PX * 2)
-  ctx.stroke()
-
-  const hauteurCouranteDeg = versSpherique(applique(entree.matriceCiel, CENTRE_GALACTIQUE))
-    .latitudeDeg
-  const decDeg = versSpherique(CENTRE_GALACTIQUE).latitudeDeg
-  const culmination = altitudeCulmination(entree.latitudeDeg, decDeg).value
-  const seuil = K('SEUIL_HAUTEUR_IMAGERIE_DEG')
-  const texte =
-    culmination <= seuil
-      ? `${NOM_CENTRE_GALACTIQUE} ${hauteurCouranteDeg.toFixed(0)}° — culmine à ` +
-        `${culmination.toFixed(1)}°, hors imagerie sauf sous ` +
-        `${latitudeAccessibleDeg(decDeg, seuil).toFixed(1)}° N`
-      : `${NOM_CENTRE_GALACTIQUE} ${hauteurCouranteDeg.toFixed(0)}°`
-  return {
-    texte,
-    categorie: 'CONSTELLATION',
-    xPx: p.xPx + RAYON_CORPS_PX * 2 + HAUTEUR_LABEL_PX / 2,
-    yPx: p.yPx,
-    priorite: 0,
-    largeurPx: texte.length * LARGEUR_CARACTERE_PX,
-    hauteurPx: HAUTEUR_LABEL_PX,
-    couleur,
-  }
-}
 
 /**
  * T-0107 — un pixel du voisinage immédiat porte-t-il déjà une étoile nommée ?
@@ -737,34 +199,37 @@ function pixelDejaNomme(pixels: ReadonlySet<number>, xPx: number, yPx: number): 
   return false
 }
 
-export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
-  const brut = entreeBrute.projecteur
-  // §4.1 — la couche Sol tient par deux gestes complémentaires. Le sol est PEINT, opaque, sur
-  // ce qui a été tracé avant lui : rien d'autre ne masque la largeur d'un trait épais. Et ce
-  // qui est tracé APRÈS lui hérite d'un projecteur aveugle au sol — sans quoi les étoiles se
-  // reposeraient par-dessus le sol qu'on vient de peindre, et resteraient cliquables.
-  const entree: EntreeDessin = entreeBrute.couches.sol
-    ? {
-        ...entreeBrute,
-        projecteur: projecteurSansSol(brut, entreeBrute.masque, entreeBrute.matriceCiel),
-      }
-    : entreeBrute
-  const { ctx, projecteur, index } = entree
-  // T-0171 — l'aperçu peint sur toute la scène tient lieu de prise de vue : ce qui la
-  // commente s'efface. Ne restent que le sol, l'horizon et le cadre matériel — ce qui CADRE le
-  // champ, pas ce qui l'annote. La sélection continue de tourner : les cibles restent
-  // cliquables et le survol nomme ce qu'il désigne ; seule la peinture des repères est
-  // suspendue, comme celle des disques d'étoiles l'était déjà depuis T-0116.
-  const peintReperes = entree.passeFile === undefined
-  const couches: CouchesActives = peintReperes
-    ? entree.couches
-    : { ...entree.couches, figures: false, frontieres: false, asterismes: false, voieLactee: false }
-  const teintes = paletteScene(entree.modeNuit, entree.vueRealiste, entree.sbCiel)
-  // §11.1 — le mode nuit protège l'adaptation à l'obscurité : éclaircir tout le canevas le
-  // rendrait inutile. La vue réaliste n'y change donc que la magnitude limite.
-  const fondPeint = entree.vueRealiste && !entree.modeNuit
-  const largeur = projecteur.vue.largeurPx
-  const hauteur = projecteur.vue.hauteurPx
+
+/**
+ * Ce que toutes les passes d'une image partagent.
+ *
+ * `entree` porte le projecteur FILTRÉ par le sol ; `brut` est celui qui ignore le sol, et il
+ * reste nécessaire à ce qui doit se peindre sous l'horizon — le cadre du matériel, l'horizon
+ * lui-même, la bande. Les deux tableaux sont les accumulateurs de l'image : une passe y dépose
+ * ce qu'elle a peint, `dessineCiel` en tire les labels et les cibles cliquables.
+ */
+interface Passe {
+  readonly entree: EntreeDessin
+  readonly brut: Projecteur
+  readonly couches: CouchesActives
+  readonly teintes: PaletteCiel
+  /** T-0171 — faux quand l'aperçu plein ciel tient lieu de prise de vue : les repères s'effacent. */
+  readonly peintReperes: boolean
+  readonly fondPeint: boolean
+  readonly largeur: number
+  readonly hauteur: number
+  /** Point de travail unique pour toute l'image : aucune passe n'alloue par élément (T-0065). */
+  readonly p: PointEcranMut
+  readonly cibles: CibleEcran[]
+  readonly candidats: CandidatLabel[]
+}
+
+const TOUR_RAD = 2 * Math.PI
+
+/** §3.7, §4.1 — le fond, les halos, la bande et le sol : ce qui se peint sous tout le reste. */
+function passeFond(passe: Passe): void {
+  const { entree, brut, couches, teintes, fondPeint, largeur, hauteur } = passe
+  const { ctx, projecteur } = passe.entree
 
   ctx.fillStyle = teintes.fond
   ctx.fillRect(0, 0, largeur, hauteur)
@@ -780,7 +245,7 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   // Elle est tracée au projecteur BRUT, puis recouverte par le sol : filtrée, un trait de
   // cinq degrés de large s'interromprait un pas d'azimut trop tôt et laisserait une encoche
   // au-dessus de l'horizon.
-  if (couches.voieLactee) traceBandeVoieLactee(entreeBrute)
+  if (couches.voieLactee) traceBandeVoieLactee({ ...entree, projecteur: brut })
   // §4.1 — le sol, peint sur le fond et sur la bande, sous tout le reste.
   if (couches.sol) {
     dessineSol(ctx, brut, entree.matriceCiel, entree.masque, teintes.sol, teintes.horizon)
@@ -788,6 +253,12 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   // §9.5 — la passe de filé passe APRÈS le sol, mais avec le projecteur qui l'ignore : le sol
   // reste peint par-dessus le fond, et aucune trace ne se calcule sous l'horizon (§4.1).
   entree.passeFile?.(ctx, projecteur)
+}
+
+/** §3.3, T-0110, T-0173 — les repères tracés : constellations, horizon, plan galactique. */
+function passeTraces(passe: Passe): CandidatLabel | null {
+  const { entree, brut, couches, teintes } = passe
+  const { ctx, projecteur } = passe.entree
   ctx.font = `${HAUTEUR_LABEL_PX}px system-ui, sans-serif`
   ctx.textBaseline = 'middle'
 
@@ -823,26 +294,22 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     ctx.lineWidth = 1
     traceLignes(ctx, projecteur, [PLAN_GALACTIQUE])
   }
-  let labelCentreGalactique: CandidatLabel | null = null
-  if (couches.voieLactee) {
-    labelCentreGalactique = repereCentreGalactique(entree, teintes.voieLactee, pointEcran())
-  }
+  if (!couches.voieLactee) return null
+  return repereCentreGalactique(entree, teintes.voieLactee, pointEcran())
+}
 
+/** §3.3 — les étoiles du paquet, regroupées par teinte : huit tracés, pas seize mille. */
+function passeEtoiles(passe: Passe): { stats: StatistiquesSelection; etoilesDessinees: number } {
+  const { entree, peintReperes, largeur, hauteur, p, cibles } = passe
+  const { ctx, projecteur, index } = passe.entree
   // --- Étoiles ------------------------------------------------------------
-  const fovDeg = projecteur.vue.fovDeg
   // Rayon du champ : la diagonale du canevas, exprimée en degrés au centre.
   const { centre: centreJ2000, rayonDeg: rayonChampDeg } = champVisible(projecteur)
   // Un `Path2D` par teinte, réalloué à chaque image : l'API n'offre aucun effacement, et
   // un chemin réutilisé accumulerait les disques des images précédentes. Contrainte de la
   // plateforme, pas négligence — huit objets par image, contre un par étoile évité plus bas.
   const chemins = Array.from({ length: TEINTES }, () => new Path2D())
-  const cibles: CibleEcran[] = []
-  const candidats: CandidatLabel[] = []
   let etoilesDessinees = 0
-  const TOUR_RAD = 2 * Math.PI
-  // Point de travail unique pour toute l'image : la boucle par étoile n'alloue plus rien,
-  // ni en entrée — les composantes arrivent en scalaires — ni en sortie (T-0065).
-  const p = pointEcran()
 
   const stats = selectionne(
     index,
@@ -872,6 +339,13 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     }
   }
 
+  return { stats, etoilesDessinees }
+}
+
+/** §3.4 — les étoiles nommées : leurs labels, et les pixels qu'elles occupent déjà (T-0107). */
+function passeEtoilesNommees(passe: Passe): ReadonlySet<number> {
+  const { entree, peintReperes, largeur, hauteur, p, cibles, candidats } = passe
+  const { projecteur } = passe.entree
   // --- Étoiles nommées : labels et identification au clic -----------------
   const pixelsNommes = new Set<number>()
   for (const nommee of entree.etoilesNommees) {
@@ -896,6 +370,13 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     }
   }
 
+  return pixelsNommes
+}
+
+/** §3.4 — le ciel profond : un tracé par objet, chacun avec la teinte de son type. */
+function passeObjets(passe: Passe): void {
+  const { entree, peintReperes, largeur, hauteur, p, cibles, candidats } = passe
+  const { ctx, projecteur } = passe.entree
   // --- Objets du ciel profond ---------------------------------------------
   // Un tracé par objet, là où les étoiles se regroupent en huit chemins : chacun porte la teinte
   // de son type et son dégradé (`apparence-objets.ts`). Ce sont quelques centaines d'ordres, pas
@@ -932,7 +413,12 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   }
   // Les passes suivantes tracent au trait fin : l'épaisseur des contours ne leur appartient pas.
   ctx.lineWidth = 1
+}
 
+/** §3.4 — les corps mobiles, dont les noms passent avant tous les autres. */
+function passeCorps(passe: Passe): void {
+  const { entree, teintes, peintReperes, largeur, hauteur, p, cibles, candidats } = passe
+  const { ctx, projecteur } = passe.entree
   // --- Corps mobiles -------------------------------------------------------
   const versJ2000 = transpose(entree.matriceCiel)
   ctx.fillStyle = teintes.corps
@@ -960,7 +446,12 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
       })
     }
   }
+}
 
+/** T-0034, T-0091 — les noms de la couche Voie lactée : la bande, puis le centre galactique. */
+function passeNomsVoieLactee(passe: Passe, labelCentreGalactique: CandidatLabel | null): void {
+  const { couches, teintes, largeur, hauteur, candidats } = passe
+  const { projecteur } = passe.entree
   // --- Noms de la couche Voie lactée --------------------------------------
   // Posés avant les noms de constellations : à priorité égale, le tri stable de
   // `composeLabels` les laisse passer devant eux plutôt que derrière. Et le repère du
@@ -983,7 +474,12 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
       })
     }
   }
+}
 
+/** §3.3 — les noms de constellations et d'astérismes, candidats comme les autres. */
+function passeNomsConstellations(passe: Passe): void {
+  const { entree, couches, peintReperes, largeur, hauteur, p, candidats } = passe
+  const { projecteur } = passe.entree
   // --- Noms de constellations ---------------------------------------------
   for (const figure of peintReperes ? entree.figures : []) {
     if (figure.centre === null) continue
@@ -1016,7 +512,12 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
       })
     }
   }
+}
 
+/** §3.5 — le contour du cadre matériel, tracé au projecteur brut. */
+function passeCadre(passe: Passe): void {
+  const { entree, brut, couches, teintes } = passe
+  const { ctx } = passe.entree
   // --- Cadre matériel §3.5 -------------------------------------------------
   if (couches.cadre) {
     ctx.strokeStyle = teintes.cadre
@@ -1029,9 +530,17 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     }
     ctx.lineWidth = 1
   }
+}
 
+/** §3.4, T-0085 — les labels retenus, puis le nom que le survol révèle. */
+function passeLabels(passe: Passe): {
+  labels: readonly CandidatLabel[]
+  revele: BoiteLabel | null
+} {
+  const { entree, teintes, candidats } = passe
+  const { ctx, projecteur } = passe.entree
   // --- Labels --------------------------------------------------------------
-  const labels = composeLabels(candidats, fovDeg)
+  const labels = composeLabels(candidats, projecteur.vue.fovDeg)
   for (const label of labels) {
     ctx.fillStyle = label.couleur ?? teintes.texte
     ctx.fillText(label.texte, label.xPx, label.yPx)
@@ -1060,6 +569,13 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
     ctx.fillText(revele.texte, revele.xPx, revele.yPx)
   }
 
+  return { labels, revele }
+}
+
+/** §9.1, T-0142 — la carte de pose, EN DERNIER : elle masque tout ce qui précède dans le cadre. */
+function passeCartePose(passe: Passe): void {
+  const { entree, brut, couches, teintes } = passe
+  const { ctx } = passe.entree
   // --- Carte de pose dans le cadre §9.1 / T-0142 ---------------------------
   // En DERNIER : la carte masque le cadre, traces, repères et noms compris. Peinte avec les
   // repères, elle laisserait passer par-dessus elle les labels retenus juste au-dessus.
@@ -1087,17 +603,78 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
       }
     }
   }
+}
 
-  // T-0107 — une étoile nommée n'est pas AUSSI une cible anonyme. Les deux passes ci-dessus
-  // décrivent le même astre : celle du catalogue le lit dans `hyg-1.bin`, où la position est
-  // arrondie en Float32 ; celle des étoiles nommées le lit dans `constellations-1.bin`, qui la
-  // garde en double précision. L'écart — 0,04″ sur β Oph, moins d'un millième de pixel —
-  // suffisait à faire gagner l'entrée anonyme une fois sur deux au jeu de la plus proche, et le
-  // survol répondait « sans désignation » sous le nom déjà peint. Deux cibles sur le même pixel
-  // sont indiscernables au pointeur : c'est l'identifiée qui répond. La branche de repli sert
+/**
+ * L'image du planétarium : une passe par couche, dans l'ordre où elles se recouvrent.
+ *
+ * T-0193 — cette fonction dépasse cinquante lignes et doit le rester. Ce qu'elle contient est
+ * l'ORDRE des passes, et l'ordre est le contrat : chaque couche peint sur ce que la précédente
+ * a déposé. Le découper en deux moitiés ne raccourcirait pas la liste, il la couperait en deux
+ * endroits où il faut aller la lire — c'est-à-dire qu'il cacherait la seule chose que ce corps
+ * a à dire. Les passes, elles, tiennent chacune sous cinquante lignes.
+ */
+export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
+  const brut = entreeBrute.projecteur
+  // §4.1 — la couche Sol tient par deux gestes complémentaires. Le sol est PEINT, opaque, sur
+  // ce qui a été tracé avant lui : rien d'autre ne masque la largeur d'un trait épais. Et ce
+  // qui est tracé APRÈS lui hérite d'un projecteur aveugle au sol — sans quoi les étoiles se
+  // reposeraient par-dessus le sol qu'on vient de peindre, et resteraient cliquables.
+  const entree: EntreeDessin = entreeBrute.couches.sol
+    ? {
+        ...entreeBrute,
+        projecteur: projecteurSansSol(brut, entreeBrute.masque, entreeBrute.matriceCiel),
+      }
+    : entreeBrute
+  const { projecteur } = entree
+  // T-0171 — l'aperçu peint sur toute la scène tient lieu de prise de vue : ce qui la
+  // commente s'efface. Ne restent que le sol, l'horizon et le cadre matériel — ce qui CADRE le
+  // champ, pas ce qui l'annote. La sélection continue de tourner : les cibles restent
+  // cliquables et le survol nomme ce qu'il désigne ; seule la peinture des repères est
+  // suspendue, comme celle des disques d'étoiles l'était déjà depuis T-0116.
+  const peintReperes = entree.passeFile === undefined
+  const couches: CouchesActives = peintReperes
+    ? entree.couches
+    : { ...entree.couches, figures: false, frontieres: false, asterismes: false, voieLactee: false }
+  const teintes = paletteScene(entree.modeNuit, entree.vueRealiste, entree.sbCiel)
+  // §11.1 — le mode nuit protège l'adaptation à l'obscurité : éclaircir tout le canevas le
+  // rendrait inutile. La vue réaliste n'y change donc que la magnitude limite.
+  const fondPeint = entree.vueRealiste && !entree.modeNuit
+  const largeur = projecteur.vue.largeurPx
+  const hauteur = projecteur.vue.hauteurPx
+
+  const passe: Passe = {
+    entree,
+    brut,
+    couches,
+    teintes,
+    peintReperes,
+    fondPeint,
+    largeur,
+    hauteur,
+    p: pointEcran(),
+    cibles: [],
+    candidats: [],
+  }
+
+  // L'ORDRE EST LE CONTRAT. Chaque passe peint sur ce que la précédente a déposé : le sol
+  // recouvre la bande, les repères recouvrent le sol, les labels recouvrent les repères, et la
+  // carte de pose recouvre tout ce qui tombe dans le cadre. Réordonner, c'est changer l'image.
+  passeFond(passe)
+  const labelCentreGalactique = passeTraces(passe)
+  const { stats, etoilesDessinees } = passeEtoiles(passe)
+  const pixelsNommes = passeEtoilesNommees(passe)
+  passeObjets(passe)
+  passeCorps(passe)
+  passeNomsVoieLactee(passe, labelCentreGalactique)
+  passeNomsConstellations(passe)
+  passeCadre(passe)
+  const { labels, revele } = passeLabels(passe)
+  passeCartePose(passe)
+
   // encore les étoiles brillantes que le paquet nommé ne porte pas.
-  const ciblesUniques = cibles.filter(
-    (c) =>
+  const ciblesUniques = passe.cibles.filter(
+    (c: CibleEcran) =>
       c.type !== 'ETOILE' ||
       c.etoileNommee !== undefined ||
       !pixelDejaNomme(pixelsNommes, c.xPx, c.yPx),
