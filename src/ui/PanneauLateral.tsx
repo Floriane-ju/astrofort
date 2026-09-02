@@ -13,7 +13,7 @@
  * pas en le parcourant pour choisir, et c'est ce qui en fait une carte.
  */
 
-import type { ReactNode } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import { Icone } from './Icone.tsx'
 import type { ModeInterface } from './seance-etat.ts'
 
@@ -31,6 +31,8 @@ export interface PanneauLateralProps {
   /** §6.4 — la note de facilité de la cible ouverte, annoncée avec son libellé. */
   readonly rappel: ReactNode
   readonly children: ReactNode
+  /** T-0188 — ref au titre pour la gestion du focus quand on ouvre une fiche. */
+  readonly titreRef?: RefObject<HTMLHeadingElement | null>
 }
 
 export function PanneauLateral(props: PanneauLateralProps) {
@@ -47,7 +49,10 @@ export function PanneauLateral(props: PanneauLateralProps) {
             <Icone nom="arrow_back" />
           </button>
         )}
-        <h2>{props.titre}</h2>
+        {/* T-0188 — le titre est focalisable pour la gestion du focus au clavier. */}
+        <h2 ref={props.titreRef} tabIndex={-1}>
+          {props.titre}
+        </h2>
         {props.rappel}
       </div>
       <div className="lateral-corps">{props.children}</div>

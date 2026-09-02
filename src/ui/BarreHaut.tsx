@@ -100,15 +100,10 @@ export function BarreHaut(props: BarreHautProps) {
       </div>
 
       {/* T-0047 / T-0184 — ce qui sort du chemin principal : dernier élément de la barre,
-          donc le plus à droite. La fermeture à Échap est le seul JavaScript du tiroir —
-          `<details>` porte le reste, ouverture, clavier et annonce compris. */}
-      <details
-        className="tiroir tiroir-outils"
-        data-alerte={props.persistance.echec}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') e.currentTarget.removeAttribute('open')
-        }}
-      >
+          donc le plus à droite. T-0189 — le tiroir n'a plus AUCUN JavaScript : Échap vient de
+          l'écoute unique du document, la même pour les trois tiroirs, et elle ramène le focus
+          sur le `<summary>`. `<details>` porte le reste, ouverture, clavier et annonce. */}
+      <details className="tiroir tiroir-outils" data-alerte={props.persistance.echec}>
         {/* T-0041 — le libellé porte l'alerte en mots, et dit de quelle section elle vient :
             le rouge ne l'annonce jamais seul (§11.1). */}
         <summary>

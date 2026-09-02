@@ -193,11 +193,11 @@ describe('§11.3 — le panneau est toujours ouvert et son contenu suit le mode'
   })
 
   it('change d’en-tête et de contenu avec le mode, sans autre geste', () => {
-    expect(ecran()).toContain('<h2>Toutes les cibles</h2>')
+    expect(ecran()).toContain('<h2 tabindex="-1">Toutes les cibles</h2>')
     poseMode('PANORAMA')
     const panorama = ecran()
-    expect(panorama).toContain('<h2>Panorama</h2>')
-    expect(panorama).not.toContain('<h2>Toutes les cibles</h2>')
+    expect(panorama).toContain('<h2 tabindex="-1">Panorama</h2>')
+    expect(panorama).not.toContain('<h2 tabindex="-1">Toutes les cibles</h2>')
   })
 
   it('ne laisse plus aucun état fermé exister', () => {
@@ -388,7 +388,7 @@ describe('§3.4 — un objet cliqué ouvre sa fiche', () => {
     expect(fiche).toContain('lateral-retour')
     expect(fiche).toContain('aria-label="Revenir à la liste des cibles"')
     // L'en-tête nomme la cible et porte sa note, hors de tout bouton : elle est annoncée.
-    expect(fiche).toContain('<h2>M31</h2>')
+    expect(fiche).toContain('<h2 tabindex="-1">M31</h2>')
   })
 
   it('garde l’état du panneau d’un mode à l’autre', () => {
@@ -397,7 +397,7 @@ describe('§3.4 — un objet cliqué ouvre sa fiche', () => {
     expect(ecran()).toContain('Séquence de filé')
     poseMode('CIEL_PROFOND')
     expect(etatSeance().vueCibles).toBe('FICHE')
-    expect(ecran()).toContain('<h2>M31</h2>')
+    expect(ecran()).toContain('<h2 tabindex="-1">M31</h2>')
   })
 
   it('ne pose plus aucune carte Cible sur la scène', () => {

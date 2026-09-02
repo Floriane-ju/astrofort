@@ -32,6 +32,7 @@ import {
 import { profilAEnregistrer, siteAEnregistrer } from './ui/saisie-persistee.ts'
 import { useChaineCalcul } from './ui/app-calcul.ts'
 import { appliqueModeNuit, litEtatPersiste, type EtatModeNuit } from './ui/ModeNuit.tsx'
+import { installeEchap } from './ui/gere-echap.ts'
 
 const MS_PAR_JOUR = 86_400_000
 
@@ -66,7 +67,12 @@ function useModeNuit(): [EtatModeNuit, (etat: EtatModeNuit) => void] {
  */
 export function App() {
   const restauree = useSaisieRestauree()
-  if (restauree === null) return <p className="etat">Lecture des données enregistrées…</p>
+  if (restauree === null)
+    return (
+      <p className="etat" role="status" aria-live="polite">
+        Lecture des données enregistrées…
+      </p>
+    )
   return <AppPrete restauree={restauree} />
 }
 
@@ -77,6 +83,10 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
   const catalogues = useCatalogues()
   // §12.5 — l'état affiché suit les bascules, il n'est pas figé au démarrage.
   const modeReseau = useSyncExternalStore(abonneModeReseau, modeReseauCourant, () => 'EN_LIGNE')
+
+  // T-0189 — une seule écoute d'Échap pour toute l'application : les bulles s'ouvrent sans
+  // JavaScript et ne peuvent pas porter la leur (§1.4.13, voir `gere-echap.ts`).
+  useEffect(() => installeEchap(document), [])
 
   // Pointage, temps et intention : les deux magasins que la scène et les panneaux partagent.
   const anneeEpoque = useTrancheScene(epoqueAffichee)

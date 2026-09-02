@@ -12,7 +12,7 @@
  * T-0181 — le panneau ne s'ouvre plus : il est à demeure, et le mode décide de son contenu.
  */
 
-import type { ReactNode } from 'react'
+import { useRef, useEffect, type ReactNode } from 'react'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { EtatCible } from '../core/cibles-liste.ts'
 import type { Etoile } from '../data/catalog.ts'
@@ -28,10 +28,11 @@ import { Bulle } from './Bulle.tsx'
 import { PlanSessionVue } from './PlanSession.tsx'
 import { RegionNuit } from './RegionNuit.tsx'
 import { modeObjectif } from './PanneauMateriel.tsx'
-import { montreListeCibles, useSeance } from './seance-etat.ts'
+import { montreListeCibles, useSeance, type VueCibles } from './seance-etat.ts'
 import { AIDE_MATERIEL_INCOMPLET } from './Inconnu.tsx'
 import type { SaisieLieu, SaisieMateriel } from './app-saisie.ts'
 import type { ChaineCalcul } from './app-calcul.ts'
+import { cibleFocus, idLigneCible } from './focus-panneau.ts'
 
 export interface RegionSeanceProps {
   readonly chaine: ChaineCalcul
@@ -155,6 +156,8 @@ function RappelFacilite({ etat }: { readonly etat: EtatCible }) {
  *
  * T-0181 — il n'y a plus de panneau à choisir : le mode le dit. En Ciel profond on choisit une
  * cible dans le catalogue, en Panorama on règle le panorama, et rien d'autre n'est monté.
+ *
+ * T-0188 — gestion du focus quand le contenu du panneau change.
  */
 export function LateralSeance(props: RegionSeanceProps) {
   const { chaine, catalogue } = props
@@ -179,11 +182,44 @@ export function LateralSeance(props: RegionSeanceProps) {
       ? null
       : chaine.etatsCibles.get(props.cibleDuCiel.designation) ?? null
 
+  // T-0188 — le focus suit le contenu du panneau. La liste et la fiche ne coexistent jamais :
+  // au moment où l'effet s'exécute, celle qui portait le focus est déjà démontée.
+  const titreRef = useRef<HTMLHeadingElement | null>(null)
+  const rechercheRef = useRef<HTMLInputElement | null>(null)
+  const vuePrecedente = useRef<VueCibles>(vueCibles)
+
+  useEffect(() => {
+    const precedente = vuePrecedente.current
+    vuePrecedente.current = vueCibles
+
+    // La ligne de la cible consultée : elle vient d'être remontée, ou les filtres l'ont
+    // écartée pendant la consultation — c'est ce que le repli couvre.
+    const ligne =
+      props.cibleDuCiel === null
+        ? null
+        : document.getElementById(idLigneCible(props.cibleDuCiel.designation))
+
+    switch (cibleFocus(precedente, vueCibles, ligne !== null)) {
+      case 'TITRE_FICHE':
+        titreRef.current?.focus()
+        break
+      case 'LIGNE_CIBLE':
+        ligne?.focus()
+        break
+      case 'CHAMP_RECHERCHE':
+        rechercheRef.current?.focus()
+        break
+      default:
+        break
+    }
+  }, [vueCibles, props.cibleDuCiel])
+
   return (
     <PanneauLateral
       titre={fiche && props.cibleDuCiel !== null ? props.cibleDuCiel.designation : TITRES_LATERAL[mode]}
       retour={fiche ? montreListeCibles : null}
       rappel={fiche && facilite !== null ? <RappelFacilite etat={facilite} /> : null}
+      titreRef={titreRef}
     >
       {fiche && props.cibleDuCiel !== null ? (
         /* T-0149 — sans optique chiffrable, la fiche dit ce qui manque plutôt que de meubler. */
@@ -211,6 +247,7 @@ export function LateralSeance(props: RegionSeanceProps) {
           capteurHMm={calcul.capteur.capteurHMm}
           contexteSession={chaine.contexteSession}
           etats={chaine.etatsCibles}
+          inputRef={rechercheRef}
         />
       ) : (
         <p className="etat">{AIDE_MATERIEL_INCOMPLET}</p>

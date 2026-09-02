@@ -38,29 +38,36 @@ export function Verification(props: VerificationProps) {
     <>
       <section>
         <h2>Vérification — état du socle</h2>
-        {etat === null && <p>Vérification en cours…</p>}
-        {etat !== null && (
-          <>
-            <p className="etat">réseau : {props.modeReseau}</p>
-            <p className="etat">
-              stockage persistant : {etat.stockage.persistant ? 'accordé' : 'non accordé'}
-              {etat.stockage.usageMo !== null &&
-                ` · ${etat.stockage.usageMo.toFixed(1)} Mo utilisés`}
-            </p>
-            {etat.stockage.avertissement !== undefined && (
-              <p className="cause">{etat.stockage.avertissement}</p>
-            )}
-            {etat.catalogues.cause !== undefined && <p className="cause">{etat.catalogues.cause}</p>}
-            <ul>
-              {etat.catalogues.paquets.map((p) => (
-                <li key={p.manifeste.nom}>
-                  {p.manifeste.nom} v{p.manifeste.version} — {p.integrite} (
-                  {(p.manifeste.octets / OCTETS_PAR_MO).toFixed(2)} Mo)
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
+        {/* T-0187 — l'état du socle et le mode réseau s'annoncent à leur changement seulement,
+            via une région vive. Ils n'annoncent pas le message de persistance : c'est son
+            propre changement qui doit l'annoncer. */}
+        <div aria-live="polite" aria-atomic="true">
+          {etat === null && <p>Vérification en cours…</p>}
+          {etat !== null && (
+            <>
+              <p className="etat">réseau : {props.modeReseau}</p>
+              <p className="etat">
+                stockage persistant : {etat.stockage.persistant ? 'accordé' : 'non accordé'}
+                {etat.stockage.usageMo !== null &&
+                  ` · ${etat.stockage.usageMo.toFixed(1)} Mo utilisés`}
+              </p>
+              {etat.stockage.avertissement !== undefined && (
+                <p className="cause">{etat.stockage.avertissement}</p>
+              )}
+              {etat.catalogues.cause !== undefined && (
+                <p className="cause">{etat.catalogues.cause}</p>
+              )}
+              <ul>
+                {etat.catalogues.paquets.map((p) => (
+                  <li key={p.manifeste.nom}>
+                    {p.manifeste.nom} v{p.manifeste.version} — {p.integrite} (
+                    {(p.manifeste.octets / OCTETS_PAR_MO).toFixed(2)} Mo)
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
         <div className="actions">
           <button type="button" onClick={props.surExport}>
             Exporter mes données (JSON)
@@ -77,11 +84,21 @@ export function Verification(props: VerificationProps) {
             />
           </label>
         </div>
-        {props.messagePersistance !== null && (
-          <p className={props.echecPersistance ? 'cause' : 'etat'}>
-            {props.messagePersistance}
-          </p>
-        )}
+        {/* T-0187 — un échec porte `role="alert"`, un succès s'annonce poliment : perdre un
+            export est de l'ordre de l'erreur, réussir un import n'interrompt personne.
+
+            La région est TOUJOURS montée, vide quand il n'y a rien à dire. Une région vive
+            insérée en même temps que son texte n'est pas annoncée par la plupart des lecteurs
+            d'écran : ils observent les régions présentes, ils n'observent pas leur apparition.
+            C'est le seul détail qui décide si ce ticket sert à quelque chose. */}
+        <p
+          className={props.echecPersistance ? 'cause' : 'etat'}
+          role={props.echecPersistance ? 'alert' : 'status'}
+          aria-live={props.echecPersistance ? 'assertive' : 'polite'}
+          aria-atomic="true"
+        >
+          {props.messagePersistance}
+        </p>
       </section>
 
       <section>

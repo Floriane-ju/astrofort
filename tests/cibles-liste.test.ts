@@ -13,7 +13,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { filtreLignes, lignesCatalogue, typesPresents } from '../src/core/cibles-liste.ts'
+import { ajouteCoordonnees, filtreLignes, lignesCatalogue, lignesInvariantes, typesPresents } from '../src/core/cibles-liste.ts'
 import { ficheCadrage } from '../src/core/framing.ts'
 import { cielInstantane } from '../src/core/horloges.ts'
 import { applique, versSpherique, versVecteur } from '../src/core/mat3.ts'
@@ -295,5 +295,26 @@ describe('lignesCatalogue — sur le catalogue embarqué, au site de l’Annexe 
     expect(magnitudes.slice(dernierChiffre === -1 ? magnitudes.length : dernierChiffre)).toSatisfy(
       (restant: readonly (number | null)[]) => restant.every((m) => m === null),
     )
+  })
+
+  it('T-0190 - optimisation identique a la version non optimisee', () => {
+    const naif = lignesCatalogue({ catalogue: CATALOGUE, ...SETUP })
+    const optimise = ajouteCoordonnees(lignesInvariantes({ catalogue: CATALOGUE, ...OPTIQUE, ...CIEL }), MATRICE)
+
+    expect(optimise).toHaveLength(naif.length)
+    for (let i = 0; i < naif.length; i++) {
+      const n = naif[i]!
+      const o = optimise[i]!
+      expect(o.objet.designation).toBe(n.objet.designation)
+      expect(o.hauteurDeg).toBeCloseTo(n.hauteurDeg, 12)
+      expect(o.azimutDeg).toBeCloseTo(n.azimutDeg, 12)
+      expect(o.sbObj).toBe(n.sbObj)
+      expect(o.verdict).toBe(n.verdict)
+      expect(o.grandAxePx).toBe(n.grandAxePx)
+      expect(o.petitAxePx).toBe(n.petitAxePx)
+      expect(o.remplissage).toBe(n.remplissage)
+      expect(o.verdictCadrage).toBe(n.verdictCadrage)
+      expect(o.cadrable).toBe(n.cadrable)
+    }
   })
 })

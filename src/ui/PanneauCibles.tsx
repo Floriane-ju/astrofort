@@ -73,6 +73,8 @@ export interface PanneauCiblesProps {
    * contredits une fois — la carte notait ce que la liste laissait vide.
    */
   readonly etats: ReadonlyMap<string, EtatCible>
+  /** T-0188 — le champ de recherche est le repli du focus au retour de la fiche. */
+  readonly inputRef?: React.RefObject<HTMLInputElement | null>
 }
 
 export function PanneauCibles(props: PanneauCiblesProps) {
@@ -133,6 +135,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
   return (
     <section className="cibles">
       <input
+        ref={props.inputRef}
         className="cibles-recherche"
         type="search"
         aria-label="Rechercher un objet du catalogue"
@@ -198,10 +201,22 @@ export function PanneauCibles(props: PanneauCiblesProps) {
         </label>
       </div>
 
-      <p className="etat">
-        {retenues.length.toLocaleString('fr-FR')} objet{retenues.length > 1 ? 's' : ''}
-        {retenues.length > plafond ? `, les ${plafond} plus brillants affichés` : ''}.
-      </p>
+      {/* T-0187 — une seule région vive pour le compte ET le message de liste vide.
+          Deux régions annonceraient deux fois le même changement. */}
+      <div aria-live="polite" aria-atomic="true">
+        <p className="etat">
+          {retenues.length.toLocaleString('fr-FR')} objet{retenues.length > 1 ? 's' : ''}
+          {retenues.length > plafond ? `, les ${plafond} plus brillants affichés` : ''}.
+        </p>
+
+        {listees.length === 0 && (
+          <p className="etat">
+            {recherche.trim() === ''
+              ? 'Aucun objet ne passe ces filtres.'
+              : 'Aucun objet du catalogue ne porte ce nom.'}
+          </p>
+        )}
+      </div>
 
       <ul className="cibles-liste">
         {listees.map((ligne) => (
@@ -212,14 +227,6 @@ export function PanneauCibles(props: PanneauCiblesProps) {
           />
         ))}
       </ul>
-
-      {listees.length === 0 && (
-        <p className="etat">
-          {recherche.trim() === ''
-            ? 'Aucun objet ne passe ces filtres.'
-            : 'Aucun objet du catalogue ne porte ce nom.'}
-        </p>
-      )}
 
       {props.contexteSession !== null && (
         <p className="etat cibles-note">

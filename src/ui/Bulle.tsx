@@ -7,7 +7,11 @@
  * l'obscurité. Elle n'a pas non plus de largeur : une glose de deux lignes s'étale sur
  * une seule, hors écran. La bulle est donc du DOM, pas un attribut.
  *
- * PAS DE JAVASCRIPT. L'ouverture est `:hover` / `:focus-within` sur l'ancre — le clavier
+ * PAS DE JAVASCRIPT ICI. T-0189 — Échap la congédie (1.4.13), mais depuis une écoute unique
+ * posée sur le document (`gere-echap.ts`) : au survol seul, aucun nœud de la bulle ne tient le
+ * focus, une écoute portée par l'ancre ne verrait jamais la touche.
+ *
+ * L'ouverture est `:hover` / `:focus-within` sur l'ancre — le clavier
  * l'obtient sans code, et rien ne se recalcule au survol. Le débordement non plus n'est pas
  * mesuré ici : `place` dit le côté PRÉFÉRÉ, et l'ancrage CSS (`position-try-fallbacks`,
  * `styles.css`) rabat la bulle lui-même quand ce côté ne tient pas à l'écran.
