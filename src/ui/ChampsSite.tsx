@@ -43,24 +43,44 @@ export function ChampsSite(props: ChampsSiteProps) {
       <div className="champs">
         <label>
           <Etiquette cle="latitude" />
-          <input value={props.latitude} onChange={(e) => props.surLatitude(e.target.value)} />
+          <input
+            value={props.latitude}
+            inputMode="decimal"
+            onChange={(e) => props.surLatitude(e.target.value)}
+          />
         </label>
         <label>
           <Etiquette cle="longitude" />
-          <input value={props.longitude} onChange={(e) => props.surLongitude(e.target.value)} />
+          <input
+            value={props.longitude}
+            inputMode="decimal"
+            onChange={(e) => props.surLongitude(e.target.value)}
+          />
         </label>
         <label>
           <Etiquette cle="altitude_site" />
-          <input value={props.altitude} onChange={(e) => props.surAltitude(e.target.value)} />
+          <input
+            value={props.altitude}
+            inputMode="decimal"
+            onChange={(e) => props.surAltitude(e.target.value)}
+          />
         </label>
         <label>
+          {/* Bortle est un indice ENTIER (1 à 9, DOMAINES.bortle_declare) : le pavé
+              numérique sans séparateur décimal évite une saisie qu'aucune valeur
+              du domaine n'accepterait. */}
           <Etiquette cle="bortle" />
-          <input value={props.bortle} onChange={(e) => props.surBortle(e.target.value)} />
+          <input
+            value={props.bortle}
+            inputMode="numeric"
+            onChange={(e) => props.surBortle(e.target.value)}
+          />
         </label>
         <label>
           <Etiquette cle="sqm" />
           <input
             value={props.sqm}
+            inputMode="decimal"
             placeholder="prioritaire si renseigné"
             onChange={(e) => props.surSqm(e.target.value)}
           />

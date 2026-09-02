@@ -275,11 +275,19 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
         <div className="champs">
           <label>
             <Etiquette cle="focale" />
-            <input value={props.focale} onChange={(e) => props.surFocale(e.target.value)} />
+            <input
+              value={props.focale}
+              inputMode="decimal"
+              onChange={(e) => props.surFocale(e.target.value)}
+            />
           </label>
           <label>
             <Etiquette cle="ouverture" />
-            <input value={props.ouverture} onChange={(e) => props.surOuverture(e.target.value)} />
+            <input
+              value={props.ouverture}
+              inputMode="decimal"
+              onChange={(e) => props.surOuverture(e.target.value)}
+            />
           </label>
           <label>
             <Etiquette cle="recadrage_capteur" />
