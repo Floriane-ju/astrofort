@@ -1,9 +1,9 @@
 /**
- * T-0047 — la roue crantée de la barre haute.
+ * T-0047 — les réglages qui ne décrivent pas une séance.
  *
- * Le patron est celui de `MenuInfos` : un `<details>` natif porte l'état ouvert/fermé, le
- * clavier et l'annonce ; le seul JavaScript est la fermeture à Échap, que `<details>` ne fait
- * pas de lui-même.
+ * T-0184 — ce composant ne porte plus son tiroir : Vérification et Réglages répondaient au
+ * même geste, et deux tiroirs voisins pour un seul geste encombraient la barre. Ne reste ici
+ * qu'un CONTENU, monté dans le tiroir fusionné de `BarreHaut`.
  *
  * T-0128 — la recherche du catalogue a quitté ce tiroir pour l'onglet « Toutes les cibles »,
  * où elle rejoint les filtres et les lectures qui rendent un résultat exploitable. Chercher
@@ -91,17 +91,9 @@ export interface MenuReglagesProps {
 
 export function MenuReglages(props: MenuReglagesProps) {
   return (
-    <details
-      className="tiroir tiroir-reglages"
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') e.currentTarget.removeAttribute('open')
-      }}
-    >
-      <summary>Réglages</summary>
-
-      <div className="tiroir-contenu">
-        <ReglagePoids {...props.poids} />
-      </div>
-    </details>
+    <section className="menu-reglages">
+      <h2>Réglages</h2>
+      <ReglagePoids {...props.poids} />
+    </section>
   )
 }

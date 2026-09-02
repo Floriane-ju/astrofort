@@ -12,13 +12,19 @@
  * T-0180 — les trois boutons de panneau sont partis avec le tiroir qu'ils ouvraient : le mode
  * décide seul de ce que le panneau porte. Ne reste qu'une bascule à deux positions, et elle
  * tient le centre — c'est l'état le plus lourd de l'écran, il ne se cherche pas dans un coin.
+ *
+ * T-0184 — Vérification et Réglages ne font plus qu'un tiroir. Ils répondaient au même geste,
+ * « ce qui sort du chemin principal », et l'enveloppe est donc unique : deux sections dedans,
+ * la vérification d'abord parce qu'elle seule porte une conduite à tenir. L'alerte de
+ * persistance remonte sur le tiroir fermé et NOMME sa section — une information qui n'existe
+ * que pour qui pense à ouvrir un menu n'existe pas (§11.3).
  */
 
 import type { EtatDemarrage } from '../data/bootstrap.ts'
 import type { CapteurMode } from '../data/equipment.ts'
 import { MenuReglages } from './MenuReglages.tsx'
 import type { SaisiePoids } from './app-saisie.ts'
-import { Verification } from './Verification.tsx'
+import { ALERTE_VERIFICATION, Verification } from './Verification.tsx'
 import { ModeNuit, type EtatModeNuit } from './ModeNuit.tsx'
 import { Inconnu } from './Inconnu.tsx'
 import { Icone } from './Icone.tsx'
@@ -93,17 +99,34 @@ export function BarreHaut(props: BarreHautProps) {
         ))}
       </div>
 
-      <Verification
-        etat={props.etat}
-        modeReseau={props.modeReseau}
-        messagePersistance={props.persistance.message}
-        echecPersistance={props.persistance.echec}
-        surExport={props.persistance.surExport}
-        surImport={props.persistance.surImport}
-      />
-      {/* T-0047 — ce qui se règle une fois et ne décrit pas une séance : dernier élément de
-          la barre, donc le plus à droite. */}
-      <MenuReglages poids={props.poids} />
+      {/* T-0047 / T-0184 — ce qui sort du chemin principal : dernier élément de la barre,
+          donc le plus à droite. La fermeture à Échap est le seul JavaScript du tiroir —
+          `<details>` porte le reste, ouverture, clavier et annonce compris. */}
+      <details
+        className="tiroir tiroir-outils"
+        data-alerte={props.persistance.echec}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') e.currentTarget.removeAttribute('open')
+        }}
+      >
+        {/* T-0041 — le libellé porte l'alerte en mots, et dit de quelle section elle vient :
+            le rouge ne l'annonce jamais seul (§11.1). */}
+        <summary>
+          <Icone nom="settings" />
+          {props.persistance.echec ? ALERTE_VERIFICATION : 'réglages'}
+        </summary>
+        <div className="tiroir-contenu">
+          <Verification
+            etat={props.etat}
+            modeReseau={props.modeReseau}
+            messagePersistance={props.persistance.message}
+            echecPersistance={props.persistance.echec}
+            surExport={props.persistance.surExport}
+            surImport={props.persistance.surImport}
+          />
+          <MenuReglages poids={props.poids} />
+        </div>
+      </details>
     </>
   )
 }

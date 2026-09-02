@@ -26,6 +26,8 @@ import {
   resolutionRendu,
 } from '../src/ui/scene-etat.ts'
 import { MenuReglages } from '../src/ui/MenuReglages.tsx'
+import { BarreHaut, type BarreHautProps } from '../src/ui/BarreHaut.tsx'
+import { ALERTE_VERIFICATION } from '../src/ui/Verification.tsx'
 import { poidsParDefaut } from '../src/core/session.ts'
 import { DOMAINES } from '../src/registry/domains.ts'
 import {
@@ -138,7 +140,7 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
     expect(topbar).toContain('Vérification')
     expect(topbar).toContain('Registre de constantes')
     // Fermé par défaut : le tiroir n'est pas déplié à l'ouverture de l'application.
-    expect(topbar).not.toMatch(/<details class="tiroir tiroir-verification" open/)
+    expect(topbar).not.toMatch(/<details class="tiroir tiroir-outils" open/)
   })
 
   // T-0153 — la barre haute ne dit plus où pointe la vue : la phrase complète est en bas,
@@ -663,16 +665,15 @@ describe('T-0041 — un tiroir qui s’alerte ne le dit pas par la seule couleur
 
 
 describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', () => {
-  it('monte un tiroir de réglages dans la barre haute', () => {
+  it('T-0184 — monte un tiroir d’outils dans la barre haute', () => {
     const ecran = renderToStaticMarkup(<App />)
-    expect(ecran).toContain('tiroir tiroir-reglages')
+    expect(ecran).toContain('tiroir tiroir-outils')
     expect(ecran).toContain('Réglages')
   })
 
   it('T-0153 — ferme la barre : plus rien ne se monte après lui', () => {
     const topbar = barreHaute(renderToStaticMarkup(<App />))
-    expect(topbar.indexOf('tiroir-verification')).toBeLessThan(topbar.indexOf('tiroir-reglages'))
-    expect(topbar.slice(topbar.indexOf('tiroir-reglages'))).not.toContain('<details')
+    expect(topbar.slice(topbar.indexOf('tiroir-outils'))).not.toContain('<details')
   })
 
   it('T-0128 — ne porte plus le catalogue : il a un écran à lui', () => {
@@ -704,8 +705,7 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
   })
 
   it('garde la cible de clic de §11.2 : le tiroir est un `.tiroir` comme les autres', () => {
-    const rendu = renderToStaticMarkup(<MenuReglages {...REGLAGES_INERTES} />)
-    expect(rendu).toMatch(/class="tiroir tiroir-reglages"/)
+    expect(barreHaute(renderToStaticMarkup(<App />))).toMatch(/class="tiroir tiroir-outils"/)
     const styles = readFileSync(
       join(import.meta.dirname, '..', 'src', 'ui', 'styles.css'),
       'utf8',
@@ -718,6 +718,71 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
   })
 })
 
+
+
+/**
+ * T-0184 — Vérification et Réglages ne font plus qu'un tiroir.
+ *
+ * Deux tiroirs voisins répondaient au même geste — « ce qui sort du chemin principal ». Ce
+ * qui se vérifie ici n'est pas la fusion pour elle-même, c'est ce qu'elle ne doit pas coûter :
+ * l'alerte de persistance de T-0041, qui n'a de valeur que sur le tiroir FERMÉ, et l'accès
+ * aux deux contenus, dont aucun ne doit avoir disparu en route.
+ */
+describe('T-0184 — un seul tiroir pour la vérification et les réglages', () => {
+  /** La barre haute hors application : seul un échec de persistance fabriqué révèle l'alerte. */
+  function barreSeule(echec: boolean): string {
+    const props: BarreHautProps = {
+      focale: '120',
+      ouverture: '2.8',
+      capteurMode: 'FULL_FRAME',
+      modeNuit: { actif: false, luminance: 1 },
+      surModeNuit: () => undefined,
+      etat: null,
+      modeReseau: 'hors ligne',
+      persistance: {
+        message: echec ? 'écriture perdue' : null,
+        echec,
+        surExport: () => undefined,
+        surImport: () => undefined,
+      },
+      poids: POIDS_INERTES,
+    }
+    return renderToStaticMarkup(<BarreHaut {...props} />)
+  }
+
+  it('ne monte plus qu’une fenêtre, et les deux contenus y sont', () => {
+    const topbar = barreHaute(ecran())
+    expect(topbar).not.toContain('tiroir-verification')
+    expect(topbar).not.toContain('tiroir-reglages')
+    // Une seule fenêtre : ce qui suit l'ouverture du tiroir d'outils porte les deux sections.
+    const fenetre = topbar.slice(topbar.indexOf('tiroir-outils'))
+    expect(fenetre).toContain('état du socle')
+    expect(fenetre).toContain('Réglages')
+  })
+
+  it('reste le dernier élément de la barre : le plus à droite', () => {
+    const topbar = barreHaute(ecran())
+    expect(topbar.slice(topbar.indexOf('tiroir-outils'))).not.toContain('<details')
+  })
+
+  it('T-0041 — un échec de persistance se signale sur le tiroir fermé, et nomme sa section', () => {
+    const alerte = barreSeule(true)
+    const resume = alerte.slice(alerte.indexOf('tiroir-outils'))
+    expect(resume).toContain('data-alerte="true"')
+    expect(resume.slice(0, resume.indexOf('</summary>'))).toContain(ALERTE_VERIFICATION)
+    // La mention nomme la section : « Vérification », pas seulement l'échec.
+    expect(ALERTE_VERIFICATION).toMatch(/^Vérification/)
+    expect(barreSeule(false)).toContain('data-alerte="false"')
+  })
+
+  it('n’a rien retiré : les cinq poids et l’état du socle restent atteignables', () => {
+    const topbar = barreHaute(ecran())
+    expect(topbar.match(/role="slider"/g)?.length).toBeGreaterThanOrEqual(5)
+    expect(topbar).toContain('Registre de constantes')
+    expect(topbar).toContain('Matrice de dégradation hors-ligne')
+    expect(topbar).toContain('Exporter mes données (JSON)')
+  })
+})
 
 /**
  * T-0128 — le catalogue a un écran, et il en a UN seul.
