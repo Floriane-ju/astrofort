@@ -111,6 +111,20 @@ async function attend(base: number, nouvelles: number): Promise<void> {
   )
 }
 
+/**
+ * Attend la PREMIÈRE requête, sans rien relâcher de ce qui part.
+ *
+ * Un consommateur lit IndexedDB avant d'émettre : un seul tour de boucle ne suffit pas à coup
+ * sûr, et compter sur lui rendait la suite dépendante de la charge de la machine.
+ */
+async function attendPremiere(): Promise<void> {
+  for (let garde = 0; garde < TOURS_PAR_REQUETE; garde += 1) {
+    if (appels.length > 0) return
+    await tour()
+  }
+  throw new Error('aucune requête émise : le préchargement ne démarre pas')
+}
+
 /** Précharge un jeu, et attend les requêtes NOUVELLES qu'il doit émettre — ni plus, ni moins. */
 async function prechargeEtAttend(
   objets: readonly ObjetCielProfond[],
@@ -178,8 +192,8 @@ describe('abandon d’un jeu périmé §6.4', () => {
     const courant = tranche(6, DEBIT)
 
     prechargeVignettes(perime)
-    await tour() // les premières requêtes partent, la file garde le reste
-    expect(appels.length).toBeGreaterThan(0)
+    await attendPremiere() // les premières requêtes partent, la file garde le reste
+    expect(appels.length).toBeLessThanOrEqual(DEBIT)
 
     await prechargeEtAttend(courant, courant.length)
 

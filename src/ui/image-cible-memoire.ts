@@ -147,17 +147,29 @@ const enAttente: ObjetCielProfond[] = []
 let consommateurs = 0
 let dernierJeu: string | null = null
 
+/**
+ * La génération du préchargement. Un consommateur porte la sienne : `oublieImages` la périme,
+ * et celui qui est resté suspendu sur une requête sans réponse cesse d'appartenir au compte.
+ *
+ * Sans ce jeton, un consommateur bloqué garde sa place jusqu'à la fin du processus, et le
+ * portillon de débit ne rouvre plus jamais — plus rien ne se précharge ensuite.
+ */
+let generation = 0
+
 async function consomme(): Promise<void> {
+  const mienne = generation
   try {
     for (;;) {
       const objet = enAttente.shift()
       if (objet === undefined) return
       // Un échec ne se signale pas : la ligne reste complète sans son image (§12.5).
       const image = await resoudImage(objet).catch(() => null)
+      // Une image arrivée après l'oubli appartient à une mémoire qui n'existe plus.
+      if (mienne !== generation) return
       if (image !== null) retient(image)
     }
   } finally {
-    consommateurs -= 1
+    if (mienne === generation) consommateurs -= 1
   }
 }
 
@@ -198,4 +210,6 @@ export function oublieImages(): void {
   abonnes.clear()
   enAttente.length = 0
   dernierJeu = null
+  generation += 1
+  consommateurs = 0
 }
