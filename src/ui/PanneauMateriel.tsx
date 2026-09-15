@@ -33,6 +33,7 @@ import { TracedValue } from './TracedValue.tsx'
 import { PanneauBoitier } from './PanneauBoitier.tsx'
 import { Etiquette } from './Terme.tsx'
 import { ChampDomaine } from './ChampDomaine.tsx'
+import { Interrupteur } from './Interrupteur.tsx'
 import { LectureInconnue } from './Inconnu.tsx'
 
 /** §5.1 — le type d'objectif choisit la projection, il n'ajuste pas un rendu. */
@@ -136,22 +137,20 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
             </select>
           </label>
         </div>
-        <label className="interrupteur">
-          <input
-            type="checkbox"
-            checked={props.typeObjectif === 'FISHEYE'}
-            onChange={(e) => props.surTypeObjectif(e.target.checked ? 'FISHEYE' : 'RECTILINEAIRE')}
-          />
+        <Interrupteur
+          actif={props.typeObjectif === 'FISHEYE'}
+          surChangement={(fisheye) =>
+            props.surTypeObjectif(fisheye ? 'FISHEYE' : 'RECTILINEAIRE')
+          }
+        >
           Objectif fisheye
-        </label>
-        <label className="interrupteur">
-          <input
-            type="checkbox"
-            checked={props.comparerRecadrage}
-            onChange={(e) => props.surComparerRecadrage(e.target.checked)}
-          />
+        </Interrupteur>
+        <Interrupteur
+          actif={props.comparerRecadrage}
+          surChangement={props.surComparerRecadrage}
+        >
           Superposer les deux cadres, plein format et recadrage APS-C
-        </label>
+        </Interrupteur>
         {lectures?.noteRecadrage !== undefined && (
           <p className="cause">{lectures.noteRecadrage}</p>
         )}
@@ -173,14 +172,9 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
       <section>
         <h2>Suivi</h2>
         <div className="champs">
-          <label className="interrupteur">
-            <input
-              type="checkbox"
-              checked={props.suiviActif}
-              onChange={(e) => props.surSuiviActif(e.target.checked)}
-            />
+          <Interrupteur actif={props.suiviActif} surChangement={props.surSuiviActif}>
             Ma monture suit les étoiles
-          </label>
+          </Interrupteur>
           {props.suiviActif && (
             <label>
               <Etiquette cle="mise_en_station" />

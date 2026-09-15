@@ -20,6 +20,7 @@
 import { useEffect } from 'react'
 import { K } from '../registry/constants.ts'
 import { Curseur } from './Curseur.tsx'
+import { Interrupteur } from './Interrupteur.tsx'
 import { Etiquette } from './Terme.tsx'
 
 export interface EtatModeNuit {
@@ -104,14 +105,12 @@ export function ModeNuit({ etat, surChangement }: ModeNuitProps) {
     <section>
       <h2>Mode nuit</h2>
       <div className="champs">
-        <label className="interrupteur">
-          <input
-            type="checkbox"
-            checked={etat.actif}
-            onChange={(e) => surChangement({ ...etat, actif: e.target.checked })}
-          />
+        <Interrupteur
+          actif={etat.actif}
+          surChangement={(actif) => surChangement({ ...etat, actif })}
+        >
           Activer le mode nuit
-        </label>
+        </Interrupteur>
         <label>
           <span>
             <Etiquette cle="luminance_mode_nuit" />

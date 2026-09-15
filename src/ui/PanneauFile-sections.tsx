@@ -21,6 +21,7 @@ import {
 } from './seance-etat.ts'
 import { MENTION_PLAFOND_CHAMP, MENTION_PLAFOND_FILE } from './scene-overlay.ts'
 import { Curseur } from './Curseur.tsx'
+import { Interrupteur } from './Interrupteur.tsx'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette } from './Terme.tsx'
 import type { LecturesFile } from './panneau-file-lectures.ts'
@@ -106,14 +107,12 @@ export function PoseMaximale({
   return (
     <section>
       <div className="champs">
-        <label className="interrupteur">
-          <input
-            type="checkbox"
-            checked={file.poseDansCadre}
-            onChange={(e) => majFile({ poseDansCadre: e.target.checked })}
-          />
+        <Interrupteur
+          actif={file.poseDansCadre}
+          surChangement={(poseDansCadre) => majFile({ poseDansCadre })}
+        >
           Afficher la pose maximale dans le cadre
-        </label>
+        </Interrupteur>
       </div>
       {file.poseDansCadre && (
         <p className="etat">

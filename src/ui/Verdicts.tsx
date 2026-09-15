@@ -12,6 +12,7 @@ import { SOURCE_TABLE_CONTRASTE } from '../registry/contrast.ts'
 import { SOURCE_TABLE_FILTRES } from '../registry/filters.ts'
 import { libelleZpSource, type PointZeroSysteme } from '../data/equipment.ts'
 import { MANQUANTE } from './ChampsCible.tsx'
+import { Interrupteur } from './Interrupteur.tsx'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, Terme } from './Terme.tsx'
 import { heure } from './horaire.ts'
@@ -193,14 +194,9 @@ function PoseUnitaire({
             </p>
           )}
           {/* §7.2 — le mode permissif se demande, et s'annonce avec son coût chiffré. */}
-          <label className="interrupteur">
-            <input
-              type="checkbox"
-              checked={permissif}
-              onChange={(e) => surPermissif(e.target.checked)}
-            />
+          <Interrupteur actif={permissif} surChangement={surPermissif}>
             <Etiquette cle="mode_permissif" /> — ciel pollué, suivi imprécis, vent
-          </label>
+          </Interrupteur>
           {r.pose.notePermissif !== undefined && (
             <p className="cause">{r.pose.notePermissif}</p>
           )}
@@ -366,14 +362,9 @@ function PourquoiCeVerdict({
     <section>
       <h2>Pourquoi ce verdict</h2>
       <p className="etat">{explique.n1}</p>
-      <label className="interrupteur">
-        <input
-          type="checkbox"
-          checked={filtreDualBand}
-          onChange={(e) => surFiltre(e.target.checked)}
-        />
+      <Interrupteur actif={filtreDualBand} surChangement={surFiltre}>
         Je possède un filtre bi-bande Hα / OIII
-      </label>
+      </Interrupteur>
       <details
         className="tracee"
         onToggle={(e) => surDeplie((e.currentTarget as HTMLDetailsElement).open)}
