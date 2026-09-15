@@ -237,13 +237,58 @@ export interface SaisieBoitier {
   readonly tailleRawMo: string
 }
 
-export interface BoitierResolu {
-  readonly boitier: Boitier
-  /**
-   * Grandeurs qu'aucune saisie ne renseigne et qu'une valeur générique du registre remplace.
-   * Elles s'affichent, et les sorties qui en dépendent portent [ESTIMÉ] (§2.3, §7.1).
-   */
-  readonly estimations: readonly string[]
+/**
+ * T-0199 — §5.1 : pour chaque grandeur laissée vide, la conséquence chiffrée de son absence.
+ *
+ * Indexée par champ de saisie, et dérivée de la SAISIE BRUTE, pas du boîtier résolu : c'est
+ * quand la saisie est refusée — résolution effacée le temps de la retaper — qu'on a le plus
+ * besoin de savoir ce qui manque, et le boîtier n'existe alors pas. Une grandeur vide n'est
+ * jamais une erreur ; le texte dit ce que le registre met à sa place, pas ce qu'il faudrait
+ * corriger.
+ */
+export function notesEstimation(
+  saisie: SaisieBoitier,
+): Readonly<Partial<Record<keyof SaisieBoitier, string>>> {
+  const vide = (texte: string): boolean => texte.trim() === ''
+  return Object.freeze({
+  ...(vide(saisie.readNoiseE)
+    ? {
+        readNoiseE:
+          `Non renseigné : ${K('READ_NOISE_DEFAUT_E')} e⁻ du registre sont appliqués et ` +
+          'affichés [ESTIMÉ] — la pose optimale varie comme le carré de cette valeur.',
+      }
+    : {}),
+  ...(vide(saisie.seuilDoubleGainIso)
+    ? {
+        seuilDoubleGainIso: vide(saisie.readNoiseE)
+          ? 'Non renseigné : aucun palier ne justifie un ISO plutôt qu’un autre, aucune ' +
+            'recommandation n’est donc affichée.'
+          : 'Non renseigné : le bruit de lecture saisi n’est rattaché à aucun ISO, donc ' +
+            'inutilisable — le repli du registre s’applique et s’affiche [ESTIMÉ].',
+      }
+    : {}),
+  ...(vide(saisie.zpSys)
+    ? {
+        zpSys:
+          `Non renseigné : point zéro générique ${K('ZP_SYS_GENERIQUE')} mag, zp_source ` +
+          'GENERIQUE [ESTIMÉ] — la plage utile de pose absorbe l’incertitude.',
+      }
+    : {}),
+  ...(vide(saisie.tailleRawMo)
+    ? {
+        tailleRawMo:
+          `Non renseigné : ${K('TAILLE_RAW_MO_GENERIQUE')} Mo génériques [ESTIMÉ] — le budget ` +
+          'de stockage annoncé est alors un ordre de grandeur, pas une mesure.',
+      }
+    : {}),
+  ...(vide(saisie.fullWellE)
+    ? {
+        fullWellE:
+          'Non renseignée : aucune sortie n’en dépend aujourd’hui, la saturation des étoiles ' +
+          'brillantes n’est donc pas chiffrée.',
+      }
+    : {}),
+  })
 }
 
 /** Vide = inconnu ; renseigné = validé par le domaine du registre, refus nommant le champ. */
@@ -267,7 +312,7 @@ function champRequis(texte: string, domaine: DomaineId): number {
  * mode avancé, elles, tolèrent l'absence — le registre fournit son repli, l'application
  * l'affiche, et la sortie porte [ESTIMÉ] plutôt que de passer pour une mesure.
  */
-export function resoutBoitier(saisie: SaisieBoitier): BoitierResolu {
+export function resoutBoitier(saisie: SaisieBoitier): Boitier {
   const format = ligneFormatCapteur(saisie.formatCapteur as FormatCapteur)
   const resolutionMpx = champRequis(saisie.resolutionMpx, 'resolution_mpx')
   const capteurLMm = format.capteurLMm
@@ -279,57 +324,23 @@ export function resoutBoitier(saisie: SaisieBoitier): BoitierResolu {
   const zpSys = champ(saisie.zpSys, 'zp_sys')
   const tailleRawMo = champ(saisie.tailleRawMo, 'taille_raw_mo')
 
-  const estimations: string[] = []
-  if (readNoiseE === null) {
-    estimations.push(
-      `bruit de lecture : ${K('READ_NOISE_DEFAUT_E')} e⁻ du registre appliqués et affichés ` +
-        '[ESTIMÉ] — la pose optimale varie comme son carré.',
-    )
-  } else if (seuilDoubleGainIso === null) {
-    estimations.push(
-      `bruit de lecture : ${readNoiseE} e⁻ saisis, mais sans seuil de double gain aucun ISO ` +
-        'ne leur est rattaché — le repli du registre s’applique et s’affiche [ESTIMÉ].',
-    )
-  }
-  if (zpSys === null) {
-    estimations.push(
-      `point zéro système : générique ${K('ZP_SYS_GENERIQUE')} mag, zp_source GENERIQUE ` +
-        '[ESTIMÉ] — la plage utile de pose absorbe l’incertitude.',
-    )
-  }
-  if (tailleRawMo === null) {
-    estimations.push(
-      `taille de fichier RAW : ${K('TAILLE_RAW_MO_GENERIQUE')} Mo génériques [ESTIMÉ] — le ` +
-        'budget de stockage est un ordre de grandeur, pas une mesure.',
-    )
-  }
-  if (fullWellE === null) {
-    estimations.push(
-      'capacité de saturation : inconnue — aucune sortie n’en dépend aujourd’hui, la ' +
-        'saturation des étoiles brillantes n’est donc pas chiffrée.',
-    )
-  }
-
-  return {
-    boitier: Object.freeze({
-      id: 'saisi',
-      libelle: `Boîtier saisi — ${format.libelle}, ${resolutionMpx} Mpx, pitch ${pitchUm.toFixed(2)} µm`,
-      capteurLMm,
-      capteurHMm,
-      pitchUm,
-      // Le recadrage reste un mode du boîtier : il change les dimensions, jamais le pitch.
-      recadrageApsc: Object.freeze(recadrageApsc(capteurLMm, capteurHMm)),
-      readNoiseE: Object.freeze(
-        readNoiseE === null || seuilDoubleGainIso === null ? {} : { [seuilDoubleGainIso]: readNoiseE },
-      ),
-      ...(seuilDoubleGainIso === null ? {} : { seuilDoubleGainIso }),
-      ...(fullWellE === null ? {} : { fullWellE }),
-      ...(zpSys === null ? {} : { zpSys }),
-      tailleRawMo: tailleRawMo ?? K('TAILLE_RAW_MO_GENERIQUE'),
-      source: 'saisie utilisateur — mode custom',
-    }),
-    estimations,
-  }
+  return Object.freeze({
+    id: 'saisi',
+    libelle: `Boîtier saisi — ${format.libelle}, ${resolutionMpx} Mpx, pitch ${pitchUm.toFixed(2)} µm`,
+    capteurLMm,
+    capteurHMm,
+    pitchUm,
+    // Le recadrage reste un mode du boîtier : il change les dimensions, jamais le pitch.
+    recadrageApsc: Object.freeze(recadrageApsc(capteurLMm, capteurHMm)),
+    readNoiseE: Object.freeze(
+      readNoiseE === null || seuilDoubleGainIso === null ? {} : { [seuilDoubleGainIso]: readNoiseE },
+    ),
+    ...(seuilDoubleGainIso === null ? {} : { seuilDoubleGainIso }),
+    ...(fullWellE === null ? {} : { fullWellE }),
+    ...(zpSys === null ? {} : { zpSys }),
+    tailleRawMo: tailleRawMo ?? K('TAILLE_RAW_MO_GENERIQUE'),
+    source: 'saisie utilisateur — mode custom',
+  })
 }
 
 /**

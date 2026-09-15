@@ -20,7 +20,7 @@ import type { ProfilSuivi, QualiteMiseEnStation, TypeMonture } from '../core/tra
 import type { ModeProjection } from '../core/projection.ts'
 import type { Traced } from '../core/traced.ts'
 import {
-  libelleZpSource,
+  notesEstimation,
   type CapteurMode,
   type IsoRetenu,
   type PointZeroSysteme,
@@ -33,9 +33,11 @@ import {
   type FormatCapteur,
 } from '../registry/capteur-formats.ts'
 import { DOMAINES, type DomaineId } from '../registry/domains.ts'
+import { GLOSSAIRE, type TermeGlossaire } from '../registry/glossaire.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette } from './Terme.tsx'
 import { Bulle } from './Bulle.tsx'
+import { Icone } from './Icone.tsx'
 import { LectureInconnue } from './Inconnu.tsx'
 
 /**
@@ -46,6 +48,17 @@ const AIDE_BOITIER =
   'Type de capteur et résolution sont exigés : sans eux, ni champ ni échantillonnage ' +
   'n’existent. Le pitch s’en déduit, il ne se saisit jamais. Le reste peut rester vide — ' +
   'le registre fournit son repli, et les sorties qui en dépendent portent [ESTIMÉ].'
+
+/**
+ * T-0199 — pourquoi remplir un dépliant qu'on peut laisser fermé. Chaque champ porte déjà la
+ * conséquence de son absence ; le dépliant, lui, dit ce que remplir fait gagner — sans quoi
+ * le mode avancé n'a l'air que d'un recoin technique qu'on referme.
+ */
+const AIDE_AVANCEES =
+  'Ces grandeurs décrivent l’électronique du capteur, pas l’optique. Renseignées, la pose ' +
+  'unitaire et l’ISO recommandé deviennent propres à ce boîtier ; laissées vides, un ' +
+  'générique du registre les remplace et toute sortie qui en dépend s’affiche [ESTIMÉ]. ' +
+  'Photons to Photos les publie pour la plupart des boîtiers.'
 
 /** §5.1 — le type d'objectif choisit la projection, il n'ajuste pas un rendu. */
 export type TypeObjectif = 'RECTILINEAIRE' | 'FISHEYE'
@@ -64,8 +77,6 @@ export interface LecturesMateriel {
   readonly zeroSysteme: PointZeroSysteme
   /** §7.2 — l'ISO retenu et la raison qui le justifie. */
   readonly iso: IsoRetenu
-  /** §5.1 — grandeurs remplacées par un générique du registre, donc [ESTIMÉ]. */
-  readonly estimations: readonly string[]
   /** §5.1 — le recadrage resserre le cadre sans toucher à l'échantillonnage. */
   readonly noteRecadrage?: string
 }
@@ -104,27 +115,55 @@ export interface PanneauMaterielProps {
 }
 
 /**
+ * T-0199 — le signe qui dit qu'une grandeur manque, posé au bout du libellé du champ qu'elle
+ * concerne. §11.1 : le rouge ne porte jamais seul, la forme du glyphe le double.
+ *
+ * `nomme` plutôt que `describedby` : le glyphe n'a pas d'autre nom que la note. Il est
+ * atteignable au clavier — la bulle s'ouvre sur `:focus-within`, et une note qui ne sort
+ * qu'au survol n'existe pas pour qui n'a pas de souris.
+ */
+function AlerteChamp({ note }: { readonly note: string }) {
+  return (
+    <Bulle texte={note} place="bas" nomme>
+      <span className="alerte-champ" role="img" tabIndex={0}>
+        <Icone nom="warning" />
+      </span>
+    </Bulle>
+  )
+}
+
+/**
  * §5.1 — un champ du mode avancé : sa borne vient du registre, jamais du composant, et le
  * laisser vide n'est pas une erreur — c'est déclarer la grandeur inconnue.
+ *
+ * §10.1 — le libellé est une clé du glossaire, jamais une chaîne : l'unité seule vient du
+ * domaine, parce qu'elle appartient à la borne de saisie et non à la définition du terme.
  */
 function ChampCapteur({
   domaine,
+  cle,
   valeur,
   surValeur,
   requis,
-  nom,
+  note,
 }: {
   readonly domaine: DomaineId
+  readonly cle: TermeGlossaire
   readonly valeur: string
   readonly surValeur: (v: string) => void
   readonly requis?: boolean
-  /** Deux champs peuvent partager un domaine — largeur et hauteur de capteur. */
-  readonly nom?: string
+  /** T-0199 — ce que le registre met à la place, quand la grandeur reste vide. */
+  readonly note?: string | undefined
 }) {
   const d = DOMAINES[domaine]
   return (
     <label>
-      {nom ?? d.champ.replace(/^l[ea’]s? ?/u, '')} ({d.unite})
+      <span className="champ-titre">
+        <span>
+          <Etiquette cle={cle} /> ({d.unite})
+        </span>
+        {note !== undefined && <AlerteChamp note={note} />}
+      </span>
       <input
         value={valeur}
         inputMode="decimal"
@@ -135,32 +174,64 @@ function ChampCapteur({
   )
 }
 
+/**
+ * §5.1 — les grandeurs du mode avancé, dans l'ordre où elles se saisissent.
+ *
+ * Une seule liste : les champs la parcourent, et le dépliant fermé s'en sert pour dire
+ * lesquelles manquent. Deux énumérations séparées finiraient par diverger, et c'est le
+ * résumé — celui qu'on lit sans ouvrir — qui mentirait.
+ */
+const CHAMPS_AVANCES = Object.freeze([
+  { champ: 'readNoiseE', domaine: 'read_noise_e', cle: 'bruit_de_lecture' },
+  { champ: 'seuilDoubleGainIso', domaine: 'seuil_double_gain_iso', cle: 'seuil_double_gain' },
+  { champ: 'fullWellE', domaine: 'full_well_e', cle: 'capacite_saturation' },
+  { champ: 'zpSys', domaine: 'zp_sys', cle: 'point_zero_systeme' },
+] as const satisfies readonly {
+  readonly champ: keyof SaisieBoitier
+  readonly domaine: DomaineId
+  readonly cle: TermeGlossaire
+}[])
+
+type NotesEstimation = Readonly<Partial<Record<keyof SaisieBoitier, string>>>
+
+/**
+ * T-0199 — ce que le dépliant FERMÉ doit dire. Sans ce résumé, les alertes de champ ne se
+ * voient qu'une fois ouvert : une grandeur manquante n'aurait aucune chance d'être remarquée
+ * par qui ne déplie jamais le mode avancé.
+ */
+function resumeManquantes(notes: NotesEstimation): string | undefined {
+  const manquantes = CHAMPS_AVANCES.filter((c) => notes[c.champ] !== undefined)
+  if (manquantes.length === 0) return undefined
+  const s = manquantes.length > 1 ? 's' : ''
+  return (
+    `${manquantes.length} grandeur${s} laissée${s} vide${s} : ` +
+    manquantes.map((c) => GLOSSAIRE[c.cle].libelle.toLowerCase()).join(', ') +
+    '. Un générique du registre les remplace, et toute sortie qui en dépend s’affiche [ESTIMÉ].'
+  )
+}
+
 /** §5.1 — les grandeurs du mode avancé : facultatives, repliées derrière un dépliant. */
 function ChampsAvances({
   boitier,
   surChamp,
+  notes,
 }: {
   readonly boitier: SaisieBoitier
   readonly surChamp: (champ: keyof SaisieBoitier) => (v: string) => void
+  readonly notes: NotesEstimation
 }) {
   return (
     <div className="champs">
-      <ChampCapteur
-        domaine="read_noise_e"
-        valeur={boitier.readNoiseE}
-        surValeur={surChamp('readNoiseE')}
-      />
-      <ChampCapteur
-        domaine="seuil_double_gain_iso"
-        valeur={boitier.seuilDoubleGainIso}
-        surValeur={surChamp('seuilDoubleGainIso')}
-      />
-      <ChampCapteur
-        domaine="full_well_e"
-        valeur={boitier.fullWellE}
-        surValeur={surChamp('fullWellE')}
-      />
-      <ChampCapteur domaine="zp_sys" valeur={boitier.zpSys} surValeur={surChamp('zpSys')} />
+      {CHAMPS_AVANCES.map(({ champ, domaine, cle }) => (
+        <ChampCapteur
+          key={champ}
+          domaine={domaine}
+          cle={cle}
+          valeur={boitier[champ]}
+          surValeur={surChamp(champ)}
+          note={notes[champ]}
+        />
+      ))}
     </div>
   )
 }
@@ -189,6 +260,10 @@ function ApercuPitch({
 
 export function PanneauMateriel(props: PanneauMaterielProps) {
   const lectures = props.lectures
+  // T-0199 — les notes viennent de la SAISIE, pas des lectures : c'est quand la saisie est
+  // refusée qu'il importe le plus de voir ce qui manque, et les lectures sont alors absentes.
+  const notes = notesEstimation(props.boitier)
+  const resumeAvancees = resumeManquantes(notes)
   const surChamp = (champ: keyof SaisieBoitier) => (v: string) =>
     props.surBoitier({ ...props.boitier, [champ]: v })
 
@@ -202,7 +277,7 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
         </h2>
         <div className="champs">
           <label>
-            Type de capteur
+            <Etiquette cle="format_capteur" />
             <select
               value={props.boitier.formatCapteur}
               onChange={(e) => surChamp('formatCapteur')(e.target.value)}
@@ -216,7 +291,7 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
           </label>
           <ChampCapteur
             domaine="resolution_mpx"
-            nom="résolution"
+            cle="resolution_capteur"
             valeur={props.boitier.resolutionMpx}
             surValeur={surChamp('resolutionMpx')}
             requis
@@ -226,29 +301,32 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
               l'autre, et c'est la seule grandeur avancée dont l'absence fausse un volume affiché. */}
           <ChampCapteur
             domaine="taille_raw_mo"
+            cle="poids_image"
             valeur={props.boitier.tailleRawMo}
             surValeur={surChamp('tailleRawMo')}
+            note={notes.tailleRawMo}
           />
         </div>
         <ApercuPitch
           formatCapteur={props.boitier.formatCapteur}
           resolutionMpx={props.boitier.resolutionMpx}
         />
-        <details>
-          <summary>Grandeurs du capteur — mode avancé</summary>
-          <ChampsAvances boitier={props.boitier} surChamp={surChamp} />
+        {/* T-0199 — l'absence de ces grandeurs se signale à chaque champ, plus dans un bloc
+            d'encadrés sous la section : une alerte loin de sa cause ne désigne rien. La ligne
+            `zp_source` part avec eux — §7.1 l'exige partout où une pose est affichée, et ce
+            panneau n'en affiche aucune ; elle vit dans les verdicts, le filé et la séance. */}
+        <details className="avancees">
+          <summary>
+            <Bulle texte={AIDE_AVANCEES} place="bas">
+              <span className="aide">Grandeurs du capteur — mode avancé</span>
+            </Bulle>
+            {resumeAvancees !== undefined && <AlerteChamp note={resumeAvancees} />}
+            {/* Le chevron remplace le marqueur natif : celui-ci se pose avant le texte, à
+                gauche, et une étiquette qui passe à la ligne le laissait seul sur la sienne. */}
+            <Icone nom="expand_more" classe="chevron" />
+          </summary>
+          <ChampsAvances boitier={props.boitier} surChamp={surChamp} notes={notes} />
         </details>
-        {/* §7.1 — zp_source est affiché avec toute pose, donc aussi à sa source. */}
-        {lectures !== undefined && (
-          <p className={lectures.zeroSysteme.estime ? 'cause' : 'etat'}>
-            {libelleZpSource(lectures.zeroSysteme)}
-          </p>
-        )}
-        {lectures?.estimations.map((note) => (
-          <p key={note} className="cause">
-            [ESTIMÉ] {note}
-          </p>
-        ))}
         {/* §7.2 — l'ISO retenu se voit et se change ; le seuil de double gain le justifie. */}
         <div className="champs">
           <label>

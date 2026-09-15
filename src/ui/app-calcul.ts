@@ -93,8 +93,6 @@ export type Calcul =
       readonly boitier: Boitier
       readonly zeroSysteme: PointZeroSysteme
       readonly iso: IsoRetenu
-      /** Grandeurs remplacées par un générique du registre : la sortie porte [ESTIMÉ]. */
-      readonly estimations: readonly string[]
       readonly noteRecadrage?: string
     }
   | { readonly ok: false; readonly erreur: string }
@@ -364,7 +362,7 @@ export function evalueCiel(site: Site, lieu: SaisieLieu): CalculCiel {
  */
 export function evalueMateriel(materiel: SaisieMateriel): Calcul {
   try {
-    const { boitier, estimations } = resoutBoitier(materiel.boitier)
+    const boitier = resoutBoitier(materiel.boitier)
     const capteur = capteurEffectif(boitier, materiel.capteurMode)
     const focaleMm = Number(materiel.focale)
     const ouvertureN = Number(materiel.ouverture)
@@ -386,7 +384,6 @@ export function evalueMateriel(materiel: SaisieMateriel): Calcul {
       boitier,
       zeroSysteme: pointZeroSysteme(boitier),
       iso: isoRecommande(boitier, isoChoisi),
-      estimations,
       ...(capteur.noteRecadrage === undefined ? {} : { noteRecadrage: capteur.noteRecadrage }),
     }
   } catch (erreur) {

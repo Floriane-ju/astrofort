@@ -2285,6 +2285,81 @@ button:not(:disabled):active,
   height: auto;
 }
 
+/* T-0199 — le dépliant des grandeurs avancées : une LIGNE, pas un paragraphe à puce.
+   Le marqueur natif se pose avant le texte ; dès que l'étiquette passe à la ligne, il reste
+   seul sur la sienne. Il disparaît donc au profit d'un chevron poussé à droite, du côté où
+   se rangent déjà les signes de la ligne — l'alerte l'y précède. */
+/* Fermé, le dépliant est une ligne parmi les autres. Ouvert, c'est un BLOC — et un bloc qui
+   se termine doit se voir finir : sans filet de pied, ses quatre champs se lisent comme la
+   suite de la section, et l'ISO qui vient juste après paraît en faire partie. */
+.avancees {
+  margin: var(--pas-3) 0;
+}
+
+.avancees[open] {
+  padding-bottom: var(--pas-4);
+  border-bottom: var(--trait) solid var(--bordure);
+}
+
+.avancees[open] > summary {
+  margin-bottom: var(--pas-3);
+}
+
+.avancees > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--pas-2);
+  min-height: var(--cible-clic);
+  cursor: pointer;
+  list-style: none;
+}
+
+.avancees > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* L'étiquette prend la place restante et pousse le reste à droite. `flex` explicite : la
+   bulle-ancre est en `flex: none`, sans quoi un libellé long déborderait au lieu de se plier. */
+.avancees > summary > .bulle-ancre:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Le chevron indique le SENS du geste : il pointe vers le bas quand il reste à ouvrir, vers
+   le haut une fois ouvert. T-0072 ne laisse d'animation qu'au fondu du mode nuit : la
+   rotation est instantanée. */
+.avancees > summary > .chevron {
+  flex: none;
+  color: var(--attenue);
+}
+
+.avancees[open] > summary > .chevron {
+  transform: rotate(180deg);
+}
+
+.avancees > summary:hover > .chevron {
+  color: var(--texte);
+}
+
+/* T-0199 — la ligne qui nomme un champ, et le signe qui dit ce qui lui manque.
+   L'alerte se pose au bout du libellé, pas sous la section : un signe dans la ligne du champ
+   désigne ce qu'il faut remplir, là où un encadré en pied de section ne désigne rien. */
+.champ-titre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pas-2);
+}
+
+/* §11.1 — le rouge ne porte jamais seul : la forme du glyphe double la teinte, et le
+   pointillé du survol annonce qu'il y a une phrase derrière, comme sur un terme. */
+.alerte-champ {
+  display: inline-flex;
+  align-items: center;
+  color: var(--alerte);
+  cursor: help;
+}
+
 /* Un titre de carte qui porte une aide au survol : même repère visuel qu'un terme du
    glossaire — le pointillé annonce qu'il y a quelque chose à lire, le curseur le confirme. */
 .aide {

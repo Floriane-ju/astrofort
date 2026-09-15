@@ -277,14 +277,89 @@ export const GLOSSAIRE = Object.freeze({
     consequence: 'Le type choisi change le rendu du cadre et la superposition sur le ciel.',
     sections: ['5.1', '3.3'],
   }),
+  format_capteur: terme({
+    libelle: 'Type de capteur',
+    glose: 'taille physique de la surface sensible',
+    explication:
+      'Le type de capteur fixe ses dimensions en millimètres — plein format, APS-C, micro 4/3, ' +
+      '1 pouce. Croisées à la résolution, elles donnent le pitch pixel, donc le champ et ' +
+      'l’échantillonnage. La fiche technique du boîtier, ou la première page de son mode ' +
+      'd’emploi, la donne toujours.',
+    consequence:
+      'Se tromper de format déplace le champ d’un facteur 1,5 sans que rien ne le signale.',
+    sections: ['5.1'],
+  }),
+  resolution_capteur: terme({
+    libelle: 'Résolution',
+    glose: 'nombre de pixels du capteur, en millions',
+    explication:
+      'La résolution, croisée aux dimensions du capteur, donne le pitch pixel — et c’est le ' +
+      'pitch, jamais le nombre de mégapixels, qui entre dans l’échantillonnage et dans la NPF. ' +
+      'Elle se lit sur la fiche technique du boîtier, où la valeur arrondie annoncée suffit.',
+    consequence:
+      'Sans elle, ni champ ni échantillonnage : c’est, avec le format, la seule grandeur exigée.',
+    sections: ['5.1'],
+  }),
+  bruit_de_lecture: terme({
+    libelle: 'Bruit de lecture',
+    glose: 'électrons parasites ajoutés à chaque pose',
+    explication:
+      'Le bruit de lecture est le nombre d’électrons que l’électronique ajoute à chaque lecture ' +
+      'du capteur, à un ISO donné. La pose optimale varie comme son CARRÉ : diviser le bruit ' +
+      'par deux divise la pose par quatre. Aucun constructeur ne le publie — il se lit sur les ' +
+      'courbes « Read Noise vs ISO » de Photons to Photos, ou sur la fiche capteur d’une caméra ' +
+      'dédiée.',
+    consequence:
+      'Laissé vide, le repli du registre s’applique et toute pose calculée sort en [ESTIMÉ].',
+    sections: ['5.1', '7.2'],
+  }),
+  seuil_double_gain: terme({
+    libelle: 'Seuil de double gain',
+    glose: 'ISO où le bruit de lecture chute d’un coup',
+    explication:
+      'Beaucoup de capteurs CMOS basculent d’amplification au-delà d’un certain ISO : le bruit ' +
+      'de lecture y chute brutalement. Au-dessus de ce palier il ne baisse plus, tandis que la ' +
+      'capacité de saturation chute proportionnellement — monter l’ISO n’achète plus rien et ' +
+      'coûte de la dynamique. Le seuil se voit comme une marche sur la courbe « Read Noise vs ' +
+      'ISO » de Photons to Photos.',
+    consequence:
+      'C’est lui qui rattache le bruit de lecture saisi à un ISO, et qui justifie l’ISO ' +
+      'recommandé.',
+    sections: ['5.1', '7.2'],
+  }),
+  capacite_saturation: terme({
+    libelle: 'Capacité de saturation',
+    glose: 'électrons qu’un pixel encaisse avant de saturer',
+    explication:
+      'La capacité de saturation, ou full well, est le nombre d’électrons qu’un pixel accepte ' +
+      'avant d’être plein. Elle borne la dynamique et dit à partir de quelle pose les étoiles ' +
+      'brillantes du champ crament. Photons to Photos la publie sous « Saturation Capacity » ; ' +
+      'les caméras dédiées la donnent sur leur fiche capteur.',
+    consequence:
+      'Aucune sortie n’en dépend aujourd’hui : la saturation des étoiles brillantes n’est pas ' +
+      'chiffrée.',
+    sections: ['5.1'],
+  }),
+  poids_image: terme({
+    libelle: 'Poids d’une image',
+    glose: 'taille d’un fichier RAW sur la carte',
+    explication:
+      'Le poids d’un RAW, multiplié par le nombre de poses, donne le volume à rapporter d’une ' +
+      'séance. Il ne se devine pas : il dépend du boîtier, du format et de la compression ' +
+      'choisis. Le plus sûr est de lire la taille d’un fichier déjà pris avec ces réglages.',
+    consequence:
+      'Laissé vide, le budget de stockage repose sur un générique et s’affiche en [ESTIMÉ].',
+    sections: ['5.1', '7.3'],
+  }),
   point_zero_systeme: terme({
     libelle: 'Point zéro système',
     glose: 'sensibilité globale de la chaîne',
     explication:
       'Le point zéro système résume en une magnitude le rendement complet de la chaîne ' +
       'optique et électronique. Il permet de convertir une brillance de ciel en flux ' +
-      'd’électrons par pixel et par seconde. Faute de valeur mesurée pour le boîtier, une ' +
-      'valeur générique est appliquée et affichée comme estimée.',
+      'd’électrons par pixel et par seconde. Aucun constructeur ne le publie : il se mesure ' +
+      'sur un champ stellaire calibré, ou se laisse au générique du registre, qui l’affiche ' +
+      'alors comme estimé.',
     consequence: 'Une erreur d’un facteur deux dessus coûte peu, car l’optimum de pose est plat.',
     sections: ['2.3', '5.1'],
   }),

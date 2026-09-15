@@ -14,6 +14,7 @@ import {
   isoRecommande,
   libelleZpSource,
   pointZeroSysteme,
+  notesEstimation,
   resoutBoitier,
   type SaisieBoitier,
 } from '../src/data/equipment.ts'
@@ -38,7 +39,7 @@ function saisie(partiel: Partial<SaisieBoitier> = {}): SaisieBoitier {
 
 describe('§5.1 — le boîtier saisi à la main', () => {
   it('reprend le format et la résolution saisis, jamais les grandeurs d’un autre appareil', () => {
-    const { boitier } = resoutBoitier(saisie())
+    const boitier = resoutBoitier(saisie())
     const format = ligneFormatCapteur('APSC_NIKON')
     expect(boitier.id).toBe('saisi')
     expect(boitier.capteurLMm).toBe(format.capteurLMm)
@@ -64,7 +65,7 @@ describe('§5.1 — le boîtier saisi à la main', () => {
   })
 
   it('garde le recadrage APS-C dans le boîtier : il change les dimensions, jamais le pitch', () => {
-    const { boitier } = resoutBoitier(saisie({ formatCapteur: 'PLEIN_FORMAT', resolutionMpx: '33' }))
+    const boitier = resoutBoitier(saisie({ formatCapteur: 'PLEIN_FORMAT', resolutionMpx: '33' }))
     const entier = capteurEffectif(boitier, 'FULL_FRAME')
     const recadre = capteurEffectif(boitier, 'APSC_CROP')
     expect(recadre.pitchUm).toBe(entier.pitchUm)
@@ -74,7 +75,8 @@ describe('§5.1 — le boîtier saisi à la main', () => {
 })
 
 describe('§5.1 cas limite — profil sans bruit de lecture renseigné', () => {
-  const { boitier, estimations } = resoutBoitier(saisie())
+  const boitier = resoutBoitier(saisie())
+  const notes = notesEstimation(saisie())
   const iso = isoRecommande(boitier)
   const zeroSysteme = pointZeroSysteme(boitier)
 
@@ -95,7 +97,7 @@ describe('§5.1 cas limite — profil sans bruit de lecture renseigné', () => {
     expect(pose.readNoiseUtiliseE).toBe(K('READ_NOISE_DEFAUT_E'))
     expect(pose.readNoiseEstime).toBe(true)
     expect(pose.tOptS.flags).toContain('ESTIME')
-    expect(estimations.join(' ')).toContain(String(K('READ_NOISE_DEFAUT_E')))
+    expect(notes.readNoiseE).toContain(String(K('READ_NOISE_DEFAUT_E')))
   })
 
   it('applique le point zéro générique et le dit dans zp_source (§7.1)', () => {
@@ -105,22 +107,22 @@ describe('§5.1 cas limite — profil sans bruit de lecture renseigné', () => {
     expect(libelleZpSource(zeroSysteme)).toContain('GENERIQUE')
     expect(libelleZpSource(zeroSysteme)).toContain('[ESTIMÉ]')
     // Le point zéro saisi, lui, n'est plus le générique : la mention [ESTIMÉ] disparaît.
-    const declare = pointZeroSysteme(resoutBoitier(saisie({ zpSys: '20.5' })).boitier)
+    const declare = pointZeroSysteme(resoutBoitier(saisie({ zpSys: '20.5' })))
     expect(declare.source).toBe('BASE_MATERIEL')
     expect(libelleZpSource(declare)).not.toContain('[ESTIMÉ]')
   })
 
   it('remplace la taille de RAW par le générique du registre, jamais par celle d’un autre', () => {
     expect(boitier.tailleRawMo).toBe(K('TAILLE_RAW_MO_GENERIQUE'))
-    expect(estimations.join(' ')).toContain(String(K('TAILLE_RAW_MO_GENERIQUE')))
-    const renseigne = resoutBoitier(saisie({ tailleRawMo: '20' })).boitier
+    expect(notes.tailleRawMo).toContain(String(K('TAILLE_RAW_MO_GENERIQUE')))
+    const renseigne = resoutBoitier(saisie({ tailleRawMo: '20' }))
     expect(renseigne.tailleRawMo).toBe(20)
   })
 })
 
 describe('§7.2 — l’ISO retenu se voit, se justifie et se change', () => {
   it('rattache le bruit de lecture saisi au seuil de double gain déclaré', () => {
-    const { boitier } = resoutBoitier(saisie({ readNoiseE: '2.4', seuilDoubleGainIso: '800' }))
+    const boitier = resoutBoitier(saisie({ readNoiseE: '2.4', seuilDoubleGainIso: '800' }))
     const iso = isoRecommande(boitier)
     expect(iso.iso).toBe(800)
     expect(iso.readNoiseE).toBe(2.4)
@@ -137,10 +139,45 @@ describe('§7.2 — l’ISO retenu se voit, se justifie et se change', () => {
   })
 
   it('ne prétend à aucun palier quand le seuil de double gain n’est pas renseigné', () => {
-    const { boitier } = resoutBoitier(saisie({ readNoiseE: '2.4' }))
+    const boitier = resoutBoitier(saisie({ readNoiseE: '2.4' }))
     const iso = isoRecommande(boitier)
     expect(iso.isoRecommandeParSeuil).toBeNull()
     expect(iso.readNoiseE).toBeNull()
     expect(iso.message).toMatch(/pas renseigné/)
+  })
+})
+
+/**
+ * T-0199 — la note d'une grandeur absente appartient à SON champ. Ce qui se vérifie ici n'est
+ * pas le texte mais l'indexation : une note posée sur le mauvais champ afficherait l'alerte
+ * loin de la saisie qui l'éteint, ce que le bloc d'encadrés faisait déjà.
+ */
+describe('§5.1 — les notes d’estimation, champ par champ', () => {
+  it('ne note que les grandeurs vides, et sous leur propre clé', () => {
+    expect(Object.keys(notesEstimation(saisie())).sort()).toEqual(
+      ['fullWellE', 'readNoiseE', 'seuilDoubleGainIso', 'tailleRawMo', 'zpSys'].sort(),
+    )
+    const complet = saisie({
+      readNoiseE: '2.4',
+      seuilDoubleGainIso: '800',
+      fullWellE: '50000',
+      zpSys: '20.5',
+      tailleRawMo: '30',
+    })
+    expect(notesEstimation(complet)).toEqual({})
+  })
+
+  it('dit au seuil de double gain qu’il rend inutilisable le bruit de lecture saisi', () => {
+    // §7.2 — un bruit de lecture sans ISO auquel le rattacher ne sert à rien : c'est le seuil
+    // qui manque, et c'est donc lui qui doit porter l'alerte.
+    const notes = notesEstimation(saisie({ readNoiseE: '2.4' }))
+    expect(notes.readNoiseE).toBeUndefined()
+    expect(notes.seuilDoubleGainIso).toContain('bruit de lecture')
+  })
+
+  it('reste disponible quand la saisie est refusée, là où aucun boîtier ne se résout', () => {
+    const sansResolution = saisie({ resolutionMpx: '' })
+    expect(() => resoutBoitier(sansResolution)).toThrow(SaisieRefuseeError)
+    expect(notesEstimation(sansResolution).readNoiseE).toContain(String(K('READ_NOISE_DEFAUT_E')))
   })
 })

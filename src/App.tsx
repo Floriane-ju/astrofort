@@ -147,7 +147,6 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
                 poseNpf: calcul.poseNpf,
                 zeroSysteme: calcul.zeroSysteme,
                 iso: calcul.iso,
-                estimations: calcul.estimations,
                 ...(calcul.noteRecadrage === undefined
                   ? {}
                   : { noteRecadrage: calcul.noteRecadrage }),
