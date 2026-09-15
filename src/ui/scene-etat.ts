@@ -275,6 +275,10 @@ export function afficheInstant(ms: number, diagnostic?: DiagnosticRendu): void {
  * l'instant choisi n'aurait vécu que 40 ms.
  */
 export function vaA(ms: number): void {
+  // T-0210 — le compteur d'année de la barre de temps n'a pas de borne haute, et une date
+  // hors des instants représentables fait lever `astronomy-engine` depuis la boucle de rendu.
+  // Une destination inatteignable n'est pas un voyage : on reste où l'on est.
+  if (!Number.isFinite(ms)) return
   instant.ms = ms
   majTemps({ modeTemps: 'FIGE' })
   // L'horloge d'affichage saute avec l'instant, sans attendre l'image suivante : seule la

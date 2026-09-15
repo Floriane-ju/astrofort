@@ -305,7 +305,13 @@ export function SequenceDePrises({
             min={0}
             step={1}
             value={file.intervalleS}
-            onChange={(e) => majFile({ intervalleS: Number(e.target.value) })}
+            onChange={(e) => {
+              // T-0210 — un champ vidé donne `Number('') === 0`, mais un contenu que le
+              // navigateur n'a pas su lire donne `NaN`, qui se propagerait dans toute la
+              // séquence. Une valeur illisible garde la précédente.
+              const saisi = Number(e.target.value)
+              if (Number.isFinite(saisi)) majFile({ intervalleS: Math.max(0, saisi) })
+            }}
           />
         </label>
       </div>
