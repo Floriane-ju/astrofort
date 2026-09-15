@@ -289,7 +289,9 @@ describe('contraste du texte — WCAG 2.2 AA', () => {
     expect(luminance(nuit['attenue']!)).toBeLessThan(luminance(nuit['texte']!))
     // T-0194 — la taille vient désormais de l'échelle typographique : ce qui est vérifié
     // reste qu'un rang lui est assigné, pas la forme littérale du nombre.
-    for (const selecteur of ['label', '.etat']) {
+    // T-0215 — le rang du libellé a quitté `label` pour `.libelle` : `label` n'ordonne plus
+    // que la disposition, et ne restyle plus le contrôle qu'il enveloppe.
+    for (const selecteur of ['.libelle', '.etat']) {
       expect(regle(selecteur), selecteur).toMatch(/font-size: var\(--texte-[a-z]+\)/)
     }
     expect(regle('.onglet.actif')).toMatch(/font-weight: 700/)
@@ -358,9 +360,14 @@ describe('contraste des bordures de controle - WCAG 2.2 1.4.11', () => {
 
     // Verifier que --bordure-controle est sur les controles
     // Le selecteur 'input,' n'a pas d'accolade directe - il est suivi de 'select {'
-    const debut = CSS.indexOf('input,')
+    //
+    // T-0215 — la recherche porte sur la feuille SANS SES COMMENTAIRES : une note de prose
+    // qui cite « input, select » se plaçait avant la règle et faisait lire le mauvais bloc.
+    // C'est la convention des autres tests de feuille (`echelles.test.ts`).
+    const sansCommentaires = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+    const debut = sansCommentaires.indexOf('input,')
     expect(debut).toBeGreaterThan(-1)
-    const regleInput = CSS.slice(debut, CSS.indexOf('}', debut))
+    const regleInput = sansCommentaires.slice(debut, sansCommentaires.indexOf('}', debut))
     expect(regleInput).toMatch(/border.*var\(--bordure-controle\)/)
 
     const regleTiroir = regle('.tiroir > summary')

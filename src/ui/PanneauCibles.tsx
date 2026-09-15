@@ -179,7 +179,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
 
       <div className="cibles-filtres">
         <label>
-          Type
+          <span className="libelle">Type</span>
           <select
             value={type ?? ''}
             onChange={(e) =>
@@ -195,7 +195,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
           </select>
         </label>
         <label>
-          <span>
+          <span className="libelle">
             Jusqu’à la magnitude{' '}
             <span className="cibles-mag-valeur">
               {magMax >= DOMAINE_MAG.max ? 'toutes' : magMax.toFixed(1)}

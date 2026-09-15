@@ -56,7 +56,7 @@ function ReglagePoids(props: SaisiePoids) {
       </p>
       {CRITERES_SCORING.map((critere) => (
         <label key={critere}>
-          <span>
+          <span className="libelle">
             {LIBELLE_CRITERE[critere]}
             <span className="poids-effectif">
               {' '}

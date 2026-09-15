@@ -1345,6 +1345,27 @@ label {
   display: flex;
   flex-direction: column;
   gap: var(--pas-1);
+}
+
+/* T-0215 — CE QUI NOMME LE CHAMP, ET RIEN D'AUTRE.
+ *
+ * Ces quatre déclarations vivaient sur `label`, qui ENVELOPPE son contrôle : elles
+ * descendaient donc sur l'`<input>`, sur le `<select>`, sur la bulle de glose et — sans que
+ * rien ne l'arrête — sur le message de refus. Un refus de saisie se rendait en capitales
+ * espacées, alors que la règle `.etat` juste au-dessus dit l'inverse en toutes lettres :
+ * « appliquées à une explication, elles la rendent illisible et lui donnent un poids qu'elle
+ * n'a pas ». Les contrôles s'en défendaient par une annulation ; l'explication, non.
+ *
+ * Porté par un enfant nommé, le style ne descend plus que sur ce qui nomme. Les deux
+ * annulations qui existaient pour s'en protéger — sur `input, select` et sur `.interrupteur` —
+ * disparaissent avec lui.
+ *
+ * `button` et les `summary` gardent la leur : ces deux-là ne contiennent QUE leur propre
+ * libellé, leurs capitales sont donc justes, et les annulations qui subsistent chez eux
+ * protègent des contenus riches délibérément imbriqués (`.cible-ligne`, `.tracee-detail`).
+ * Le défaut était que `label` enveloppe ce qu'il ne possède pas — pas que les capitales
+ * héritent. */
+.libelle {
   font-size: var(--texte-micro);
   letter-spacing: var(--suivi-micro);
   text-transform: uppercase;
@@ -1363,7 +1384,6 @@ select {
   border-radius: 0;
   font: var(--texte-appui)/1.4 var(--police-mono);
   letter-spacing: var(--suivi-saisie);
-  text-transform: none;
 }
 
 input:hover,
@@ -1546,8 +1566,6 @@ th {
   gap: var(--pas-2);
   color: var(--texte);
   font-size: var(--texte-legende);
-  letter-spacing: 0;
-  text-transform: none;
   min-height: var(--cible-clic);
 }
 

@@ -112,7 +112,7 @@ export function ModeNuit({ etat, surChangement }: ModeNuitProps) {
           Activer le mode nuit
         </Interrupteur>
         <label>
-          <span>
+          <span className="libelle">
             <Etiquette cle="luminance_mode_nuit" />
           </span>
           <Curseur

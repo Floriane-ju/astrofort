@@ -267,7 +267,9 @@ function CombienDePhotos({
     <section>
       <h2>Combien de photos</h2>
       <label>
-        <Etiquette cle="snr_cible" />
+        <span className="libelle">
+          <Etiquette cle="snr_cible" />
+        </span>
         <select value={snrCible} onChange={(e) => surSnr(Number(e.target.value))}>
           {PRESETS_SNR.map((p) => (
             <option key={p.cle} value={p.valeur}>

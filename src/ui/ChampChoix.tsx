@@ -43,7 +43,9 @@ export function ChampChoix<T extends string>({
 }: ChampChoixProps<T>) {
   return (
     <label>
-      <Etiquette cle={cle} />
+      <span className="libelle">
+        <Etiquette cle={cle} />
+      </span>
       <select value={valeur} onChange={(e) => surChangement(e.target.value as T)}>
         {children}
       </select>

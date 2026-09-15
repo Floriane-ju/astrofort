@@ -68,7 +68,7 @@ export function ChampDomaine(props: ChampDomaineProps) {
 
   return (
     <label>
-      <span className="champ-titre">
+      <span className="libelle champ-titre">
         <span>
           {props.cle === undefined ? props.libelle : <Etiquette cle={props.cle} />}
           {props.unite === true && ` (${d.unite})`}

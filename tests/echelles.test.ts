@@ -12,7 +12,7 @@
  * rendu quand elle dérive — elle se contente de désaligner l'interface d'un pixel à la fois.
  */
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 const CSS = readFileSync(join(import.meta.dirname, '..', 'src', 'ui', 'styles.css'), 'utf8')
@@ -219,5 +219,44 @@ describe('T-0194 — le retour d’état des contrôles', () => {
     // Un bouton désactivé qui répond au survol promet un clic qui n'aura pas lieu.
     expect(CSS).toMatch(/button:not\(:disabled\):hover/)
     expect(CSS).toMatch(/button:not\(:disabled\):active/)
+  })
+})
+
+/**
+ * T-0215 — UN CONTENEUR NE RESTYLE PAS CE QU'IL NE POSSÈDE PAS.
+ *
+ * `label` portait la casse et le suivi du micro-libellé. Or un `<label>` ENVELOPPE son
+ * contrôle : le style descendait sur l'`<input>`, sur le `<select>`, sur la bulle de glose, et
+ * — sans que rien ne l'arrête — sur le message de refus, qui se rendait donc en capitales
+ * espacées. La règle `.etat` dit pourtant l'inverse en toutes lettres : « appliquées à une
+ * explication, elles la rendent illisible ». Les contrôles s'en défendaient par une
+ * annulation ; l'explication, non.
+ *
+ * Le style vit maintenant sur `.libelle`, un enfant nommé. Ce qui se vérifie ici est que le
+ * défaut ne revient pas : ni par `label`, ni par un champ qui oublierait la classe.
+ */
+describe('T-0215 — le libellé ne déborde pas sur son contrôle', () => {
+  it('ne laisse à `label` que la disposition', () => {
+    const corps = REGLES.slice(REGLES.indexOf('\nlabel {'), REGLES.indexOf('}', REGLES.indexOf('\nlabel {')))
+    for (const propriete of ['font-size', 'letter-spacing', 'text-transform', 'color']) {
+      expect(corps, propriete).not.toContain(`${propriete}:`)
+    }
+  })
+
+  it('ne laisse aucun `<label>` sans son libellé nommé', () => {
+    // Deux exceptions, et elles portent leur propre style de texte : `.interrupteur` est une
+    // PHRASE et non une étiquette, `.bouton-fichier` est un bouton déguisé en label.
+    const SANS_LIBELLE = ['interrupteur', 'bouton-fichier']
+    const racine = join(import.meta.dirname, '..', 'src', 'ui')
+    for (const fichier of readdirSync(racine)) {
+      if (!fichier.endsWith('.tsx')) continue
+      const source = readFileSync(join(racine, fichier), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+      for (const [balise] of source.matchAll(/<label[^>]*>([\s\S]*?)<\/label>/g)) {
+        if (SANS_LIBELLE.some((classe) => balise.includes(classe))) continue
+        expect(balise, `${fichier} — un <label> sans <span className="libelle">`).toContain(
+          'className="libelle',
+        )
+      }
+    }
   })
 })

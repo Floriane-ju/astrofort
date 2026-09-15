@@ -161,7 +161,7 @@ export function ProfondeurDUnePose({
       <h3>Prévisualisation de champ</h3>
       <div className="champs">
         <label>
-          Pose unitaire : {file.tPoseS.toFixed(0)} s
+          <span className="libelle">Pose unitaire : {file.tPoseS.toFixed(0)} s</span>
           <Curseur
             libelle="Pose unitaire"
             valeur={file.tPoseS}
@@ -233,7 +233,7 @@ export function ArcsDuFile({
       <h3>Filé d’étoiles</h3>
       <div className="champs">
         <label>
-          <span>
+          <span className="libelle">
             <Etiquette cle="duree_file" /> : {file.dureeTotaleMin.toFixed(0)} min
           </span>
           {/* La borne basse n'est pas celle de §9.3 : le domaine ouvre le filé à 5 min, mais
@@ -299,7 +299,9 @@ export function SequenceDePrises({
       <h3>Séquence de filé</h3>
       <div className="champs">
         <label>
-          <Etiquette cle="intervalle_file" />
+          <span className="libelle">
+            <Etiquette cle="intervalle_file" />
+          </span>
           <input
             type="number"
             min={0}
