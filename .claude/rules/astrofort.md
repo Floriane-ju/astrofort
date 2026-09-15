@@ -31,6 +31,9 @@ non-négociables.
 
 ## Icônes
 
+> Le catalogue complet — jetons, composants, exemples — est dans
+> `docs/design-system/README.md`. Ce qui suit en est le non-négociable.
+
 - Toute icône passe par `<Icone nom="..." />` (`src/ui/Icone.tsx`) et la police Material
   Symbols Sharp livrée dans `src/fonts/`. Pas de SVG inline, pas de caractère Unicode
   décoratif (`✕`, `→`, `●`) posé à la place d'un glyphe.

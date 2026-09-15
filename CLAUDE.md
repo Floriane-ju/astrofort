@@ -30,6 +30,11 @@ Vitest (environnement `node`) · pnpm.
 démarrer sans réseau (§12.2). Le noyau — planétarium, cadrage, pose, planification, filé — est
 intégralement hors-ligne (`src/data/degradation.ts`, §12.5).
 
+**Design system — lire `docs/design-system/README.md` AVANT d'écrire de l'interface.** Les
+jetons, les composants partagés et la règle des icônes y sont décrits, avec la liste des onze
+tests qui les tiennent. Écrire une couleur, un écart, un corps de texte ou un suivi en dur fait
+échouer `pnpm test` : le raccourci n'existe pas, autant prendre le bon chemin d'emblée.
+
 ## Commandes
 
 ```bash
