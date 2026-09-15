@@ -32,6 +32,7 @@ import { type DomaineId } from '../registry/domains.ts'
 import { K } from '../registry/constants.ts'
 import { GLOSSAIRE, type TermeGlossaire } from '../registry/glossaire.ts'
 import { Etiquette } from './Terme.tsx'
+import { ChampChoix } from './ChampChoix.tsx'
 import { AlerteChamp, ChampDomaine } from './ChampDomaine.tsx'
 import { Bulle } from './Bulle.tsx'
 import { Icone } from './Icone.tsx'
@@ -154,21 +155,18 @@ function SelecteurBoitier({
   const marques: string[] = []
   for (const b of BASE_BOITIERS) if (!marques.includes(b.marque)) marques.push(b.marque)
   return (
-    <label>
-      <Etiquette cle="mon_boitier" />
-      <select value={boitierId} onChange={(e) => surBoitierId(e.target.value)}>
-        <option value="">Personnalisé — décrire le capteur</option>
-        {marques.map((marque) => (
-          <optgroup key={marque} label={marque}>
-            {BASE_BOITIERS.filter((b) => b.marque === marque).map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.libelle}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </select>
-    </label>
+    <ChampChoix cle="mon_boitier" valeur={boitierId} surChangement={surBoitierId}>
+      <option value="">Personnalisé — décrire le capteur</option>
+      {marques.map((marque) => (
+        <optgroup key={marque} label={marque}>
+          {BASE_BOITIERS.filter((b) => b.marque === marque).map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.libelle}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </ChampChoix>
   )
 }
 
@@ -287,19 +285,17 @@ export function PanneauBoitier(props: PanneauBoitierProps) {
       <div className="champs">
         {ligne === null && (
           <>
-            <label>
-              <Etiquette cle="format_capteur" />
-              <select
-                value={props.boitier.formatCapteur}
-                onChange={(e) => surChamp('formatCapteur')(e.target.value)}
-              >
-                {TABLE_FORMATS_CAPTEUR.map((f) => (
-                  <option key={f.format} value={f.format}>
-                    {f.libelle}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <ChampChoix
+              cle="format_capteur"
+              valeur={props.boitier.formatCapteur}
+              surChangement={surChamp('formatCapteur')}
+            >
+              {TABLE_FORMATS_CAPTEUR.map((f) => (
+                <option key={f.format} value={f.format}>
+                  {f.libelle}
+                </option>
+              ))}
+            </ChampChoix>
             <ChampDomaine
               domaine="resolution_mpx"
               cle="resolution_capteur"

@@ -31,7 +31,7 @@ import {
 } from '../registry/capteur-formats.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { PanneauBoitier } from './PanneauBoitier.tsx'
-import { Etiquette } from './Terme.tsx'
+import { ChampChoix } from './ChampChoix.tsx'
 import { ChampDomaine } from './ChampDomaine.tsx'
 import { Interrupteur } from './Interrupteur.tsx'
 import { LectureInconnue } from './Inconnu.tsx'
@@ -124,18 +124,16 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
             surValeur={props.surOuverture}
             requis
           />
-          <label>
-            <Etiquette cle="recadrage_capteur" />
-            <select
-              value={props.capteurMode}
-              onChange={(e) => props.surCapteurMode(e.target.value as CapteurMode)}
-            >
-              <option value="FULL_FRAME">
-                Capteur entier — {ligneFormatCapteur(formatCapteur).libelle}
-              </option>
-              <option value="APSC_CROP">Recadrage APS-C</option>
-            </select>
-          </label>
+          <ChampChoix
+            cle="recadrage_capteur"
+            valeur={props.capteurMode}
+            surChangement={props.surCapteurMode}
+          >
+            <option value="FULL_FRAME">
+              Capteur entier — {ligneFormatCapteur(formatCapteur).libelle}
+            </option>
+            <option value="APSC_CROP">Recadrage APS-C</option>
+          </ChampChoix>
         </div>
         <Interrupteur
           actif={props.typeObjectif === 'FISHEYE'}
@@ -176,29 +174,25 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
             Ma monture suit les étoiles
           </Interrupteur>
           {props.suiviActif && (
-            <label>
-              <Etiquette cle="mise_en_station" />
-              <select
-                value={props.qualiteMes}
-                onChange={(e) => props.surQualiteMes(e.target.value as QualiteMiseEnStation)}
-              >
-                <option value="SOIGNEE">Oui — viseur polaire réglé</option>
-                <option value="APPROX">Non — mise en station à la boussole</option>
-                <option value="INCONNUE">Je ne sais pas</option>
-              </select>
-            </label>
+            <ChampChoix
+              cle="mise_en_station"
+              valeur={props.qualiteMes}
+              surChangement={props.surQualiteMes}
+            >
+              <option value="SOIGNEE">Oui — viseur polaire réglé</option>
+              <option value="APPROX">Non — mise en station à la boussole</option>
+              <option value="INCONNUE">Je ne sais pas</option>
+            </ChampChoix>
           )}
           {props.suiviActif && (
-            <label>
-              <Etiquette cle="type_monture" />
-              <select
-                value={props.typeMonture}
-                onChange={(e) => props.surTypeMonture(e.target.value as TypeMonture)}
-              >
-                <option value="TRACKER">Monture sur rotule (tracker)</option>
-                <option value="GEM">Équatoriale allemande</option>
-              </select>
-            </label>
+            <ChampChoix
+              cle="type_monture"
+              valeur={props.typeMonture}
+              surChangement={props.surTypeMonture}
+            >
+              <option value="TRACKER">Monture sur rotule (tracker)</option>
+              <option value="GEM">Équatoriale allemande</option>
+            </ChampChoix>
           )}
           {/* T-0207 — l'altazimutale n'est pas un choix tant que la rotation de champ n'est pas
               modélisée (§5.2) : la proposer ne menait qu'à un refus. `etat` et non `cause` :
