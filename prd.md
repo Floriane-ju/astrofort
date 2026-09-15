@@ -1202,7 +1202,11 @@ CAPTEUR — un modèle de la base, ou un format et une résolution
   ISO, le seuil de double gain, la capacité de saturation. Ce sont ces grandeurs, et elles
   seules, qui permettent de recommander un ISO (§7.2) et de chiffrer une pose sans repli
   générique. Les exiger d'une saisie manuelle revenait à ne jamais les avoir.
-  → modèle choisi : plus aucun champ capteur n'est posé, il n'y a plus rien à décider.
+  → modèle choisi : plus aucun champ DÉCRIVANT LE CAPTEUR n'est posé, il n'y a plus rien à
+    décider. Une seule exception, `taille_raw_mo` : elle ne décrit pas le capteur mais le
+    réglage RAW du moment — compressé, sans perte ou non compressé changent le fichier du
+    simple au triple sur le même appareil. La ligne de la base la préremplit, elle ne
+    l'impose pas.
 
   Mode personnalisé — le capteur se décrit par son type et sa résolution, jamais par des
   millimètres ou un pitch tapés à la main : ni l'un ni l'autre ne se lit sur une fiche
@@ -1250,9 +1254,9 @@ DIAGNOSTIC D'ÉCHANTILLONNAGE (seeing courant 2–3", constante C-04)
 | `resolution_mpx` | float | Mpx | 1 – 200 | avec type_capteur donne pitch_um |
 | `capteur_L_mm`, `capteur_H_mm` | float | mm | 3 – 60 | pilotées par type_capteur |
 | `pitch_um` | float | µm | 0,8 – 24 | dérivé de type_capteur + resolution_mpx |
-| `read_noise_e` | float | e⁻ | 0,5 – 15 | par ISO, saisi ou repli générique |
+| `read_noise_e` | float | e⁻ | 0,5 – 40 | par ISO, saisi ou repli générique |
 | `seuil_double_gain_iso` | int | — | 100 – 6400 | saisi ou absent |
-| `full_well_e` | int | e⁻ | 5 000 – 200 000 | saturation |
+| `full_well_e` | int | e⁻ | 5 000 – 250 000 | saturation |
 | `zp_sys` | float | mag | 18 – 22 | §2.3, saisi ou repli générique |
 | `taille_raw_mo` | float | Mo | 5 – 120 | budget stockage §7.3, §9.4 |
 | `fov_l_deg`, `fov_h_deg` | float | ° | sortie | |
@@ -1260,7 +1264,7 @@ DIAGNOSTIC D'ÉCHANTILLONNAGE (seeing courant 2–3", constante C-04)
 | `dawes_as`, `D_mm` | float | ", mm | sortie | |
 | `diag_ech` | enum | — | 4 valeurs | sortie |
 
-Les champs `read_noise_e`, `full_well_e`, `zp_sys` et `seuil_double_gain_iso` sont invisibles pour le débutant : facultatifs, éditables en mode avancé, remplacés par le repli générique du registre quand ils sont absents. `taille_raw_mo` est facultatif de la même manière, mais il se saisit EN CLAIR, sous le libellé « poids d'une image » : c'est la seule de ces grandeurs qui commande une sortie affichée — le budget de stockage, que §7.3 tient pour bloquant en pratique. Replié sous un dépliant, il laisse tout volume annoncé reposer sur un repli générique.
+Les champs `read_noise_e`, `full_well_e`, `zp_sys` et `seuil_double_gain_iso` sont invisibles pour le débutant : facultatifs, éditables en mode avancé, remplacés par le repli générique du registre quand ils sont absents. `taille_raw_mo` est facultatif de la même manière, mais il se saisit EN CLAIR, sous le libellé « poids d'une image » : c'est la seule de ces grandeurs qui commande une sortie affichée — le budget de stockage, que §7.3 tient pour bloquant en pratique. Replié sous un dépliant, il laisse tout volume annoncé reposer sur un repli générique. C'est aussi la seule de ces grandeurs qui reste saisissable sous un boîtier de la base : elle appartient au réglage, pas au modèle.
 
 ### Critères d'acceptation
 
@@ -1293,7 +1297,12 @@ Et capteur_L_mm, capteur_H_mm ne sont à aucun moment saisis à la main
 Étant donné un boitier_id de la base matériel
 Quand je valide le profil
 Alors aucun champ décrivant le capteur ne m'est présenté
+Et le seul champ qui subsiste est le poids d'une image, prérempli par la ligne choisie
 Et le profil enregistré porte l'identifiant du modèle, jamais une copie de ses grandeurs
+
+Étant donné un boitier_id de la base et un poids d'une image saisi à la main
+Quand un volume de stockage est calculé
+Alors c'est la valeur saisie qui s'applique, pas celle de la ligne
 
 Étant donné un profil dont le boitier_id ne figure plus dans la base    # cas limite
 Quand l'application démarre
@@ -1993,10 +2002,15 @@ CHOIX DE L'ISO — le double gain de conversion
   autre, et AUCUNE recommandation n'est affichée. Inventer un seuil là où la courbe n'en
   montre pas ferait recommander un réglage sans raison.
 
-  AFFICHAGE — boîtier de la base : l'ISO recommandé est un FAIT, pas un champ. Demander de
-  taper le chiffre qu'on vient de calculer est une question dont on connaît la réponse.
-  Il reste modifiable — le seuil justifie une recommandation, il n'impose pas un réglage —
-  par une commande explicite qui rouvre la saisie sans faire quitter son boîtier.
+  AFFICHAGE — boîtier de la base : l'ISO recommandé est un FAIT, pas un champ, et il ne se
+  modifie pas. Demander de taper le chiffre qu'on vient de calculer est une question dont on
+  connaît la réponse ; le rendre modifiable offrait un réglage dont TOUTES les valeurs sont
+  moins bonnes que celle affichée — en dessous du seuil, RN² impose des poses plus longues ;
+  au-dessus, la capacité de saturation chute sans que RN diminue. Le seuil ne recommande pas,
+  il tranche.
+  Conséquence sur le calcul : tant qu'un boitier_id est choisi, un ISO forcé — resté d'une
+  saisie antérieure ou relu d'un profil enregistré — est IGNORÉ. La pose se calcule avec le
+  bruit de lecture du palier affiché, jamais avec une valeur que l'écran ne montre pas.
   Mode personnalisé : l'ISO se saisit, et le seuil saisi le justifie s'il est renseigné.
 
 AFFICHAGE — §2.3
@@ -2021,7 +2035,7 @@ Les valeurs de bruit de lecture sont `[À VÉRIFIER]` en base matériel, jamais 
 | Champ | Type | Unité | Plage valide | Note |
 |---|---|---|---|---|
 | `e_ciel` | float | e⁻/s/px | §7.1 | |
-| `read_noise_e` | float | e⁻ | 0,5 – 15 | fonction de l'ISO |
+| `read_noise_e` | float | e⁻ | 0,5 – 40 | fonction de l'ISO |
 | `c_facteur` | float | — | 3 – 10 | défaut C-03 = 10 |
 | `t_max_suivi_s` | float | s | §5.2 | |
 | `t_opt_s`, `t_recommande_s` | float | s | sortie | |
@@ -2052,6 +2066,11 @@ Et l'app explique qu'un ciel plus noir exige des poses PLUS LONGUES, pas plus co
 Étant donné un boîtier sans bruit de lecture connu                  # cas limite
 Quand la pose est calculée
 Alors RN = 3,0 e⁻ est appliqué, affiché, et le résultat porte la mention [ESTIMÉ]
+
+Étant donné un boitier_id de la base et un ISO forcé resté dans la saisie   # cas limite
+Quand la pose unitaire est calculée
+Alors l'ISO affiché est le palier du seuil de double gain, et il n'est pas saisissable
+Et la pose se calcule avec le bruit de lecture de ce palier, pas avec l'ISO forcé
 ```
 
 ### Dépendances données
