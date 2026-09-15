@@ -191,9 +191,14 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
               >
                 <option value="TRACKER">Monture sur rotule (tracker)</option>
                 <option value="GEM">Équatoriale allemande</option>
-                <option value="ALTAZ">Altazimutale</option>
               </select>
             </label>
+          )}
+          {/* T-0207 — l'altazimutale n'est pas un choix tant que la rotation de champ n'est pas
+              modélisée (§5.2) : la proposer ne menait qu'à un refus. `etat` et non `cause` :
+              rien n'est en défaut dans la saisie, c'est le périmètre de l'app qui se dit. */}
+          {props.suiviActif && (
+            <p className="etat">Les montures altazimutales ne sont pas encore gérées.</p>
           )}
         </div>
       </section>

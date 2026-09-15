@@ -388,12 +388,12 @@ export const GLOSSAIRE = Object.freeze({
   }),
   type_monture: terme({
     libelle: 'Type de monture',
-    glose: 'équatoriale, rotule ou altazimutale',
+    glose: 'équatoriale allemande ou rotule',
     explication:
       'Une équatoriale allemande impose un retournement au passage du méridien, une monture ' +
-      'sur rotule non. Une altazimutale fait tourner le champ pendant la pose, phénomène non ' +
-      'traité dans cette version.',
-    consequence: 'Le type déclaré décide du retournement à prévoir et des domaines ouverts.',
+      'sur rotule non. L’altazimutale, qui fait tourner le champ pendant la pose, n’est pas ' +
+      'proposée : ce calcul n’existe pas dans cette version.',
+    consequence: 'Le type déclaré décide du retournement à prévoir, donc du découpage du créneau.',
     sections: ['5.2', '8.2'],
   }),
   pose_max_suivi: terme({

@@ -161,6 +161,13 @@ describe('T-0082 — la saisie survit au rechargement', () => {
     })
   })
 
+  it('T-0207 — un profil altazimutal relu revient au type par défaut', async () => {
+    // Le sélecteur ne propose plus l'altazimutale : la relire telle quelle donnerait un
+    // `<select>` sans option correspondante. Le fichier, lui, reste accepté.
+    const materiel = await rechargeMateriel(saisieMateriel({ typeMonture: 'ALTAZ' }))
+    expect(materiel?.typeMonture).toBe('TRACKER')
+  })
+
   it('n’écrit pas une saisie hors domaine et laisse le dernier état valable', async () => {
     // §2.1 — un NaN ou un Bortle 12 persisté ressortirait à chaque démarrage, et rendrait
     // l'export irréimportable : le contrôle du réimport applique les mêmes plages.

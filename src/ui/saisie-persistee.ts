@@ -129,6 +129,11 @@ export function departMateriel(profil: ProfilMateriel | null): DepartMateriel | 
     suiviActif: profil.suiviActif,
     // Absents d'un fichier importé d'ailleurs : les valeurs de départ de la saisie reprennent.
     ...(profil.qualiteMes === undefined ? {} : { qualiteMes: profil.qualiteMes }),
-    ...(profil.typeMonture === undefined ? {} : { typeMonture: profil.typeMonture }),
+    // T-0207 — l'altazimutale a quitté le sélecteur : un profil qui la porte encore retomberait
+    // sur un `<select>` sans option correspondante. Le moteur sait toujours la traiter, mais la
+    // saisie ne peut plus la représenter, donc elle revient au type par défaut.
+    ...(profil.typeMonture === undefined
+      ? {}
+      : { typeMonture: profil.typeMonture === 'ALTAZ' ? 'TRACKER' : profil.typeMonture }),
   }
 }
