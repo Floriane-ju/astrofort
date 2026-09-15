@@ -874,7 +874,7 @@ input.barretemps-instant {
   max-width: 100%;
   display: flex;
   flex-direction: column;
-  border-left: var(--trait) solid var(--accent);
+  border-left: var(--trait) solid var(--bordure);
   background: var(--surface);
 }
 
@@ -892,7 +892,7 @@ input.barretemps-instant {
   max-width: 100%;
   display: flex;
   flex-direction: column;
-  border-right: var(--trait) solid var(--accent);
+  border-right: var(--trait) solid var(--bordure);
   background: var(--surface);
 }
 
