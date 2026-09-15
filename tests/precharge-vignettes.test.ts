@@ -61,6 +61,9 @@ let appels: string[] = []
 let enVol = 0
 let volMax = 0
 let retenues: (() => void)[] = []
+/** Une image retenue, donc une requête menée jusqu'au bout — c'est la fin de la chaîne. */
+let reveils = 0
+let seDesabonne: (() => void) | null = null
 
 function bouchonne(): void {
   vi.stubGlobal('fetch', (adresse: string) => {
@@ -95,19 +98,35 @@ async function tour(): Promise<void> {
  * L'attente porte sur un COMPTE, jamais sur un délai : entre deux requêtes, un consommateur
  * traverse IndexedDB — lecture puis écriture — et une suite qui tourne en parallèle d'une
  * soixantaine d'autres fichiers ne tient aucune promesse de calendrier.
+ *
+ * T-0215 — CE QUI SE TAIT N'EST PAS LE RÉSEAU, C'EST LE TRAVAIL QU'IL ALIMENTE. Le bouchon
+ * décrémente `enVol` au moment où il RÉSOUT la promesse : à cet instant, le consommateur n'a
+ * pas encore lu le blob ni écrit dans IndexedDB, et il n'a donc pas encore retenu l'image.
+ * L'ancienne version compensait par deux tours forfaitaires après le silence réseau — et deux
+ * tours sont une durée déguisée, exactement ce que l'en-tête de cette fonction proscrit. Sous
+ * charge, la chaîne dépassait le forfait : la dernière image n'était pas retenue, et deux
+ * assertions tombaient — le compte des réveils, et le jeu élargi qui redemandait une image
+ * censée être déjà en mémoire.
+ *
+ * La condition est désormais exacte : le bouchon répond TOUJOURS une image, donc toute requête
+ * émise doit produire un réveil, et la file n'est achevée que lorsque les deux comptes se
+ * rejoignent. Plus aucun tour n'est accordé au hasard.
  */
 async function attend(base: number, nouvelles: number): Promise<void> {
   for (let garde = 0; garde <= (nouvelles + 1) * TOURS_PAR_REQUETE; garde += 1) {
-    if (retenues.length === 0 && enVol === 0 && appels.length - base >= nouvelles) {
-      // Deux tours de plus : une file vidée n'émet plus rien, et c'est ce qu'on vérifie.
-      await tour()
-      await tour()
-      if (retenues.length === 0 && enVol === 0) return
+    if (
+      retenues.length === 0 &&
+      enVol === 0 &&
+      appels.length - base >= nouvelles &&
+      reveils === appels.length
+    ) {
+      return
     }
     await tour()
   }
   throw new Error(
-    `préchargement inachevé : ${appels.length - base} requêtes sur ${nouvelles} attendues`,
+    `préchargement inachevé : ${appels.length - base} requêtes sur ${nouvelles} attendues, ` +
+      `${reveils} réveils sur ${appels.length} requêtes émises`,
   )
 }
 
@@ -152,12 +171,19 @@ beforeEach(async () => {
   retenues = []
   enVol = 0
   volMax = 0
+  reveils = 0
+  // `oublieImages` vide les abonnés : l'abonnement du banc se repose après, jamais avant.
   oublieImages()
+  seDesabonne = abonneImages(() => {
+    reveils += 1
+  })
   await (await db()).clear('images')
   bouchonne()
 })
 
 afterEach(() => {
+  seDesabonne?.()
+  seDesabonne = null
   vi.unstubAllGlobals()
 })
 
@@ -220,9 +246,11 @@ describe('hors ligne §12.5', () => {
 describe('réveil des vignettes montées §6.4', () => {
   it('notifie le magasin à chaque image retenue', async () => {
     const jeu = tranche(8, DEBIT * 2)
-    let reveils = 0
+    // Un second abonné, distinct de celui du banc : ce qui se vérifie ici n'est pas que la
+    // chaîne s'achève — `attend` l'exige déjà — mais que CHAQUE abonné soit prévenu.
+    let prevenu = 0
     const desabonne = abonneImages(() => {
-      reveils += 1
+      prevenu += 1
     })
 
     await prechargeEtAttend(jeu, jeu.length)
@@ -230,6 +258,6 @@ describe('réveil des vignettes montées §6.4', () => {
 
     // Sans cette notification, une ligne qui a conclu à l'absence resterait sans image
     // jusqu'au prochain montage du panneau.
-    expect(reveils).toBe(jeu.length)
+    expect(prevenu).toBe(jeu.length)
   })
 })
