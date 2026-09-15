@@ -16,6 +16,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
 import { ETAT_INITIAL, appliqueModeNuit, litEtatPersiste } from '../src/ui/ModeNuit.tsx'
+import { Mention } from '../src/ui/Mention.tsx'
 import { K } from '../src/registry/constants.ts'
 import { etatScene } from '../src/ui/scene-etat.ts'
 
@@ -133,9 +134,27 @@ describe('palette du mode nuit §11.1', () => {
   })
 
   it('ne fait jamais porter l’information par la seule couleur', () => {
-    // Une alerte se distingue aussi par sa forme : bordure latérale et signe en préfixe.
-    expect(CSS).toMatch(/\.cause::before/)
-    expect(CSS).toMatch(/content: '⚠ '/)
+    // Une alerte se distingue aussi par sa FORME : une barre latérale épaisse, et un signe.
+    //
+    // T-0215 — le signe était « ⚠ » posé en `content` par la feuille, donc rendu dans la
+    // police de texte. Il vient maintenant du balisage, par `Icone` : c'est là qu'il se
+    // vérifie. La barre, elle, reste une propriété de la feuille.
+    for (const ton of ['cause', 'erreur'] as const) {
+      const html = renderToStaticMarkup(<Mention ton={ton}>refus</Mention>)
+      expect(html, ton).toContain('warning')
+      expect(html, ton).toContain('mention-signe')
+    }
+    expect(CSS).toMatch(/border-left-width: var\(--trait-marque\)/)
+  })
+
+  it('ne pose le signe que sur ce qui alerte', () => {
+    // Un état simple n'est pas une alerte : lui donner le signe le ferait lire comme un refus,
+    // et §11.1 perdrait ce qui distingue les deux une fois la couleur passée au rouge.
+    for (const ton of ['etat', 'tracee-source'] as const) {
+      expect(renderToStaticMarkup(<Mention ton={ton}>lecture</Mention>), ton).not.toContain(
+        'mention-signe',
+      )
+    }
   })
 })
 

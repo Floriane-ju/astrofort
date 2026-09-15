@@ -19,6 +19,7 @@ import { nombreSaisi } from './saisie-bornee.ts'
 import { Bulle } from './Bulle.tsx'
 import { Etiquette } from './Terme.tsx'
 import { Icone } from './Icone.tsx'
+import { Mention } from './Mention.tsx'
 
 /**
  * T-0199 — le signe qui dit qu'une grandeur manque, posé au bout du libellé du champ qu'elle
@@ -82,9 +83,9 @@ export function ChampDomaine(props: ChampDomaineProps) {
         onChange={(e) => props.surValeur(e.target.value)}
       />
       {refus !== null && (
-        <p className="erreur" id={idRefus} role="status">
+        <Mention ton="erreur" id={idRefus} role="status">
           {refus}
-        </p>
+        </Mention>
       )}
     </label>
   )

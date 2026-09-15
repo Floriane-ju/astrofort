@@ -15,6 +15,7 @@ import { SaisieRefuseeError } from '../registry/domains.ts'
 import { nombreSaisi, refusDe } from './saisie-bornee.ts'
 import { ChampDomaine } from './ChampDomaine.tsx'
 import { Terme } from './Terme.tsx'
+import { Mention } from './Mention.tsx'
 
 export interface MasqueHorizonProps {
   readonly points: readonly PointMasque[]
@@ -75,10 +76,10 @@ export function MasqueHorizonSaisie(props: MasqueHorizonProps) {
       />
       {/* L'hypothèse plate est une alerte — le relevé saisi, lui, n'est qu'une lecture. */}
       {props.masque.note !== undefined && (
-        <p className={props.masque.estHypothese ? 'cause' : 'tracee-source'}>
+        <Mention ton={props.masque.estHypothese ? 'cause' : 'tracee-source'}>
           {props.masque.flags?.map((f) => `[${f}] `).join('')}
           {props.masque.note}
-        </p>
+        </Mention>
       )}
 
       {props.points.length > 0 && (
@@ -125,7 +126,7 @@ export function MasqueHorizonSaisie(props: MasqueHorizonProps) {
         )}
       </div>
 
-      {refus !== null && <p className="cause">{refus}</p>}
+      {refus !== null && <Mention ton="cause">{refus}</Mention>}
     </div>
   )
 }

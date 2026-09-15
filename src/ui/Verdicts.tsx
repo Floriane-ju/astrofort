@@ -17,6 +17,7 @@ import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, Terme } from './Terme.tsx'
 import { heure } from './horaire.ts'
 import type { Conseils, Resultat } from './fiche-cible-calcul.ts'
+import { Mention } from './Mention.tsx'
 
 export interface VerdictsProps {
   readonly r: Resultat
@@ -85,10 +86,10 @@ function CadrageDeLaCible({ r }: { readonly r: Resultat }) {
       {/* La ligne « Mosaïque » porte déjà le message du verdict dans sa glose : le répéter
           en clair sous elle ferait lire deux fois la même phrase. */}
       {cadrage.nTuiles === undefined && (
-        <p className={cadrage.faisable ? 'etat' : 'cause'}>{cadrage.message}</p>
+        <Mention ton={cadrage.faisable ? 'etat' : 'cause'}>{cadrage.message}</Mention>
       )}
       <p className="etat">{cadrage.noteOrientation}</p>
-      {cadrage.cause !== undefined && <p className="cause">{cadrage.cause}</p>}
+      {cadrage.cause !== undefined && <Mention ton="cause">{cadrage.cause}</Mention>}
       {cadrage.focaleIdealeMm !== undefined && (
         <TracedValue terme="focale_ideale" trace={cadrage.focaleIdealeMm} decimales={0} unite="mm" />
       )}
@@ -102,7 +103,7 @@ function CadrageDeLaCible({ r }: { readonly r: Resultat }) {
  * annonceraient deux poses sans que rien ne dise laquelle porte quelle nuit.
  */
 function CielSousLaLune({ r }: { readonly r: Resultat }) {
-  if (!r.lune.evaluee) return <p className="cause">{r.lune.cause}</p>
+  if (!r.lune.evaluee) return <Mention ton="cause">{r.lune.cause}</Mention>
   return (
     <>
       <p className="etat">
@@ -165,14 +166,14 @@ function PoseUnitaire({
     <section>
       <h2>Pose</h2>
       {/* §7.1 — zp_source doit être affiché partout où une pose l'est. */}
-      <p className={zeroSysteme.estime ? 'cause' : 'etat'}>{libelleZpSource(zeroSysteme)}</p>
-      {zeroSysteme.note !== undefined && <p className="cause">{zeroSysteme.note}</p>}
+      <Mention ton={zeroSysteme.estime ? 'cause' : 'etat'}>{libelleZpSource(zeroSysteme)}</Mention>
+      {zeroSysteme.note !== undefined && <Mention ton="cause">{zeroSysteme.note}</Mention>}
       <TracedValue terme="flux_ciel" trace={r.eCiel} unite="e⁻/s/px" />
       {r.eObj !== null && <TracedValue terme="flux_objet" trace={r.eObj} decimales={3} unite="e⁻/s/px" />}
       {r.pose === null && (
-        <p className="cause">
+        <Mention ton="cause">
           Aucune pose n’est chiffrée : la donnée source manque pour cette cible.
-        </p>
+        </Mention>
       )}
       {r.pose !== null && (
         <>
@@ -184,21 +185,21 @@ function PoseUnitaire({
           <p className="etat">
             <Etiquette cle="regime_pose" /> : {r.pose.regime}
           </p>
-          <p className={r.pose.regime === 'NOMINAL' ? 'etat' : 'cause'}>{r.pose.message}</p>
+          <Mention ton={r.pose.regime === 'NOMINAL' ? 'etat' : 'cause'}>{r.pose.message}</Mention>
           <p className="etat">
             <Etiquette cle="iso_recommande" /> : {isoLibelle}
           </p>
           {r.pose.readNoiseEstime && (
-            <p className="cause">
+            <Mention ton="cause">
               [ESTIMÉ] Bruit de lecture inconnu : {r.pose.readNoiseUtiliseE} e⁻ appliqué et affiché.
-            </p>
+            </Mention>
           )}
           {/* §7.2 — le mode permissif se demande, et s'annonce avec son coût chiffré. */}
           <Interrupteur actif={permissif} surChangement={surPermissif}>
             <Etiquette cle="mode_permissif" /> — ciel pollué, suivi imprécis, vent
           </Interrupteur>
           {r.pose.notePermissif !== undefined && (
-            <p className="cause">{r.pose.notePermissif}</p>
+            <Mention ton="cause">{r.pose.notePermissif}</Mention>
           )}
         </>
       )}
@@ -258,7 +259,7 @@ function CombienDePhotos({
     return refus === undefined ? null : (
       <section>
         <h2>Combien de photos</h2>
-        <p className="cause">{refus}</p>
+        <Mention ton="cause">{refus}</Mention>
       </section>
     )
   }
@@ -285,9 +286,9 @@ function CombienDePhotos({
       )}
       <p className="etat">{integration.loiFondamentale}</p>
       {integration.messages.map((m) => (
-        <p key={m} className={integration.horsDePortee ? 'cause' : 'etat'}>
+        <Mention key={m} ton={integration.horsDePortee ? 'cause' : 'etat'}>
           {m}
-        </p>
+        </Mention>
       ))}
     </section>
   )
@@ -334,9 +335,9 @@ function PlanDeCalibration({ r }: { readonly r: Resultat }) {
         <Etiquette cle="dithering" /> : {calibration.dithering}
       </p>
       {calibration.avertissements.map((a) => (
-        <p key={a} className="cause">
+        <Mention key={a} ton="cause">
           {a}
-        </p>
+        </Mention>
       ))}
     </section>
   )
@@ -405,7 +406,7 @@ function PourquoiCeVerdict({
 function ConseilsEtRecommandations({ conseils }: { readonly conseils: Conseils }) {
   return (
     <>
-      <p className={conseils.filtre.declenche ? 'cause' : 'etat'}>{conseils.filtre.message}</p>
+      <Mention ton={conseils.filtre.declenche ? 'cause' : 'etat'}>{conseils.filtre.message}</Mention>
       <p className="tracee-source">Familles de filtres : {SOURCE_TABLE_FILTRES}</p>
       {/* §10.3 — recommandation d'équipement : catégorie et gain chiffré, rien d'autre. */}
       <p className="etat">{conseils.recommandations.message}</p>

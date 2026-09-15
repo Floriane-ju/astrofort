@@ -14,6 +14,7 @@
  */
 
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { Mention } from './Mention.tsx'
 
 interface EtatGarde {
   readonly cause: string | null
@@ -50,7 +51,7 @@ export function EcranInterrompu({ cause }: { readonly cause: string }) {
   return (
     <div className="garde-erreur" role="alert">
       <h1>Le calcul s’est interrompu</h1>
-      <p className="erreur">{cause}</p>
+      <Mention ton="erreur">{cause}</Mention>
       <p className="etat">
         Les données enregistrées sont intactes. Recharger reprend à la dernière saisie
         valable ; si l’interruption revient, c’est une valeur enregistrée qui la déclenche.

@@ -15,6 +15,7 @@
 import { MATRICE_DEGRADATION } from '../data/degradation.ts'
 import type { EtatDemarrage } from '../data/bootstrap.ts'
 import { REGISTRE } from '../registry/constants.ts'
+import { Mention } from './Mention.tsx'
 
 const OCTETS_PAR_MO = 1024 * 1024
 
@@ -52,10 +53,10 @@ export function Verification(props: VerificationProps) {
                   ` · ${etat.stockage.usageMo.toFixed(1)} Mo utilisés`}
               </p>
               {etat.stockage.avertissement !== undefined && (
-                <p className="cause">{etat.stockage.avertissement}</p>
+                <Mention ton="cause">{etat.stockage.avertissement}</Mention>
               )}
               {etat.catalogues.cause !== undefined && (
-                <p className="cause">{etat.catalogues.cause}</p>
+                <Mention ton="cause">{etat.catalogues.cause}</Mention>
               )}
               <ul>
                 {etat.catalogues.paquets.map((p) => (
@@ -91,14 +92,14 @@ export function Verification(props: VerificationProps) {
             insérée en même temps que son texte n'est pas annoncée par la plupart des lecteurs
             d'écran : ils observent les régions présentes, ils n'observent pas leur apparition.
             C'est le seul détail qui décide si ce ticket sert à quelque chose. */}
-        <p
-          className={props.echecPersistance ? 'cause' : 'etat'}
+        <Mention
+          ton={props.echecPersistance ? 'cause' : 'etat'}
           role={props.echecPersistance ? 'alert' : 'status'}
           aria-live={props.echecPersistance ? 'assertive' : 'polite'}
           aria-atomic="true"
         >
           {props.messagePersistance}
-        </p>
+        </Mention>
       </section>
 
       <section>

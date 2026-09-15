@@ -121,3 +121,44 @@ describe('T-0215 — aucun caractère Unicode à la place d’un glyphe', () => 
     }
   })
 })
+
+/**
+ * T-0215 — l'alerte porte son signe par le BALISAGE, plus par la feuille.
+ *
+ * `.cause::before` posait « ⚠ » en `content` : une seconde façon d'afficher une icône dans un
+ * projet qui n'en autorise qu'une, et un second endroit à toucher le jour où l'épaisseur des
+ * glyphes change. Ce qui se vérifie ici est que ce chemin ne rouvre pas — ni par un `content`
+ * qui dessine, ni par un appel direct à la police d'icônes ailleurs que dans `.icone`.
+ */
+describe('T-0215 — une seule façon d’afficher une icône', () => {
+  it('ne pose aucun glyphe en `content` dans la feuille', () => {
+    // « · » reste permis : c'est un séparateur de liste, il se lit dans une phrase.
+    const DESSINS =
+      /[\u{25A0}-\u{25FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B00}-\u{2BFF}\u{1F300}-\u{1FAFF}]/u
+    for (const [, valeur] of CSS.matchAll(/content:\s*'([^']*)'/g)) {
+      expect(DESSINS.exec(valeur!)?.[0], `content: '${valeur}'`).toBeUndefined()
+    }
+  })
+
+  it('ne nomme la police d’icônes que dans `.icone`', () => {
+    // Deux occurrences légitimes, et deux seulement : la déclaration du jeton, et la règle
+    // qui l'applique. Une troisième serait un second style d'icône hors de portée d'`Icone`.
+    const REGLES = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+    expect([...REGLES.matchAll(/var\(--police-icone\)/g)]).toHaveLength(1)
+    expect(reglePointIcone()).toContain('var(--police-icone)')
+  })
+
+  it('ne laisse aucune phrase d’alerte se poser sans passer par `Mention`', () => {
+    const racine = join(import.meta.dirname, '..', 'src')
+    for (const dossier of ['', 'ui']) {
+      const chemin = join(racine, dossier)
+      for (const fichier of readdirSync(chemin, { withFileTypes: true })) {
+        if (!fichier.isFile() || !fichier.name.endsWith('.tsx')) continue
+        if (fichier.name === 'Mention.tsx') continue
+        const source = readFileSync(join(chemin, fichier.name), 'utf8')
+        expect(source, fichier.name).not.toMatch(/<p[^>]*className="(cause|erreur)"/)
+        expect(source, fichier.name).not.toMatch(/<p[^>]*className=\{[^}]*'(cause|erreur)'/)
+      }
+    }
+  })
+})

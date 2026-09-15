@@ -17,6 +17,7 @@ import { Icone } from './Icone.tsx'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, Terme } from './Terme.tsx'
 import { heure } from './horaire.ts'
+import { Mention } from './Mention.tsx'
 
 const DEG_PAR_HEURE = 15
 const POURCENT = 100
@@ -68,15 +69,15 @@ export function PlanSessionVue(props: PlanSessionProps) {
         <Terme cle="plan_session" contexte={`${plan.etapes.length} cibles`} />
         <p className="etat">{plan.message}</p>
         {plan.contrainteDominante !== undefined && (
-          <p className="cause">{plan.contrainteDominante}</p>
+          <Mention ton="cause">{plan.contrainteDominante}</Mention>
         )}
         {plan.alternative !== undefined && <p className="etat">{plan.alternative}</p>}
         {plan.noteCouvertureCatalogue !== undefined && (
-          <p className="cause">{plan.noteCouvertureCatalogue}</p>
+          <Mention ton="cause">{plan.noteCouvertureCatalogue}</Mention>
         )}
-        <p className="cause">{plan.avertissementMeteo}</p>
+        <Mention ton="cause">{plan.avertissementMeteo}</Mention>
         {plan.avertissementBatterie !== undefined && (
-          <p className="cause">{plan.avertissementBatterie}</p>
+          <Mention ton="cause">{plan.avertissementBatterie}</Mention>
         )}
 
         {plan.etapes.map((etape, index) => (
@@ -112,12 +113,12 @@ export function PlanSessionVue(props: PlanSessionProps) {
           </tbody>
         </table>
         <TracedValue terme="budget_nuit" trace={plan.budget.totalMin} decimales={0} unite="min" />
-        <p className={plan.budget.tient ? 'etat' : 'cause'}>
+        <Mention ton={plan.budget.tient ? 'etat' : 'cause'}>
           {plan.budget.tient
             ? 'Le budget tient dans la nuit disponible.'
             : 'Le budget dépasse la nuit : une cible entière a été retirée plutôt qu’une ' +
               'intégration tronquée.'}
-        </p>
+        </Mention>
       </section>
 
       {plan.ciblesEcartees.length > 0 && (
@@ -209,17 +210,17 @@ function Etape({ etape, rang, ...props }: EtapeProps) {
         de ciel {etape.sbCielEffectif.toFixed(2)} mag/as²
       </p>
       {!etape.integrationComplete && (
-        <p className="cause">
+        <Mention ton="cause">
           La nuit ne couvre pas l’intégration requise : {etape.nNuits} nuits sont annoncées
           plutôt qu’un plan irréalisable. Aucune intégration n’est tronquée en silence.
-        </p>
+        </Mention>
       )}
       {etape.creneau.retournementMeridien && (
-        <p className="cause">
+        <Mention ton="cause">
           Retournement au méridien à {heure(etape.creneau.heureCulmination!)} : l’orientation du
           capteur bascule de 180°, les flats restent valides, le cadrage se re-vérifie et la
           séquence redémarre.
-        </p>
+        </Mention>
       )}
       {/* §7.6 — la masse d'air qui a dosé cette intégration : la MOYENNE du créneau, pas
           celle de la culmination. La cible passe une partie de la nuit plus bas. */}
@@ -271,7 +272,7 @@ function Pointage({ etape, ...props }: EtapeProps) {
         <Etiquette cle="mode_pointage" /> : {carte.mode}
       </h3>
       <p className="etat">{carte.message}</p>
-      {carte.cause !== undefined && <p className="cause">{carte.cause}</p>}
+      {carte.cause !== undefined && <Mention ton="cause">{carte.cause}</Mention>}
       {carte.contraintesARelacher?.map((contrainte) => (
         <p key={contrainte} className="etat">
           À relâcher : {contrainte}

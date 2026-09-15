@@ -35,6 +35,7 @@ import { ChampChoix } from './ChampChoix.tsx'
 import { ChampDomaine } from './ChampDomaine.tsx'
 import { Interrupteur } from './Interrupteur.tsx'
 import { LectureInconnue } from './Inconnu.tsx'
+import { Mention } from './Mention.tsx'
 
 /** §5.1 — le type d'objectif choisit la projection, il n'ajuste pas un rendu. */
 export type TypeObjectif = 'RECTILINEAIRE' | 'FISHEYE'
@@ -150,7 +151,7 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
           Superposer les deux cadres, plein format et recadrage APS-C
         </Interrupteur>
         {lectures?.noteRecadrage !== undefined && (
-          <p className="cause">{lectures.noteRecadrage}</p>
+          <Mention ton="cause">{lectures.noteRecadrage}</Mention>
         )}
         {lectures === undefined ? (
           <>
@@ -203,15 +204,15 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
           {/* §5.2 — fermer le ciel profond et le justifier sont un seul geste (core/tracking.ts) :
               cette cause doit rester visible sans naviguer, qu'on suive ou non. */}
           {lectures?.suivi.cause !== null && lectures?.suivi.cause !== undefined && (
-            <p className="cause">{lectures.suivi.cause}</p>
+            <Mention ton="cause">{lectures.suivi.cause}</Mention>
           )}
           {lectures?.suivi.gainMiseEnStation !== undefined && (
-            <p className="cause">{lectures.suivi.gainMiseEnStation}</p>
+            <Mention ton="cause">{lectures.suivi.gainMiseEnStation}</Mention>
           )}
         </div>
       </section>
 
-      {props.erreur !== undefined && <p className="erreur">{props.erreur}</p>}
+      {props.erreur !== undefined && <Mention ton="erreur">{props.erreur}</Mention>}
     </>
   )
 }

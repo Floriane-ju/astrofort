@@ -36,6 +36,7 @@ import { ChampChoix } from './ChampChoix.tsx'
 import { AlerteChamp, ChampDomaine } from './ChampDomaine.tsx'
 import { Bulle } from './Bulle.tsx'
 import { Icone } from './Icone.tsx'
+import { Mention } from './Mention.tsx'
 
 /**
  * §5.1 — ce que la saisie exige, dit une fois au titre de la carte. Au survol plutôt qu'en
@@ -190,7 +191,7 @@ function SelecteurBoitier({
 function ManquesDeLaBase({ ligne }: { readonly ligne: LigneBoitier }) {
   if (Object.keys(ligne.readNoiseE).length > 0) return null
   return (
-    <p className="cause">
+    <Mention ton="cause">
       <AlerteChamp
         note={
           'Cette ligne de la base laisse le bruit de lecture vide : ' +
@@ -199,7 +200,7 @@ function ManquesDeLaBase({ ligne }: { readonly ligne: LigneBoitier }) {
         }
       />{' '}
       Base incomplète pour ce boîtier.
-    </p>
+    </Mention>
   )
 }
 
@@ -246,7 +247,7 @@ function LigneIso({
         </div>
       )}
       {lecture !== undefined && (
-        <p className={lecture.readNoiseE === null ? 'cause' : 'etat'}>{lecture.message}</p>
+        <Mention ton={lecture.readNoiseE === null ? 'cause' : 'etat'}>{lecture.message}</Mention>
       )}
     </>
   )

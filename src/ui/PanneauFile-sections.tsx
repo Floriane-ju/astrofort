@@ -25,6 +25,7 @@ import { Interrupteur } from './Interrupteur.tsx'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette } from './Terme.tsx'
 import type { LecturesFile } from './panneau-file-lectures.ts'
+import { Mention } from './Mention.tsx'
 
 const S_PAR_MIN = 60
 const POURCENT = 100
@@ -76,7 +77,7 @@ export function CadrageDuFile({
           </p>
           {lectures.mentionProj !== null && (
             <>
-              <p className="cause">{lectures.mentionProj}</p>
+              <Mention ton="cause">{lectures.mentionProj}</Mention>
               <button type="button" onClick={() => actions.majVue({ mode: modeObjectif, fovDeg: fovLDeg })}>
                 Voir comme l’objectif
               </button>
@@ -122,9 +123,9 @@ export function PoseMaximale({
       )}
       <TracedValue terme="pose_max_cadre" trace={carte.tMaxCadreS} decimales={1} unite="s" />
       {carte.messages.map((message) => (
-        <p className="cause" key={message}>
+        <Mention ton="cause" key={message}>
           {message}
-        </p>
+        </Mention>
       ))}
     </section>
   )
@@ -181,7 +182,7 @@ export function ProfondeurDUnePose({
       />
       <TracedValue terme="trainee" trace={trainee} decimales={1} unite="px" />
       {/* §7.1 — une pose s'affiche toujours avec la source de son point zéro. */}
-      <p className={zeroSysteme.estime ? 'cause' : 'etat'}>{libelleZpSource(zeroSysteme)}</p>
+      <Mention ton={zeroSysteme.estime ? 'cause' : 'etat'}>{libelleZpSource(zeroSysteme)}</Mention>
       {/* Le vignettage n'a plus d'interrupteur : il se centre sur le canevas et non sur le
           cadre, donc il n'est jamais incrusté. Son chiffre, lui, reste une lecture du
           matériel — et il vaut pour l'image que le capteur enregistrera (§9.2). */}
@@ -193,12 +194,12 @@ export function ProfondeurDUnePose({
         unite="diaph"
       />
       {poseDepassee && carte.poseOperanteS !== null && (
-        <p className="cause">
+        <Mention ton="cause">
           Pose de {file.tPoseS.toFixed(0)} s au-delà de la pose max du cadre (
           {carte.poseOperanteS.toFixed(1)} s) : les étoiles sont rendues ovalisées, avec une
           traînée de {trainee.value.toFixed(1)} px. Ramener la pose à{' '}
           {carte.poseOperanteS.toFixed(0)} s les rend ponctuelles.
-        </p>
+        </Mention>
       )}
       {poseDepassee && carte.poseOperanteS !== null && (
         <button
@@ -209,10 +210,10 @@ export function ProfondeurDUnePose({
         </button>
       )}
       {renduFile !== null && renduFile.reelles === 0 && (
-        <p className="cause">
+        <Mention ton="cause">
           Aucun repère brillant dans ce champ : aucune étoile catalographiée n’y tombe. En
           pointage manuel, ce cadre sera difficile à retrouver dans le viseur.
-        </p>
+        </Mention>
       )}
     </section>
   )
@@ -276,9 +277,9 @@ export function ArcsDuFile({
         {(diagnostic.fractionHauteurCadre * POURCENT).toFixed(0)} % de la hauteur du cadre
       </p>
       {diagnostic.messages.map((message) => (
-        <p className="cause" key={message}>
+        <Mention ton="cause" key={message}>
           {message}
-        </p>
+        </Mention>
       ))}
     </section>
   )
@@ -315,7 +316,7 @@ export function SequenceDePrises({
         </label>
       </div>
 
-      {sequence.intervalleRefuse !== null && <p className="erreur">{sequence.intervalleRefuse}</p>}
+      {sequence.intervalleRefuse !== null && <Mention ton="erreur">{sequence.intervalleRefuse}</Mention>}
       <TracedValue terme="n_poses_file" trace={sequence.nPoses} decimales={0} />
       <TracedValue terme="volume_stockage" trace={sequence.volumeGo} decimales={1} unite="Go" />
       <ul>

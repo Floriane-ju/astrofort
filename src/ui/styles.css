@@ -1522,11 +1522,21 @@ th {
 }
 
 /* §11.1 — le rouge ne porte jamais seul une information : l'alerte se distingue aussi par
-   sa forme, sa barre latérale et son signe. */
-.cause::before,
-.erreur::before {
-  content: '⚠ ';
-  font-weight: 700;
+   sa forme, sa barre latérale et son signe.
+
+   T-0215 — le signe était « ⚠ » posé en `content` par cette règle : rendu dans la police de
+   TEXTE, il échappait à `.icone` — ni la même grille optique, ni la même graisse, et un
+   SECOND endroit à toucher le jour où le dessin des icônes change. Il vient maintenant du
+   balisage (`Mention.tsx`), par `Icone`, comme toutes les autres icônes du produit.
+
+   Le glyphe prend le corps de la phrase qu'il ouvre, pas celui d'une icône (1,25 rem) : à
+   cette taille il pèserait plus que le texte qu'il annonce. `translate` plutôt que
+   `vertical-align` : la boîte d'un glyphe Material est carrée et déborde de la ligne par le
+   bas, là où le « ⚠ » tenait sur la hauteur de capitale. */
+.mention-signe {
+  font-size: var(--texte-legende);
+  margin-inline-end: var(--pas-1);
+  translate: 0 0.12em;
 }
 
 /* Un interrupteur porte la phrase qui dit ce qu'il fait, pas le nom d'un champ. */

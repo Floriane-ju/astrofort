@@ -24,6 +24,7 @@ import { ImageCible } from './ImageCible.tsx'
 import { Verdicts } from './Verdicts.tsx'
 import { useLuneCible } from './fiche-cible-lune.ts'
 import { conseilsCible, evalue, type ContexteFiche, type Resultat } from './fiche-cible-calcul.ts'
+import { Mention } from './Mention.tsx'
 
 export { LIBELLE_TYPE_OBJET, libelleObjet } from './libelles-objet.ts'
 
@@ -95,7 +96,7 @@ export function FicheCible(props: FicheCibleProps) {
           nue : un rectangle tracé contre un champ de repli mentirait sur l'échelle. */}
       <ImageCible objet={objet} cadre={cadre} />
       <ChampsCible objet={objet} />
-      {!calcul.ok && <p className="erreur">{calcul.erreur}</p>}
+      {!calcul.ok && <Mention ton="erreur">{calcul.erreur}</Mention>}
       {calcul.ok && (
         <Verdicts
           r={calcul.r}

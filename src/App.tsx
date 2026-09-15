@@ -34,6 +34,7 @@ import { useChaineCalcul } from './ui/app-calcul.ts'
 import { useCiblesEnAvant } from './ui/cibles-en-avant.ts'
 import { appliqueModeNuit, litEtatPersiste, type EtatModeNuit } from './ui/ModeNuit.tsx'
 import { installeEchap } from './ui/gere-echap.ts'
+import { Mention } from './ui/Mention.tsx'
 
 const MS_PAR_JOUR = 86_400_000
 
@@ -182,7 +183,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       surSelectionObjet={ouvreCible}
     />
   ) : (
-    <p className="erreur">{ciel.erreur}</p>
+    <Mention ton="erreur">{ciel.erreur}</Mention>
   )
 
   const regions = {

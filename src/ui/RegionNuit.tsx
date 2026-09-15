@@ -11,6 +11,7 @@ import type { FondDeCiel } from '../core/sky-background.ts'
 import type { Traced } from '../core/traced.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { Terme } from './Terme.tsx'
+import { Mention } from './Mention.tsx'
 
 function heure(date: Date | null): string {
   return date === null ? '—' : date.toLocaleString('fr-FR')
@@ -32,11 +33,11 @@ export function RegionNuit(props: RegionNuitProps) {
       {props.planIndisponible && (
         <section>
           <h2>Plan de session</h2>
-          <p className="cause">
+          <Mention ton="cause">
             Les catalogues ne sont pas encore vérifiés : aucun plan n’est produit tant qu’un
             binaire non validé pourrait l’alimenter. Les moteurs de cadrage, de pose et
             d’intégration restent utilisables sur une cible saisie à la main.
-          </p>
+          </Mention>
         </section>
       )}
     </>
@@ -59,7 +60,7 @@ function FenetreNocturneVue({
         cle={nuit.modeDegrade ? 'mode_degrade_nuit' : 'nuit_astronomique'}
         contexte={`${nuit.dureeReferenceH.toFixed(2)} h exploitables`}
       />
-      {nuit.cause !== undefined && <p className="cause">{nuit.cause}</p>}
+      {nuit.cause !== undefined && <Mention ton="cause">{nuit.cause}</Mention>}
       <table>
         <tbody>
           <tr>
@@ -100,7 +101,7 @@ function FondDeCielVue({ ciel }: { readonly ciel: FondDeCiel }) {
       <h2>Fond de ciel</h2>
       <p className="etat">source : {ciel.sourceSb}</p>
       {ciel.confirmationRequise !== undefined && (
-        <p className="cause">{ciel.confirmationRequise}</p>
+        <Mention ton="cause">{ciel.confirmationRequise}</Mention>
       )}
       <TracedValue terme="fond_de_ciel" trace={ciel.sbCiel} unite="mag/as²" />
       <TracedValue terme="magnitude_limite_oeil" trace={ciel.mLimOeil} unite="mag" />

@@ -16,6 +16,7 @@ import { SOURCE_TABLE_BORTLE } from '../registry/bortle.ts'
 import { MasqueHorizonSaisie } from './MasqueHorizon.tsx'
 import { ChampDomaine } from './ChampDomaine.tsx'
 import { TracedValue } from './TracedValue.tsx'
+import { Mention } from './Mention.tsx'
 
 export interface ChampsSiteProps {
   readonly latitude: string
@@ -94,9 +95,9 @@ export function ChampsSite(props: ChampsSiteProps) {
       />
 
       {props.cielRefus !== null && (
-        <p className="erreur" role="status">
+        <Mention ton="erreur" role="status">
           {props.cielRefus} — le ciel affiché reste celui de la dernière saisie valide.
-        </p>
+        </Mention>
       )}
 
       {/* Les seuils de déclinaison sont une propriété de la latitude, pas de l'optique. */}
