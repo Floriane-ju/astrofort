@@ -2,12 +2,11 @@
  * T-0113 — l'état de la coque : ce qui est posé sur la scène, et ce qui est ouvert à côté.
  *
  * La coque ne pile plus trois colonnes : la scène occupe tout, et les réglages viennent
- * dessus en cartes déplaçables ou à côté en panneau latéral. Trois choses doivent donc être
- * lisibles de plusieurs endroits sans ancêtre commun — un clic sur un objet DANS la scène
- * ouvre la carte Cible ; une carte se replie depuis son propre en-tête ; une carte déplacée
- * mesure ce que la coque réserve. Même raison que [[scene-etat]] et [[seance-etat]] : l'état vit
- * dans le module, donc il se lit en rendu serveur comme dans le navigateur, et se teste sans
- * DOM.
+ * dessus en cartes déplaçables ou à côté en panneau latéral. Deux choses doivent donc être
+ * lisibles de plusieurs endroits sans ancêtre commun — une carte se replie depuis son propre
+ * en-tête ; une carte déplacée mesure ce que la coque réserve. Même raison que [[scene-etat]]
+ * et [[seance-etat]] : l'état vit dans le module, donc il se lit en rendu serveur comme dans
+ * le navigateur, et se teste sans DOM.
  *
  * Les positions ne sont PAS persistées. Une carte déplacée revient à sa place au rechargement,
  * et c'est voulu : §12.3 enregistre ce qui décrit une séance — un site, un matériel — pas la
@@ -18,7 +17,7 @@
 import { useSyncExternalStore } from 'react'
 
 /** Les cartes posées sur la scène. Chacune est nommée d'après ce qu'elle montre. */
-export type CleCarte = 'VUE' | 'PLAN'
+export type CleCarte = 'PLAN'
 
 export interface Decalage {
   readonly x: number
@@ -38,13 +37,9 @@ export interface EtatCoque {
 const SANS_DECALAGE: Decalage = Object.freeze({ x: 0, y: 0 })
 
 /**
- * Deux cartes démarrent repliées, et pour deux raisons distinctes.
- *
- * VUE — ses interrupteurs se règlent une fois puis se laissent tranquilles, alors que le
- * matériel se relit à chaque changement de focale.
- *
- * PLAN — il se consulte pendant qu'on regarde le ciel, il ne s'impose pas : déplié au
- * démarrage, il couvrirait la moitié de la scène avant qu'on ait rien demandé.
+ * La seule carte restante démarre repliée : le plan se consulte pendant qu'on regarde le
+ * ciel, il ne s'impose pas — déplié au démarrage, il couvrirait la moitié de la scène avant
+ * qu'on ait rien demandé.
  *
  * T-0182 — la carte Cible est partie : la fiche prend la place de la liste dans le panneau,
  * là où on l'a choisie.
@@ -52,10 +47,13 @@ const SANS_DECALAGE: Decalage = Object.freeze({ x: 0, y: 0 })
  * T-0197 — la carte Matériel aussi : elle est devenue la colonne de gauche. Un repli ne lui
  * rendait rien — c'est la saisie qu'on relit le plus, et la seule dont chaque champ change
  * tout le reste.
+ *
+ * T-0213 — la carte Vue aussi, et pour la raison inverse : ses bascules se prennent EN
+ * regardant le ciel. Un repli leur coûtait deux gestes par réglage. Elles sont devenues le
+ * rail posé au bord de la scène (`RailVue`), toujours visible, donc sans état de repli.
  */
 const ETAT_INITIAL: EtatCoque = Object.freeze({
   cartes: Object.freeze({
-    VUE: { ouverte: false, decalage: SANS_DECALAGE },
     PLAN: { ouverte: false, decalage: SANS_DECALAGE },
   }),
 })

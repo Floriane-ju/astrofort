@@ -10,7 +10,8 @@
  *   - la barre BASSE porte le lieu et le temps — les deux entrées qui datent toute la nuit ;
  *   - la colonne MATÉRIEL tient le flanc gauche, à demeure : c'est la saisie qu'on relit le
  *     plus, et la seule dont chaque champ change tout le reste (T-0197) ;
- *   - les CARTES portent la vue et le plan de nuit, repliables et déplaçables ;
+ *   - le RAIL borde la scène à gauche et porte les bascules de la vue (T-0213) ;
+ *   - les CARTES portent le plan de nuit, repliable et déplaçable ;
  *   - le PANNEAU latéral porte ce qui se lit en longueur : le catalogue, le filé.
  *
  * La coque ne connaît aucun contenu : elle reçoit six régions et les place. C'est ce qui
@@ -36,7 +37,7 @@ export interface CoqueProps {
   readonly scene: ReactNode
   /** Colonne de gauche : le matériel, toujours là. */
   readonly materiel: ReactNode
-  /** Les cartes posées sur la scène : la vue, le plan de nuit. */
+  /** Ce qui se pose sur la scène : le rail de la vue, puis la carte du plan de nuit. */
   readonly cartes: ReactNode
   /** Panneau latéral, ou `null` quand aucun n'est ouvert. */
   readonly lateral: ReactNode

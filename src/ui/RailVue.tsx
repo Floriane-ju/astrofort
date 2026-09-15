@@ -1,0 +1,259 @@
+/**
+ * §11.3 — le rail de la vue : ce qui commande CE QU'ON VOIT, posé sur la scène même.
+ *
+ * T-0213 — c'était la carte « Vue », repliée au démarrage. Ses neuf commandes se règlent EN
+ * regardant le ciel : déplier une carte pour éteindre une couche, puis la replier pour revoir
+ * ce qu'on vient de changer, c'est deux gestes pour un seul réglage — et sur le terrain, deux
+ * gestes gantés dans le noir. Le rail les rend d'un clic, sans rien masquer de la scène qu'il
+ * commande.
+ *
+ * TOUJOURS MONTÉ, donc jamais abonné à tout. La carte s'abonnait au magasin entier
+ * (`useScene`), ce que son démontage rendait sans conséquence ; ici l'instant republié deux
+ * fois par seconde rendrait le rail au même rythme (T-0056). Trois tranches, trois sélecteurs
+ * définis au niveau du module — c'est le contrat de `useTrancheScene`.
+ *
+ * LES NOTES SONT DANS LES BULLES. La carte portait sept notes sous ses cases ; elles suivent
+ * le contrôle qu'elles expliquent, au survol comme au focus clavier. Chaque bouton garde un
+ * `aria-label` court : la bulle le DÉCRIT, elle ne le nomme pas — un nom accessible de trente
+ * mots ne se laisse pas parcourir.
+ */
+
+import {
+  RAPPEL_ASTERISME,
+  RAPPEL_FIGURES,
+  ecartFrontieresDeg,
+} from '../core/constellations.ts'
+import { bornesZoom, type ModeProjection } from '../core/projection.ts'
+import type { MasqueHorizon } from '../core/site.ts'
+import { Bulle } from './Bulle.tsx'
+import type { CouchesActives } from './dessine-ciel.ts'
+import { Icone } from './Icone.tsx'
+import { RACCOURCIS_CLAVIER } from './planetarium-gestes.ts'
+import { majRendu, majVue, useTrancheScene, type EtatScene } from './scene-etat.ts'
+import { useSeance } from './seance-etat.ts'
+
+export interface RailVueProps {
+  /** §5.1 — la projection de l'objectif déclaré au panneau matériel, pas un réglage de rendu. */
+  readonly modeObjectif: ModeProjection
+  readonly gaiaCharge: boolean
+  /** Époque de l'instant affiché : elle chiffre l'écart de précession des frontières B1875. */
+  readonly epoqueAnnee: number
+  /** §4.1 — relief du site : la couche Sol masque ce relief, et le déclare quand il est supposé. */
+  readonly masque: MasqueHorizon
+}
+
+/** Sélecteurs définis au niveau du module — `useTrancheScene` exige une identité stable. */
+function modeScene(etat: EtatScene): ModeProjection {
+  return etat.vue.mode
+}
+function couchesScene(etat: EtatScene): CouchesActives {
+  return etat.rendu.couches
+}
+function vueRealisteScene(etat: EtatScene): boolean {
+  return etat.rendu.vueRealiste
+}
+
+/**
+ * Les couches qui se décident, avec leur glyphe. L'horizon n'en fait pas partie : c'est la
+ * ligne à laquelle se lisent les hauteurs et l'azimut, donc le repère du reste — l'effacer
+ * rendait la scène illisible sans rien libérer. Il reste une passe de rendu
+ * (`CouchesActives.horizon`), toujours allumée, que les tests de tracé isolent couche par
+ * couche.
+ *
+ * `filter_hdr` et non `terrain` pour le sol : la ligature `terrain` n'existe pas dans la
+ * police livrée, et une ligature absente s'affiche en toutes lettres.
+ */
+const COUCHES: readonly (readonly [keyof CouchesActives, string, string])[] = [
+  ['figures', 'polyline', 'Figures IAU'],
+  ['frontieres', 'map', 'Frontières IAU'],
+  ['asterismes', 'auto_awesome', 'Astérismes'],
+  ['cadre', 'crop', 'Cadre matériel'],
+  ['sol', 'filter_hdr', 'Sol'],
+  ['voieLactee', 'blur_on', 'Voie lactée'],
+]
+
+/**
+ * T-0171 — un interrupteur qui ne commande rien doit dire pourquoi. Sous l'aperçu peint sur
+ * toute la scène (§9.5), seuls le sol, l'horizon, le cadre matériel et le trait du plan
+ * galactique s'ajoutent : ces quatre couches-ci restent éteintes quel que soit leur état.
+ */
+const ETEINTES_EN_PANORAMA: readonly (keyof CouchesActives)[] = [
+  'figures',
+  'frontieres',
+  'asterismes',
+  'voieLactee',
+]
+
+const NOTE_PANORAMA =
+  'L’aperçu est peint sur toute la scène : seuls le sol, l’horizon, le cadre matériel et le ' +
+  'trait du plan galactique s’y ajoutent. Cette couche reste éteinte tant qu’il est actif — ' +
+  'le survol nomme toujours ce qu’il désigne.'
+
+/* T-0097 — la bascule ne plafonne plus seulement la magnitude : elle peint le fond de ciel
+   du site, son halo d'horizon et celui de la Lune. */
+const AIDE_REALISTE = 'fond de ciel et magnitude limite du site, modélisés'
+
+/**
+ * T-0096 — les limites du fond peint se disent DANS l'application : une approximation tue est
+ * une approximation que l'utilisateur prend pour une mesure.
+ *
+ * Elles ne tiennent PAS dans une bulle. `Bulle.tsx` pose qu'une infobulle est une phrase, pas
+ * un paragraphe ; et une bulle ne s'ouvre ni au doigt ni avant le geste qu'elle devrait
+ * éclairer — sur écran tactile, le tap qui la révélerait a déjà basculé le réglage. Cet aveu
+ * est donc AFFICHÉ, et seulement quand il porte : pendant que le fond est peint.
+ */
+const LIMITES_FOND_PEINT =
+  'Le fond peint additionne, en nanolamberts, la brillance du site, son halo d’horizon ' +
+  '(van Rhijn 1921), la lueur du crépuscule (Patat, Ugolnikov & Postylyakov 2006, mesurée ' +
+  'de 5° à 15° de dépression solaire) et celle de la Lune (Krisciunas & Schaefer 1991). ' +
+  'Hors périmètre, et dit plutôt que supposé : le sol ne s’éclaircit pas ; le halo du site ' +
+  'reste symétrique en azimut — le dôme lumineux d’une ' +
+  'ville est plus clair de son côté, mais l’atlas qui le donnerait exige le réseau ; et la ' +
+  'teinte du crépuscule ne vire pas vers l’azimut du Soleil, alors que le vrai ciel y est ' +
+  'plus clair et plus jaune.'
+
+/** Une phrase par bulle : le libellé du contrôle, puis ce qu'il faut savoir avant de cliquer. */
+function aide(libelle: string, ...notes: readonly (string | undefined)[]): string {
+  return [libelle, ...notes.filter((n) => n !== undefined && n !== '')].join(' — ')
+}
+
+interface BasculeProps {
+  readonly nom: string
+  /** Nom accessible du bouton : court, c'est lui qu'un lecteur d'écran annonce. */
+  readonly libelle: string
+  /** Ce que la bulle dit au survol et au focus. Elle DÉCRIT le bouton, elle ne le nomme pas. */
+  readonly aide: string
+  readonly actif: boolean
+  /** La commande est sans effet dans le mode courant : elle le montre au lieu de faire semblant. */
+  readonly eteinte?: boolean
+  readonly sur: () => void
+}
+
+function Bascule(props: BasculeProps) {
+  return (
+    <Bulle texte={props.aide} place="droite">
+      {/* `aria-pressed` plutôt qu'une case : ces boutons ne déplient rien, ils tiennent un
+          état à deux positions — même grammaire que la bascule de mode de la barre haute.
+          L'icône reste `aria-hidden` : le bouton porte déjà son nom, la ligature serait
+          annoncée deux fois. */}
+      <button
+        type="button"
+        className={props.eteinte === true ? 'bascule eteinte' : 'bascule'}
+        aria-label={props.libelle}
+        aria-pressed={props.actif}
+        onClick={props.sur}
+      >
+        <Icone nom={props.nom} />
+      </button>
+    </Bulle>
+  )
+}
+
+export function RailVue(props: RailVueProps) {
+  const mode = useTrancheScene(modeScene)
+  const couches = useTrancheScene(couchesScene)
+  const vueRealiste = useTrancheScene(vueRealisteScene)
+  const { mode: modeInterface } = useSeance()
+
+  /* Les bornes de champ sont une propriété de la PROJECTION (`fovMaxSelonMode`), et leur
+     plancher une propriété du paquet chargé : la cause se lit donc sur les deux boutons qui
+     choisissent la projection. §3.3 — un geste sans effet doit nommer ce qui l'arrête. */
+  const bornes = bornesZoom(props.gaiaCharge, mode)
+  const projectionObjectif =
+    props.modeObjectif === 'MODE_FISHEYE'
+      ? 'Comme l’objectif — équidistante'
+      : 'Comme l’objectif — gnomonique'
+
+  /* §4.1 — le sol masque, il doit donc dire sur quoi il repose. L'hypothèse d'horizon plat
+     reste au panneau Lieu : elle invite à éditer le relief, un geste que le rail ne propose
+     pas. */
+  const noteSol =
+    !props.masque.estHypothese && props.masque.note !== undefined ? props.masque.note : undefined
+
+  /* §10.2 — tout nombre affiché est dépliable jusqu'à sa formule. Une bulle ne déplie rien :
+     y écrire l'écart de précession en ferait un chiffre à croire sur parole. Elle porte donc
+     la phrase que la trace adresse à l'utilisateur, et le nombre reste au compteur de visée
+     et aux valeurs tracées, où il se déplie. */
+  const noteFrontieres = ecartFrontieresDeg(props.epoqueAnnee).note
+
+  const notes: Partial<Record<keyof CouchesActives, string | undefined>> = {
+    figures: RAPPEL_FIGURES,
+    frontieres: noteFrontieres,
+    asterismes: RAPPEL_ASTERISME,
+    sol: noteSol,
+  }
+
+  return (
+    <>
+      <div className="coque-rail" role="group" aria-label="Vue de la scène">
+        {/* Deux choix seulement : la vue de planétarium, ou celle de l'objectif déclaré.
+            Offrir gnomonique ET équidistante ici laisserait choisir une projection que le
+            matériel ne produit pas — §5.1 en fait une propriété de l'objectif. */}
+        <div className="rail-groupe" role="group" aria-label="Projection">
+          <Bascule
+            nom="public"
+            libelle="Planétarium — stéréographique"
+            aide={aide('Planétarium — stéréographique', bornes.cause)}
+            actif={mode === 'MODE_PLANETARIUM'}
+            sur={() => majVue({ mode: 'MODE_PLANETARIUM' })}
+          />
+          <Bascule
+            nom="photo_camera"
+            libelle={projectionObjectif}
+            aide={aide(projectionObjectif, bornes.cause)}
+            actif={mode !== 'MODE_PLANETARIUM'}
+            sur={() => majVue({ mode: props.modeObjectif })}
+          />
+        </div>
+
+        <div className="rail-groupe" role="group" aria-label="Fond de ciel">
+          <Bascule
+            nom="tonality"
+            libelle="Vue réaliste"
+            aide={aide('Vue réaliste', AIDE_REALISTE)}
+            actif={vueRealiste}
+            sur={() => majRendu({ vueRealiste: !vueRealiste })}
+          />
+        </div>
+
+        <div className="rail-groupe" role="group" aria-label="Couches">
+          {COUCHES.map(([cle, glyphe, libelle]) => {
+            const eteinte = modeInterface === 'PANORAMA' && ETEINTES_EN_PANORAMA.includes(cle)
+            return (
+              <Bascule
+                key={cle}
+                nom={glyphe}
+                libelle={libelle}
+                aide={aide(libelle, notes[cle], eteinte ? NOTE_PANORAMA : undefined)}
+                actif={couches[cle]}
+                eteinte={eteinte}
+                sur={() =>
+                  majRendu((r) => ({ couches: { ...r.couches, [cle]: !r.couches[cle] } }))
+                }
+              />
+            )
+          })}
+        </div>
+
+        {/* T-0069 — « un raccourci qui n'est écrit que dans le code n'existe pas ». La carte
+            Vue les affichait ; le rail n'a pas la place d'un paragraphe, mais il a celle d'un
+            bouton. Ce n'est pas une bascule : il ne commande rien, il ANNONCE — d'où l'absence
+            d'`aria-pressed`. Sa bulle s'ouvre au focus autant qu'au survol, et c'est exactement
+            le public concerné : qui pilote la scène au clavier l'atteint au clavier. */}
+        <div className="rail-groupe">
+          <Bulle texte={RACCOURCIS_CLAVIER} place="droite">
+            <button
+              type="button"
+              className="bascule"
+              aria-label="Raccourcis clavier de la scène"
+            >
+              <Icone nom="keyboard" />
+            </button>
+          </Bulle>
+        </div>
+      </div>
+
+      {vueRealiste && <p className="rail-note">{LIMITES_FOND_PEINT}</p>}
+    </>
+  )
+}

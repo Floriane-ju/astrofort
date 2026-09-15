@@ -14,7 +14,7 @@ import type { Site } from '../src/core/ephem.ts'
 import { masquePlat } from '../src/core/site.ts'
 import { pointZeroSysteme } from '../src/data/equipment.ts'
 import { PanneauFile } from '../src/ui/PanneauFile.tsx'
-import { PanneauVue } from '../src/ui/PanneauVue.tsx'
+import { RailVue } from '../src/ui/RailVue.tsx'
 import { modeObjectif } from '../src/ui/PanneauMateriel.tsx'
 import {
   afficheInstant,
@@ -131,19 +131,20 @@ describe('§5.1 — le type d’objectif pilote la projection de la scène', () 
   })
 
   it('n’offre à la scène que la projection de l’objectif déclaré', () => {
-    // Le choix de projection est porté par la carte Vue avec le reste des réglages de
-    // scène ; ce qu'il propose reste dicté par l'objectif déclaré au panneau matériel.
+    // T-0213 — le choix de projection est porté par le rail de la vue avec le reste des
+    // réglages de scène ; ce qu'il propose reste dicté par l'objectif déclaré au panneau
+    // matériel. Deux bascules, jamais trois.
     const html = renderToStaticMarkup(
-      createElement(PanneauVue, {
+      createElement(RailVue, {
         modeObjectif: modeObjectif('FISHEYE'),
         gaiaCharge: false,
         epoqueAnnee: 2026.6,
         masque: masquePlat(),
       }),
     )
-    expect(html).toContain('MODE_FISHEYE')
+    expect(html).toContain('Comme l’objectif — équidistante')
     // Un objectif fisheye ne produit pas de projection gnomonique : elle n'est pas proposée.
-    expect(html).not.toContain('MODE_CADRE')
+    expect(html).not.toContain('gnomonique')
   })
 })
 

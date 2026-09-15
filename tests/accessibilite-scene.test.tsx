@@ -15,7 +15,7 @@ import { App } from '../src/App.tsx'
 import { K } from '../src/registry/constants.ts'
 import { etatScene, majVue, reinitialiseScene } from '../src/ui/scene-etat.ts'
 import { reinitialiseSeance } from '../src/ui/seance-etat.ts'
-import { ouvreCarte, reinitialiseCoque } from '../src/ui/coque-etat.ts'
+import { reinitialiseCoque } from '../src/ui/coque-etat.ts'
 
 const DOSSIER_UI = join(import.meta.dirname, '..', 'src', 'ui')
 
@@ -83,13 +83,10 @@ describe('T-0068 — la description dit ce que la vue montre en ce moment', () =
   })
 
   it('énonce les raccourcis du clavier, que le code seul ne dirait à personne (T-0069)', () => {
-    // T-0113 — la carte Vue démarre repliée, et son corps n'est alors pas monté : les
-    // raccourcis s'y lisent une fois dépliée, comme le reste des réglages de scène.
-    ouvreCarte('VUE')
-    const html = ecran()
-    expect(description(html)).toMatch(/← ↑ ↓ →/)
-    // Et pas seulement pour les lecteurs d'écran : la carte Vue les affiche aussi.
-    expect(html.slice(html.indexOf('carte-vue'))).toMatch(/← ↑ ↓ →/)
+    // T-0213 — la carte Vue les affichait aussi en clair ; elle a disparu avec le rail, et
+    // ses bascules ne pilotent pas la visée. Les raccourcis restent donc annoncés là où ils
+    // s'appliquent : la description du canevas, qui est ce que la scène porte en propre.
+    expect(description(ecran())).toMatch(/← ↑ ↓ →/)
   })
 
   it('emprunte les mots de la lecture affichée : une seule phrase, deux endroits', () => {

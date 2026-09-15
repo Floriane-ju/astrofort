@@ -68,13 +68,19 @@ function rect(element: Element | null | undefined): DOMRect | null {
  *
  * Les hauteurs des deux barres et les largeurs des deux colonnes sont écrites dans la feuille
  * de style. Les redéclarer ici en ferait une seconde source de vérité qui divergerait au
- * premier ajustement de gouttière ; les lire à l'instant du geste ne coûte que quatre mesures.
+ * premier ajustement de gouttière ; les lire à l'instant du geste ne coûte que cinq mesures.
+ *
+ * T-0213 — le flanc gauche en compte deux : la colonne du matériel, puis le rail de la vue
+ * collé contre elle. Sans le rail dans la marge, une carte poussée à gauche passerait sous
+ * ses bascules et les rendrait inatteignables.
  */
 function margesCoque(coque: Element): MargesCoque {
+  const materiel = rect(coque.querySelector('.coque-materiel'))?.width ?? 0
+  const rail = rect(coque.querySelector('.coque-rail'))?.width ?? 0
   return {
     haut: rect(coque.querySelector('.coque-topbar'))?.height ?? 0,
     bas: rect(coque.querySelector('.coque-barrebas'))?.height ?? 0,
-    gauche: rect(coque.querySelector('.coque-materiel'))?.width ?? 0,
+    gauche: materiel + rail,
     droite: rect(coque.querySelector('.coque-lateral'))?.width ?? 0,
   }
 }

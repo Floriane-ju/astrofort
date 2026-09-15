@@ -22,6 +22,7 @@ import {
   HAUTEUR_SCENE_PX,
   LARGEUR_SCENE_PX,
   etatScene,
+  majRendu,
   reinitialiseScene,
   resolutionRendu,
 } from '../src/ui/scene-etat.ts'
@@ -105,12 +106,23 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
     expect(html).toContain('class="planetarium"')
   })
 
-  it('pose les cartes sur la scène : la vue et le plan', () => {
+  // T-0213 — la carte Vue est devenue le rail : ses bascules bordent la scène au lieu de se
+  // déplier. Ce qui se pose sur la scène est donc le rail, puis la carte du plan.
+  it('pose le rail de la vue et la carte du plan sur la scène', () => {
     const html = ecran()
-    for (const carte of ['carte-vue', 'carte-plan']) {
-      expect(html, carte).toContain(carte)
+    for (const region of ['coque-rail', 'carte-plan']) {
+      expect(html, region).toContain(region)
     }
+    expect(html).not.toContain('carte-vue')
     expect(html).not.toContain('coque-seance')
+  })
+
+  // Le rail borde la scène à gauche : la tabulation le rencontre après elle et avant le
+  // panneau, comme la carte qu'il remplace.
+  it('range le rail entre la scène et le panneau latéral', () => {
+    const html = ecran()
+    expect(html.indexOf('coque-rail')).toBeGreaterThan(html.indexOf('coque-scene'))
+    expect(html.indexOf('coque-rail')).toBeLessThan(html.indexOf('coque-lateral'))
   })
 
   /**
@@ -175,11 +187,63 @@ describe('§11.2 — un seul jeu de réglages à la fois', () => {
   })
 
   it('ne monte pas le corps d’une carte repliée', () => {
-    // La carte Vue démarre repliée : ses réglages ne s'abonnent pas au magasin de scène, et
-    // n'y recalculent donc aucune profondeur à chaque geste de visée.
-    expect(ecran()).not.toContain('Vue réaliste')
-    ouvreCarte('VUE')
-    expect(ecran()).toContain('Vue réaliste')
+    // Le plan démarre replié. Son corps reste monté — il est la seule région imprimable
+    // (§11.2) — mais son en-tête annonce bien l'état fermé.
+    expect(ecran()).toContain('class="carte carte-plan" data-ouverte="false"')
+    ouvreCarte('PLAN')
+    expect(ecran()).toContain('class="carte carte-plan" data-ouverte="true"')
+  })
+
+  // T-0213 — les bascules de la vue ne se déplient plus : elles sont là dès l'ouverture, et
+  // c'est tout l'intérêt du rail. Une seule lecture du magasin, pas un abonnement complet.
+  it('monte les neuf bascules de la vue sans qu’on ait à déplier quoi que ce soit', () => {
+    const rail = ecran()
+    const debut = rail.indexOf('coque-rail')
+    const bloc = rail.slice(debut, rail.indexOf('carte-plan'))
+    for (const libelle of [
+      'Planétarium — stéréographique',
+      'Vue réaliste',
+      'Figures IAU',
+      'Frontières IAU',
+      'Astérismes',
+      'Cadre matériel',
+      'Sol',
+      'Voie lactée',
+    ]) {
+      expect(bloc, libelle).toContain(`aria-label="${libelle}"`)
+    }
+    expect((bloc.match(/aria-pressed=/g) ?? []).length).toBe(9)
+  })
+
+  /**
+   * T-0096 — l'aveu de modélisation du fond peint n'est PAS dans une bulle : une infobulle ne
+   * s'ouvre pas au doigt, et sur écran tactile le geste qui la révélerait a déjà basculé le
+   * réglage (§11.2, rien de critique au survol). Il est affiché, et seulement tant qu'il
+   * porte — sinon c'est un paragraphe qui mange le ciel pour rien.
+   */
+  it('affiche les limites du fond peint pendant qu’il est peint, et pas avant', () => {
+    // « van Rhijn » seul ne prouverait rien : le registre de constantes le cite déjà dans le
+    // tiroir de vérification. C'est l'aveu de PORTÉE qui n'existe qu'ici.
+    const aveu = 'Hors périmètre, et dit plutôt que supposé'
+    expect(ecran()).not.toContain(aveu)
+    majRendu({ vueRealiste: true })
+    const allume = ecran()
+    expect(allume).toContain('rail-note')
+    expect(allume).toContain(aveu)
+    majRendu({ vueRealiste: false })
+    expect(ecran()).not.toContain('rail-note')
+  })
+
+  /**
+   * T-0069 — « un raccourci qui n'est écrit que dans le code n'existe pas ». La carte Vue les
+   * affichait ; le rail les porte sur un bouton qui n'est pas une bascule — il annonce, il ne
+   * commande rien, et sa bulle s'ouvre au focus autant qu'au survol.
+   */
+  it('garde les raccourcis clavier atteignables depuis le rail', () => {
+    const html = ecran()
+    const rail = html.slice(html.indexOf('coque-rail'), html.indexOf('carte-plan'))
+    expect(rail).toContain('aria-label="Raccourcis clavier de la scène"')
+    expect(rail).toMatch(/← ↑ ↓ →/)
   })
 
   it('survit à un changement de matériel : le panneau reste sur le mode courant', () => {
@@ -316,17 +380,16 @@ describe('T-0113 — les cartes posées sur la scène', () => {
   const HOTE = { left: 0, top: 0, width: 1400, height: 800 }
   const MARGES = { haut: 44, bas: 48, gauche: 0, droite: 0 }
 
-  it('replie et déplie une carte sans toucher aux autres', () => {
-    expect(etatCoque().cartes.VUE.ouverte).toBe(false)
+  it('replie et déplie une carte', () => {
     expect(etatCoque().cartes.PLAN.ouverte).toBe(false)
-    basculeCarte('VUE')
-    expect(etatCoque().cartes.VUE.ouverte).toBe(true)
-    expect(etatCoque().cartes.PLAN.ouverte).toBe(false)
+    basculeCarte('PLAN')
+    expect(etatCoque().cartes.PLAN.ouverte).toBe(true)
   })
 
-  // T-0197 — le matériel n'est plus une carte : la clé n'existe plus.
-  it('ne connaît plus que deux cartes', () => {
-    expect(Object.keys(etatCoque().cartes)).toEqual(['VUE', 'PLAN'])
+  // T-0197 — le matériel n'est plus une carte. T-0213 — la vue non plus : ses bascules
+  // bordent la scène, et une commande toujours visible n'a pas d'état de repli à tenir.
+  it('ne connaît plus qu’une carte', () => {
+    expect(Object.keys(etatCoque().cartes)).toEqual(['PLAN'])
   })
 
   /** Un geste plus ample que la coque : c'est le bornage qui doit l'arrêter, pas sa taille. */

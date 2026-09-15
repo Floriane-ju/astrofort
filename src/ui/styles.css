@@ -213,6 +213,9 @@ body {
      Plus étroite que celle de droite — elle porte des champs courts, là où le catalogue porte
      des lignes de texte. */
   --materiel: 19rem;
+  /* T-0213 — le rail des bascules de vue : une cible de clic de large, plus son filet. Il est
+     cité deux fois — par le rail lui-même et par la note qui se pose à sa droite. */
+  --rail: calc(var(--cible-clic) + var(--trait));
   --carte-large: 19rem;
   /* T-0183 — le plan porte une table de budget de nuit : à 19 rem elle défilerait
      horizontalement, et un tableau qu'on fait glisser ne se compare plus d'une ligne à
@@ -765,17 +768,114 @@ input.barretemps-instant {
   width: max-content;
 }
 
-.carte-vue {
-  left: calc(var(--materiel) + var(--jour-carte));
-  bottom: calc(var(--barre-bas) + var(--jour-carte));
-}
-
 /* T-0183 — le plan s'ancre en bas à droite, calé sur le panneau : c'est le bord libre, et
-   celui d'où il ne recouvre ni le matériel ni la vue. */
+   celui d'où il ne recouvre ni le matériel ni le rail. */
 .carte-plan {
   width: var(--carte-plan);
   right: calc(var(--lateral) + var(--jour-carte));
   bottom: calc(var(--barre-bas) + var(--jour-carte));
+}
+
+
+/* T-0213 — LE RAIL DE LA VUE : les bascules de rendu, collées au flanc gauche de la scène.
+
+   Elles vivaient dans une carte repliée par défaut. Un réglage qui se prend EN regardant le
+   ciel n'a pas à se déplier : le rail borde la scène sans jamais la couvrir, et chaque
+   bascule reste à un clic.
+
+   Il prolonge la colonne du matériel plutôt que de flotter au-dessus du ciel : deux bords
+   verticaux au lieu de trois, et une largeur que `Carte.tsx` MESURE pour que rien ne vienne
+   se glisser dessous. Son fond est translucide — c'est le ciel qui passe derrière, pas du
+   vide —, avec un aplat plein en repli là où `color-mix` n'est pas connu. */
+.coque-rail {
+  position: absolute;
+  left: var(--materiel);
+  top: var(--barre-haut);
+  bottom: var(--barre-bas);
+  z-index: 3;
+  width: var(--rail);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow-y: auto;
+  border-right: var(--trait) solid var(--bordure);
+  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
+/* Trois groupes — projection, fond de ciel, couches — séparés d'un filet : sans lui, neuf
+   glyphes empilés se lisent comme une seule liste, et la projection passe pour une couche. */
+.coque-rail > .rail-groupe {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+}
+
+.coque-rail > .rail-groupe + .rail-groupe {
+  border-top: var(--trait) solid var(--bordure);
+}
+
+/* Une bascule porte un glyphe, pas un mot : elle perd le rembourrage et la casse d'un bouton
+   de formulaire, mais garde la cible de clic gantée de §11.2. Le filet reste `transparent`
+   plutôt qu'absent — la géométrie ne bouge pas entre le repos, le survol et l'état actif. */
+.bascule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--cible-clic);
+  min-width: var(--cible-clic);
+  padding: 0;
+  background: transparent;
+  color: var(--attenue);
+  border: var(--trait) solid transparent;
+}
+
+.bascule:not(:disabled):hover {
+  background: transparent;
+  border-color: var(--accent);
+  color: var(--texte);
+}
+
+/* §11.1 — LE ROUGE NE PORTE JAMAIS SEUL UNE INFORMATION. En mode nuit toute la palette est
+   monochrome : un état actif signalé par la seule teinte y disparaît. Le glyphe se REMPLIT
+   donc — l'axe `FILL` de la police est une forme, pas une couleur, et il survit au
+   basculement. Le fond et la teinte s'y ajoutent le jour, ils ne le remplacent pas. */
+.bascule[aria-pressed='true'] {
+  background: var(--fond-accent);
+  color: var(--accent);
+}
+
+.bascule[aria-pressed='true'] > .icone {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* T-0171 — sous l'aperçu peint sur toute la scène, ces couches ne commandent rien. La bascule
+   le montre au lieu de faire semblant ; sa bulle dit pourquoi, et le clic reste possible :
+   ce qui est éteint est l'effet, pas la commande. */
+.bascule.eteinte {
+  color: var(--bordure-controle);
+}
+
+/* T-0096 — l'aveu de modélisation du fond peint, affiché tant que le fond est peint.
+
+   Il n'est pas dans une bulle et ce n'est pas un oubli : une infobulle est une phrase, et
+   elle ne s'ouvre pas au doigt — sur écran tactile, le geste qui la révélerait a déjà basculé
+   le réglage (§11.2, rien de critique au survol). Il se pose donc à droite du rail, au contact
+   de la bascule qu'il explique, et disparaît avec elle. */
+.rail-note {
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--barre-haut) + var(--jour-carte));
+  left: calc(var(--materiel) + var(--rail) + var(--jour-carte));
+  max-width: var(--carte-large);
+  margin: 0;
+  padding: var(--pas-2) var(--pas-3);
+  border: var(--trait) solid var(--bordure);
+  border-left-width: 3px;
+  background: var(--surface);
+  color: var(--attenue);
+  font-size: var(--texte-legende);
+  line-height: 1.55;
 }
 
 /* L'en-tête est à la fois la poignée et l'interrupteur : `grab` annonce la première,
@@ -949,6 +1049,8 @@ input.barretemps-instant {
   .coque-barrebas,
   .coque-scene,
   .carte,
+  .coque-rail,
+  .rail-note,
   .coque-materiel,
   .coque-lateral {
     position: static;
@@ -973,10 +1075,30 @@ input.barretemps-instant {
   }
 
   .carte,
+  .coque-rail,
   .coque-materiel,
   .coque-lateral {
     border: 0;
     border-top: var(--trait) solid var(--bordure);
+  }
+
+  /* T-0213 — sous le repli le rail n'a plus de flanc à border : il devient une rangée de
+     bascules dans le flux, à la place qu'il tenait en flottant — juste après la scène. Les
+     filets de groupe basculent d'horizontaux à verticaux, sinon les trois groupes se lisent
+     comme trois rangées superposées. */
+  .coque-rail {
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .coque-rail > .rail-groupe {
+    flex-direction: row;
+  }
+
+  .coque-rail > .rail-groupe + .rail-groupe {
+    border-top: 0;
+    border-left: var(--trait) solid var(--bordure);
   }
 
   .carte[data-ouverte='false'] {

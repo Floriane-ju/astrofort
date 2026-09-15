@@ -22,7 +22,7 @@ import type { EtatCible } from '../core/cibles-liste.ts'
 import type { Etoile } from '../data/catalog.ts'
 import { libelleZpSource } from '../data/equipment.ts'
 import { Carte } from './Carte.tsx'
-import { PanneauVue } from './PanneauVue.tsx'
+import { RailVue } from './RailVue.tsx'
 import { PanneauLateral, TITRES_LATERAL } from './PanneauLateral.tsx'
 import { PanneauCibles } from './PanneauCibles.tsx'
 import { PanneauFile } from './PanneauFile.tsx'
@@ -72,9 +72,12 @@ export function ColonneMateriel({ children }: { readonly children: ReactNode }) 
 /**
  * Les cartes de la scène.
  *
- * Le corps d'une carte repliée n'est PAS monté : replier la carte Vue ne la cache pas, elle
- * cesse d'exister — donc de s'abonner au magasin de scène et d'y recalculer une profondeur à
- * chaque geste de visée. C'est ce qui rend le repli utile et pas seulement discret.
+ * Le corps d'une carte repliée n'est PAS monté : replier le plan ne le cache pas, il cesse
+ * d'exister — donc de s'abonner aux magasins et d'y recalculer quoi que ce soit à chaque
+ * geste de visée. C'est ce qui rend le repli utile et pas seulement discret.
+ *
+ * T-0213 — le rail de la vue est monté ici plutôt qu'en carte : il reste toujours visible,
+ * et ne lit du magasin de scène que les trois tranches dont ses bascules ont besoin.
  */
 export function CartesSeance(props: RegionSeanceProps) {
   const { chaine, lieu, materiel } = props
@@ -103,14 +106,16 @@ export function CartesSeance(props: RegionSeanceProps) {
 
   return (
     <>
-      <Carte cle="VUE" titre="Vue">
-        <PanneauVue
-          modeObjectif={modeObjectif(materiel.typeObjectif)}
-          gaiaCharge={props.gaiaCharge}
-          epoqueAnnee={props.epoqueAnnee}
-          masque={chaine.masque}
-        />
-      </Carte>
+      {/* T-0213 — le rail remplace la carte « Vue ». Ses réglages se prennent EN regardant le
+          ciel : une carte à déplier puis replier coûtait deux gestes par bascule. Il est monté
+          avant la carte Plan pour que la tabulation le rencontre d'abord — il borde la scène,
+          elle flotte dessus. */}
+      <RailVue
+        modeObjectif={modeObjectif(materiel.typeObjectif)}
+        gaiaCharge={props.gaiaCharge}
+        epoqueAnnee={props.epoqueAnnee}
+        masque={chaine.masque}
+      />
 
       {/* T-0183 — le plan se consulte pendant qu'on regarde le ciel : vérifier l'heure du
           prochain créneau, la pose retenue, ce qui a été écarté. C'est ce qui en fait une
