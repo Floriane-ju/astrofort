@@ -53,7 +53,7 @@ Format et résolution viennent des spécifications constructeur.
 | sony-a7-3 | Sony α7 III | PLEIN_FORMAT | 24.0 |  | 640 | 100:6.41 200:5.39 400:4.99 640:1.44 800:1.34 1600:1.37 3200:1.26 6400:1.19 | 93703 |  | Photons to Photos `Sony ILCE-7M3` |
 | sony-a7-4 | Sony α7 IV | PLEIN_FORMAT | 32.74 | 33 | 400 | 100:4.59 200:4.11 400:1.35 800:1.32 1600:1.32 3200:1.25 6400:1.22 | 65432 |  | Photons to Photos `Sony ILCE-7M4` |
 | sony-a7c | Sony α7C | PLEIN_FORMAT | 24.0 |  | 640 | 100:6.11 200:5.17 400:4.92 640:1.36 800:1.29 1600:1.25 3200:1.18 6400:1.09 | 93917 |  | Photons to Photos `Sony ILCE-7C` |
-| sony-a7c-2 | Sony α7C II | PLEIN_FORMAT | 32.74 | 33 | 400 | 100:4.72 200:4.29 400:1.47 800:1.39 1600:1.31 3200:1.37 6400:1.31 | 69634 |  | Photons to Photos `Sony ILCE-7CM2` |
+| sony-a7c-2 | Sony α7C II | PLEIN_FORMAT | 32.74 | 60 | 400 | 100:4.72 200:4.29 400:1.47 800:1.39 1600:1.31 3200:1.37 6400:1.31 | 69634 |  | Photons to Photos `Sony ILCE-7CM2` |
 | sony-a7r-4 | Sony α7R IV | PLEIN_FORMAT | 60.21 |  | 320 | 100:2.91 200:2.87 320:1.3 400:1.25 800:1.21 1600:1.17 3200:1.13 6400:1.13 | 34452 |  | Photons to Photos `Sony ILCE-7RM4` |
 | sony-a7r-5 | Sony α7R V | PLEIN_FORMAT | 60.21 |  | 320 | 100:3.41 200:3.23 320:1.47 400:1.48 800:1.39 1600:1.42 3200:1.33 6400:1.28 | 36950 |  | Photons to Photos `Sony ILCE-7RM5` |
 | sony-a7s-3 | Sony α7S III | PLEIN_FORMAT | 12.0 |  | 1600 | 100:13.09 200:10.93 400:10.06 800:9.32 1600:1.13 3200:1.06 6400:0.86 | 227834 |  | Photons to Photos `Sony ILCE-7SM3` |
