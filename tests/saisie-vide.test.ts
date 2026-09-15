@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { evalueCiel, evalueMateriel } from '../src/ui/app-calcul.ts'
+import { cielAffiche, evalueCiel, evalueMateriel } from '../src/ui/app-calcul.ts'
 import { DEFAUT, type SaisieLieu, type SaisieMateriel } from '../src/ui/app-saisie.ts'
 import type { Site } from '../src/core/ephem.ts'
 
@@ -118,5 +118,30 @@ describe('champ matériel effacé', () => {
       expect(Number.isFinite(ciel.ciel.sbCiel.value)).toBe(true)
       expect(Number.isFinite(ciel.ciel.mLimOeil.value)).toBe(true)
     }
+  })
+})
+
+/**
+ * Le Bortle effacé le temps d'en taper un autre refusait le ciel ENTIER, et le planétarium
+ * disparaissait à chaque frappe. Le dernier ciel calculé tient l'écran ; le refus se dit
+ * sous les champs.
+ */
+describe('champ du lieu effacé : la scène garde le dernier ciel', () => {
+  const VALIDE = evalueCiel(SITE, LIEU)
+  const REFUS = evalueCiel(SITE, lieu({ bortle: '', sqm: '' }))
+
+  it('le refus ne remplace pas un ciel déjà calculé', () => {
+    if (!VALIDE.ok) throw new Error('le ciel du départ doit être calculable')
+    expect(cielAffiche(REFUS, VALIDE)).toBe(VALIDE)
+  })
+
+  it('sans ciel antérieur, le refus reste le seul état possible', () => {
+    expect(cielAffiche(REFUS, null)).toBe(REFUS)
+  })
+
+  it('une saisie de nouveau valide reprend la main', () => {
+    if (!VALIDE.ok) throw new Error('le ciel du départ doit être calculable')
+    const autre = evalueCiel(SITE, lieu({ bortle: '3', sqm: '' }))
+    expect(cielAffiche(autre, VALIDE)).toBe(autre)
   })
 })

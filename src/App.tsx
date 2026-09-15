@@ -214,6 +214,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       masque={chaine.masque}
       pointsMasque={lieu.pointsMasque}
       surPointsMasque={lieu.surPointsMasque}
+      cielRefus={chaine.cielRefus}
       {...(ciel.ok ? { seuils: ciel.seuils } : {})}
     />
   )

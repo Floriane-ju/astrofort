@@ -34,6 +34,7 @@ const ECRAN_SITE = renderToStaticMarkup(
     masque={masquePlat()}
     pointsMasque={[]}
     surPointsMasque={rien}
+    cielRefus={null}
   />,
 )
 

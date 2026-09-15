@@ -34,6 +34,12 @@ export interface ChampsSiteProps {
   readonly surPointsMasque: (v: readonly PointMasque[]) => void
   /** Seuils de déclinaison du site — propriété de la latitude, absents si la saisie est refusée. */
   readonly seuils?: SeuilsSite
+  /**
+   * La cause du refus de la saisie en cours, `null` si le lieu est calculable. La scène
+   * continue d'afficher le dernier ciel valide : c'est ici, au pied des champs qui l'ont
+   * produit, que le refus se dit.
+   */
+  readonly cielRefus: string | null
 }
 
 export function ChampsSite(props: ChampsSiteProps) {
@@ -92,6 +98,12 @@ export function ChampsSite(props: ChampsSiteProps) {
         surPoints={props.surPointsMasque}
         masque={props.masque}
       />
+
+      {props.cielRefus !== null && (
+        <p className="erreur" role="status">
+          {props.cielRefus} — le ciel affiché reste celui de la dernière saisie valide.
+        </p>
+      )}
 
       {/* Les seuils de déclinaison sont une propriété de la latitude, pas de l'optique. */}
       {props.seuils !== undefined && (

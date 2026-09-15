@@ -7,7 +7,7 @@
  * l'application (§12.5).
  */
 
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { fenetreNocturne, offsetMidiSolaireMin, type FenetreNocturne } from '../core/night.ts'
 import { etatsCibles, type EtatCible } from '../core/cibles-liste.ts'
 import { fenetreUtile as calculeFenetreUtile, type FenetreUtile } from '../core/moon.ts'
@@ -80,6 +80,9 @@ export type CalculCiel =
     }
   | { readonly ok: false; readonly erreur: string }
 
+/** Le ciel quand il est calculable — ce que la scène et le plan de séance consomment. */
+export type CielCalcule = Extract<CalculCiel, { readonly ok: true }>
+
 /** §5.1, §5.2 et §9.1 — ce que le MATÉRIEL déclaré produit, ou la cause de son refus. */
 export type Calcul =
   | {
@@ -101,6 +104,11 @@ export interface ChaineCalcul {
   readonly calcul: Calcul
   /** T-0149 — le ciel du site : il se calcule même quand le matériel est incomplet. */
   readonly ciel: CalculCiel
+  /**
+   * La cause du refus de la SAISIE en cours, quand `ciel` est celui de la saisie précédente.
+   * `null` dès que le lieu saisi est de nouveau calculable.
+   */
+  readonly cielRefus: string | null
   readonly site: Site
   readonly masque: MasqueHorizon
   readonly fenetreUtile: FenetreUtile | null
@@ -165,11 +173,25 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     [lieu.latitude, lieu.longitude, lieu.altitude],
   )
 
-  const ciel = useMemo(
+  const cielSaisi = useMemo(
     () => evalueCiel(site, lieu),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [site, lieu.bortle, lieu.sqm, lieu.dateIso],
   )
+
+  /**
+   * T-0149, suite — un champ du lieu vidé le temps d'en retaper la valeur refusait tout le
+   * ciel, et la scène disparaissait le temps de la frappe. Le dernier ciel calculable tient
+   * lieu de ciel affiché, et la cause du refus se lit à côté du champ qui l'a produite : un
+   * planétarium qui clignote à chaque touche est illisible, et l'erreur reste dite.
+   *
+   * Tant qu'aucune saisie n'a abouti — profil relu hors domaine au premier rendu — il n'y a
+   * rien à garder : le refus reste le seul état possible.
+   */
+  const dernierCiel = useRef<CielCalcule | null>(null)
+  if (cielSaisi.ok) dernierCiel.current = cielSaisi
+  const ciel = cielAffiche(cielSaisi, dernierCiel.current)
+  const cielRefus = cielSaisi.ok ? null : cielSaisi.erreur
 
   const calcul = useMemo(
     () => evalueMateriel(materiel),
@@ -305,6 +327,7 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
   return {
     calcul,
     ciel,
+    cielRefus,
     site,
     masque,
     fenetreUtile,
@@ -321,6 +344,14 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
         ? panneauFile(calcul, materiel, site, profondeurFile)
         : null,
   }
+}
+
+/**
+ * Le ciel que la scène dessine : celui de la saisie quand elle aboutit, sinon le dernier
+ * qui a abouti. Un refus ne remplace le ciel affiché que tant qu'aucun n'a jamais tenu.
+ */
+export function cielAffiche(saisi: CalculCiel, dernier: CielCalcule | null): CalculCiel {
+  return saisi.ok ? saisi : (dernier ?? saisi)
 }
 
 /** §4.1 et §2.2 — ce que le lieu et la date donnent, ou la cause du refus. */
