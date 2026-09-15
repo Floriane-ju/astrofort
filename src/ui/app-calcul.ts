@@ -35,7 +35,7 @@ import { construitIndex, type IndexCiel } from '../core/index-ciel.ts'
 import type { EntreeProfondeur } from '../core/galactique.ts'
 import { npf, profilSuivi, type ProfilSuivi } from '../core/tracking.ts'
 import { BortleHorsTableError } from '../registry/bortle.ts'
-import { SaisieRefuseeError, valide } from '../registry/domains.ts'
+import { SaisieRefuseeError } from '../registry/domains.ts'
 import { HorsDomaineSeriesError, type Site } from '../core/ephem.ts'
 import type { ProfilCadre } from '../core/cadre.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
@@ -56,6 +56,7 @@ import { K } from '../registry/constants.ts'
 import type { Traced } from '../core/traced.ts'
 import { modeObjectif } from './PanneauMateriel.tsx'
 import type { SaisieLieu, SaisieMateriel } from './app-saisie.ts'
+import { nombreSaisi, nombreSiRenseigne } from './saisie-bornee.ts'
 import type { MaterielFile } from './planetarium-materiel.ts'
 import type { ContexteFiche } from './fiche-cible-calcul.ts'
 import type { PanneauFileProps } from './PanneauFile.tsx'
@@ -91,6 +92,8 @@ export type Calcul =
       readonly suivi: ProfilSuivi
       readonly poseNpf: Traced<number | null>
       readonly capteur: CapteurEffectif
+      /** T-0208 — la focale et l'ouverture BORNÉES : celles dont tout le reste est déduit. */
+      readonly focaleMm: number
       readonly ouvertureN: number
       /** §5.1 — le boîtier retenu : celui de la base, ou celui que la saisie décrit. */
       readonly boitier: Boitier
@@ -164,14 +167,30 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     }
   }, [lieu.pointsMasque])
 
-  const site = useMemo(
+  /**
+   * T-0208 — les trois grandeurs du lieu, ramenées dans leur domaine avant d'entrer dans le
+   * moindre moteur. C'est ici que se ferme l'écran noir : `astronomy-engine` lève une CHAÎNE
+   * de caractères sur une latitude hors [−90, 90], que `refus()` ne reconnaissait pas et
+   * relançait depuis un rendu.
+   */
+  const siteSaisi = useMemo(
     () => ({
-      latitudeDeg: Number(lieu.latitude),
-      longitudeDeg: Number(lieu.longitude),
-      altitudeM: Number(lieu.altitude),
+      latitudeDeg: nombreSaisi('latitude_deg', lieu.latitude).valeur,
+      longitudeDeg: nombreSaisi('longitude_deg', lieu.longitude).valeur,
+      altitudeM: nombreSaisi('altitude_m', lieu.altitude).valeur,
     }),
     [lieu.latitude, lieu.longitude, lieu.altitude],
   )
+
+  /**
+   * T-0149, même raison que pour le ciel : un champ vidé le temps d'être retapé n'est pas un
+   * lieu. Un site non chiffrable laisse la place au dernier qui l'était, et c'est ce site-là
+   * que reçoivent la fenêtre utile, le plan de séance et la boucle du planétarium — aucun
+   * `NaN` ne descend plus dans la chaîne.
+   */
+  const dernierSite = useRef<Site | null>(null)
+  if (siteChiffrable(siteSaisi)) dernierSite.current = siteSaisi
+  const site = dernierSite.current ?? siteSaisi
 
   const cielSaisi = useMemo(
     () => evalueCiel(site, lieu),
@@ -191,6 +210,9 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
   const dernierCiel = useRef<CielCalcule | null>(null)
   if (cielSaisi.ok) dernierCiel.current = cielSaisi
   const ciel = cielAffiche(cielSaisi, dernierCiel.current)
+  // T-0208 — le bornage d'un champ se dit AU PIED DE CE CHAMP (`ChampDomaine`), pas ici :
+  // cette ligne-ci ne porte que ce qu'aucun champ ne peut dire seul — une table de Bortle
+  // sans repli, un fond de ciel indéterminable, un lieu incomplet.
   const cielRefus = cielSaisi.ok ? null : cielSaisi.erreur
 
   const calcul = useMemo(
@@ -259,7 +281,7 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     if (!calcul.ok || !ciel.ok || profondeurFile === null) return null
     return {
       optique: {
-        focaleMm: Number(materiel.focale),
+        focaleMm: calcul.focaleMm,
         ouvertureN: calcul.ouvertureN,
         pitchUm: calcul.capteur.pitchUm,
       },
@@ -354,18 +376,35 @@ export function cielAffiche(saisi: CalculCiel, dernier: CielCalcule | null): Cal
   return saisi.ok ? saisi : (dernier ?? saisi)
 }
 
+/**
+ * T-0208 — un lieu dont une grandeur n'est pas un nombre n'est pas un lieu : `new Observer`
+ * laisse passer un `NaN` sans lever, et c'est toute la chaîne qui rend ensuite du `NaN`.
+ */
+export function siteChiffrable(site: Site): boolean {
+  return (
+    Number.isFinite(site.latitudeDeg) &&
+    Number.isFinite(site.longitudeDeg) &&
+    Number.isFinite(site.altitudeM)
+  )
+}
+
 /** §4.1 et §2.2 — ce que le lieu et la date donnent, ou la cause du refus. */
 export function evalueCiel(site: Site, lieu: SaisieLieu): CalculCiel {
   try {
+    if (!siteChiffrable(site)) {
+      return { ok: false, erreur: 'Saisie refusée : le lieu doit être entièrement chiffré.' }
+    }
     // Départ à midi UTC : la recherche du coucher part de là.
     const depart = new Date(`${lieu.dateIso}T12:00:00Z`)
     const offsetFuseauH = -new Date().getTimezoneOffset() / 60
+    const sqm = nombreSiRenseigne('sqm_mesure', lieu.sqm)
+    const bortle = nombreSiRenseigne('bortle_declare', lieu.bortle)
     return {
       ok: true,
       nuit: fenetreNocturne(site, depart),
       ciel: fondDeCiel({
-        ...(lieu.sqm.trim() === '' ? {} : { sqmMesure: Number(lieu.sqm) }),
-        ...(lieu.bortle.trim() === '' ? {} : { bortleDeclare: Number(lieu.bortle) }),
+        ...(sqm.valeur === undefined ? {} : { sqmMesure: sqm.valeur }),
+        ...(bortle.valeur === undefined ? {} : { bortleDeclare: bortle.valeur }),
       }),
       seuils: seuilsDeclinaison(site.latitudeDeg),
       offsetMidi: offsetMidiSolaireMin(site.longitudeDeg, offsetFuseauH),
@@ -401,16 +440,18 @@ export function evalueMateriel(materiel: SaisieMateriel): Calcul {
   try {
     const boitier = boitierCourant(materiel)
     const capteur = capteurEffectif(boitier, materiel.capteurMode)
-    const focaleMm = Number(materiel.focale)
-    const ouvertureN = Number(materiel.ouverture)
+    const focale = nombreSaisi('focale_mm', materiel.focale)
+    const ouverture = nombreSaisi('ouverture_N', materiel.ouverture)
+    const focaleMm = focale.valeur
+    const ouvertureN = ouverture.valeur
     // T-0206 — sous un boîtier de la base, l'ISO ne se force plus : c'est le seuil de double
     // gain de sa ligne qui le désigne. Ignorer ici la valeur saisie évite qu'un ISO tapé avant
     // le choix du boîtier — ou relu d'un profil enregistré — pilote en douce la pose calculée
     // alors que l'écran affiche le palier du seuil.
-    const isoChoisi =
-      ligneBoitier(materiel.boitierId) !== null || materiel.iso.trim() === ''
-        ? null
-        : valide('iso_capture', Number(materiel.iso))
+    const iso =
+      ligneBoitier(materiel.boitierId) !== null
+        ? { valeur: undefined, refus: null }
+        : nombreSiRenseigne('iso_capture', materiel.iso)
     return {
       ok: true,
       optique: profilOptique({ focaleMm, ouvertureN, ...capteur }),
@@ -424,10 +465,11 @@ export function evalueMateriel(materiel: SaisieMateriel): Calcul {
       // c'est la zone la plus contraignante du ciel, la carte par cellule vient au lot 5.
       poseNpf: npf({ focaleMm, ouvertureN, pitchUm: capteur.pitchUm, decDeg: 0 }),
       capteur,
+      focaleMm,
       ouvertureN,
       boitier,
       zeroSysteme: pointZeroSysteme(boitier),
-      iso: isoRecommande(boitier, isoChoisi),
+      iso: isoRecommande(boitier, iso.valeur ?? null),
       ...(capteur.noteRecadrage === undefined ? {} : { noteRecadrage: capteur.noteRecadrage }),
     }
   } catch (erreur) {
@@ -435,7 +477,14 @@ export function evalueMateriel(materiel: SaisieMateriel): Calcul {
   }
 }
 
-/** Saisie refusée ou domaine dépassé : la cause est nommée, pas avalée. */
+/**
+ * Saisie refusée ou domaine dépassé : la cause est nommée, pas avalée.
+ *
+ * T-0208 — et plus jamais relancée. `astronomy-engine` lève des CHAÎNES de caractères, pas des
+ * `Error` : les quatre `instanceof` étaient faux, la levée repartait depuis un `useMemo` de
+ * rendu, et React démontait l'arbre entier — l'écran devenait noir sans rien dire. Une cause
+ * qu'on ne sait pas nommer s'affiche telle quelle ; elle ne fait pas tomber l'application.
+ */
 function refus(erreur: unknown): { readonly ok: false; readonly erreur: string } {
   if (
     erreur instanceof BortleHorsTableError ||
@@ -445,14 +494,14 @@ function refus(erreur: unknown): { readonly ok: false; readonly erreur: string }
   ) {
     return { ok: false, erreur: erreur.message }
   }
-  throw erreur
+  return { ok: false, erreur: `Calcul impossible : ${String(erreur)}` }
 }
 
 function profilsDeCadre(calcul: Calcul, materiel: SaisieMateriel): readonly ProfilCadre[] {
   if (!calcul.ok) return []
   const boitier = calcul.boitier
-  const focaleMm = Number(materiel.focale)
-  const ouvertureN = Number(materiel.ouverture)
+  const focaleMm = calcul.focaleMm
+  const ouvertureN = calcul.ouvertureN
   const autre: CapteurMode = materiel.capteurMode === 'FULL_FRAME' ? 'APSC_CROP' : 'FULL_FRAME'
   const modes: readonly CapteurMode[] = materiel.comparerRecadrage
     ? [materiel.capteurMode, autre]
@@ -490,9 +539,9 @@ function contexteFiche(
     mLimOeil: ciel.ciel.mLimOeil.value,
     // Sans suivi, c'est la NPF qui plafonne la pose (§9.1) — jamais rien.
     tMaxS: calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value,
-    bortle: lieu.bortle.trim() === '' ? null : Number(lieu.bortle),
+    bortle: nombreSiRenseigne('bortle_declare', lieu.bortle).valeur ?? null,
     suiviActif: materiel.suiviActif,
-    focaleMm: Number(materiel.focale),
+    focaleMm: calcul.focaleMm,
   }
 }
 
@@ -504,7 +553,7 @@ function panneauFile(
 ): PanneauFileProps {
   return {
     site,
-    focaleMm: Number(materiel.focale),
+    focaleMm: calcul.focaleMm,
     ouvertureN: calcul.ouvertureN,
     pitchUm: calcul.capteur.pitchUm,
     capteurLMm: calcul.capteur.capteurLMm,

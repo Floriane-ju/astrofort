@@ -25,6 +25,7 @@ import {
 } from '../src/ui/saisie-persistee.ts'
 import type { SaisieLieu, SaisieMateriel } from '../src/ui/app-saisie.ts'
 import { masqueDepuisPoints } from '../src/core/site.ts'
+import { DOMAINES } from '../src/registry/domains.ts'
 import { BASE_BOITIERS } from '../src/data/boitiers.ts'
 
 /** Les commandes de la saisie ne servent à rien ici : c'est la valeur qui voyage. */
@@ -168,14 +169,18 @@ describe('T-0082 — la saisie survit au rechargement', () => {
     expect(materiel?.typeMonture).toBe('TRACKER')
   })
 
-  it('n’écrit pas une saisie hors domaine et laisse le dernier état valable', async () => {
-    // §2.1 — un NaN ou un Bortle 12 persisté ressortirait à chaque démarrage, et rendrait
-    // l'export irréimportable : le contrôle du réimport applique les mêmes plages.
-    const bon = saisieLieu()
-    await rechargeLieu(bon)
-    expect(await rechargeLieu(saisieLieu({ bortle: '12' }))).toEqual(await rechargeLieu(bon))
-    // Un champ vide n'est pas un zéro : une latitude vide enregistrée à 0° reviendrait à
-    // chaque démarrage comme un site au large du golfe de Guinée.
+  it('enregistre la valeur BORNÉE d’une saisie hors domaine', async () => {
+    // T-0208 — le Bortle 12 n'est plus jeté : c'est la valeur ramenée dans le domaine qui
+    // s'enregistre, la même dont la scène est déduite. Ce qu'on voit est ce qu'on retrouve.
+    // Rien d'irréimportable n'entre en base pour autant : une valeur bornée est, par
+    // construction, dans les plages qu'applique le contrôle du réimport.
+    const borne = await rechargeLieu(saisieLieu({ bortle: '12' }))
+    expect(borne?.bortle).toBe(String(DOMAINES.bortle_declare.max))
+  })
+
+  it('n’écrit pas un champ vide, qui n’est pas un zéro', async () => {
+    // Une latitude vide enregistrée à 0° reviendrait à chaque démarrage comme un site au
+    // large du golfe de Guinée : un vide se refuse, il ne se borne pas.
     expect(siteAEnregistrer(saisieLieu({ latitude: '' }), masqueDepuisPoints([]))).toBeNull()
     expect(profilAEnregistrer(saisieMateriel({ focale: '' }))).toBeNull()
   })

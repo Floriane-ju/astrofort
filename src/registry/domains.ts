@@ -138,7 +138,7 @@ export const DOMAINES = Object.freeze({
 
 export type DomaineId = keyof typeof DOMAINES
 
-/** Saisie refusée : le champ fautif est nommé, jamais corrigé en silence (§5.1). */
+/** Saisie refusée : le champ fautif est nommé, jamais corrigé EN SILENCE (§5.1). */
 export class SaisieRefuseeError extends Error {
   readonly champ: DomaineId
 
@@ -166,4 +166,42 @@ export function valide(champ: DomaineId, valeur: number): number {
     )
   }
   return valeur
+}
+
+/**
+ * Ce que devient une saisie une fois confrontée à son domaine (T-0208).
+ *
+ * La frontière de SAISIE ne refuse pas comme la frontière de DONNÉES : un fichier importé
+ * qu'on refuse peut être corrigé ailleurs, une valeur tapée à l'écran doit produire quelque
+ * chose tout de suite. Elle est donc ramenée dans son domaine, et la correction est DITE —
+ * c'est ce qui la distingue d'un silence.
+ */
+export interface Bornage {
+  readonly valeur: number
+  /** `null` quand la saisie était déjà dans le domaine. */
+  readonly refus: string | null
+}
+
+/**
+ * La valeur ramenée dans son domaine, et la cause quand elle a dû l'être (§4.1, §5.1).
+ *
+ * Une valeur non finie n'est PAS bornée : un champ vidé le temps d'être retapé n'est pas une
+ * latitude de −90°, et l'inventer écrirait un lieu que personne n'a saisi. Le refus remonte,
+ * et c'est au dernier calcul valable de tenir l'écran (T-0149).
+ */
+export function borne(champ: DomaineId, valeur: number): Bornage {
+  const d = DOMAINES[champ]
+  if (!Number.isFinite(valeur)) {
+    return { valeur, refus: `Saisie refusée : ${d.champ} doit être un nombre.` }
+  }
+  if (valeur < d.min || valeur > d.max) {
+    const retenue = valeur < d.min ? d.min : d.max
+    return {
+      valeur: retenue,
+      refus:
+        `Saisie hors plage : ${d.champ} vaut ${valeur} ${d.unite}, hors de la plage ` +
+        `${d.min} à ${d.max} ${d.unite} — ${retenue} ${d.unite} retenu.`,
+    }
+  }
+  return { valeur, refus: null }
 }

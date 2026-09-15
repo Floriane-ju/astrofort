@@ -14,34 +14,49 @@
 import type { SiteEnregistre, ProfilMateriel } from '../data/db.ts'
 import type { ProfilAEnregistrer, SiteAExporter } from '../data/persistence.ts'
 import type { MasqueHorizon } from '../core/site.ts'
-import { valide, type DomaineId } from '../registry/domains.ts'
+import { borne, valide, type DomaineId } from '../registry/domains.ts'
+import { nombreSaisi, nombreSiRenseigne } from './saisie-bornee.ts'
 import type { DepartLieu, DepartMateriel, SaisieLieu, SaisieMateriel } from './app-saisie.ts'
 
 /**
- * Un champ optionnel de la saisie : absent quand il est vide, refusé quand il est hors
- * domaine. Le refus remonte en exception, comme partout ailleurs sur une saisie (§2.1).
+ * Un champ optionnel de la saisie : absent quand il est vide, BORNÉ quand il est hors domaine.
+ *
+ * T-0208 — c'est la valeur ramenée dans le domaine qui s'enregistre, la même que celle dont la
+ * scène est déduite : ce qu'on voit est ce qu'on retrouve au démarrage suivant.
  */
 function siRenseigne<C extends string>(
   nom: C,
   saisi: string,
   domaine: DomaineId,
 ): { readonly [K in C]?: number } {
-  if (saisi.trim() === '') return {}
-  return { [nom]: valide(domaine, Number(saisi)) } as { readonly [K in C]?: number }
+  const { valeur } = nombreSiRenseigne(domaine, saisi)
+  return (valeur === undefined ? {} : { [nom]: valeur }) as { readonly [K in C]?: number }
 }
 
 /**
  * Une grandeur sans laquelle l'enregistrement n'a pas de sens. Un champ vide est refusé comme
  * un `NaN`, jamais coercé en 0 : une latitude vide enregistrée à 0° ne serait pas un aveu
  * d'oubli mais un point au large du golfe de Guinée, relu tel quel à chaque démarrage.
+ *
+ * `valide` reste le dernier mot : sur une valeur déjà bornée il ne peut plus lever que pour
+ * un `NaN`, c'est-à-dire exactement le champ vide.
  */
 function requis(saisi: string, domaine: DomaineId): number {
-  return valide(domaine, saisi.trim() === '' ? Number.NaN : Number(saisi))
+  return valide(domaine, nombreSaisi(domaine, saisi).valeur)
 }
 
-/** Le texte d'une grandeur enregistrée ; vide quand elle est absente, jamais « undefined ». */
-function texteDe(valeur: number | undefined): string {
-  return valeur === undefined ? '' : String(valeur)
+/**
+ * Le texte d'une grandeur relue de la base ; vide quand elle est absente, jamais « undefined ».
+ *
+ * T-0208 — et borné à la RELECTURE. Rien ne revalide ce que rend `litSiteActif` : une valeur
+ * hors domaine déjà en base — export retouché, version antérieure, DevTools — repartait dans
+ * la chaîne de calcul avant que le moindre champ soit éditable. Elle repart maintenant à sa
+ * borne, et le champ reste corrigeable.
+ */
+function texteDe(valeur: number | undefined, domaine: DomaineId): string {
+  if (valeur === undefined) return ''
+  const { valeur: borne_ } = borne(domaine, valeur)
+  return Number.isFinite(borne_) ? String(borne_) : ''
 }
 
 /**
@@ -96,13 +111,13 @@ export function profilAEnregistrer(materiel: SaisieMateriel): ProfilAEnregistrer
 export function departLieu(site: SiteEnregistre | null): DepartLieu | null {
   if (site === null) return null
   return {
-    latitude: String(site.latitudeDeg),
-    longitude: String(site.longitudeDeg),
-    altitude: String(site.altitudeM),
+    latitude: texteDe(site.latitudeDeg, 'latitude_deg'),
+    longitude: texteDe(site.longitudeDeg, 'longitude_deg'),
+    altitude: texteDe(site.altitudeM, 'altitude_m'),
     // Un champ vidé volontairement le reste : sans cela, effacer le Bortle pour saisir un
     // SQM verrait le Bortle par défaut revenir au rechargement, et le ciel changer seul.
-    bortle: texteDe(site.bortleDeclare),
-    sqm: texteDe(site.sqmMesure),
+    bortle: texteDe(site.bortleDeclare, 'bortle_declare'),
+    sqm: texteDe(site.sqmMesure, 'sqm_mesure'),
     pointsMasque: site.masquePoints ?? [],
   }
 }
@@ -114,16 +129,16 @@ export function departMateriel(profil: ProfilMateriel | null): DepartMateriel | 
     ...(profil.boitierId === undefined ? {} : { boitierId: profil.boitierId }),
     boitier: {
       formatCapteur: profil.formatCapteur,
-      resolutionMpx: texteDe(profil.resolutionMpx),
-      readNoiseE: texteDe(profil.readNoiseE),
-      seuilDoubleGainIso: texteDe(profil.seuilDoubleGainIso),
-      fullWellE: texteDe(profil.fullWellE),
-      zpSys: texteDe(profil.zpSys),
-      tailleRawMo: texteDe(profil.tailleRawMo),
+      resolutionMpx: texteDe(profil.resolutionMpx, 'resolution_mpx'),
+      readNoiseE: texteDe(profil.readNoiseE, 'read_noise_e'),
+      seuilDoubleGainIso: texteDe(profil.seuilDoubleGainIso, 'seuil_double_gain_iso'),
+      fullWellE: texteDe(profil.fullWellE, 'full_well_e'),
+      zpSys: texteDe(profil.zpSys, 'zp_sys'),
+      tailleRawMo: texteDe(profil.tailleRawMo, 'taille_raw_mo'),
     },
-    iso: texteDe(profil.isoCapture),
-    focale: String(profil.focaleMm),
-    ouverture: String(profil.ouvertureN),
+    iso: texteDe(profil.isoCapture, 'iso_capture'),
+    focale: texteDe(profil.focaleMm, 'focale_mm'),
+    ouverture: texteDe(profil.ouvertureN, 'ouverture_N'),
     capteurMode: profil.capteurMode,
     typeObjectif: profil.typeObjectif,
     suiviActif: profil.suiviActif,
