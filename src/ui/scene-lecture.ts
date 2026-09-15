@@ -47,7 +47,7 @@ export function viseeVersVue(
 }
 
 /** Ce que règle un segment de la phrase — l'ordre des cinq est celui de la lecture. */
-export type ChampVisee = 'AD' | 'DEC' | 'AZIMUT' | 'HAUTEUR' | 'FOV'
+export type ChampVisee = 'AD' | 'DEC' | 'AZIMUT' | 'HAUTEUR' | 'FOV' | 'ROTATION'
 
 export interface SegmentVisee {
   readonly champ: ChampVisee
@@ -102,6 +102,13 @@ export function segmentsVisee(vue: VueScene, matriceCiel: Mat3): readonly Segmen
       valeurDeg: vue.fovDeg,
       texte: `${vue.fovDeg.toFixed(DECIMALES_CHAMP)}°`,
       avant: ' · champ ',
+    },
+    {
+      champ: 'ROTATION',
+      libelle: 'Rotation du cadre',
+      valeurDeg: vue.rotationCadreDeg,
+      texte: `${vue.rotationCadreDeg.toFixed(DECIMALES_POINTAGE)}°`,
+      avant: ' · rotation ',
     },
   ]
 }

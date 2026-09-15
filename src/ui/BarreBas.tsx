@@ -62,6 +62,7 @@ const PAS_VISEE: Readonly<Record<ChampVisee, number>> = Object.freeze({
   AZIMUT: 1,
   HAUTEUR: 0.5,
   FOV: 0.5,
+  ROTATION: 1,
 })
 
 /**
@@ -88,6 +89,7 @@ function Visee(props: { readonly site: Site; readonly gaiaCharge: boolean }) {
     if (champ === 'DEC') return majVue(viseeVersVue(ad, valeur, ciel.matrice))
     if (champ === 'AZIMUT') return majVue({ azimutDeg: tourBorne(valeur) })
     if (champ === 'HAUTEUR') return majVue({ hauteurDeg: valeur })
+    if (champ === 'ROTATION') return majVue({ rotationCadreDeg: valeur })
     // Le plafond est reposé par le magasin ; le plancher, lui, dépend du paquet chargé.
     majVue({ fovDeg: valeur })
   }
@@ -98,6 +100,7 @@ function Visee(props: { readonly site: Site; readonly gaiaCharge: boolean }) {
       return { min: HAUTEUR_MIN_DEG, max: HAUTEUR_MAX_DEG }
     }
     if (champ === 'FOV') return { min: bornes.fovMinDeg, max: bornes.fovMaxDeg }
+    if (champ === 'ROTATION') return { min: 0, max: 360 }
     return {}
   }
 

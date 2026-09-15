@@ -22,7 +22,6 @@ import {
 import { bornesZoom, etatProfondeur, type ModeProjection } from '../core/projection.ts'
 import type { MasqueHorizon } from '../core/site.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
-import { Curseur } from './Curseur.tsx'
 import { RACCOURCIS_CLAVIER } from './planetarium-gestes.ts'
 import { useScene } from './scene-etat.ts'
 import { useSeance } from './seance-etat.ts'
@@ -60,7 +59,7 @@ const COUCHES: readonly (readonly [keyof CouchesActives, string])[] = [
 export function PanneauVue(props: PanneauVueProps) {
   const { vue, rendu, actions } = useScene()
   const { mode: modeInterface } = useSeance()
-  const { fovDeg, rotationCadreDeg: rotationDeg, mode } = vue
+  const { fovDeg, mode } = vue
   const { couches, vueRealiste } = rendu
 
   const bornes = bornesZoom(props.gaiaCharge, mode)
@@ -86,31 +85,6 @@ export function PanneauVue(props: PanneauVueProps) {
                 {props.modeObjectif === 'MODE_FISHEYE' ? 'équidistante' : 'gnomonique'}
               </option>
             </select>
-          </label>
-          <label>
-            Champ : {fovDeg.toFixed(1)}°
-            <Curseur
-              libelle="Champ"
-              valeur={fovDeg}
-              min={bornes.fovMinDeg}
-              max={bornes.fovMaxDeg}
-              pas={1}
-              texte={`${fovDeg.toFixed(1)}°`}
-              sur={(valeur) => actions.majVue({ fovDeg: valeur })}
-            />
-          </label>
-          <label>
-            {/* Le geste équivalent est sur la scène ; sans mention ici, il reste introuvable. */}
-            Rotation du cadre : {rotationDeg.toFixed(0)}° — ou Maj + glisser sur la scène
-            <Curseur
-              libelle="Rotation du cadre"
-              valeur={rotationDeg}
-              min={0}
-              max={360}
-              pas={1}
-              texte={`${rotationDeg.toFixed(0)}°`}
-              sur={(valeur) => actions.majVue({ rotationCadreDeg: valeur })}
-            />
           </label>
           <label className="interrupteur">
             <input
@@ -177,9 +151,10 @@ export function PanneauVue(props: PanneauVueProps) {
           ))}
         </div>
         {/* §4.1 — le sol masque, il doit donc dire sur quoi il repose : le masque porte déjà
-            sa note, hypothèse d'horizon plat comprise. La réécrire ici la ferait diverger. */}
-        {couches.sol && props.masque.note !== undefined && (
-          <p className={props.masque.estHypothese ? 'cause' : 'etat'}>{props.masque.note}</p>
+            sa note. L'hypothèse d'horizon plat, elle, reste au panneau Lieu (MasqueHorizon) :
+            elle invite à éditer le relief, un geste que la carte Vue ne propose pas. */}
+        {couches.sol && !props.masque.estHypothese && props.masque.note !== undefined && (
+          <p className="etat">{props.masque.note}</p>
         )}
         {couches.asterismes && <p className="etat">{RAPPEL_ASTERISME}</p>}
         {couches.figures && <p className="etat">{RAPPEL_FIGURES}</p>}
