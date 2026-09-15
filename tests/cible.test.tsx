@@ -52,12 +52,6 @@ ouvreCible(CIBLE_REFERENCE)
 const ecran = renderToStaticMarkup(<App />)
 
 describe('fiche de cible — écran par défaut, M33 depuis le site de l’Annexe A', () => {
-  it('annonce le domaine du setup et sa fenêtre de cadrage, dans la carte Matériel', () => {
-    expect(ecran).toContain('DOMAINE_TRES_GRAND_CHAMP')
-    expect(ecran).toContain('3.79')
-    expect(ecran).toContain('5.69')
-  })
-
   it('produit le verdict de détectabilité de M33 avec sa brillance et son contraste', () => {
     // 23,0148 mag/arcsec² et −2,0648 : le PRD écrit 23,02 et −2,07, arrondis obtenus avec
     // le facteur 8,63 plutôt qu’avec π/4 × 3600 calculé.
@@ -314,9 +308,6 @@ describe('T-0156 — sans cible désignée, il n’y a pas de fiche', () => {
     // T-0182 — le panneau rend la liste : une fiche sans cible désignée n'existe plus.
     expect(sansCible).toContain('Tout le catalogue')
     expect(sansCible).not.toContain('Cadrage de la cible')
-    // T-0157 — le domaine, lui, ne dépend que du matériel : il se lit sans cible désignée.
-    expect(sansCible).toContain('Ce que ce setup cadre')
-    expect(sansCible).toContain('DOMAINE_TRES_GRAND_CHAMP')
     ouvreCible(CIBLE_REFERENCE)
   })
 })

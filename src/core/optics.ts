@@ -91,9 +91,7 @@ function diagnostique(echApx: number): Diagnostic {
   }
   return {
     diagEch: 'GRAND_CHAMP_ASSUME',
-    messageDiag:
-      'Grand champ assumé : la résolution est limitée par le pixel, pas par l’optique. ' +
-      'Ce n’est pas un défaut à corriger, c’est le régime normal du grand champ.',
+    messageDiag: '',
     alerte: false,
   }
 }

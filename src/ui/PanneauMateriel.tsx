@@ -15,7 +15,6 @@
  */
 
 import type { ProfilOptique } from '../core/optics.ts'
-import type { VerdictDomaine } from '../core/framing.ts'
 import type { ProfilSuivi, QualiteMiseEnStation, TypeMonture } from '../core/tracking.ts'
 import type { ModeProjection } from '../core/projection.ts'
 import type { Traced } from '../core/traced.ts'
@@ -85,11 +84,6 @@ export interface PanneauMaterielProps {
   /** Lectures du matériel courant, ou la cause du refus de saisie. */
   readonly lectures?: LecturesMateriel
   readonly erreur?: string
-  /**
-   * §6.1 — la famille d'objets que ce setup cadre. Absente quand l'optique n'est pas
-   * chiffrable : sans champ, il n'y a pas de fenêtre de cadrage.
-   */
-  readonly domaine?: VerdictDomaine
 }
 
 export function PanneauMateriel(props: PanneauMaterielProps) {
@@ -188,17 +182,19 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
               </select>
             </label>
           )}
-          <label>
-            <Etiquette cle="type_monture" />
-            <select
-              value={props.typeMonture}
-              onChange={(e) => props.surTypeMonture(e.target.value as TypeMonture)}
-            >
-              <option value="TRACKER">Monture sur rotule (tracker)</option>
-              <option value="GEM">Équatoriale allemande</option>
-              <option value="ALTAZ">Altazimutale</option>
-            </select>
-          </label>
+          {props.suiviActif && (
+            <label>
+              <Etiquette cle="type_monture" />
+              <select
+                value={props.typeMonture}
+                onChange={(e) => props.surTypeMonture(e.target.value as TypeMonture)}
+              >
+                <option value="TRACKER">Monture sur rotule (tracker)</option>
+                <option value="GEM">Équatoriale allemande</option>
+                <option value="ALTAZ">Altazimutale</option>
+              </select>
+            </label>
+          )}
         </div>
       </section>
 
@@ -222,9 +218,11 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
           <TracedValue terme="champ" suffixe="largeur" trace={lectures.optique.fovLDeg} unite="°" />
           <TracedValue terme="champ" suffixe="hauteur" trace={lectures.optique.fovHDeg} unite="°" />
           <TracedValue terme="echantillonnage" trace={lectures.optique.echApx} unite="&quot;/px" />
-          <p className={lectures.optique.alerte ? 'cause' : 'etat'}>
-            {lectures.optique.messageDiag}
-          </p>
+          {lectures.optique.messageDiag !== '' && (
+            <p className={lectures.optique.alerte ? 'cause' : 'etat'}>
+              {lectures.optique.messageDiag}
+            </p>
+          )}
           <TracedValue terme="diametre_pupille" trace={lectures.optique.dMm} unite="mm" />
           <TracedValue terme="pouvoir_separateur" trace={lectures.optique.dawesAs} unite="&quot;" />
           <TracedValue terme="npf" trace={lectures.poseNpf} unite="s" />
@@ -236,43 +234,6 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
         </section>
       )}
 
-      {/* T-0157 — §6.1 se lit « à la validation du profil matériel » : le domaine est une
-          sortie du setup, pas d'une cible. Il suit les lectures dont il découle. */}
-      <section>
-        <h2>Ce que ce setup cadre</h2>
-        {props.domaine === undefined ? (
-          <>
-            <LectureInconnue terme="fenetre_cadrage" suffixe="taille minimale" />
-            <LectureInconnue terme="fenetre_cadrage" suffixe="taille maximale" />
-          </>
-        ) : (
-          <DomaineCadre domaine={props.domaine} />
-        )}
-      </section>
-    </>
-  )
-}
-
-/** §6.1 — la fenêtre de cadrage de ce setup, et quelques cibles réelles qui y tombent. */
-function DomaineCadre({ domaine }: { readonly domaine: VerdictDomaine }) {
-  return (
-    <>
-      <p className="etat">domaine : {domaine.domaine}</p>
-      <p>{domaine.phrase}</p>
-      <TracedValue terme="fenetre_cadrage" suffixe="taille minimale" trace={domaine.tailleMinDeg} unite="°" />
-      <TracedValue terme="fenetre_cadrage" suffixe="taille maximale" trace={domaine.tailleMaxDeg} unite="°" />
-      {domaine.causeAbsence !== undefined && <p className="cause">{domaine.causeAbsence}</p>}
-      {domaine.cibles.length > 0 && (
-        <ul>
-          {domaine.cibles.map((o) => (
-            <li key={o.designation}>
-              {o.designation}
-              {o.nomsCommuns === '' ? '' : ` — ${o.nomsCommuns.split('|')[0]}`} ·{' '}
-              {o.majAxArcmin?.toFixed(0)}’ · mag {o.vMag ?? '—'}
-            </li>
-          ))}
-        </ul>
-      )}
     </>
   )
 }

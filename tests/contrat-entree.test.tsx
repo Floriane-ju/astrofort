@@ -40,9 +40,9 @@ describe('contrat d’entrée — écran par défaut, setup de l’Annexe A', ()
     expect(ecran).toContain('43.6')
   })
 
-  it('annonce le grand champ assumé sans le présenter comme un défaut', () => {
-    expect(ecran).toContain('Grand champ assumé')
+  it('n’affiche aucun avertissement pour un grand champ assumé', () => {
     expect(ecran).not.toContain('Sur-échantillonné')
+    expect(ecran).not.toContain('Grand champ assumé')
   })
 
   it('affiche le masque plat comme une hypothèse, pas comme une mesure', () => {

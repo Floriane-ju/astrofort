@@ -1236,10 +1236,11 @@ DIAGNOSTIC D'ÉCHANTILLONNAGE (seeing courant 2–3", constante C-04)
   1,0 ≤ ech ≤ 2,0  → nominal longue pose
   2,0 < ech ≤ 4,0  → sous-échantillonné modéré, acceptable en grand champ
   ech > 4,0        → grand champ assumé : la résolution est limitée par le pixel,
-                     pas par l'optique. NON BLOQUANT. Message dédié, pas d'alerte.
+                     pas par l'optique. NON BLOQUANT, aucun message affiché.
 
   La dernière ligne est une exigence produit : à 120 mm l'app ne doit PAS afficher
-  de warning anxiogène. Le sous-échantillonnage est le régime normal du grand champ.
+  de warning anxiogène. Le sous-échantillonnage est le régime normal du grand champ,
+  et n'a pas besoin d'être commenté à l'écran.
 ```
 
 ### Entrées / Sorties

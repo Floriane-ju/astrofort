@@ -52,6 +52,7 @@ describe('grandeurs dérivées §5.1', () => {
     // Exigence produit §5.1 : à 8,80 "/px l'app ne doit afficher aucun avertissement.
     expect(profil.diagEch).toBe('GRAND_CHAMP_ASSUME')
     expect(profil.alerte).toBe(false)
+    expect(profil.messageDiag).toBe('')
   })
 
   it('signale le sur-échantillonnage sous 1 "/px', () => {

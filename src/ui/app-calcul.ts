@@ -30,7 +30,6 @@ import {
   type FondDeCiel,
 } from '../core/sky-background.ts'
 import { profilOptique, type ProfilOptique } from '../core/optics.ts'
-import { verdictDomaine, type VerdictDomaine } from '../core/framing.ts'
 import { fluxCiel } from '../core/exposure.ts'
 import { construitIndex, type IndexCiel } from '../core/index-ciel.ts'
 import type { EntreeProfondeur } from '../core/galactique.ts'
@@ -124,11 +123,6 @@ export interface ChaineCalcul {
   readonly etatsCibles: ReadonlyMap<string, EtatCible>
   /** Le matériel et le ciel sous lesquels la fiche évalue une cible (§6, §7). */
   readonly contexteFiche: ContexteFiche | null
-  /**
-   * §6.1 — ce que ce setup cadre. Sortie du MATÉRIEL et du catalogue, pas d'une cible : elle
-   * se lit dès que l'optique est chiffrable, avant qu'aucun objet ne soit désigné.
-   */
-  readonly domaineCadrage: VerdictDomaine | null
   readonly panneauFile: PanneauFileProps | null
 }
 
@@ -308,11 +302,6 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     [contexteSession, catalogue],
   )
 
-  const domaineCadrage = useMemo(
-    () => (calcul.ok ? verdictDomaine(calcul.optique.fovHDeg.value, catalogue) : null),
-    [calcul, catalogue],
-  )
-
   return {
     calcul,
     ciel,
@@ -327,7 +316,6 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     etatsCibles: etats,
     contexteFiche:
       calcul.ok && ciel.ok ? contexteFiche(calcul, ciel, materiel, lieu) : null,
-    domaineCadrage,
     panneauFile:
       calcul.ok && profondeurFile !== null
         ? panneauFile(calcul, materiel, site, profondeurFile)
