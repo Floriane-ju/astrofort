@@ -1336,7 +1336,14 @@ h3 {
 }
 
 /* Un libellé est une ÉTIQUETTE : petit, en capitales, espacé. Ce qui le sépare de la valeur
-   n'est pas sa luminance — §11.1 n'en laisse pas assez — mais sa casse et son suivi. */
+   n'est pas sa luminance — §11.1 n'en laisse pas assez — mais sa casse et son suivi.
+
+   T-0215 — LE MICRO-LIBELLÉ est ce quadruplet, et il vaut pour neuf règles de la feuille :
+   `--attenue`, `--texte-micro`, `--suivi-micro`, `uppercase`. Il ne forme pas une règle
+   groupée — un onglet actif, un tiroir ouvert et un survol reposent chacun sur l'ordre de la
+   feuille pour surcharger leur couleur, et les rassembler les déplacerait. C'est
+   `echelles.test.ts` qui tient l'ensemble : une dixième règle qui prendrait la taille et la
+   casse sans le suivi ni la couleur échoue au test. */
 label {
   display: flex;
   flex-direction: column;

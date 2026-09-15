@@ -105,6 +105,49 @@ describe('T-0215 — l’échelle de suivi', () => {
   })
 })
 
+/**
+ * T-0215 — LE MICRO-LIBELLÉ, le style de texte le plus fréquent de l'interface.
+ *
+ * C'est la grammaire de T-0113 : ce qui NOMME — l'étiquette d'un champ, l'en-tête d'une
+ * colonne, l'onglet, le résumé d'un tiroir, le détail d'un score — se distingue de ce qui
+ * VAUT par sa casse et son suivi, puisque §11.1 ne laisse pas assez de luminance pour
+ * l'étager autrement. Le motif est écrit neuf fois, et ses quatre valeurs sont déjà des
+ * jetons : ce qui peut dériver n'est pas une valeur, c'est la dixième règle qui en oublierait
+ * un et produirait un libellé presque semblable.
+ *
+ * Les neuf règles ne sont PAS regroupées en une seule. Les regrouper les déplacerait dans la
+ * cascade — un onglet actif, un tiroir ouvert et un survol reposent chacun sur l'ordre de la
+ * feuille pour surcharger leur couleur. Vingt-sept lignes gagnées contre neuf réordonnance-
+ * ments dans une feuille dont toute la discipline est que rien ne bouge en silence : la
+ * garantie vaut mieux ici que la concision.
+ */
+describe('T-0215 — le micro-libellé', () => {
+  /** Les corps de règle qui portent la taille du micro-libellé et la casse. */
+  function reglesMicro(): readonly (readonly [string, string])[] {
+    return [...REGLES.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .map(([, sel, corps]) => [sel!.split('\n').join(' ').trim(), corps!] as const)
+      .filter(
+        ([, corps]) =>
+          corps.includes('font-size: var(--texte-micro)') &&
+          corps.includes('text-transform: uppercase'),
+      )
+  }
+
+  it('en compte neuf, et sait lesquelles', () => {
+    expect(reglesMicro()).toHaveLength(9)
+  })
+
+  it('n’en laisse aucune oublier le suivi ni la couleur qui vont avec', () => {
+    // Les quatre valeurs tiennent ensemble ou ne tiennent pas : un libellé en capitales sans
+    // suivi se lit comme un mot tapé en majuscules, et rendu en --texte il pèse autant que la
+    // valeur qu'il annonce — c'est exactement la hiérarchie que §11.1 confisque par ailleurs.
+    for (const [selecteur, corps] of reglesMicro()) {
+      expect(corps, selecteur).toContain('letter-spacing: var(--suivi-micro)')
+      expect(corps, selecteur).toContain('color: var(--attenue)')
+    }
+  })
+})
+
 describe('T-0194 — le retour d’état des contrôles', () => {
   /** Ce qui se clique, se tire ou se saisit : tout doit répondre au geste de la même façon. */
   const CONTROLES = [
