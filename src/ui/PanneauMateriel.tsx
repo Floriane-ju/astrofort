@@ -156,6 +156,19 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
         {lectures?.noteRecadrage !== undefined && (
           <p className="cause">{lectures.noteRecadrage}</p>
         )}
+        {lectures === undefined ? (
+          <>
+            <LectureInconnue terme="champ" suffixe="largeur" />
+            <LectureInconnue terme="champ" suffixe="hauteur" />
+            <LectureInconnue terme="npf" />
+          </>
+        ) : (
+          <>
+            <TracedValue terme="champ" suffixe="largeur" trace={lectures.optique.fovLDeg} unite="°" />
+            <TracedValue terme="champ" suffixe="hauteur" trace={lectures.optique.fovHDeg} unite="°" />
+            <TracedValue terme="npf" trace={lectures.poseNpf} unite="s" />
+          </>
+        )}
       </section>
 
       <section>
@@ -200,45 +213,18 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
           {props.suiviActif && (
             <p className="etat">Les montures altazimutales ne sont pas encore gérées.</p>
           )}
+          {/* §5.2 — fermer le ciel profond et le justifier sont un seul geste (core/tracking.ts) :
+              cette cause doit rester visible sans naviguer, qu'on suive ou non. */}
+          {lectures?.suivi.cause !== null && lectures?.suivi.cause !== undefined && (
+            <p className="cause">{lectures.suivi.cause}</p>
+          )}
+          {lectures?.suivi.gainMiseEnStation !== undefined && (
+            <p className="cause">{lectures.suivi.gainMiseEnStation}</p>
+          )}
         </div>
       </section>
 
       {props.erreur !== undefined && <p className="erreur">{props.erreur}</p>}
-
-      {/* T-0149 — la section reste, même sans lectures : ce qui manque se voit à sa place. */}
-      {lectures === undefined ? (
-        <section>
-          <h2>Ce que ce matériel donne</h2>
-          <LectureInconnue terme="champ" suffixe="largeur" />
-          <LectureInconnue terme="champ" suffixe="hauteur" />
-          <LectureInconnue terme="echantillonnage" />
-          <LectureInconnue terme="diametre_pupille" />
-          <LectureInconnue terme="pouvoir_separateur" />
-          <LectureInconnue terme="npf" />
-          <LectureInconnue terme="pose_max_suivi" />
-        </section>
-      ) : (
-        <section>
-          <h2>Ce que ce matériel donne</h2>
-          <TracedValue terme="champ" suffixe="largeur" trace={lectures.optique.fovLDeg} unite="°" />
-          <TracedValue terme="champ" suffixe="hauteur" trace={lectures.optique.fovHDeg} unite="°" />
-          <TracedValue terme="echantillonnage" trace={lectures.optique.echApx} unite="&quot;/px" />
-          {lectures.optique.messageDiag !== '' && (
-            <p className={lectures.optique.alerte ? 'cause' : 'etat'}>
-              {lectures.optique.messageDiag}
-            </p>
-          )}
-          <TracedValue terme="diametre_pupille" trace={lectures.optique.dMm} unite="mm" />
-          <TracedValue terme="pouvoir_separateur" trace={lectures.optique.dawesAs} unite="&quot;" />
-          <TracedValue terme="npf" trace={lectures.poseNpf} unite="s" />
-          <TracedValue terme="pose_max_suivi" trace={lectures.suivi.tMaxSuiviS} unite="s" />
-          {lectures.suivi.cause !== null && <p className="cause">{lectures.suivi.cause}</p>}
-          {lectures.suivi.gainMiseEnStation !== undefined && (
-            <p className="cause">{lectures.suivi.gainMiseEnStation}</p>
-          )}
-        </section>
-      )}
-
     </>
   )
 }

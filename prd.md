@@ -4374,7 +4374,7 @@ Le découpage suit les dépendances entre moteurs, pas la valeur perçue. Un lot
 
 **Contenu** §4 profil Lieu avec masque d'horizon · §5.1 profil optique et capteur · §5.2 profil suivi · §10.1 glossaire contextuel
 
-**Livrable** un lieu et un matériel saisis produisent champ, échantillonnage, pose max NPF, seuils de déclinaison du site, et chaque terme est glosé.
+**Livrable** un lieu et un matériel saisis produisent champ, pose max NPF, seuils de déclinaison du site, et chaque terme est glosé. L'échantillonnage, la pupille et le pouvoir séparateur restent calculés (§5.1) mais ne sont plus affichés sous « Optique » : ce panneau ne porte que ce qui pèse sur le cadrage et l'exposition.
 
 **Dépend du lot 0.**
 

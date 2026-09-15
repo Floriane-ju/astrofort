@@ -1,6 +1,6 @@
 /**
  * Livrable vérifiable du Lot 1 : un lieu et un matériel saisis produisent, À L'ÉCRAN, le
- * champ, l'échantillonnage, la pose maximale et les seuils de déclinaison du site.
+ * champ, la pose maximale et les seuils de déclinaison du site.
  *
  * Le rendu statique suffit : il n'y a rien à cliquer pour que le contrat d'entrée produise
  * ses sorties, et c'est précisément ce qu'on vérifie. Les variantes qui demandent une
@@ -20,14 +20,6 @@ describe('contrat d’entrée — écran par défaut, setup de l’Annexe A', ()
     // 17,01° × 11,37° : l'Annexe A annonce 17,02 × 11,38, arrondis d'un intermédiaire.
     expect(ecran).toContain('17.01')
     expect(ecran).toContain('11.37')
-  })
-
-  it('affiche l’échantillonnage, la pupille et le pouvoir séparateur', () => {
-    // Pitch dérivé de 33 Mpx sur le format plein format (35,9 × 23,9 mm) : 5,099 µm, plus
-    // aucun boîtier ne fournissant de pitch sourcé directement (§5.1).
-    expect(ecran).toContain('8.76')
-    expect(ecran).toContain('42.86')
-    expect(ecran).toContain('2.71')
   })
 
   it('affiche la pose maximale sans suivi', () => {
@@ -51,7 +43,6 @@ describe('contrat d’entrée — écran par défaut, setup de l’Annexe A', ()
   })
 
   it('ferme le ciel profond faute de suivi, en renvoyant au grand champ', () => {
-    expect(ecran).toContain('[DONNÉE MANQUANTE]')
     expect(ecran).toMatch(/domaine ciel profond est fermé/)
   })
 
@@ -68,7 +59,7 @@ describe('contrat d’entrée — écran par défaut, setup de l’Annexe A', ()
   })
 
   it('glose chaque terme technique au contact', () => {
-    for (const cle of ['champ', 'echantillonnage', 'npf', 'masque_horizon'] as const) {
+    for (const cle of ['champ', 'npf', 'masque_horizon'] as const) {
       expect(ecran, cle).toContain(GLOSSAIRE[cle].glose)
     }
   })
