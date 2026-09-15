@@ -163,7 +163,21 @@ body {
   --suivi-micro: 0.14em;
   --suivi-titre: 0.24em;
   --suivi-marque: 0.4em;
+  /* T-0215 — trois suivis échappaient à la famille, écrits en dur dans leur règle. Ils n'y
+     rentrent pas — ce ne sont pas des capitales espacées mais des textes qu'on aère à peine —
+     et ils sont donc nommés par leur rôle, comme les trois autres. Une valeur de suivi écrite
+     en dur est désormais un bug, au même titre qu'une couleur ou qu'un écart. */
+  --suivi-saisie: 0.05em;
+  --suivi-horaire: 0.08em;
+  --suivi-etape: 0.12em;
   --trait: 1px;
+  /* T-0215 — le filet ÉPAIS, celui qui marque le bord gauche d'une alerte, d'une cause ou
+     d'une carte. Trois fois la valeur de `--trait`, et cité trois fois : §11.1 veut que le
+     rouge ne porte jamais seul, et c'est ce filet qui le double. */
+  --trait-marque: 3px;
+  /* Le décalage du pointillé qui annonce « il y a quelque chose à lire » — un terme du
+     glossaire, un titre de carte porteur d'aide. Cité aux deux endroits. */
+  --decalage-souligne: 3px;
   /* T-0194 — L'ÉCHELLE D'ESPACEMENT. La feuille portait vingt et une valeurs d'écart entre
      0,05 et 2 rem : à ce grain, deux marges voisines ne se distinguent plus à l'œil mais
      divergent au pixel, et rien ne dit laquelle est la bonne quand on en ajoute une. Sept
@@ -225,6 +239,10 @@ body {
   /* T-0145 — l'écart entre deux éléments d'une barre. Nommé parce que la bande de commandes
      l'annule par marge négative : la valeur doit être lue au même endroit des deux côtés. */
   --jour-barre: var(--pas-2);
+  /* T-0215 — l'air réservé entre un flottant et le bord de l'écran. Cité par les quatre
+     surfaces qui se posent en absolu et peuvent atteindre ce bord : les deux fenêtres de
+     tiroir, la bulle rabattue, la carte du plan. */
+  --jour-ecran: var(--pas-5);
   /* T-0147 — largeur maximale d'une bulle de survol. Une infobulle est une phrase, pas un
      paragraphe : au-delà, ce n'est plus un survol qu'il faut, c'est la fiche. */
   --bulle-large: 18rem;
@@ -541,7 +559,7 @@ body {
   bottom: calc(var(--barre-bas) + var(--pas-1));
   left: var(--pas-3);
   right: auto;
-  width: min(32rem, calc(100vw - 1.5rem));
+  width: min(32rem, calc(100vw - var(--jour-ecran)));
   max-height: calc(100dvh - var(--barre-bas) - 1rem);
 }
 
@@ -549,7 +567,7 @@ body {
    des 32 rem du tiroir du lieu, qui laisseraient une fenêtre vide aux trois quarts. */
 .coque-barrebas .tiroir-legende[open] > .tiroir-contenu {
   width: max-content;
-  max-width: calc(100vw - 1.5rem);
+  max-width: calc(100vw - var(--jour-ecran));
 }
 
 .legende-couleurs {
@@ -685,7 +703,7 @@ input.barretemps-instant {
   position: absolute;
   right: 0;
   bottom: calc(100% + var(--pas-1));
-  width: min(28rem, calc(100vw - 1.5rem));
+  width: min(28rem, calc(100vw - var(--jour-ecran)));
   margin: 0;
   padding: var(--pas-2) var(--pas-2);
   background: var(--surface-haute);
@@ -871,7 +889,7 @@ input.barretemps-instant {
   margin: 0;
   padding: var(--pas-2) var(--pas-3);
   border: var(--trait) solid var(--bordure);
-  border-left-width: 3px;
+  border-left-width: var(--trait-marque);
   background: var(--surface);
   color: var(--attenue);
   font-size: var(--texte-legende);
@@ -1266,7 +1284,7 @@ input.barretemps-instant {
   left: auto;
   top: calc(var(--barre-haut) + var(--pas-1));
   z-index: 5;
-  width: min(52rem, calc(100vw - 1.5rem));
+  width: min(52rem, calc(100vw - var(--jour-ecran)));
   max-height: calc(100dvh - var(--barre-haut) - 1rem);
   overflow-y: auto;
   padding: 0 var(--pas-4) var(--pas-4);
@@ -1340,7 +1358,7 @@ select {
   border: var(--trait) solid var(--bordure-controle);
   border-radius: 0;
   font: var(--texte-appui)/1.4 var(--police-mono);
-  letter-spacing: 0.05em;
+  letter-spacing: var(--suivi-saisie);
   text-transform: none;
 }
 
@@ -1492,7 +1510,7 @@ th {
   margin: var(--pas-2) 0;
   padding: var(--pas-2) var(--pas-3);
   border: var(--trait) solid var(--alerte);
-  border-left-width: 3px;
+  border-left-width: var(--trait-marque);
   background: var(--fond-alerte);
   color: var(--alerte);
   font-size: var(--texte-legende);
@@ -1664,7 +1682,7 @@ th {
    s'ouvre aussi au clic (§11.2). */
 .terme abbr {
   text-decoration: underline dotted var(--accent);
-  text-underline-offset: 3px;
+  text-underline-offset: var(--decalage-souligne);
   cursor: help;
 }
 
@@ -1686,7 +1704,7 @@ th {
   text-transform: none;
   margin: 0 0 var(--pas-3);
   padding: var(--pas-2) var(--pas-3);
-  border-left: 3px solid var(--bordure);
+  border-left: var(--trait-marque) solid var(--bordure);
   background: var(--fond-accent);
   font-size: var(--texte-legende);
   color: var(--attenue);
@@ -1864,7 +1882,7 @@ button:disabled {
   font-family: var(--police-titre);
   font-size: var(--texte-corps);
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--suivi-etape);
   text-transform: uppercase;
   color: var(--texte);
 }
@@ -1872,7 +1890,7 @@ button:disabled {
 .etape-horaire {
   font-family: var(--police-mono);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--suivi-horaire);
   color: var(--accent);
 }
 
@@ -2486,7 +2504,7 @@ button:not(:disabled):active,
    glossaire — le pointillé annonce qu'il y a quelque chose à lire, le curseur le confirme. */
 .aide {
   text-decoration: underline dotted var(--accent);
-  text-underline-offset: 3px;
+  text-underline-offset: var(--decalage-souligne);
   cursor: help;
 }
 

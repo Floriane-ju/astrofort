@@ -79,6 +79,32 @@ describe('T-0194 — l’échelle typographique', () => {
   })
 })
 
+/**
+ * T-0215 — le suivi relève de la même discipline que le corps et l'écart.
+ *
+ * §11.1 confisque la luminance comme moyen de hiérarchie ; il reste la taille et la CASSE, et
+ * la casse ne se lit qu'espacée. Le suivi est donc le second étage de la hiérarchie, et il
+ * était le seul des trois à n'avoir aucune garantie : trois valeurs sur six étaient écrites
+ * en dur dans leur règle, invisibles à toute comparaison.
+ */
+describe('T-0215 — l’échelle de suivi', () => {
+  const SUIVI = /^\s*letter-spacing:\s*([^;]+);/gm
+
+  it('ne laisse aucun suivi écrit en dur', () => {
+    // `normal` et `0` ne sont pas des valeurs de l'échelle : ce sont les deux façons de
+    // l'ANNULER, là où un texte hérite du suivi d'un libellé parent qui n'est pas le sien.
+    for (const valeur of declarations(SUIVI)) {
+      if (valeur === 'normal' || valeur === '0') continue
+      expect(valeur, valeur).toMatch(/^var\(--suivi-[a-z]+\)$/)
+    }
+  })
+
+  it('nomme chaque pas par son rôle, jamais par son rang', () => {
+    const noms = [...CSS.matchAll(/^ {2}--suivi-([a-z]+): ([\d.]+em);/gm)].map((m) => m[1]!)
+    expect(noms).toEqual(['micro', 'titre', 'marque', 'saisie', 'horaire', 'etape'])
+  })
+})
+
 describe('T-0194 — le retour d’état des contrôles', () => {
   /** Ce qui se clique, se tire ou se saisit : tout doit répondre au geste de la même façon. */
   const CONTROLES = [
