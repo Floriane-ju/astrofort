@@ -1137,9 +1137,12 @@ input.barretemps-instant {
     max-width: 100%;
   }
 
+  /* Le tiroir d'information reste utilisable : son contenu défile plutôt que d'allonger la
+     page. */
   .coque .tiroir[open] > .tiroir-contenu {
     position: static;
     width: auto;
+    max-height: 70dvh;
   }
 
   .coque-scene,
@@ -1153,12 +1156,6 @@ input.barretemps-instant {
     width: 100%;
     height: auto;
     aspect-ratio: 16 / 9;
-  }
-
-  /* Le tiroir d'information reste utilisable : son contenu défile plutôt que d'allonger la
-     page. */
-  .coque .tiroir[open] > .tiroir-contenu {
-    max-height: 70dvh;
   }
 }
 
@@ -2180,14 +2177,6 @@ button:disabled {
 .facilite-vide {
   color: var(--attenue);
   font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
-}
-
-/* En fiche, la note se lit en clair à côté des pastilles : sur un écran, cinq disques ne
-   disent pas leur total, et « 4 sur 5 » se recopie dans un carnet. */
-.facilite-ligne {
-  display: flex;
-  align-items: center;
-  gap: var(--pas-2);
 }
 
 .cible-lectures {
