@@ -12,6 +12,8 @@
 import { useState } from 'react'
 import { masqueDepuisPoints, type MasqueHorizon, type PointMasque } from '../core/site.ts'
 import { SaisieRefuseeError } from '../registry/domains.ts'
+import { nombreSaisi, refusDe } from './saisie-bornee.ts'
+import { ChampDomaine } from './ChampDomaine.tsx'
 import { Terme } from './Terme.tsx'
 
 export interface MasqueHorizonProps {
@@ -36,7 +38,12 @@ export function MasqueHorizonSaisie(props: MasqueHorizonProps) {
   const [refus, surRefus] = useState<string | null>(null)
 
   function ajoute() {
-    const point = { azimutDeg: Number(azimut), altitudeDeg: Number(altitude) }
+    // T-0208 — un relevé hors plage est RAMENÉ à sa borne, pas jeté : une crête notée à 95°
+    // est une crête à 90°, et perdre la saisie sans rien retenir n'aide personne. Un champ
+    // vide, lui, n'est pas un relevé : il reste refusé.
+    const azimutBorne = nombreSaisi('azimut_masque_deg', azimut)
+    const altitudeBornee = nombreSaisi('masque_horizon_deg', altitude)
+    const point = { azimutDeg: azimutBorne.valeur, altitudeDeg: altitudeBornee.valeur }
     try {
       // Le constructeur du masque porte les bornes du registre : on l'appelle pour valider,
       // plutôt que de recopier ici un min et un max qui divergeraient.
@@ -44,7 +51,7 @@ export function MasqueHorizonSaisie(props: MasqueHorizonProps) {
       props.surPoints([...props.points, point])
       surAzimut('')
       surAltitude('')
-      surRefus(null)
+      surRefus(refusDe(azimutBorne, altitudeBornee))
     } catch (erreur) {
       surRefus(
         erreur instanceof SaisieRefuseeError || erreur instanceof Error
@@ -94,24 +101,20 @@ export function MasqueHorizonSaisie(props: MasqueHorizonProps) {
       )}
 
       <div className="champs">
-        <label>
-          Azimut du relevé
-          <input
-            value={azimut}
-            inputMode="decimal"
-            placeholder="0 = nord, 90 = est"
-            onChange={(e) => surAzimut(e.target.value)}
-          />
-        </label>
-        <label>
-          Hauteur d’obstruction
-          <input
-            value={altitude}
-            inputMode="decimal"
-            placeholder="crête, arbre, bâtiment"
-            onChange={(e) => surAltitude(e.target.value)}
-          />
-        </label>
+        <ChampDomaine
+          domaine="azimut_masque_deg"
+          libelle="Azimut du relevé"
+          valeur={azimut}
+          surValeur={surAzimut}
+          placeholder="0 = nord, 90 = est"
+        />
+        <ChampDomaine
+          domaine="masque_horizon_deg"
+          libelle="Hauteur d’obstruction"
+          valeur={altitude}
+          surValeur={surAltitude}
+          placeholder="crête, arbre, bâtiment"
+        />
         <button type="button" onClick={ajoute}>
           Relever
         </button>

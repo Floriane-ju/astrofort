@@ -32,6 +32,7 @@ import {
 import { TracedValue } from './TracedValue.tsx'
 import { PanneauBoitier } from './PanneauBoitier.tsx'
 import { Etiquette } from './Terme.tsx'
+import { ChampDomaine } from './ChampDomaine.tsx'
 import { LectureInconnue } from './Inconnu.tsx'
 
 /** §5.1 — le type d'objectif choisit la projection, il n'ajuste pas un rendu. */
@@ -108,22 +109,20 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
       <section>
         <h2>Optique</h2>
         <div className="champs">
-          <label>
-            <Etiquette cle="focale" />
-            <input
-              value={props.focale}
-              inputMode="decimal"
-              onChange={(e) => props.surFocale(e.target.value)}
-            />
-          </label>
-          <label>
-            <Etiquette cle="ouverture" />
-            <input
-              value={props.ouverture}
-              inputMode="decimal"
-              onChange={(e) => props.surOuverture(e.target.value)}
-            />
-          </label>
+          <ChampDomaine
+            domaine="focale_mm"
+            cle="focale"
+            valeur={props.focale}
+            surValeur={props.surFocale}
+            requis
+          />
+          <ChampDomaine
+            domaine="ouverture_N"
+            cle="ouverture"
+            valeur={props.ouverture}
+            surValeur={props.surOuverture}
+            requis
+          />
           <label>
             <Etiquette cle="recadrage_capteur" />
             <select

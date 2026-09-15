@@ -14,7 +14,7 @@
 import type { MasqueHorizon, PointMasque, SeuilsSite } from '../core/site.ts'
 import { SOURCE_TABLE_BORTLE } from '../registry/bortle.ts'
 import { MasqueHorizonSaisie } from './MasqueHorizon.tsx'
-import { Etiquette } from './Terme.tsx'
+import { ChampDomaine } from './ChampDomaine.tsx'
 import { TracedValue } from './TracedValue.tsx'
 
 export interface ChampsSiteProps {
@@ -47,50 +47,44 @@ export function ChampsSite(props: ChampsSiteProps) {
     <section>
       <h2>Site</h2>
       <div className="champs">
-        <label>
-          <Etiquette cle="latitude" />
-          <input
-            value={props.latitude}
-            inputMode="decimal"
-            onChange={(e) => props.surLatitude(e.target.value)}
-          />
-        </label>
-        <label>
-          <Etiquette cle="longitude" />
-          <input
-            value={props.longitude}
-            inputMode="decimal"
-            onChange={(e) => props.surLongitude(e.target.value)}
-          />
-        </label>
-        <label>
-          <Etiquette cle="altitude_site" />
-          <input
-            value={props.altitude}
-            inputMode="decimal"
-            onChange={(e) => props.surAltitude(e.target.value)}
-          />
-        </label>
-        <label>
-          {/* Bortle est un indice ENTIER (1 à 9, DOMAINES.bortle_declare) : le pavé
-              numérique sans séparateur décimal évite une saisie qu'aucune valeur
-              du domaine n'accepterait. */}
-          <Etiquette cle="bortle" />
-          <input
-            value={props.bortle}
-            inputMode="numeric"
-            onChange={(e) => props.surBortle(e.target.value)}
-          />
-        </label>
-        <label>
-          <Etiquette cle="sqm" />
-          <input
-            value={props.sqm}
-            inputMode="decimal"
-            placeholder="prioritaire si renseigné"
-            onChange={(e) => props.surSqm(e.target.value)}
-          />
-        </label>
+        <ChampDomaine
+          domaine="latitude_deg"
+          cle="latitude"
+          valeur={props.latitude}
+          surValeur={props.surLatitude}
+          requis
+        />
+        <ChampDomaine
+          domaine="longitude_deg"
+          cle="longitude"
+          valeur={props.longitude}
+          surValeur={props.surLongitude}
+          requis
+        />
+        <ChampDomaine
+          domaine="altitude_m"
+          cle="altitude_site"
+          valeur={props.altitude}
+          surValeur={props.surAltitude}
+          requis
+        />
+        {/* Bortle est un indice ENTIER (1 à 9, DOMAINES.bortle_declare) : le pavé numérique
+            sans séparateur décimal évite une saisie qu'aucune valeur du domaine
+            n'accepterait. */}
+        <ChampDomaine
+          domaine="bortle_declare"
+          cle="bortle"
+          valeur={props.bortle}
+          surValeur={props.surBortle}
+          inputMode="numeric"
+        />
+        <ChampDomaine
+          domaine="sqm_mesure"
+          cle="sqm"
+          valeur={props.sqm}
+          surValeur={props.surSqm}
+          placeholder="prioritaire si renseigné"
+        />
       </div>
 
       <MasqueHorizonSaisie

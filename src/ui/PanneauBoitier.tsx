@@ -28,10 +28,11 @@ import {
   pitchDepuisFormat,
   type FormatCapteur,
 } from '../registry/capteur-formats.ts'
-import { DOMAINES, type DomaineId } from '../registry/domains.ts'
+import { type DomaineId } from '../registry/domains.ts'
 import { K } from '../registry/constants.ts'
 import { GLOSSAIRE, type TermeGlossaire } from '../registry/glossaire.ts'
 import { Etiquette } from './Terme.tsx'
+import { AlerteChamp, ChampDomaine } from './ChampDomaine.tsx'
 import { Bulle } from './Bulle.tsx'
 import { Icone } from './Icone.tsx'
 
@@ -55,66 +56,6 @@ const AIDE_AVANCEES =
   'unitaire et l’ISO recommandé deviennent propres à ce boîtier ; laissées vides, un ' +
   'générique du registre les remplace et toute sortie qui en dépend s’affiche [ESTIMÉ]. ' +
   'Photons to Photos les publie pour la plupart des boîtiers.'
-
-/**
- * T-0199 — le signe qui dit qu'une grandeur manque, posé au bout du libellé du champ qu'elle
- * concerne. §11.1 : le rouge ne porte jamais seul, la forme du glyphe le double.
- *
- * `nomme` plutôt que `describedby` : le glyphe n'a pas d'autre nom que la note. Il est
- * atteignable au clavier — la bulle s'ouvre sur `:focus-within`, et une note qui ne sort
- * qu'au survol n'existe pas pour qui n'a pas de souris.
- */
-function AlerteChamp({ note }: { readonly note: string }) {
-  return (
-    <Bulle texte={note} place="bas" nomme>
-      <span className="alerte-champ" role="img" tabIndex={0}>
-        <Icone nom="warning" />
-      </span>
-    </Bulle>
-  )
-}
-
-/**
- * §5.1 — un champ du mode avancé : sa borne vient du registre, jamais du composant, et le
- * laisser vide n'est pas une erreur — c'est déclarer la grandeur inconnue.
- *
- * §10.1 — le libellé est une clé du glossaire, jamais une chaîne : l'unité seule vient du
- * domaine, parce qu'elle appartient à la borne de saisie et non à la définition du terme.
- */
-function ChampCapteur({
-  domaine,
-  cle,
-  valeur,
-  surValeur,
-  requis,
-  note,
-}: {
-  readonly domaine: DomaineId
-  readonly cle: TermeGlossaire
-  readonly valeur: string
-  readonly surValeur: (v: string) => void
-  readonly requis?: boolean
-  /** T-0199 — ce que le registre met à la place, quand la grandeur reste vide. */
-  readonly note?: string | undefined
-}) {
-  const d = DOMAINES[domaine]
-  return (
-    <label>
-      <span className="champ-titre">
-        <span>
-          <Etiquette cle={cle} /> ({d.unite})
-        </span>
-        {note !== undefined && <AlerteChamp note={note} />}
-      </span>
-      <input
-        value={valeur}
-        inputMode="decimal"
-        placeholder={requis === true ? `${d.min} à ${d.max}` : 'inconnu'}
-        onChange={(e) => surValeur(e.target.value)}
-      />
-    </label>
-  )
-}
 
 /**
  * §5.1 — les grandeurs du mode avancé, dans l'ordre où elles se saisissent.
@@ -165,10 +106,11 @@ function ChampsAvances({
   return (
     <div className="champs">
       {CHAMPS_AVANCES.map(({ champ, domaine, cle }) => (
-        <ChampCapteur
+        <ChampDomaine
           key={champ}
           domaine={domaine}
           cle={cle}
+          unite
           valeur={boitier[champ]}
           surValeur={surChamp(champ)}
           note={notes[champ]}
@@ -295,15 +237,14 @@ function LigneIso({
         </p>
       ) : (
         <div className="champs">
-          <label>
-            <Etiquette cle="iso_recommande" />
-            <input
-              value={iso}
-              inputMode="numeric"
-              placeholder={lecture === undefined ? 'recommandé' : `recommandé : ${lecture.iso}`}
-              onChange={(e) => surIso(e.target.value)}
-            />
-          </label>
+          <ChampDomaine
+            domaine="iso_capture"
+            cle="iso_recommande"
+            valeur={iso}
+            surValeur={surIso}
+            inputMode="numeric"
+            placeholder={lecture === undefined ? 'recommandé' : `recommandé : ${lecture.iso}`}
+          />
         </div>
       )}
       {lecture !== undefined && (
@@ -359,9 +300,10 @@ export function PanneauBoitier(props: PanneauBoitierProps) {
                 ))}
               </select>
             </label>
-            <ChampCapteur
+            <ChampDomaine
               domaine="resolution_mpx"
               cle="resolution_capteur"
+              unite
               valeur={props.boitier.resolutionMpx}
               surValeur={surChamp('resolutionMpx')}
               requis
@@ -373,9 +315,10 @@ export function PanneauBoitier(props: PanneauBoitierProps) {
             l'autre, et c'est la seule grandeur avancée dont l'absence fausse un volume affiché.
             T-0205 — il survit au choix d'un boîtier de la base, prérempli par sa ligne : le
             réglage RAW change le poids sans changer d'appareil. */}
-        <ChampCapteur
+        <ChampDomaine
           domaine="taille_raw_mo"
           cle="poids_image"
+          unite
           valeur={props.boitier.tailleRawMo}
           surValeur={surChamp('tailleRawMo')}
           note={notes.tailleRawMo}
