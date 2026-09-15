@@ -1950,6 +1950,18 @@ button:disabled {
   font-weight: 700;
 }
 
+/* T-0215 — les trois repères du schéma étaient des caractères Unicode (« ✛ », « ● », « ★ »)
+   rendus dans la police de TEXTE : ni la grille optique, ni la graisse, ni l'alignement des
+   icônes de l'application, et un dessin qui changeait d'un poste à l'autre selon la police de
+   repli disponible. Ils passent par `Icone` comme tout le reste.
+
+   Le glyphe prend le corps d'une LÉGENDE et non celui d'une icône (1,25 rem) : à cette
+   taille, trois marqueurs auraient rempli un schéma qui tient dans 22 rem. Même arbitrage
+   que `.facilite .icone`, et même jeton. */
+.schema-astre .icone {
+  font-size: var(--texte-legende);
+}
+
 /* §3 — canevas du planétarium. Le fond est peint par le rendu, pas par la feuille de
    style : c'est lui qui bascule en palette de nuit avec le reste (§11.1). */
 .planetarium {

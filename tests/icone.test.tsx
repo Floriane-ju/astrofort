@@ -5,7 +5,7 @@
  * la police est livrée avec l'artefact, et le glyphe n'est pas annoncé comme du texte.
  */
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -86,5 +86,38 @@ describe('style des icônes §11.1', () => {
     const famille = /--police-icone:\s*([^;]+);/.exec(CSS)?.[1]?.trim()
     expect(famille).toBeDefined()
     expect(faceIcone()).toContain(`font-family: ${famille}`)
+  })
+})
+
+/**
+ * T-0215 — LA RÈGLE EXISTAIT, RIEN NE LA TENAIT.
+ *
+ * `.claude/rules/astrofort.md` interdit déjà « un caractère Unicode décoratif posé à la place
+ * d'un glyphe » ; `pastilles.test.tsx` le vérifiait pour un seul composant. Trois caractères
+ * y échappaient dans le schéma de pointage de §8.4 — « ✛ », « ● » et « ★ » —, rendus dans la
+ * police de TEXTE : ni la grille optique, ni la graisse, ni l'alignement du reste, et un
+ * dessin qui variait d'un poste à l'autre selon la police de repli disponible.
+ *
+ * Ce qui est interdit est le caractère qui DESSINE : formes géométriques, dingbats, symboles
+ * divers, emoji. Ce qui reste permis est le caractère qui SE LIT dans une phrase — « → »,
+ * « × », « − », « ° », « Δ », « · » sont de la typographie, pas des icônes, et les proscrire
+ * obligerait à poser un glyphe au milieu d'un mot.
+ */
+describe('T-0215 — aucun caractère Unicode à la place d’un glyphe', () => {
+  /** Formes géométriques, symboles divers, dingbats, emoji. Pas les flèches ni les opérateurs. */
+  const DESSINS =
+    /[\u{25A0}-\u{25FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B00}-\u{2BFF}\u{1F300}-\u{1FAFF}]/u
+
+  it('dans aucun composant de l’interface', () => {
+    const racine = join(import.meta.dirname, '..', 'src', 'ui')
+    for (const fichier of readdirSync(racine)) {
+      if (!fichier.endsWith('.tsx') && !fichier.endsWith('.ts')) continue
+      // Les commentaires CITENT les caractères proscrits pour dire qu'ils le sont.
+      const source = readFileSync(join(racine, fichier), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '')
+      const trouve = DESSINS.exec(source)
+      expect(trouve?.[0], `${fichier} — « ${trouve?.[0]} » doit passer par <Icone>`).toBeUndefined()
+    }
   })
 })

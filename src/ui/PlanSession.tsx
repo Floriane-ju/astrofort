@@ -13,6 +13,7 @@ import type { EtapePlan, PlanSession as Plan } from '../core/session.ts'
 import type { Site } from '../core/ephem.ts'
 import type { FenetreUtile } from '../core/moon.ts'
 import type { Etoile } from '../data/catalog.ts'
+import { Icone } from './Icone.tsx'
 import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, Terme } from './Terme.tsx'
 import { heure } from './horaire.ts'
@@ -289,7 +290,7 @@ function Pointage({ etape, ...props }: EtapeProps) {
                 était bonne, l'effet nul. Le schéma est une image composée en HTML. */}
           <div className="schema" role="img" aria-label="Schéma du cadre, cible au centre">
             <span className="schema-astre schema-cible" style={{ left: '50%', top: '50%' }}>
-              ✛
+              <Icone nom="my_location" />
             </span>
             {carte.ancrages.map((ancrage) => (
               <span
@@ -300,7 +301,8 @@ function Pointage({ etape, ...props }: EtapeProps) {
                   top: `${(1 / 2 - ancrage.yCadre) * POURCENT}%`,
                 }}
               >
-                ●{ancrage.principal ? ' ★' : ''}
+                <Icone nom="circle" />
+                {ancrage.principal && <Icone nom="star" />}
               </span>
             ))}
           </div>
@@ -317,7 +319,18 @@ function Pointage({ etape, ...props }: EtapeProps) {
             <tbody>
               {carte.ancrages.map((ancrage) => (
                 <tr key={`${ancrage.adH}-${ancrage.decDeg}-l`}>
-                  <td>{ancrage.principal ? 'principal ★' : 'secondaire'}</td>
+                  {/* Le glyphe REND LA LIGNE AU SCHÉMA : sans lui, rien ne dit lequel des
+                      points de l'image est celui que la ligne décrit. Le mot porte le sens,
+                      l'icône reste donc `aria-hidden` — c'est le défaut d'`Icone`. */}
+                  <td>
+                    {ancrage.principal ? (
+                      <>
+                        principal <Icone nom="star" />
+                      </>
+                    ) : (
+                      'secondaire'
+                    )}
+                  </td>
                   <td>{ancrage.magV.toFixed(1)} mag</td>
                   <td>{ancrage.separationDeg.toFixed(2)} °</td>
                   <td>{ancrage.deltaAdH.toFixed(3)} h</td>
