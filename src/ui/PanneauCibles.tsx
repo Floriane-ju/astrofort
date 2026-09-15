@@ -107,13 +107,19 @@ export function PanneauCibles(props: PanneauCiblesProps) {
 
   const typesOfferts = useMemo(() => typesPresents(lignes), [lignes])
 
-  const retenues = useMemo(() => {
+  // Calculé indépendamment de la portée active : le libellé de l'onglet « Photographiables »
+  // en a besoin même quand c'est « Tout le catalogue » qui est affiché.
+  const photographiables = useMemo(() => {
     const filtrees = filtreLignes(lignes, { type, magMax, recherche })
-    if (portee === 'CATALOGUE') return filtrees
     // Une cible écartée porte une note et pas de pose : elle n'est pas photographiable, donc
     // elle ne passe pas cette portée-là. C'est la POSE qui décide, pas la présence d'une note.
     return filtrees.filter((l) => etats.get(l.objet.designation)?.pose != null)
-  }, [lignes, type, magMax, recherche, portee, etats])
+  }, [lignes, type, magMax, recherche, etats])
+
+  const retenues = useMemo(() => {
+    if (portee === 'CATALOGUE') return filtreLignes(lignes, { type, magMax, recherche })
+    return photographiables
+  }, [lignes, type, magMax, recherche, portee, photographiables])
 
   // §6.4 — le haut de la liste est demandé au réseau, une fois, après que la saisie s'est
   // posée. Ce sont les RÉSULTATS qui déclenchent, donc les trois gestes en sont couverts :
@@ -160,6 +166,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
             onClick={() => majCatalogue({ portee: p })}
           >
             {LIBELLE_PORTEE[p]}
+            {p === 'PHOTOGRAPHIABLES' ? ` (${photographiables.length.toLocaleString('fr-FR')})` : ''}
           </button>
         ))}
       </div>
