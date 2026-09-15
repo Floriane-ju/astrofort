@@ -1,0 +1,7 @@
+# Les `overrides` de pnpm 11 vivent ici, plus dans package.json.
+#
+# `fast-uri` est tiré par `ajv`, sous `vite-plugin-pwa > workbox-build`, qui le borne à une
+# plage vulnérable (GHSA host confusion et SSRF). Rien en amont ne remonte : l'override est le
+# seul moyen de faire passer `pnpm audit`, que la CI traite comme un arrêt (T-0077).
+overrides:
+  fast-uri: ^3.1.6
