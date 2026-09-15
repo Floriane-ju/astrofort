@@ -131,6 +131,8 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       modeReseau={modeReseau}
       persistance={persistance}
       poids={poids}
+      profondeurMag={chaine.index.profondeurMag}
+      sbCiel={ciel.ok ? ciel.ciel.sbCiel.value : null}
     />
   )
 

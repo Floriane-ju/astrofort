@@ -10,8 +10,8 @@
  * n'appartient pas plus à la vue qu'au plan de séance. Ce qui reste ici ne décrit que le
  * rendu, et c'est ce qui rend la carte repliable sans rien perdre.
  *
- * Aucun calcul ne descend ici : `etatProfondeur` est la même fonction que celle que la boucle
- * de rendu consulte, appelée sur le même état de scène.
+ * La profondeur affichée se lit dans la barre haute (`BarreHaut.tsx`), pas ici : c'est une
+ * lecture d'atelier, pas un réglage de rendu, et elle reste visible carte repliée.
  */
 
 import {
@@ -19,7 +19,7 @@ import {
   RAPPEL_FIGURES,
   ecartFrontieresDeg,
 } from '../core/constellations.ts'
-import { bornesZoom, etatProfondeur, type ModeProjection } from '../core/projection.ts'
+import { bornesZoom, type ModeProjection } from '../core/projection.ts'
 import type { MasqueHorizon } from '../core/site.ts'
 import type { CouchesActives } from './dessine-ciel.ts'
 import { RACCOURCIS_CLAVIER } from './planetarium-gestes.ts'
@@ -31,10 +31,6 @@ export interface PanneauVueProps {
   /** §5.1 — la projection de l'objectif déclaré au panneau matériel, pas un réglage de rendu. */
   readonly modeObjectif: ModeProjection
   readonly gaiaCharge: boolean
-  /** Magnitude la plus faible du paquet chargé : au-delà, le champ paraît plus pauvre qu'il n'est. */
-  readonly profondeurMag: number
-  /** §2.2 — fond de ciel du site : c'est lui qui plafonne la profondeur en vue réaliste. */
-  readonly sbCiel: number | null
   /** Époque de l'instant affiché : elle chiffre l'écart de précession des frontières B1875. */
   readonly epoqueAnnee: number
   /** §4.1 — relief du site : la couche Sol masque ce relief, et le déclare quand il est supposé. */
@@ -59,11 +55,10 @@ const COUCHES: readonly (readonly [keyof CouchesActives, string])[] = [
 export function PanneauVue(props: PanneauVueProps) {
   const { vue, rendu, actions } = useScene()
   const { mode: modeInterface } = useSeance()
-  const { fovDeg, mode } = vue
+  const { mode } = vue
   const { couches, vueRealiste } = rendu
 
   const bornes = bornesZoom(props.gaiaCharge, mode)
-  const profondeur = etatProfondeur(fovDeg, props.profondeurMag, props.sbCiel, vueRealiste)
 
   return (
     <>
@@ -117,9 +112,6 @@ export function PanneauVue(props: PanneauVueProps) {
         {/* T-0069 — un raccourci qui n'est écrit que dans le code n'existe pas. Il est
             annoncé ici, avec les autres gestes de la scène (§11.2). */}
         <p className="etat">{RACCOURCIS_CLAVIER}</p>
-
-        <TracedValue terme="magnitude_limite_rendue" trace={profondeur.magLimite} unite="mag" />
-        {profondeur.cause !== undefined && <p className="cause">{profondeur.cause}</p>}
       </section>
 
       <section>

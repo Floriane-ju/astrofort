@@ -768,6 +768,8 @@ describe('T-0184 — un seul tiroir pour la vérification et les réglages', () 
         surImport: () => undefined,
       },
       poids: POIDS_INERTES,
+      profondeurMag: 12,
+      sbCiel: null,
     }
     return renderToStaticMarkup(<BarreHaut {...props} />)
   }

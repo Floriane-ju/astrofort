@@ -137,8 +137,6 @@ describe('§5.1 — le type d’objectif pilote la projection de la scène', () 
       createElement(PanneauVue, {
         modeObjectif: modeObjectif('FISHEYE'),
         gaiaCharge: false,
-        profondeurMag: 6.5,
-        sbCiel: 20.6,
         epoqueAnnee: 2026.6,
         masque: masquePlat(),
       }),

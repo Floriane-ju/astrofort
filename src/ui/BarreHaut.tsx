@@ -18,10 +18,17 @@
  * la vérification d'abord parce qu'elle seule porte une conduite à tenir. L'alerte de
  * persistance remonte sur le tiroir fermé et NOMME sa section — une information qui n'existe
  * que pour qui pense à ouvrir un menu n'existe pas (§11.3).
+ *
+ * La profondeur affichée rejoint ici les autres lectures d'atelier : elle se lisait dans la
+ * carte Vue, qu'il fallait déplier pour la voir. Le survol suffit à la comprendre (glossaire),
+ * donc pas de `<details>` ici — la carte Vue reste repliable sans rien lui retirer.
  */
 
 import type { EtatDemarrage } from '../data/bootstrap.ts'
 import type { CapteurMode } from '../data/equipment.ts'
+import { etatProfondeur } from '../core/projection.ts'
+import { GLOSSAIRE } from '../registry/glossaire.ts'
+import { Bulle } from './Bulle.tsx'
 import { MenuReglages } from './MenuReglages.tsx'
 import type { SaisiePoids } from './app-saisie.ts'
 import { ALERTE_VERIFICATION, Verification } from './Verification.tsx'
@@ -30,6 +37,7 @@ import { Inconnu } from './Inconnu.tsx'
 import { Icone } from './Icone.tsx'
 import type { Persistance } from './app-donnees.ts'
 import { poseMode, useSeance, type ModeInterface } from './seance-etat.ts'
+import { useTrancheScene, type EtatScene } from './scene-etat.ts'
 
 export interface BarreHautProps {
   readonly focale: string
@@ -42,6 +50,18 @@ export interface BarreHautProps {
   readonly persistance: Persistance
   /** §8.3 — les poids de scoring, réglés depuis le tiroir des réglages. */
   readonly poids: SaisiePoids
+  /** Magnitude la plus faible du paquet chargé : au-delà, le champ paraît plus pauvre qu'il n'est. */
+  readonly profondeurMag: number
+  /** §2.2 — fond de ciel du site : c'est lui qui plafonne la profondeur en vue réaliste. */
+  readonly sbCiel: number | null
+}
+
+/** Sélecteurs définis au niveau du module — `useTrancheScene` exige une identité stable. */
+function fovScene(etat: EtatScene): number {
+  return etat.vue.fovDeg
+}
+function vueRealisteScene(etat: EtatScene): boolean {
+  return etat.rendu.vueRealiste
 }
 
 /**
@@ -55,6 +75,17 @@ const MODES: readonly (readonly [ModeInterface, string])[] = [
 
 export function BarreHaut(props: BarreHautProps) {
   const { mode } = useSeance()
+  const fovDeg = useTrancheScene(fovScene)
+  const vueRealiste = useTrancheScene(vueRealisteScene)
+  const profondeur = etatProfondeur(fovDeg, props.profondeurMag, props.sbCiel, vueRealiste)
+  const entreeProfondeur = GLOSSAIRE.magnitude_limite_rendue
+  // Plus de `<details>` : la glose seule ne dirait pas pourquoi la profondeur bouge avec le
+  // zoom, ni ce qui la plafonne en vue réaliste — l'explication complète du glossaire, jointe
+  // à la cause d'un catalogue épuisé quand elle existe, tient donc seule le survol (§10.1).
+  const aideProfondeur =
+    profondeur.cause === undefined
+      ? entreeProfondeur.explication
+      : `${entreeProfondeur.explication} ${profondeur.cause}`
 
   return (
     <>
@@ -65,7 +96,14 @@ export function BarreHaut(props: BarreHautProps) {
         {/* T-0149 — un champ vidé pour être retapé n'efface pas la lecture : il la marque. */}
         {props.focale.trim() === '' ? <Inconnu /> : props.focale} mm f/
         {props.ouverture.trim() === '' ? <Inconnu /> : props.ouverture} ·{' '}
-        {props.capteurMode === 'FULL_FRAME' ? 'plein format' : 'APS-C'}
+        {props.capteurMode === 'FULL_FRAME' ? 'plein format' : 'APS-C'} ·{' '}
+        <span className="terme">
+          <Bulle texte={aideProfondeur} place="bas">
+            <abbr>
+              {entreeProfondeur.libelle} {profondeur.magLimite.value.toFixed(1)} mag
+            </abbr>
+          </Bulle>
+        </span>
       </p>
 
       {/* §11.1 — le mode nuit est un geste de terrain : il reste à portée, dans la barre. */}

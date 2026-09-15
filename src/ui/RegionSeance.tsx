@@ -79,7 +79,6 @@ export function ColonneMateriel({ children }: { readonly children: ReactNode }) 
 export function CartesSeance(props: RegionSeanceProps) {
   const { chaine, lieu, materiel } = props
   const { calcul, ciel } = chaine
-  const sbCiel = ciel.ok ? ciel.ciel.sbCiel.value : null
 
   /* §11.2 — la seule région qui survit à l'impression : elle est nommée pour ça. */
   const planImprimable =
@@ -108,8 +107,6 @@ export function CartesSeance(props: RegionSeanceProps) {
         <PanneauVue
           modeObjectif={modeObjectif(materiel.typeObjectif)}
           gaiaCharge={props.gaiaCharge}
-          profondeurMag={chaine.index.profondeurMag}
-          sbCiel={sbCiel}
           epoqueAnnee={props.epoqueAnnee}
           masque={chaine.masque}
         />
