@@ -22,6 +22,7 @@ import type { TypeObjet } from '../data/deepsky.ts'
 import { APPARENCE_OBJET, EPAISSEUR_BORD_PX, teintesReference } from './apparence-objets.ts'
 import { Icone } from './Icone.tsx'
 import { LIBELLE_TYPE_OBJET } from './libelles-objet.ts'
+import { Tiroir } from './Tiroir.tsx'
 
 /**
  * Le fourre-tout ferme la marche : une légende qui s'ouvre sur « type inconnu » enseigne
@@ -80,45 +81,42 @@ export function feuilleLegende(modeNuit: boolean): string {
 
 export function LegendeCouleurs(props: { readonly modeNuit: boolean }) {
   return (
-    <details className="tiroir tiroir-legende">
-      <summary>Légende</summary>
-      <div className="tiroir-contenu">
-        <style>{feuilleLegende(props.modeNuit)}</style>
+    <Tiroir modificateur="legende" resume="Légende">
+      <style>{feuilleLegende(props.modeNuit)}</style>
 
-        <section>
-          <h2>Couleur — famille d’objet</h2>
-          <ul className="legende-couleurs">
-            {LIGNES_LEGENDE.map((ligne, rang) => (
-              <li key={ligne.types[0]}>
-                {ligne.croix ? (
-                  <Icone nom="close" classe={`legende-croix legende-temoin-${rang}`} />
-                ) : (
-                  <span className={`legende-pastille legende-temoin-${rang}`} aria-hidden="true" />
-                )}
-                {ligne.types.map((type) => LIBELLE_TYPE_OBJET[type]).join(', ')}
-              </li>
-            ))}
-          </ul>
-        </section>
+      <section>
+        <h2>Couleur — famille d’objet</h2>
+        <ul className="legende-couleurs">
+          {LIGNES_LEGENDE.map((ligne, rang) => (
+            <li key={ligne.types[0]}>
+              {ligne.croix ? (
+                <Icone nom="close" classe={`legende-croix legende-temoin-${rang}`} />
+              ) : (
+                <span className={`legende-pastille legende-temoin-${rang}`} aria-hidden="true" />
+              )}
+              {ligne.types.map((type) => LIBELLE_TYPE_OBJET[type]).join(', ')}
+            </li>
+          ))}
+        </ul>
+      </section>
 
-        {/* La forme n'est pas une propriété du type mais du CATALOGUE : sans grand axe, aucune
-            ellipse ne peut être dessinée à l'échelle, et en inventer une mentirait sur la
-            seule chose que le marqueur a à dire. Les deux témoins sont donc peints en gris
-            d'interface — les rattacher à une teinte laisserait croire à une famille. */}
-        <section>
-          <h2>Forme — étendue de l’objet</h2>
-          <ul className="legende-couleurs legende-formes">
-            <li>
-              <span className="legende-pastille legende-forme" aria-hidden="true" />
-              étendue connue : le marqueur est à l’échelle de l’objet dans le ciel
-            </li>
-            <li>
-              <Icone nom="close" classe="legende-croix legende-forme" />
-              étendue inconnue au catalogue : une croix, quel que soit le type
-            </li>
-          </ul>
-        </section>
-      </div>
-    </details>
+      {/* La forme n'est pas une propriété du type mais du CATALOGUE : sans grand axe, aucune
+          ellipse ne peut être dessinée à l'échelle, et en inventer une mentirait sur la
+          seule chose que le marqueur a à dire. Les deux témoins sont donc peints en gris
+          d'interface — les rattacher à une teinte laisserait croire à une famille. */}
+      <section>
+        <h2>Forme — étendue de l’objet</h2>
+        <ul className="legende-couleurs legende-formes">
+          <li>
+            <span className="legende-pastille legende-forme" aria-hidden="true" />
+            étendue connue : le marqueur est à l’échelle de l’objet dans le ciel
+          </li>
+          <li>
+            <Icone nom="close" classe="legende-croix legende-forme" />
+            étendue inconnue au catalogue : une croix, quel que soit le type
+          </li>
+        </ul>
+      </section>
+    </Tiroir>
   )
 }

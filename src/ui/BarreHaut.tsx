@@ -35,6 +35,7 @@ import { ALERTE_VERIFICATION, Verification } from './Verification.tsx'
 import { ModeNuit, type EtatModeNuit } from './ModeNuit.tsx'
 import { Inconnu } from './Inconnu.tsx'
 import { Icone } from './Icone.tsx'
+import { Tiroir } from './Tiroir.tsx'
 import type { Persistance } from './app-donnees.ts'
 import { poseMode, useSeance, type ModeInterface } from './seance-etat.ts'
 import { useTrancheScene, type EtatScene } from './scene-etat.ts'
@@ -107,18 +108,20 @@ export function BarreHaut(props: BarreHautProps) {
       </p>
 
       {/* §11.1 — le mode nuit est un geste de terrain : il reste à portée, dans la barre. */}
-      <details className="tiroir tiroir-nuit">
-        <summary>
-          <Icone
-            nom={props.modeNuit.actif ? 'dark_mode' : 'light_mode'}
-            libelle={props.modeNuit.actif ? 'actif' : 'inactif'}
-          />
-          mode nuit
-        </summary>
-        <div className="tiroir-contenu">
-          <ModeNuit etat={props.modeNuit} surChangement={props.surModeNuit} />
-        </div>
-      </details>
+      <Tiroir
+        modificateur="nuit"
+        resume={
+          <>
+            <Icone
+              nom={props.modeNuit.actif ? 'dark_mode' : 'light_mode'}
+              libelle={props.modeNuit.actif ? 'actif' : 'inactif'}
+            />
+            mode nuit
+          </>
+        }
+      >
+        <ModeNuit etat={props.modeNuit} surChangement={props.surModeNuit} />
+      </Tiroir>
 
       {/* §11.3 — le commutateur de premier rang. `aria-pressed` plutôt qu'`aria-expanded` :
           ces deux boutons ne déplient rien, ils choisissent lequel des deux états l'écran
@@ -138,28 +141,29 @@ export function BarreHaut(props: BarreHautProps) {
       </div>
 
       {/* T-0047 / T-0184 — ce qui sort du chemin principal : dernier élément de la barre,
-          donc le plus à droite. T-0189 — le tiroir n'a plus AUCUN JavaScript : Échap vient de
-          l'écoute unique du document, la même pour les trois tiroirs, et elle ramène le focus
-          sur le `<summary>`. `<details>` porte le reste, ouverture, clavier et annonce. */}
-      <details className="tiroir tiroir-outils" data-alerte={props.persistance.echec}>
-        {/* T-0041 — le libellé porte l'alerte en mots, et dit de quelle section elle vient :
-            le rouge ne l'annonce jamais seul (§11.1). */}
-        <summary>
-          <Icone nom="settings" />
-          {props.persistance.echec ? ALERTE_VERIFICATION : 'réglages'}
-        </summary>
-        <div className="tiroir-contenu">
-          <Verification
-            etat={props.etat}
-            modeReseau={props.modeReseau}
-            messagePersistance={props.persistance.message}
-            echecPersistance={props.persistance.echec}
-            surExport={props.persistance.surExport}
-            surImport={props.persistance.surImport}
-          />
-          <MenuReglages poids={props.poids} />
-        </div>
-      </details>
+          donc le plus à droite. */}
+      <Tiroir
+        modificateur="outils"
+        alerte={props.persistance.echec}
+        /* T-0041 — le libellé porte l'alerte en mots, et dit de quelle section elle vient :
+           le rouge ne l'annonce jamais seul (§11.1). */
+        resume={
+          <>
+            <Icone nom="settings" />
+            {props.persistance.echec ? ALERTE_VERIFICATION : 'réglages'}
+          </>
+        }
+      >
+        <Verification
+          etat={props.etat}
+          modeReseau={props.modeReseau}
+          messagePersistance={props.persistance.message}
+          echecPersistance={props.persistance.echec}
+          surExport={props.persistance.surExport}
+          surImport={props.persistance.surImport}
+        />
+        <MenuReglages poids={props.poids} />
+      </Tiroir>
     </>
   )
 }

@@ -11,7 +11,7 @@
  * persistante — congédier ne doit pas avoir retiré `:hover` / `:focus-within` à l'ancre.
  */
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { cibleEchap } from '../src/ui/gere-echap.ts'
@@ -66,11 +66,25 @@ describe('T-0189 — les trois tiroirs sont couverts par la même règle', () =>
     }
   })
 
-  it('les trois tiroirs portent la classe que l’écoute reconnaît', () => {
-    const barreHaut = readFileSync(join(RACINE, 'ui', 'BarreHaut.tsx'), 'utf8')
-    const barreBas = readFileSync(join(RACINE, 'ui', 'BarreBas.tsx'), 'utf8')
-    expect(barreHaut).toContain('className="tiroir tiroir-nuit"')
-    expect(barreHaut).toContain('className="tiroir tiroir-outils"')
-    expect(barreBas).toContain('className="tiroir tiroir-site"')
+  /**
+   * T-0215 — la classe ne s'écrit plus au site d'appel, elle se construit dans `Tiroir`.
+   *
+   * L'assertion précédente citait les chaînes littérales de deux fichiers : elle garantissait
+   * la propriété en énumérant les tiroirs, donc elle ratait le quatrième (`tiroir-legende`) et
+   * elle aurait raté le cinquième. La propriété tient désormais par CONSTRUCTION, et c'est
+   * cela qui se vérifie : un seul endroit bâtit un `<details class="tiroir">`.
+   */
+  it('bâtit la classe que l’écoute reconnaît, en un seul endroit', () => {
+    const tiroir = readFileSync(join(RACINE, 'ui', 'Tiroir.tsx'), 'utf8')
+    expect(tiroir).toContain('<details')
+    expect(tiroir).toContain('`tiroir tiroir-${modificateur}`')
+  })
+
+  it('ne laisse aucun tiroir se bâtir hors de ce composant', () => {
+    for (const fichier of readdirSync(join(RACINE, 'ui'))) {
+      if (!fichier.endsWith('.tsx') || fichier === 'Tiroir.tsx') continue
+      const source = readFileSync(join(RACINE, 'ui', fichier), 'utf8')
+      expect(source, fichier).not.toMatch(/className=(["'`])tiroir[\s"'`]/)
+    }
   })
 })

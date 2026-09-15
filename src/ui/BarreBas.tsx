@@ -31,6 +31,7 @@ import { BarreTemps } from './BarreTemps.tsx'
 import { ChampsSite, type ChampsSiteProps } from './ChampsSite.tsx'
 import { Compteur } from './Compteur.tsx'
 import { LegendeCouleurs } from './LegendeCouleurs.tsx'
+import { Tiroir } from './Tiroir.tsx'
 import { HAUTEUR_MAX_DEG, HAUTEUR_MIN_DEG, tourBorne } from './planetarium-gestes.ts'
 import { majVue, useScene } from './scene-etat.ts'
 import {
@@ -131,16 +132,16 @@ export function BarreBas(props: BarreBasProps) {
     <>
       {/* Le lieu se LIT sur la pastille et se RÈGLE dans le tiroir : ce qui comptait n'était
           pas que les six champs soient dépliés, c'était que leurs valeurs soient visibles. */}
-      <details className="tiroir tiroir-site">
-        <summary>
+      <Tiroir
+        modificateur="site"
+        resume={
           <span className="barrebas-lieu">
             {site.latitude}° / {site.longitude}° · Bortle {site.bortle}
           </span>
-        </summary>
-        <div className="tiroir-contenu">
-          <ChampsSite {...site} />
-        </div>
-      </details>
+        }
+      >
+        <ChampsSite {...site} />
+      </Tiroir>
 
       {/* La légende dit ce que les couleurs des marqueurs signifient. Elle voisine le lieu
           plutôt que la scène : c'est une convention de lecture, pas une commande de vue. */}
