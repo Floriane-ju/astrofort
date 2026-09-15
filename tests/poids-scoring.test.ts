@@ -69,6 +69,7 @@ function contexte(poids?: PoidsScoring): ContexteSession {
     sbCielNoir: 20.95,
     mLimOeil: 5.9,
     tMaxS: 13,
+    domaineCpFerme: null,
     snrCible: 10,
     typeMonture: 'TRACKER',
     ...(poids === undefined ? {} : { poids }),

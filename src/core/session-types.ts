@@ -31,6 +31,7 @@ export type CauseEcart =
   | 'HORS_PORTEE'
   | 'CONFLIT_CRENEAU'
   | 'BUDGET'
+  | 'SUIVI'
 
 export interface CibleEcartee {
   readonly designation: string
@@ -99,6 +100,16 @@ export interface ContexteSession {
   readonly sbCielNoir: number
   readonly mLimOeil: number | null
   readonly tMaxS: number | null
+  /**
+   * §5.2 — la cause du verrou du domaine ciel profond quand il est fermé — pas de suivi,
+   * ou monture altazimutale —, `null` quand il est ouvert.
+   *
+   * Le PRD nomme cette sortie `domaine_cp_ouvert`, un booléen. Elle porte ici sa cause plutôt
+   * qu'un drapeau : un domaine fermé sans phrase à afficher laisserait l'écran vide et muet,
+   * et c'est le seul résultat que §5.2 interdit — « présenté comme fermé, avec le grand champ
+   * en alternative ». La phrase vient de `profilSuivi`, elle n'est pas réécrite ici.
+   */
+  readonly domaineCpFerme: string | null
   readonly snrCible: number
   readonly typeMonture: TypeMonture
   readonly filtres?: readonly FamilleFiltre[]

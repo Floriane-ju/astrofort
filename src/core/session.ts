@@ -83,6 +83,13 @@ export function planSession(
     )
   }
 
+  // §5.2 — domaine ciel profond verrouillé : le plan n'est pas vide « faute de cible », il est
+  // fermé, et il le dit avec le grand champ en alternative. `preFiltre` écarterait déjà tout,
+  // mais le titre de l'écran doit nommer le suivi, pas une contrainte dominante anonyme.
+  if (contexte.domaineCpFerme !== null) {
+    return planVide(contexte, poids, [], new Map(), null, contexte.domaineCpFerme)
+  }
+
   const sbCielBase = contexte.sbCielNoir - contexte.nuit.penaliteSbMag
   const prefiltre = preFiltre(contexte, catalogue)
   const ecartees: CibleEcartee[] = [...prefiltre.ecartees]
@@ -265,6 +272,8 @@ function planVide(
   ecartees: readonly CibleEcartee[],
   comptes: ReadonlyMap<CauseEcart, number>,
   causeFenetre: string | null,
+  /** §5.2 — le domaine fermé garde son alternative : c'est la nuit absente qui n'en a pas. */
+  causeDomaine: string | null = null,
 ): PlanSession {
   const dominante = contrainteDominante(comptes)
   return {
@@ -276,9 +285,10 @@ function planVide(
     calibration: null,
     message:
       causeFenetre ??
+      causeDomaine ??
       'Aucune cible du catalogue ne franchit le pré-filtrage cette nuit-là. La liste des ' +
         'cibles écartées est donnée à part : le plan n’est pas rempli avec elles.',
-    ...(causeFenetre === null && dominante !== undefined
+    ...(causeFenetre === null && causeDomaine === null && dominante !== undefined
       ? { contrainteDominante: dominante }
       : {}),
     ...(noteCouverture(comptes) === undefined

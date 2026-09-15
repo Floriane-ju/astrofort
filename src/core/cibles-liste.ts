@@ -209,27 +209,37 @@ export interface FiltreListe {
  * La recherche garde l'ordre de `chercheCatalogue` — préfixes d'abord, puis du plus
  * brillant au plus faible — et sa portée est celle des lignes reçues, jamais plafonnée.
  */
-export function filtreLignes(
-  lignes: readonly LigneCible[],
+export function filtreObjets(
+  objets: readonly ObjetCielProfond[],
   filtre: FiltreListe,
-): readonly LigneCible[] {
+): readonly ObjetCielProfond[] {
   const parType =
-    filtre.type === null ? lignes : lignes.filter((l) => l.objet.type === filtre.type)
+    filtre.type === null ? objets : objets.filter((o) => o.type === filtre.type)
 
   const parMag =
     filtre.magMax >= DOMAINES.m_int.max
       ? parType
-      : parType.filter((l) => l.objet.vMag !== null && l.objet.vMag <= filtre.magMax)
+      : parType.filter((o) => o.vMag !== null && o.vMag <= filtre.magMax)
 
   if (filtre.recherche.trim() === '') return parMag
 
-  const objets = parMag.map((l) => l.objet)
-  const rangs = new Map(
-    chercheCatalogue(objets, filtre.recherche, objets.length).map((o, i) => [o.designation, i]),
-  )
-  return parMag
-    .filter((l) => rangs.has(l.objet.designation))
-    .sort((a, b) => rangs.get(a.objet.designation)! - rangs.get(b.objet.designation)!)
+  return chercheCatalogue(parMag, filtre.recherche, parMag.length)
+}
+
+/**
+ * Les lignes retenues, dans l'ordre que `filtreObjets` impose. La scène applique les MÊMES
+ * trois restrictions aux marqueurs qu'elle estompe (`cibles-en-avant.ts`) : deux tamis
+ * séparés auraient fini par retenir deux ensembles différents pour un seul réglage affiché.
+ */
+export function filtreLignes(
+  lignes: readonly LigneCible[],
+  filtre: FiltreListe,
+): readonly LigneCible[] {
+  const parDesignation = new Map(lignes.map((l) => [l.objet.designation, l]))
+  return filtreObjets(
+    lignes.map((l) => l.objet),
+    filtre,
+  ).map((o) => parDesignation.get(o.designation)!)
 }
 
 // ---------------------------------------------------------------------------

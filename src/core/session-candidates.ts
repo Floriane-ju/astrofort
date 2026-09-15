@@ -288,6 +288,15 @@ export function preFiltre(
     }
   }
 
+  // §5.2 — le verrou du domaine passe AVANT toute contrainte de cible : sans suivi, aucune
+  // cible ciel profond n'est planifiable, quelle que soit sa taille ou sa magnitude. Le plafonner
+  // par la NPF ne suffisait pas — une cible brillante restait sous le plafond d'intégration de
+  // §7.3 et s'affichait « photographiable » en 1 954 poses de 2 s sur un trépied fixe.
+  if (contexte.domaineCpFerme !== null) {
+    for (const objet of catalogue) ecarte(objet, 'SUIVI', contexte.domaineCpFerme)
+    return { candidates: [], ecartees, comptes }
+  }
+
   for (const objet of catalogue) {
     const taille = objet.majAxArcmin
     if (taille === null || objet.vMag === null) {

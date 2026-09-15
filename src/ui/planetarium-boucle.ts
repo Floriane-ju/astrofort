@@ -75,6 +75,8 @@ export interface EtatBoucle {
   readonly lune: LuneEcran | null
   /** §9.1 / T-0142 — l'optique quand la carte de pose est demandée dans le cadre, `null` sinon. */
   readonly poseCadre: OptiquePose | null
+  /** §6.4 — les cibles retenues par les filtres du catalogue, `null` si aucun n'est actif. */
+  readonly enAvant: ReadonlySet<string> | null
   readonly vue: VueScene
   readonly modeTemps: string
   readonly facteur: number
@@ -188,6 +190,7 @@ export function useBoucleRendu(entree: {
         nomsCorps: NOMS_CORPS,
         cadres,
         ...(courant.poseCadre === null ? {} : { poseCadre: courant.poseCadre }),
+        ...(courant.enAvant === null ? {} : { enAvant: courant.enAvant }),
         couches: courant.couches,
         magLimite: courant.magLimite,
         sbCiel: courant.sbCiel,

@@ -282,6 +282,9 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
         sbCielNoir: ciel.ciel.sbCiel.value,
         mLimOeil: ciel.ciel.mLimOeil.value,
         tMaxS: calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value,
+        // §5.2 — le verrou du domaine, pas seulement son plafond de pose : sans suivi, la NPF
+        // seule laissait passer les cibles brillantes, chiffrées en milliers de poses de 2 s.
+        domaineCpFerme: calcul.suivi.cause,
         snrCible: PRESET_SNR_PLAN,
         typeMonture: materiel.typeMonture,
         poids,

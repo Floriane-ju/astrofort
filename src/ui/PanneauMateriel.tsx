@@ -388,7 +388,7 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
           <TracedValue terme="pouvoir_separateur" trace={lectures.optique.dawesAs} unite="&quot;" />
           <TracedValue terme="npf" trace={lectures.poseNpf} unite="s" />
           <TracedValue terme="pose_max_suivi" trace={lectures.suivi.tMaxSuiviS} unite="s" />
-          {lectures.suivi.cause !== undefined && <p className="cause">{lectures.suivi.cause}</p>}
+          {lectures.suivi.cause !== null && <p className="cause">{lectures.suivi.cause}</p>}
           {lectures.suivi.gainMiseEnStation !== undefined && (
             <p className="cause">{lectures.suivi.gainMiseEnStation}</p>
           )}

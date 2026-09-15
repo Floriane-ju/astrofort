@@ -18,7 +18,7 @@
 import { useSyncExternalStore } from 'react'
 
 /** Les cartes posées sur la scène. Chacune est nommée d'après ce qu'elle montre. */
-export type CleCarte = 'MATERIEL' | 'VUE' | 'PLAN'
+export type CleCarte = 'VUE' | 'PLAN'
 
 export interface Decalage {
   readonly x: number
@@ -48,10 +48,13 @@ const SANS_DECALAGE: Decalage = Object.freeze({ x: 0, y: 0 })
  *
  * T-0182 — la carte Cible est partie : la fiche prend la place de la liste dans le panneau,
  * là où on l'a choisie.
+ *
+ * T-0197 — la carte Matériel aussi : elle est devenue la colonne de gauche. Un repli ne lui
+ * rendait rien — c'est la saisie qu'on relit le plus, et la seule dont chaque champ change
+ * tout le reste.
  */
 const ETAT_INITIAL: EtatCoque = Object.freeze({
   cartes: Object.freeze({
-    MATERIEL: { ouverte: true, decalage: SANS_DECALAGE },
     VUE: { ouverte: false, decalage: SANS_DECALAGE },
     PLAN: { ouverte: false, decalage: SANS_DECALAGE },
   }),
@@ -122,6 +125,7 @@ export interface Rect {
 export interface MargesCoque {
   readonly haut: number
   readonly bas: number
+  readonly gauche: number
   readonly droite: number
 }
 
@@ -134,7 +138,7 @@ export interface Bornes {
  * Ramène une valeur dans ses bornes, même quand elles sont inversées.
  *
  * Elles le sont dès qu'une carte est plus large ou plus haute que la place restante — cas
- * réel sur une fenêtre courte avec la carte Matériel dépliée. Sans le `Math.min(min, max)`,
+ * réel sur une fenêtre courte avec la carte Plan dépliée. Sans le `Math.min(min, max)`,
  * `Math.max(min, Math.min(v, max))` renverrait alors `min`, c'est-à-dire projetterait la
  * carte contre le bord opposé à chaque mouvement de souris.
  */
@@ -150,6 +154,9 @@ export function borne(valeur: number, bornes: Bornes): number {
  * T-0181 — le panneau ne se ferme plus : sa largeur est toujours réservée, et une carte
  * poussée à fond vers la droite s'arrête à son bord au lieu de glisser dessous.
  *
+ * T-0197 — le matériel occupe le flanc gauche à la même condition : les deux colonnes se
+ * déduisent, et une carte ne peut plus se cacher sous l'une ni sous l'autre.
+ *
  * Le décalage est relatif à l'ancrage CSS, pas absolu : les bornes se calculent donc à partir
  * de la position ACTUELLE de la carte, et le décalage déjà appliqué s'y ajoute à l'appel.
  */
@@ -161,7 +168,7 @@ export function bornesDeplacement(
 ): { readonly x: Bornes; readonly y: Bornes } {
   return {
     x: {
-      min: hote.left + marge - carte.left,
+      min: hote.left + marges.gauche + marge - carte.left,
       max: hote.left + hote.width - marge - marges.droite - carte.width - carte.left,
     },
     y: {

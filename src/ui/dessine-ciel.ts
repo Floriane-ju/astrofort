@@ -53,10 +53,17 @@ import {
   MARQUEUR_OBJET_PX,
   RAYON_CORPS_PX,
 } from './libelles-cibles.ts'
-import { couleurTeinte, paletteScene, teinte, TEINTES, type PaletteCiel } from './couleurs.ts'
+import {
+  avecOpacite,
+  couleurTeinte,
+  paletteScene,
+  teinte,
+  TEINTES,
+  type PaletteCiel,
+} from './couleurs.ts'
 import { dessineHaloHorizon, dessineHaloLune, type LuneEcran } from './dessine-fond-ciel.ts'
 import { dessineCartePose, type OptiquePose } from './dessine-pose-cadre.ts'
-import { teintesObjets } from './apparence-objets.ts'
+import { OPACITE_OBJET_ESTOMPE, teintesObjets } from './apparence-objets.ts'
 import { geometrieMarqueur, peintCroix, peintEllipse } from './marqueur-objet.ts'
 
 export interface CouchesActives {
@@ -158,6 +165,12 @@ export interface EntreeDessin {
   readonly poseCadre?: OptiquePose | undefined
   /** §3.4 / T-0085 — absent : rien n'est survolé, la scène ne révèle aucun nom. */
   readonly survol?: SurvolEcran | undefined
+  /**
+   * §6.4 — les désignations que les filtres du catalogue retiennent (`cibles-en-avant.ts`).
+   * Les autres marqueurs se peignent estompés, nom compris : la scène répond alors à la même
+   * question que la liste. Absent — aucun filtre actif — tout garde sa pleine opacité.
+   */
+  readonly enAvant?: ReadonlySet<string> | undefined
 }
 
 export interface SortieDessin {
@@ -375,15 +388,22 @@ function passeEtoilesNommees(passe: Passe): ReadonlySet<number> {
 
 /** §3.4 — le ciel profond : un tracé par objet, chacun avec la teinte de son type. */
 function passeObjets(passe: Passe): void {
-  const { entree, peintReperes, largeur, hauteur, p, cibles, candidats } = passe
+  const { entree, teintes, peintReperes, largeur, hauteur, p, cibles, candidats } = passe
   const { ctx, projecteur } = passe.entree
   // --- Objets du ciel profond ---------------------------------------------
   // Un tracé par objet, là où les étoiles se regroupent en huit chemins : chacun porte la teinte
   // de son type et son dégradé (`apparence-objets.ts`). Ce sont quelques centaines d'ordres, pas
   // les seize mille que le regroupement des étoiles évite.
   const teintesParType = teintesObjets(entree.modeNuit, entree.vueRealiste, entree.sbCiel)
+  // T-0195 — le plafond du ciel profond est FIXE, il n'est pas `entree.magLimite`. Celle-ci
+  // est asservie au zoom (§3.3) parce que 83 479 étoiles referment le canevas à 180° ; un
+  // marqueur d'objet ne représente pas un flux, il désigne un endroit. Asservi, il s'effaçait
+  // au dézoom — le geste même par lequel on cherche où la cible tombe dans le ciel. Même
+  // raison que la teinte des marqueurs en vue réaliste (`apparence-objets.ts`) : un repère ne
+  // s'éteint ni avec le fond de ciel, ni avec le champ.
+  const magObjets = K('MAG_LIMITE_OBJETS')
   for (const objet of entree.objets) {
-    if (objet.vMag === null || objet.vMag > entree.magLimite) continue
+    if (objet.vMag === null || objet.vMag > magObjets) continue
     const v = versVecteur(objet.adDeg, objet.decDeg)
     if (!projecteur.projetteEn(v.x, v.y, v.z, p)) continue
     if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
@@ -391,10 +411,15 @@ function passeObjets(passe: Passe): void {
     // que pour ce qui se voit.
     const teintesObjet = teintesParType[objet.type]
     const geo = geometrieMarqueur(projecteur, objet, p.xPx, p.yPx)
+    // Le filtre ne retire rien de la scène : il ne fait qu'éteindre ce qu'il ne retient pas.
+    // Le clic, le survol et la fiche continuent donc de fonctionner sur un marqueur estompé.
+    const estompe = entree.enAvant !== undefined && !entree.enAvant.has(objet.designation)
     // La géométrie se calcule même sans peinture : c'est elle qui donne au clic son rayon.
     if (peintReperes) {
+      ctx.globalAlpha = estompe ? OPACITE_OBJET_ESTOMPE : 1
       if (geo === null) peintCroix(ctx, p.xPx, p.yPx, teintesObjet.bord)
       else peintEllipse(ctx, p.xPx, p.yPx, geo, teintesObjet)
+      ctx.globalAlpha = 1
     }
     const cible: CibleEcran = {
       type: 'OBJET',
@@ -408,7 +433,14 @@ function passeObjets(passe: Passe): void {
     cibles.push(cible)
     const texte = peintReperes ? libelleCible(cible) : null
     if (texte !== null) {
-      candidats.push({ ...boiteLabel(cible, texte), categorie: 'OBJET', priorite: objet.vMag })
+      candidats.push({
+        ...boiteLabel(cible, texte),
+        categorie: 'OBJET',
+        priorite: objet.vMag,
+        // Le nom suit son marqueur : un libellé à pleine lumière au-dessus d'un disque éteint
+        // ramènerait au premier plan ce que le filtre vient d'écarter.
+        ...(estompe ? { couleur: avecOpacite(teintes.texte, OPACITE_OBJET_ESTOMPE) } : {}),
+      })
     }
   }
   // Les passes suivantes tracent au trait fin : l'épaisseur des contours ne leur appartient pas.

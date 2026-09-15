@@ -14,6 +14,7 @@ import { fenetreUtile } from '../src/core/moon.ts'
 import { masquePlat } from '../src/core/site.ts'
 import { planSession, poidsParDefaut, type ContexteSession } from '../src/core/session.ts'
 import { planEnTexte } from '../src/core/plan-texte.ts'
+import { profilSuivi } from '../src/core/tracking.ts'
 import { decodeObjets, type ObjetCielProfond } from '../src/data/deepsky.ts'
 import { K } from '../src/registry/constants.ts'
 
@@ -41,6 +42,7 @@ function contexte(surcharge: Partial<ContexteSession> = {}): ContexteSession {
     sbCielNoir: 20.95,
     mLimOeil: 6.05,
     tMaxS: 200,
+    domaineCpFerme: null,
     snrCible: 10,
     typeMonture: 'TRACKER',
     ...surcharge,
@@ -306,5 +308,29 @@ describe('grand champ bout en bout §6.1 (T-0079)', () => {
     expect(plan.etapes.length).toBeGreaterThan(0)
     const complement = plan.etapes.filter((e) => /^(Sh2-|B)\d+$/.test(e.objet.designation))
     expect(complement.length, plan.etapes.map((e) => e.objet.designation).join(', ')).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * §5.2 — « AUCUN → domaine ciel profond VERROUILLÉ, seul le grand champ reste ouvert ».
+ *
+ * Le plan n'est alors pas vide « faute de cible » : il est FERMÉ, et le critère d'acceptation
+ * de §5.2 exige qu'il le dise avec le grand champ en alternative. Une contrainte dominante
+ * anonyme — « SUIVI, 14 000 cibles écartées » — ne remplit pas ce contrat.
+ */
+describe('§5.2 — plan de séance verrouillé sans suivi', () => {
+  const sansSuivi = profilSuivi({ suiviActif: false, typeMonture: 'TRACKER', focaleMm: 120 })
+  const ferme = planSession(contexte({ domaineCpFerme: sansSuivi.cause }), CATALOGUE)
+
+  it('ne retient aucune cible là où le suivi en retient', () => {
+    // La prémisse se calcule : sans elle, le test passerait un jour où le catalogue est vide.
+    expect(planSession(contexte(), CATALOGUE).etapes.length).toBeGreaterThan(0)
+    expect(ferme.etapes).toStrictEqual([])
+  })
+
+  it('nomme le suivi et garde le grand champ en alternative', () => {
+    expect(ferme.message).toBe(sansSuivi.cause)
+    expect(ferme.alternative).toMatch(/grand champ|filé/)
+    expect(ferme.contrainteDominante).toBeUndefined()
   })
 })

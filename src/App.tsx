@@ -2,9 +2,9 @@
  * L'application : un lieu, un matériel, une intention, et la scène au centre.
  *
  * Ce fichier ne dessine plus rien et ne calcule plus rien. Il tient les magasins partagés,
- * appelle la chaîne de calcul (`app-calcul.ts`) et distribue ses sorties aux cinq régions de
- * la coque : la barre haute, la scène, les cartes posées dessus, le panneau latéral et la
- * barre basse.
+ * appelle la chaîne de calcul (`app-calcul.ts`) et distribue ses sorties aux six régions de
+ * la coque : la barre haute, la scène, la colonne matériel, les cartes posées dessus, le
+ * panneau latéral et la barre basse.
  *
  * Chaque nombre affiché reste dépliable jusqu'à sa formule, et chaque terme technique porte
  * sa définition au contact (§1.5.2, §10.1) — c'est le contrat, pas la mise en page.
@@ -21,7 +21,7 @@ import { useTrancheScene, type EtatScene } from './ui/scene-etat.ts'
 import { ouvreCible, useSeance } from './ui/seance-etat.ts'
 import { BarreHaut } from './ui/BarreHaut.tsx'
 import { BarreBas } from './ui/BarreBas.tsx'
-import { CartesSeance, LateralSeance } from './ui/RegionSeance.tsx'
+import { CartesSeance, ColonneMateriel, LateralSeance } from './ui/RegionSeance.tsx'
 import { useSaisieLieu, useSaisieMateriel, useSaisiePoids } from './ui/app-saisie.ts'
 import {
   useCatalogues,
@@ -31,6 +31,7 @@ import {
 } from './ui/app-donnees.ts'
 import { profilAEnregistrer, siteAEnregistrer } from './ui/saisie-persistee.ts'
 import { useChaineCalcul } from './ui/app-calcul.ts'
+import { useCiblesEnAvant } from './ui/cibles-en-avant.ts'
 import { appliqueModeNuit, litEtatPersiste, type EtatModeNuit } from './ui/ModeNuit.tsx'
 import { installeEchap } from './ui/gere-echap.ts'
 
@@ -103,6 +104,10 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
   const { calcul, ciel } = chaine
   const [modeNuit, setModeNuit] = useModeNuit()
 
+  // §6.4 — filtrer la liste filtre la scène : les cibles écartées s'y estompent au lieu d'y
+  // rester indistinctes. `null` tant qu'aucun filtre n'est actif.
+  const enAvant = useCiblesEnAvant(catalogues.objets, chaine.etatsCibles)
+
   // §12.3 — le lieu et le matériel s'enregistrent au fil de la saisie, masque d'horizon
   // relevé compris, et l'export les emporte tels qu'ils sont à l'écran.
   const persistance = usePersistance({
@@ -130,25 +135,27 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
   )
 
   const panneauMateriel = (
-    <PanneauMateriel
-      {...materiel}
-      {...(chaine.domaineCadrage === null ? {} : { domaine: chaine.domaineCadrage })}
-      {...(calcul.ok
-        ? {
-            lectures: {
-              optique: calcul.optique,
-              suivi: calcul.suivi,
-              poseNpf: calcul.poseNpf,
-              zeroSysteme: calcul.zeroSysteme,
-              iso: calcul.iso,
-              estimations: calcul.estimations,
-              ...(calcul.noteRecadrage === undefined
-                ? {}
-                : { noteRecadrage: calcul.noteRecadrage }),
-            },
-          }
-        : { erreur: calcul.erreur })}
-    />
+    <ColonneMateriel>
+      <PanneauMateriel
+        {...materiel}
+        {...(chaine.domaineCadrage === null ? {} : { domaine: chaine.domaineCadrage })}
+        {...(calcul.ok
+          ? {
+              lectures: {
+                optique: calcul.optique,
+                suivi: calcul.suivi,
+                poseNpf: calcul.poseNpf,
+                zeroSysteme: calcul.zeroSysteme,
+                iso: calcul.iso,
+                estimations: calcul.estimations,
+                ...(calcul.noteRecadrage === undefined
+                  ? {}
+                  : { noteRecadrage: calcul.noteRecadrage }),
+              },
+            }
+          : { erreur: calcul.erreur })}
+      />
+    </ColonneMateriel>
   )
 
   /**
@@ -163,6 +170,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       etoiles={catalogues.etoiles}
       index={chaine.index}
       objets={catalogues.objets}
+      enAvant={enAvant}
       constellations={catalogues.constellations}
       profils={chaine.profilsCadre}
       mLimOeil={ciel.ciel.mLimOeil.value}
@@ -204,6 +212,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       surDateIso={lieu.surDateIso}
       site={chaine.site}
       gaiaCharge={gaia}
+      modeNuit={modeNuit.actif}
       masque={chaine.masque}
       pointsMasque={lieu.pointsMasque}
       surPointsMasque={lieu.surPointsMasque}
@@ -215,7 +224,8 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
     <Coque
       topbar={topbar}
       scene={scene}
-      cartes={<CartesSeance {...regions} materielRendu={panneauMateriel} />}
+      materiel={panneauMateriel}
+      cartes={<CartesSeance {...regions} />}
       lateral={<LateralSeance {...regions} />}
       barrebas={barrebas}
     />

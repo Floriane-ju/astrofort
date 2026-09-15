@@ -8,14 +8,16 @@
  *
  *   - la barre HAUTE nomme l'application, dit où pointe la vue et ouvre les panneaux ;
  *   - la barre BASSE porte le lieu et le temps — les deux entrées qui datent toute la nuit ;
- *   - les CARTES portent le matériel, la vue et la cible, repliables et déplaçables ;
- *   - le PANNEAU latéral porte ce qui se lit en longueur : le plan de nuit, le filé.
+ *   - la colonne MATÉRIEL tient le flanc gauche, à demeure : c'est la saisie qu'on relit le
+ *     plus, et la seule dont chaque champ change tout le reste (T-0197) ;
+ *   - les CARTES portent la vue et le plan de nuit, repliables et déplaçables ;
+ *   - le PANNEAU latéral porte ce qui se lit en longueur : le catalogue, le filé.
  *
- * La coque ne connaît aucun contenu : elle reçoit cinq régions et les place. C'est ce qui
+ * La coque ne connaît aucun contenu : elle reçoit six régions et les place. C'est ce qui
  * permet de remplir, vider et redécouper les panneaux sans toucher à la mise en page.
  *
- * L'ordre du DOM est l'ordre de tabulation : barre haute, scène, cartes, panneau, barre
- * basse. Il suit la lecture, pas la position à l'écran — un panneau ouvert au clavier depuis
+ * L'ordre du DOM est l'ordre de tabulation : barre haute, scène, matériel, cartes, panneau,
+ * barre basse. Il suit la lecture, pas la position à l'écran — un panneau ouvert au clavier depuis
  * la barre haute est le nœud suivant, pas le dernier de la page.
  *
  * Sous le repli, tout redevient un flux vertical : les cartes se dépilent sous la scène et le
@@ -32,7 +34,9 @@ export interface CoqueProps {
   readonly topbar: ReactNode
   /** La scène. Elle occupe toute la coque, les autres régions se posent dessus. */
   readonly scene: ReactNode
-  /** Les cartes posées sur la scène : matériel, vue, cible. */
+  /** Colonne de gauche : le matériel, toujours là. */
+  readonly materiel: ReactNode
+  /** Les cartes posées sur la scène : la vue, le plan de nuit. */
   readonly cartes: ReactNode
   /** Panneau latéral, ou `null` quand aucun n'est ouvert. */
   readonly lateral: ReactNode
@@ -49,6 +53,7 @@ export function Coque(props: CoqueProps) {
     <div className="coque">
       <header className="coque-topbar">{props.topbar}</header>
       <main className="coque-scene">{props.scene}</main>
+      {props.materiel}
       <div className="coque-cartes">{props.cartes}</div>
       {props.lateral}
       <footer className="coque-barrebas">{props.barrebas}</footer>

@@ -83,6 +83,7 @@ function contexteSession(dateIso: string): ContexteSession {
     sbCielNoir: SB_CIEL_NOIR,
     mLimOeil: M_LIM_OEIL,
     tMaxS: T_MAX_S,
+    domaineCpFerme: null,
     snrCible: SNR_PLAN,
     typeMonture: 'TRACKER',
   }

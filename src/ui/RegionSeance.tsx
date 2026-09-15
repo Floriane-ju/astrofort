@@ -10,6 +10,10 @@
  * état, là où un onglet forçait à en abandonner un pour en lire un autre.
  *
  * T-0181 — le panneau ne s'ouvre plus : il est à demeure, et le mode décide de son contenu.
+ *
+ * T-0197 — le matériel quitte les cartes pour le flanc gauche. Le repli et le déplacement ne
+ * lui rendaient rien : on ne le consulte pas entre deux gestes de visée, on le corrige tout au
+ * long de la séance, et sa borne de demi-hauteur le faisait défiler dans une boîte de 20 rem.
  */
 
 import { useRef, useEffect, type ReactNode } from 'react'
@@ -47,9 +51,22 @@ export interface RegionSeanceProps {
   readonly modeNuitActif: boolean
 }
 
-export interface CartesSeanceProps extends RegionSeanceProps {
-  /** Le panneau matériel, assemblé par l'application : la carte ne fait que l'encadrer. */
-  readonly materielRendu: ReactNode
+/**
+ * La colonne de gauche : le matériel, à demeure.
+ *
+ * Elle ne prend pas de props de séance — son contenu est assemblé par l'application, qui seule
+ * tient la saisie et la chaîne de calcul. Ici il ne reste que la coquille : le même en-tête et
+ * le même corps défilant que la colonne de droite, puisque c'est la même forme.
+ */
+export function ColonneMateriel({ children }: { readonly children: ReactNode }) {
+  return (
+    <aside className="coque-materiel" id="panneau-materiel" aria-label="Matériel">
+      <div className="lateral-entete">
+        <h2>Matériel</h2>
+      </div>
+      <div className="lateral-corps">{children}</div>
+    </aside>
+  )
 }
 
 /**
@@ -59,7 +76,7 @@ export interface CartesSeanceProps extends RegionSeanceProps {
  * cesse d'exister — donc de s'abonner au magasin de scène et d'y recalculer une profondeur à
  * chaque geste de visée. C'est ce qui rend le repli utile et pas seulement discret.
  */
-export function CartesSeance(props: CartesSeanceProps) {
+export function CartesSeance(props: RegionSeanceProps) {
   const { chaine, lieu, materiel } = props
   const { calcul, ciel } = chaine
   const sbCiel = ciel.ok ? ciel.ciel.sbCiel.value : null
@@ -87,10 +104,6 @@ export function CartesSeance(props: CartesSeanceProps) {
 
   return (
     <>
-      <Carte cle="MATERIEL" titre="Matériel">
-        {props.materielRendu}
-      </Carte>
-
       <Carte cle="VUE" titre="Vue">
         <PanneauVue
           modeObjectif={modeObjectif(materiel.typeObjectif)}

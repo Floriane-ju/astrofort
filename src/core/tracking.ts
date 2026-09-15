@@ -92,8 +92,14 @@ export interface ProfilSuivi {
   readonly domaineCpOuvert: boolean
   /** §8.2 — seule l'équatoriale allemande impose un retournement au méridien. */
   readonly retournementMeridien: boolean
-  /** Pourquoi le domaine ciel profond est fermé, quand il l'est. */
-  readonly cause?: string
+  /**
+   * Pourquoi le domaine ciel profond est fermé — `null` quand il est ouvert.
+   *
+   * Nullable plutôt qu'optionnel : c'est cette phrase que le plan de séance et la liste du
+   * catalogue affichent à la place des cibles (§8.3, §6.4), et un `undefined` les laisserait
+   * refuser sans rien dire. Fermer le domaine et le justifier sont un seul geste.
+   */
+  readonly cause: string | null
   /** Ce qu'une mise en station soignée rapporterait, chiffré, quand elle ne l'est pas. */
   readonly gainMiseEnStation?: string
 }
@@ -174,7 +180,7 @@ export function profilSuivi(entree: EntreeSuivi): ProfilSuivi {
   })
 
   if (mode === 'SUIVI_SOIGNE') {
-    return { mode, tMaxSuiviS, domaineCpOuvert: true, retournementMeridien }
+    return { mode, tMaxSuiviS, domaineCpOuvert: true, retournementMeridien, cause: null }
   }
 
   const tSoigne = poseDeSuivi('T_REF_SOIGNE_200MM_S', focaleMm)
@@ -183,6 +189,7 @@ export function profilSuivi(entree: EntreeSuivi): ProfilSuivi {
     tMaxSuiviS,
     domaineCpOuvert: true,
     retournementMeridien,
+    cause: null,
     gainMiseEnStation:
       `Mise en station supposée approximative : la pose tient ${tMax.toFixed(0)} s. Un viseur ` +
       `polaire réglé la porterait à ${tSoigne.toFixed(0)} s.`,

@@ -30,6 +30,7 @@ import { bornesZoom } from '../core/projection.ts'
 import { BarreTemps } from './BarreTemps.tsx'
 import { ChampsSite, type ChampsSiteProps } from './ChampsSite.tsx'
 import { Compteur } from './Compteur.tsx'
+import { LegendeCouleurs } from './LegendeCouleurs.tsx'
 import { HAUTEUR_MAX_DEG, HAUTEUR_MIN_DEG, tourBorne } from './planetarium-gestes.ts'
 import { majVue, useScene } from './scene-etat.ts'
 import {
@@ -46,6 +47,8 @@ export interface BarreBasProps extends ChampsSiteProps {
   readonly site: Site
   /** §3.3 — le paquet Gaia décide jusqu'où le champ peut se refermer sans vider le ciel. */
   readonly gaiaCharge: boolean
+  /** §11.1 — les pastilles de la légende suivent les marqueurs qu'elles nomment. */
+  readonly modeNuit: boolean
 }
 
 /**
@@ -119,7 +122,7 @@ function Visee(props: { readonly site: Site; readonly gaiaCharge: boolean }) {
 
 export function BarreBas(props: BarreBasProps) {
   // `gaiaCharge` sort du lot : il borne le champ de la visée, il n'est pas un champ du lieu.
-  const { surDateIso, site: siteCalcul, gaiaCharge, ...site } = props
+  const { surDateIso, site: siteCalcul, gaiaCharge, modeNuit, ...site } = props
 
   return (
     <>
@@ -135,6 +138,10 @@ export function BarreBas(props: BarreBasProps) {
           <ChampsSite {...site} />
         </div>
       </details>
+
+      {/* La légende dit ce que les couleurs des marqueurs signifient. Elle voisine le lieu
+          plutôt que la scène : c'est une convention de lecture, pas une commande de vue. */}
+      <LegendeCouleurs modeNuit={modeNuit} />
 
       <Visee site={siteCalcul} gaiaCharge={gaiaCharge} />
 

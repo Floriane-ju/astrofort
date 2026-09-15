@@ -128,6 +128,11 @@ export function PanneauCibles(props: PanneauCiblesProps) {
     return () => clearTimeout(attente)
   }, [aPrecharger])
 
+  // Le verrou ne vaut que pour la portée « Photographiables » : le catalogue reste consultable
+  // sans suivi, c'est la SÉANCE qui est fermée, pas la base d'objets.
+  const domaineCpFerme =
+    portee === 'PHOTOGRAPHIABLES' ? (props.contexteSession?.domaineCpFerme ?? null) : null
+
   const plafond = K('CIBLES_LISTEES_MAX')
   const listees = retenues.slice(0, plafond)
   const seuil = props.contexteSession?.seuilHauteurDeg ?? K('SEUIL_HAUTEUR_IMAGERIE_DEG')
@@ -211,9 +216,13 @@ export function PanneauCibles(props: PanneauCiblesProps) {
 
         {listees.length === 0 && (
           <p className="etat">
-            {recherche.trim() === ''
-              ? 'Aucun objet ne passe ces filtres.'
-              : 'Aucun objet du catalogue ne porte ce nom.'}
+            {/* §5.2 — domaine fermé : la liste vide n'est pas un filtre trop serré, c'est le
+                suivi qui manque. Le dire ici évite de chercher le levier dans les filtres. */}
+            {domaineCpFerme !== null
+              ? domaineCpFerme
+              : recherche.trim() === ''
+                ? 'Aucun objet ne passe ces filtres.'
+                : 'Aucun objet du catalogue ne porte ce nom.'}
           </p>
         )}
       </div>

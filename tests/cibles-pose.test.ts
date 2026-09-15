@@ -22,6 +22,7 @@ import { fenetreNocturne } from '../src/core/night.ts'
 import { fenetreUtile } from '../src/core/moon.ts'
 import { masquePlat } from '../src/core/site.ts'
 import { planSession, type ContexteSession } from '../src/core/session.ts'
+import { profilSuivi } from '../src/core/tracking.ts'
 import { K } from '../src/registry/constants.ts'
 import type { ObjetCielProfond } from '../src/data/deepsky.ts'
 
@@ -48,6 +49,7 @@ const CONTEXTE: ContexteSession = {
   sbCielNoir: 20.95,
   mLimOeil: 6.05,
   tMaxS: 200,
+  domaineCpFerme: null,
   snrCible: 10,
   typeMonture: 'TRACKER',
 }
@@ -252,5 +254,45 @@ describe('etatsCibles — la note de facilité', () => {
       nuit: { ...NUIT, debutReference: null, finReference: null },
     }
     expect(etatsCibles(sansNuit, CATALOGUE).size).toBe(0)
+  })
+})
+
+/**
+ * §5.2 — sans suivi, le domaine ciel profond est VERROUILLÉ, pas seulement plafonné.
+ *
+ * L'ancien comportement ne fermait rien : `tMaxS` retombait sur la NPF, donc la pose unitaire
+ * tenait en secondes, et les cibles brillantes restaient sous le plafond d'intégration de §7.3.
+ * La liste les annonçait « photographiables » — en milliers de poses de deux secondes sur un
+ * trépied fixe, ce qu'aucune séance ne peut exécuter.
+ *
+ * Le verrou se lit sur `pose === null` partout, et sur une cause qui vient de `profilSuivi` :
+ * la phrase n'est pas réécrite ici, sinon deux écrans diraient deux choses.
+ */
+describe('§5.2 — sans suivi, aucune cible ciel profond n’est photographiable', () => {
+  const sansSuivi = profilSuivi({ suiviActif: false, typeMonture: 'TRACKER', focaleMm: 120 })
+  const etats = etatsCibles({ ...CONTEXTE, domaineCpFerme: sansSuivi.cause }, CATALOGUE)
+
+  it('ferme bien le domaine dans le profil de suivi', () => {
+    expect(sansSuivi.domaineCpOuvert).toBe(false)
+    expect(sansSuivi.cause).not.toBeNull()
+  })
+
+  it('n’annonce aucune pose, et donne au suivi la cause de chaque refus', () => {
+    // La prémisse : le MÊME catalogue produit des poses dès que le suivi est actif.
+    const avecSuivi = etatsCibles(CONTEXTE, CATALOGUE)
+    expect([...avecSuivi.values()].some((e) => e.pose !== null)).toBe(true)
+
+    for (const objet of CATALOGUE) {
+      const etat = etats.get(objet.designation)
+      expect(etat?.pose ?? null).toBeNull()
+      expect(etat?.cause).toBe(sansSuivi.cause)
+    }
+  })
+
+  it('verrouille aussi la monture altazimutale, dont la rotation de champ n’est pas traitée', () => {
+    const altaz = profilSuivi({ suiviActif: true, typeMonture: 'ALTAZ', focaleMm: 120 })
+    const fermes = etatsCibles({ ...CONTEXTE, domaineCpFerme: altaz.cause }, CATALOGUE)
+    expect(altaz.domaineCpOuvert).toBe(false)
+    expect([...fermes.values()].every((e) => e.pose === null)).toBe(true)
   })
 })

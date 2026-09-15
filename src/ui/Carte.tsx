@@ -27,6 +27,7 @@ import {
   useCoque,
   type CleCarte,
   type Decalage,
+  type MargesCoque,
 } from './coque-etat.ts'
 
 /**
@@ -65,14 +66,15 @@ function rect(element: Element | null | undefined): DOMRect | null {
 /**
  * Ce que la coque réserve sur ses bords, MESURÉ plutôt que recopié.
  *
- * Les hauteurs des deux barres et la largeur du panneau sont écrites dans la feuille de
- * style. Les redéclarer ici en ferait une seconde source de vérité qui divergerait au premier
- * ajustement de gouttière ; les lire à l'instant du geste ne coûte que trois mesures.
+ * Les hauteurs des deux barres et les largeurs des deux colonnes sont écrites dans la feuille
+ * de style. Les redéclarer ici en ferait une seconde source de vérité qui divergerait au
+ * premier ajustement de gouttière ; les lire à l'instant du geste ne coûte que quatre mesures.
  */
-function margesCoque(coque: Element): { haut: number; bas: number; droite: number } {
+function margesCoque(coque: Element): MargesCoque {
   return {
     haut: rect(coque.querySelector('.coque-topbar'))?.height ?? 0,
     bas: rect(coque.querySelector('.coque-barrebas'))?.height ?? 0,
+    gauche: rect(coque.querySelector('.coque-materiel'))?.width ?? 0,
     droite: rect(coque.querySelector('.coque-lateral'))?.width ?? 0,
   }
 }

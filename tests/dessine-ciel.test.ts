@@ -25,6 +25,7 @@ import { construitIndex } from '../src/core/index-ciel.ts'
 import { cielInstantane } from '../src/core/horloges.ts'
 import {
   magnitudeLimite,
+  magnitudeRendue,
   projecteur,
   type Projecteur,
   type Vue,
@@ -53,7 +54,7 @@ import { decritCible } from '../src/ui/planetarium-selection.ts'
 import { ancreLabel, libelleCible, titreCible } from '../src/ui/libelles-cibles.ts'
 import { etoileLabellisable } from '../src/core/labels.ts'
 import { palette, paletteRealiste } from '../src/ui/couleurs.ts'
-import { teintesObjets } from '../src/ui/apparence-objets.ts'
+import { OPACITE_OBJET_ESTOMPE, teintesObjets } from '../src/ui/apparence-objets.ts'
 import type { LuneEcran } from '../src/ui/dessine-fond-ciel.ts'
 import { sousLeSol } from '../src/core/sol.ts'
 import { K } from '../src/registry/constants.ts'
@@ -190,10 +191,12 @@ function rend(
     survol?: SurvolEcran
     masque?: MasqueHorizon
     fovDeg?: number
+    magLimite?: number
     corps?: readonly PositionCorps[]
     vueRealiste?: boolean
     lune?: LuneEcran
     poseCadre?: OptiquePose
+    enAvant?: ReadonlySet<string>
   } = {},
 ) {
   const ctx = contexteEspion()
@@ -240,13 +243,14 @@ function rend(
       },
     ],
     couches: options.couches ?? COUCHES,
-    magLimite: magnitudeLimite(vue.fovDeg).value,
+    magLimite: options.magLimite ?? magnitudeLimite(vue.fovDeg).value,
     sbCiel: options.sbCiel ?? SB_PLANCHER_NATUREL,
     latitudeDeg: options.latitudeDeg ?? SITE.latitudeDeg,
     modeNuit: options.modeNuit ?? false,
     survol: options.survol,
     passeFile: options.passeFile,
     poseCadre: options.poseCadre,
+    enAvant: options.enAvant,
   }
   return { ctx, sortie: dessineCiel(entree), entree }
 }
@@ -577,6 +581,84 @@ describe('marqueur d’objet §3.3', () => {
     const { sortie } = rend({ objets: [OBJET_AU_CENTRE] })
     const cible = sortie.cibles.find((c) => c.objet?.designation === OBJET_AU_CENTRE.designation)!
     expect(ancreLabel(cible).xPx).toBeGreaterThan(cible.xPx + cible.rayonPx!)
+  })
+
+  /**
+   * T-0195 — le plafond du ciel profond ne suit pas le zoom. La magnitude d'essai se prend
+   * ENTRE la profondeur du champ le plus large et le plafond fixe : c'est exactement la bande
+   * d'objets que le dézoom effaçait, et elle se dérive des deux règles, elle ne se recopie pas.
+   */
+  const FOV_LARGE = K('FOV_MAX_STEREOGRAPHIQUE_DEG')
+  const FOV_SERRE = K('FOV_MIN_SANS_GAIA_DEG')
+  const FAIBLE: ObjetCielProfond = {
+    ...OBJET_AU_CENTRE,
+    vMag: (magnitudeLimite(FOV_LARGE).value + K('MAG_LIMITE_OBJETS')) / 2,
+  }
+
+  it('peint au dézoom un objet que la profondeur du champ écarterait', () => {
+    expect(FAIBLE.vMag!).toBeGreaterThan(magnitudeLimite(FOV_LARGE).value)
+    const large = rend({ objets: [FAIBLE], fovDeg: FOV_LARGE })
+    expect(large.sortie.cibles.filter((c) => c.type === 'OBJET')).toHaveLength(1)
+    const serre = rend({ objets: [FAIBLE], fovDeg: FOV_SERRE })
+    expect(serre.sortie.cibles.filter((c) => c.type === 'OBJET')).toHaveLength(1)
+  })
+
+  /**
+   * §6.4 — filtrer le catalogue filtre la scène. L'écarté s'ESTOMPE et reste cliquable : le
+   * retirer ferait perdre l'endroit où la sélection tombe dans le ciel, qui est la seule
+   * chose que le report du filtre sur la scène apporte.
+   */
+  describe('report des filtres du catalogue', () => {
+    const AUTRE: ObjetCielProfond = { ...OBJET_AU_CENTRE, designation: 'M32' }
+    // Aucune couche : les seuls tracés de la scène sont alors ceux des deux marqueurs.
+    const NUES: CouchesActives = {
+      figures: false,
+      frontieres: false,
+      asterismes: false,
+      cadre: false,
+      horizon: false,
+      voieLactee: false,
+      sol: false,
+    }
+
+    it('peint tout à pleine opacité tant qu’aucun filtre n’est actif', () => {
+      const { ctx } = rend({ objets: [OBJET_AU_CENTRE, AUTRE], couches: NUES })
+      expect(ctx.opacites).toEqual([1, 1])
+    })
+
+    it('estompe le marqueur que les filtres ne retiennent pas', () => {
+      const { ctx, sortie } = rend({
+        objets: [OBJET_AU_CENTRE, AUTRE],
+        couches: NUES,
+        enAvant: new Set([OBJET_AU_CENTRE.designation]),
+      })
+      expect([...ctx.opacites].sort()).toEqual([OPACITE_OBJET_ESTOMPE, 1])
+      // L'écarté n'est pas retiré de la scène : il reste désignable au clic.
+      expect(sortie.cibles.filter((c) => c.type === 'OBJET')).toHaveLength(2)
+    })
+  })
+
+  it('écarte à tout champ l’objet plus faible que le plafond du ciel profond', () => {
+    const horsPlafond = { ...OBJET_AU_CENTRE, vMag: K('MAG_LIMITE_OBJETS') + 1 }
+    for (const fovDeg of [FOV_SERRE, FOV_LARGE]) {
+      const { sortie } = rend({ objets: [horsPlafond], fovDeg })
+      expect(sortie.cibles.filter((c) => c.type === 'OBJET')).toHaveLength(0)
+    }
+  })
+
+  it('garde le marqueur sous un ciel de Bortle 9 en vue réaliste', () => {
+    // La profondeur que la scène reçoit alors est celle de l'ŒIL sous ce fond de ciel : c'est
+    // elle qui plafonne les étoiles, et c'est elle que le ciel profond ne suit plus.
+    const magLimite = magnitudeRendue(FOV_SERRE, SB_PLAFOND_TABLE, true).value
+    expect(FAIBLE.vMag!).toBeGreaterThan(magLimite)
+    const { sortie } = rend({
+      objets: [FAIBLE],
+      fovDeg: FOV_SERRE,
+      magLimite,
+      vueRealiste: true,
+      sbCiel: SB_PLAFOND_TABLE,
+    })
+    expect(sortie.cibles.filter((c) => c.type === 'OBJET')).toHaveLength(1)
   })
 })
 

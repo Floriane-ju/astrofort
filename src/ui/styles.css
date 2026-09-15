@@ -209,6 +209,10 @@ body {
   --barre-haut: 2.75rem;
   --barre-bas: 3rem;
   --lateral: 22rem;
+  /* T-0197 — le flanc gauche : le matériel n'est plus une carte, c'est une colonne à demeure.
+     Plus étroite que celle de droite — elle porte des champs courts, là où le catalogue porte
+     des lignes de texte. */
+  --materiel: 19rem;
   --carte-large: 19rem;
   /* T-0183 — le plan porte une table de budget de nuit : à 19 rem elle défilerait
      horizontalement, et un tableau qu'on fait glisser ne se compare plus d'une ligne à
@@ -538,6 +542,64 @@ body {
   max-height: calc(100dvh - var(--barre-bas) - 1rem);
 }
 
+/* T-0196 — la légende n'a que six lignes courtes : elle prend la largeur de son texte au lieu
+   des 32 rem du tiroir du lieu, qui laisseraient une fenêtre vide aux trois quarts. */
+.coque-barrebas .tiroir-legende[open] > .tiroir-contenu {
+  width: max-content;
+  max-width: calc(100vw - 1.5rem);
+}
+
+.legende-couleurs {
+  list-style: none;
+  margin: var(--pas-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--pas-2);
+  font-size: var(--texte-micro);
+}
+
+.legende-couleurs > li {
+  display: flex;
+  align-items: center;
+  gap: var(--pas-2);
+}
+
+/* Le témoin reprend le marqueur du planétarium : un disque au dégradé radial et cerné pour un
+   objet dont on connaît l'étendue, une croix pour celui dont le catalogue ignore les
+   dimensions. Sa taille est celle du texte qu'il accompagne — le marqueur, lui, est dimensionné
+   par l'étendue réelle de l'objet, ce qu'une légende ne peut pas représenter.
+
+   La forme est ici, les TEINTES sont engendrées par `LegendeCouleurs` depuis la table des
+   apparences : les écrire ici les recopierait, et la légende mentirait au premier changement
+   de couleur de marqueur. Le contour vient de là aussi — son épaisseur est celle du marqueur,
+   `EPAISSEUR_BORD_PX`, et la répéter ici en ferait un second seuil à tenir à jour. */
+.legende-pastille {
+  flex: none;
+  inline-size: 1em;
+  block-size: 1em;
+  border-radius: 50%;
+}
+
+/* La croix est une ligature, pas un dessin : sa taille est celle du corps, et non les 1,25 rem
+   de `.icone` — à la taille d'un bouton, elle dépasserait la ligne qu'elle ouvre. */
+.legende-croix {
+  flex: none;
+  font-size: var(--texte-micro);
+}
+
+/* La section « forme » ne parle d'aucune famille : ses deux témoins prennent le gris de
+   l'interface, et non une teinte de type qui laisserait croire le contraire. */
+.legende-forme {
+  color: var(--attenue);
+  border: var(--trait) solid var(--attenue);
+  background: radial-gradient(circle, var(--attenue), transparent);
+}
+
+.legende-croix.legende-forme {
+  border: 0;
+  background: none;
+}
+
 /* T-0137 — le transport ferme la barre : il se pousse à droite et y reste. */
 .barretemps {
   position: relative;
@@ -703,13 +765,8 @@ input.barretemps-instant {
   width: max-content;
 }
 
-.carte-materiel {
-  left: var(--jour-carte);
-  top: calc(var(--barre-haut) + var(--jour-carte));
-}
-
 .carte-vue {
-  left: var(--jour-carte);
+  left: calc(var(--materiel) + var(--jour-carte));
   bottom: calc(var(--barre-bas) + var(--jour-carte));
 }
 
@@ -796,18 +853,6 @@ input.barretemps-instant {
   max-height: calc(100dvh - var(--barre-haut) - var(--barre-bas) - 6 * var(--jour-carte));
 }
 
-/* Le flanc gauche en porte DEUX — Matériel ancrée en haut, Vue ancrée en bas. Chacune ne
-   peut donc prendre que la moitié de la hauteur, en-têtes et jours déduits, sinon déplier
-   l'une recouvre l'autre. La borne est calculée, pas choisie : elle tient à toute hauteur de
-   fenêtre, y compris celles où deux valeurs fixes se chevaucheraient. */
-.carte-materiel .carte-corps,
-.carte-vue .carte-corps {
-  max-height: min(
-    20rem,
-    calc((100dvh - var(--barre-haut) - var(--barre-bas)) / 2 - 4rem)
-  );
-}
-
 /* Le premier titre d'une carte suit son en-tête : il n'a pas à s'en détacher d'une marge
    de section. */
 .carte-corps > *:first-child h2:first-child,
@@ -830,6 +875,24 @@ input.barretemps-instant {
   display: flex;
   flex-direction: column;
   border-left: var(--trait) solid var(--accent);
+  background: var(--surface);
+}
+
+/* T-0197 — le flanc gauche : même colonne que celle de droite, même en-tête, même corps
+   défilant. Elle se distingue par son bord — un filet à droite, pas à gauche — et par sa
+   largeur. Ce qui la sépare vraiment de la droite est ailleurs : son contenu ne change jamais,
+   le mode ne la commande pas. */
+.coque-materiel {
+  position: absolute;
+  left: 0;
+  top: var(--barre-haut);
+  bottom: var(--barre-bas);
+  z-index: 3;
+  width: var(--materiel);
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-right: var(--trait) solid var(--accent);
   background: var(--surface);
 }
 
@@ -886,6 +949,7 @@ input.barretemps-instant {
   .coque-barrebas,
   .coque-scene,
   .carte,
+  .coque-materiel,
   .coque-lateral {
     position: static;
     inset: auto;
@@ -909,6 +973,7 @@ input.barretemps-instant {
   }
 
   .carte,
+  .coque-materiel,
   .coque-lateral {
     border: 0;
     border-top: var(--trait) solid var(--bordure);
@@ -1775,6 +1840,7 @@ button:disabled {
   .coque-topbar,
   .coque-barrebas,
   .coque-scene,
+  .coque-materiel,
   .coque-lateral,
   .carte {
     display: none;

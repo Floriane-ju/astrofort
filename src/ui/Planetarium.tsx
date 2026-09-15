@@ -72,6 +72,11 @@ export interface PlanetariumProps {
   /** Index de sélection du catalogue, construit une fois par l'application. */
   readonly index: IndexCiel
   readonly objets: readonly ObjetCielProfond[]
+  /**
+   * §6.4 — les désignations que les filtres du panneau des cibles retiennent. Les autres
+   * marqueurs s'estompent. `null` : aucun filtre actif, la scène est entière.
+   */
+  readonly enAvant: ReadonlySet<string> | null
   readonly constellations: PaquetConstellations
   /** Profils de cadre à superposer (§3.5). Vide : l'app demande le profil, sans en inventer. */
   readonly profils: readonly ProfilCadre[]
@@ -256,6 +261,7 @@ export function Planetarium(props: PlanetariumProps) {
     // T-0142 — la carte de pose ne se peint que si elle est demandée ET chiffrable : sans
     // matériel, il n'y a pas de NPF, donc pas de cadre à masquer.
     poseCadre: file.poseDansCadre && props.file !== undefined ? props.file.optique : null,
+    enAvant: props.enAvant,
     magLimite: profondeur.magLimite.value,
     sbCiel: sbCielScene,
     vueRealiste: rendu.vueRealiste,

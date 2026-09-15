@@ -1009,6 +1009,23 @@ const RENDU = {
     ordreDeGrandeur: false,
     sections: ['3.3'],
   }),
+  MAG_LIMITE_OBJETS: entree({
+    ref: 'C-26',
+    libelle: 'Magnitude limite des objets du ciel profond, tous champs confondus',
+    valeur: 11,
+    unite: 'mag',
+    source:
+      'T-0195 — §3.3 asservit au zoom la profondeur des ÉTOILES : à 180°, 83 479 étoiles ' +
+      'referment le canevas. Un marqueur de ciel profond ne représente pas un flux, il ' +
+      'désigne un endroit, et on dézoome précisément pour se repérer. Plafond FIXE, choisi ' +
+      'sur le comptage des paquets versionnés : 1 217 objets au ciel entier, environ 600 sur ' +
+      'un champ de 180°, traçables par image et lisibles à l’œil. Il reste au-dessus de la ' +
+      'profondeur du zoom partout dans les bornes de §3.3 (9,5 au plancher de 15°) : aucun ' +
+      'objet aujourd’hui affiché ne disparaît.',
+    tolerance: 'convention produit',
+    ordreDeGrandeur: false,
+    sections: ['3.3'],
+  }),
   FOV_MIN_AVEC_GAIA_DEG: entree({
     ref: 'C-26',
     libelle: 'Champ minimal avec le paquet Gaia chargé',

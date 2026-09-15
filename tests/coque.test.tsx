@@ -93,10 +93,11 @@ function barreHaute(html: string): string {
 }
 
 describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
-  it('monte les cinq régions : deux barres, la scène, les cartes, le panneau', () => {
+  it('monte les six régions : deux barres, la scène, le matériel, les cartes, le panneau', () => {
     const html = ecran()
     expect(html).toContain('coque-topbar')
     expect(html).toContain('coque-scene')
+    expect(html).toContain('coque-materiel')
     expect(html).toContain('coque-cartes')
     expect(html).toContain('coque-lateral')
     expect(html).toContain('coque-barrebas')
@@ -104,14 +105,25 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
     expect(html).toContain('class="planetarium"')
   })
 
-  it('pose les cartes sur la scène, matériel compris', () => {
+  it('pose les cartes sur la scène : la vue et le plan', () => {
     const html = ecran()
-    for (const carte of ['carte-materiel', 'carte-vue']) {
+    for (const carte of ['carte-vue', 'carte-plan']) {
       expect(html, carte).toContain(carte)
     }
-    // Le matériel n'est plus une colonne : c'est une carte, avec les deux autres.
-    expect(html).not.toContain('coque-materiel')
     expect(html).not.toContain('coque-seance')
+  })
+
+  /**
+   * T-0197 — le matériel tient le flanc gauche à demeure : une colonne, pas une carte. Sa
+   * place dans le document est entre la scène et les cartes, pour que la tabulation le
+   * rencontre avant ce qui flotte dessus.
+   */
+  it('monte le matériel en colonne de gauche, plus en carte', () => {
+    const html = ecran()
+    expect(html).toContain('<aside class="coque-materiel" id="panneau-materiel"')
+    expect(html).not.toContain('carte-materiel')
+    expect(html.indexOf('coque-materiel')).toBeGreaterThan(html.indexOf('coque-scene'))
+    expect(html.indexOf('coque-materiel')).toBeLessThan(html.indexOf('coque-cartes'))
   })
 
   it('garde le lieu lisible et réglable dans les deux modes', () => {
@@ -210,7 +222,7 @@ describe('§11.3 — le panneau est toujours ouvert et son contenu suit le mode'
     // `bornesDeplacement` déduit la largeur du panneau : la borne haute en x s'en retranche.
     const carte = { left: 100, top: 100, width: 300, height: 200 }
     const hote = { left: 0, top: 0, width: 1440, height: 900 }
-    const marges = { haut: 40, bas: 40, droite: 320 }
+    const marges = { haut: 40, bas: 40, gauche: 0, droite: 320 }
     const bornes = bornesDeplacement(carte, hote, marges, 8)
     // Décalage maximal : le bord droit de la carte s'arrête à la marge, panneau déduit.
     expect(carte.left + carte.width + bornes.x.max).toBe(hote.width - 8 - marges.droite)
@@ -302,16 +314,19 @@ describe('§11.3 — la bascule de mode occupe le centre de la barre haute', () 
  */
 describe('T-0113 — les cartes posées sur la scène', () => {
   const HOTE = { left: 0, top: 0, width: 1400, height: 800 }
-  const MARGES = { haut: 44, bas: 48, droite: 0 }
+  const MARGES = { haut: 44, bas: 48, gauche: 0, droite: 0 }
 
   it('replie et déplie une carte sans toucher aux autres', () => {
-    expect(etatCoque().cartes.MATERIEL.ouverte).toBe(true)
-    basculeCarte('MATERIEL')
-    expect(etatCoque().cartes.MATERIEL.ouverte).toBe(false)
     expect(etatCoque().cartes.VUE.ouverte).toBe(false)
+    expect(etatCoque().cartes.PLAN.ouverte).toBe(false)
     basculeCarte('VUE')
     expect(etatCoque().cartes.VUE.ouverte).toBe(true)
-    expect(etatCoque().cartes.MATERIEL.ouverte).toBe(false)
+    expect(etatCoque().cartes.PLAN.ouverte).toBe(false)
+  })
+
+  // T-0197 — le matériel n'est plus une carte : la clé n'existe plus.
+  it('ne connaît plus que deux cartes', () => {
+    expect(Object.keys(etatCoque().cartes)).toEqual(['VUE', 'PLAN'])
   })
 
   /** Un geste plus ample que la coque : c'est le bornage qui doit l'arrêter, pas sa taille. */
@@ -334,6 +349,13 @@ describe('T-0113 — les cartes posées sur la scène', () => {
     const carte = { left: 12, top: 56, width: 300, height: 400 }
     const avec = bornesDeplacement(carte, HOTE, { ...MARGES, droite: 350 }, 10)
     expect(carte.left + carte.width + borne(LOIN, avec.x)).toBe(HOTE.width - 350 - 10)
+  })
+
+  // T-0197 — le flanc gauche est réservé de la même façon depuis que le matériel y tient.
+  it('déduit la largeur du panneau matériel : une carte ne glisse pas dessous à gauche', () => {
+    const carte = { left: 320, top: 56, width: 300, height: 400 }
+    const avec = bornesDeplacement(carte, HOTE, { ...MARGES, gauche: 300 }, 10)
+    expect(carte.left + borne(-LOIN, avec.x)).toBe(300 + 10)
   })
 
   it('laisse glisser une carte plus haute que la place, sans la projeter', () => {
