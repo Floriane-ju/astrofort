@@ -73,6 +73,7 @@ export function profilAEnregistrer(materiel: SaisieMateriel): ProfilAEnregistrer
       focaleMm: requis(materiel.focale, 'focale_mm'),
       ouvertureN: requis(materiel.ouverture, 'ouverture_N'),
       typeObjectif: materiel.typeObjectif,
+      ...(materiel.boitierId === '' ? {} : { boitierId: materiel.boitierId }),
       formatCapteur: boitier.formatCapteur,
       ...siRenseigne('resolutionMpx', boitier.resolutionMpx, 'resolution_mpx'),
       ...siRenseigne('readNoiseE', boitier.readNoiseE, 'read_noise_e'),
@@ -110,6 +111,7 @@ export function departLieu(site: SiteEnregistre | null): DepartLieu | null {
 export function departMateriel(profil: ProfilMateriel | null): DepartMateriel | null {
   if (profil === null) return null
   return {
+    ...(profil.boitierId === undefined ? {} : { boitierId: profil.boitierId }),
     boitier: {
       formatCapteur: profil.formatCapteur,
       resolutionMpx: texteDe(profil.resolutionMpx),

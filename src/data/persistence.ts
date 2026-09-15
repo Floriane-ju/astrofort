@@ -210,6 +210,10 @@ const FORME_PROFIL: Forme = {
   focaleMm: nombre('focale_mm'),
   ouvertureN: nombre('ouverture_N'),
   typeObjectif: parmi('RECTILINEAIRE', 'FISHEYE'),
+  // T-0204 — `texte` et non `parmi(...)` : un identifiant absent de la base n'est pas un
+  // fichier corrompu. La saisie retombe sur le mode personnalisé, et les champs ci-dessous,
+  // eux, ont bien été exportés. Refuser l'import ferait perdre tout le profil pour une ligne.
+  boitierId: optionnel(texte),
   formatCapteur: parmi(...TABLE_FORMATS_CAPTEUR.map((f) => f.format)),
   resolutionMpx: optionnel(nombre('resolution_mpx')),
   readNoiseE: optionnel(nombre('read_noise_e')),

@@ -108,7 +108,7 @@ Chacun est un constat issu d'une décision de périmètre explicite, pas une int
 | **Traitement d'images** | L'application planifie et prédit ; elle n'empile pas, ne dématrice pas, ne développe pas. |
 | **Photométrie et astrométrie scientifiques** | Précision et traçabilité hors périmètre grand public. |
 | **Pilotage de matériel** | Aucune connexion à une monture, un boîtier ou un séquenceur. |
-| **Recommandation commerciale** | L'application nomme des catégories d'équipement et chiffre leur gain (§10.3). Jamais une marque, un modèle, un prix ou un lien. |
+| **Recommandation commerciale** | L'application nomme des catégories d'équipement et chiffre leur gain (§10.3). Jamais un prix, un lien, un conseil d'achat, ni une marque ou un modèle **suggérés**. Le non-objectif porte sur la prescription, pas sur l'identification : nommer le boîtier qu'on possède déjà (§5.1) sert à le décrire, et ne vend rien. |
 
 ## 1.5 Critères de réussite du MVP
 
@@ -1194,11 +1194,20 @@ MODE DE RECADRAGE CAPTEUR
     croit très souvent gagner de la portée en passant en APS-C. L'app le dit
     explicitement au moment du basculement, en une ligne.
 
-CAPTEUR — dimensions par format, pitch dérivé de la résolution
-  Aucun boîtier ne se choisit dans une liste. Le capteur se décrit par son type et sa
-  résolution, jamais par des millimètres ou un pitch tapés à la main : ni l'un ni l'autre ne
-  se lit sur une fiche produit aussi directement que le type de capteur et le nombre de
-  mégapixels.
+CAPTEUR — un modèle de la base, ou un format et une résolution
+  Deux modes, et un seul sélecteur pour en changer.
+
+  boitier_id — une ligne de la base matériel embarquée, ou vide pour le mode personnalisé.
+  Un modèle apporte ce qu'aucune fiche produit ne donne : la courbe de bruit de lecture par
+  ISO, le seuil de double gain, la capacité de saturation. Ce sont ces grandeurs, et elles
+  seules, qui permettent de recommander un ISO (§7.2) et de chiffrer une pose sans repli
+  générique. Les exiger d'une saisie manuelle revenait à ne jamais les avoir.
+  → modèle choisi : plus aucun champ capteur n'est posé, il n'y a plus rien à décider.
+
+  Mode personnalisé — le capteur se décrit par son type et sa résolution, jamais par des
+  millimètres ou un pitch tapés à la main : ni l'un ni l'autre ne se lit sur une fiche
+  produit aussi directement que le type de capteur et le nombre de mégapixels. Ce mode est
+  un chemin de première classe, pas un rattrapage : aucune base matériel n'est exhaustive.
 
   type_capteur ∈ {PLEIN_FORMAT, APSC_NIKON, APSC_CANON, MICRO_4_3, MOYEN_FORMAT}
   Chaque format fixe capteur_L_mm et capteur_H_mm (table sourcée, documentation
@@ -1276,11 +1285,20 @@ Et l'app affiche : « recadrage, pas grossissement — même détail, moins de c
 Quand je valide
 Alors l'app signale un sur-échantillonnage et propose une réduction de focale
 
-Étant donné type_capteur = APS-C Nikon/Sony/Pentax/Fujifilm et resolution_mpx = 24
+Étant donné le mode personnalisé, type_capteur = APS-C Nikon/Sony/Pentax/Fujifilm et resolution_mpx = 24
 Quand je valide le profil
 Alors pitch_um se déduit de la formule de dérivation, jamais d'une saisie directe
 Et capteur_L_mm, capteur_H_mm ne sont à aucun moment saisis à la main
-Et aucun boîtier n'a été choisi dans une liste
+
+Étant donné un boitier_id de la base matériel
+Quand je valide le profil
+Alors aucun champ décrivant le capteur ne m'est présenté
+Et le profil enregistré porte l'identifiant du modèle, jamais une copie de ses grandeurs
+
+Étant donné un profil dont le boitier_id ne figure plus dans la base    # cas limite
+Quand l'application démarre
+Alors le mode personnalisé s'applique avec les champs enregistrés
+Et rien du profil n'est perdu
 
 Étant donné un type_capteur et une resolution_mpx dont le pitch dérivé dépasse 24 µm  # cas limite
 Quand je valide le profil
@@ -1298,7 +1316,13 @@ Alors la saisie est refusée avec un message nommant le champ fautif
 
 ### Dépendances données
 
-Table de formats de capteur embarquée (5 formats, dimensions physiques uniquement) : documentation constructeur, aucune marque de boîtier ni prix commercial. Les grandeurs avancées (bruit de lecture, seuil de double gain, capacité de saturation, point zéro système, taille de fichier RAW) n'ont pas de base matériel : saisies à la main ou remplacées par le repli générique du registre (§2.3).
+Table de formats de capteur embarquée (5 formats, dimensions physiques uniquement) : documentation constructeur.
+
+Base matériel embarquée, versionnée avec le code et éditable à la main (`src/data/boitiers.md`) : par modèle, format de capteur, résolution, courbe de bruit de lecture par ISO, seuil de double gain, capacité de saturation, poids d'une image. Sources : Photons to Photos pour l'électronique du capteur, documentation constructeur pour le format et la résolution ; chaque ligne porte la sienne (§2.1). Fraîcheur : liée aux releases, aucun appel réseau — la matrice §12.5 tient. Fallback : une colonne vide vaut « inconnu », le repli générique du registre s'applique et la sortie porte [ESTIMÉ].
+
+Le point zéro système ne figure dans aucune ligne : il n'est publié nulle part et ne se dérive pas d'une fiche produit. Le générique C-14 s'applique pour tous les boîtiers (§2.3), et la plage utile de pose absorbe l'incertitude.
+
+Les bornes de saisie de `read_noise_e` (0,5 – 40 e⁻) et de `full_well_e` (5 000 – 250 000 e⁻) couvrent les valeurs réellement mesurées : un capteur ISO-variant lit 36,5 e⁻ à ISO 100, un capteur à très gros photosites sature au-delà de 200 000 e⁻. Des bornes plus étroites refuseraient la mesure au profit de la spécification.
 
 ---
 
@@ -1961,6 +1985,19 @@ CHOIX DE L'ISO — le double gain de conversion
   iso_recommande = plus petit ISO ≥ seuil_double_gain (base matériel)
   Au-delà : RN ne diminue plus significativement, mais la capacité de saturation
   chute proportionnellement à l'ISO → étoiles brillantes cramées.
+
+  Le seuil se lit sur la courbe de bruit de lecture : une chute brutale, suivie d'un bruit
+  qui ne descend plus. C'est la signature physique de la bascule — au-delà, amplifier
+  davantage ne réduit plus le bruit en électrons. Un capteur qui décroît régulièrement
+  marche après marche n'a pas de seuil : aucun palier ne justifie alors un ISO plutôt qu'un
+  autre, et AUCUNE recommandation n'est affichée. Inventer un seuil là où la courbe n'en
+  montre pas ferait recommander un réglage sans raison.
+
+  AFFICHAGE — boîtier de la base : l'ISO recommandé est un FAIT, pas un champ. Demander de
+  taper le chiffre qu'on vient de calculer est une question dont on connaît la réponse.
+  Il reste modifiable — le seuil justifie une recommandation, il n'impose pas un réglage —
+  par une commande explicite qui rouvre la saisie sans faire quitter son boîtier.
+  Mode personnalisé : l'ISO se saisit, et le seuil saisi le justifie s'il est renseigné.
 
 AFFICHAGE — §2.3
   valeur retenue arrondie à une valeur d'obturateur usuelle
@@ -3917,7 +3954,7 @@ La colonne « mesuré » porte la taille du paquet réellement construit par `pn
 | Sharpless (271 après filtrage NGC/IC) + Barnard (343) | < 0,1 Mo | **0,02 Mo** | 614 objets Stellarium DSO v3.23, Caldwell hors périmètre |
 | Frontières IAU B1875 + figures + astérismes + étoiles nommées | < 0,25 Mo | **0,26 Mo** | un seul paquet, JSON en UTF-8 |
 | Masque Voie lactée procédural | ≈ 0,5 Mo | **0 Mo** | calculé à l'exécution, aucune donnée |
-| Base matériel (boîtiers, capteurs, filtres) | ≈ 0,2 Mo | **dans le code** | tables gelées du registre |
+| Base matériel (boîtiers, capteurs, filtres) | ≈ 0,2 Mo | **dans le code** | `src/data/boitiers.md`, table markdown lue telle quelle |
 | Glossaire §10.1 | ≈ 0,1 Mo | **dans le code** | clés typées, pas un fichier |
 | Code applicatif (aucun WASM) | 3 – 5 Mo | **0,56 Mo** | un fragment JS + une feuille CSS |
 | **Paquet de base — total** | ≈ 7 – 9 Mo | **≈ 2,4 Mo** | tout `dist/`, icônes comprises |

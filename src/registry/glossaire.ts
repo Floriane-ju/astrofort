@@ -641,6 +641,19 @@ export const GLOSSAIRE = Object.freeze({
     consequence: 'En régime bridé, soigner la mise en station rapporte plus que tout achat.',
     sections: ['7.2'],
   }),
+  mon_boitier: terme({
+    libelle: 'Mon boîtier',
+    glose: 'modèle, ou saisie à la main',
+    explication:
+      'Choisir son modèle apporte d’un coup ce qu’une fiche produit ne dit pas : la courbe de ' +
+      'bruit de lecture, le seuil de double gain, la capacité de saturation. Ce sont ces ' +
+      'grandeurs, et elles seules, qui permettent de recommander un ISO et de chiffrer une ' +
+      'pose sans repli générique.',
+    consequence:
+      'Boîtier absent de la liste : le décrire à la main par son type de capteur et sa ' +
+      'résolution, puis l’ajouter à la base pour ne plus avoir à recommencer.',
+    sections: ['5.1'],
+  }),
   iso_recommande: terme({
     libelle: 'ISO recommandé',
     glose: 'palier du double gain',

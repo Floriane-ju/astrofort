@@ -41,6 +41,8 @@ function lieu(champs: { readonly bortle: string; readonly sqm: string }): Saisie
 }
 
 const MATERIEL: SaisieMateriel = {
+  boitierId: '',
+  surBoitierId: rien,
   boitier: {
     formatCapteur: 'PLEIN_FORMAT',
     resolutionMpx: DEFAUT.resolutionMpx,

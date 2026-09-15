@@ -61,7 +61,11 @@ export const DOMAINES = Object.freeze({
     unite: 'Mpx',
     section: '5.1',
   }),
-  read_noise_e: domaine({ champ: 'le bruit de lecture', min: 0.5, max: 15, unite: 'e⁻', section: '5.1' }),
+  // T-0202 — la borne haute était à 15 e⁻ et refusait des courbes réelles : un Canon EOS RP ou
+  // 6D Mark II lit 36,5 e⁻ à ISO 100. Un capteur ISO-variant paie cher son gain de base, et la
+  // pose optimale varie comme le carré de cette valeur : l'écarter serait la fausser d'un
+  // facteur cinquante. Source : Photons to Photos.
+  read_noise_e: domaine({ champ: 'le bruit de lecture', min: 0.5, max: 40, unite: 'e⁻', section: '5.1' }),
   seuil_double_gain_iso: domaine({
     champ: 'le seuil de double gain',
     min: 100,
@@ -69,10 +73,12 @@ export const DOMAINES = Object.freeze({
     unite: 'ISO',
     section: '5.1',
   }),
+  // T-0202 — 200 000 e⁻ excluait le Sony α7S III, mesuré à 227 834 e⁻ : de très gros
+  // photosites saturent tard, c'est leur raison d'être. Source : Photons to Photos.
   full_well_e: domaine({
     champ: 'la capacité de saturation',
     min: 5000,
-    max: 200000,
+    max: 250000,
     unite: 'e⁻',
     section: '5.1',
   }),

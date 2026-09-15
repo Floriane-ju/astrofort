@@ -10,6 +10,7 @@ import { useState } from 'react'
 import { poidsParDefaut, type PoidsScoring } from '../core/session.ts'
 import type { PointMasque } from '../core/site.ts'
 import type { CapteurMode, SaisieBoitier } from '../data/equipment.ts'
+import { ligneBoitier } from '../data/boitiers.ts'
 import type { QualiteMiseEnStation, TypeMonture } from '../core/tracking.ts'
 import { jourLocalIso } from './horaire.ts'
 import { etatScene, majVue } from './scene-etat.ts'
@@ -109,7 +110,10 @@ const BOITIER_VIDE = {
 } as const
 
 export interface SaisieMateriel {
-  /** §5.1 — le type de capteur et la résolution saisis, jamais un boîtier choisi. */
+  /** T-0204 — identifiant d'une ligne de `boitiers.md`, ou `''` pour le mode personnalisé. */
+  readonly boitierId: string
+  readonly surBoitierId: (v: string) => void
+  /** §5.1 — le type de capteur et la résolution, quand aucun boîtier n'est choisi. */
   readonly boitier: SaisieBoitier
   readonly surBoitier: (v: SaisieBoitier) => void
   /** §7.2 — ISO de capture, vide tant que celui du double gain convient. */
@@ -140,6 +144,8 @@ export interface SaisieMateriel {
  * pas une caractéristique du matériel (§3.5).
  */
 export interface DepartMateriel {
+  /** Absent d'un enregistrement antérieur à T-0204 : le mode personnalisé s'applique. */
+  readonly boitierId?: string
   readonly boitier: SaisieBoitier
   readonly iso: string
   readonly focale: string
@@ -153,6 +159,11 @@ export interface DepartMateriel {
 }
 
 export function useSaisieMateriel(depart: DepartMateriel | null): SaisieMateriel {
+  // Un identifiant disparu de la base — ligne supprimée, fichier édité — retombe sur le mode
+  // personnalisé, avec les champs enregistrés : la saisie reste utilisable, rien n'est perdu.
+  const [boitierId, setBoitierId] = useState(() =>
+    ligneBoitier(depart?.boitierId ?? '') === null ? '' : (depart?.boitierId ?? ''),
+  )
   const [boitier, surBoitier] = useState<SaisieBoitier>(
     () =>
       depart?.boitier ?? {
@@ -176,6 +187,21 @@ export function useSaisieMateriel(depart: DepartMateriel | null): SaisieMateriel
   const [typeMonture, surTypeMonture] = useState<TypeMonture>(depart?.typeMonture ?? 'TRACKER')
 
   /**
+   * T-0204 — quitter un boîtier de la base recopie ses grandeurs dans les champs : on repart
+   * d'une copie modifiable plutôt que d'un formulaire vide. Le sens inverse ne recopie rien —
+   * tant qu'un boîtier est choisi, c'est la base qui fait foi, pas ce qui traîne dans l'état.
+   */
+  function surBoitierId(id: string) {
+    const quitte = id === '' ? ligneBoitier(boitierId) : null
+    if (quitte !== null) surBoitier(quitte.saisie)
+    // T-0205 — le poids d'une image reste saisissable sous un boîtier de la base : la ligne
+    // préremplit le champ, elle ne le remplace pas. Le réglage RAW change sans changer d'appareil.
+    const entre = ligneBoitier(id)
+    if (entre !== null) surBoitier({ ...boitier, tailleRawMo: entre.saisie.tailleRawMo })
+    setBoitierId(id)
+  }
+
+  /**
    * §5.1 — changer d'objectif change la projection, pas un réglage de rendu. Si la scène
    * regarde déjà « comme l'objectif », elle suit ; si elle est en planétarium, elle y reste.
    */
@@ -185,6 +211,8 @@ export function useSaisieMateriel(depart: DepartMateriel | null): SaisieMateriel
   }
 
   return {
+    boitierId,
+    surBoitierId,
     boitier,
     surBoitier,
     iso,

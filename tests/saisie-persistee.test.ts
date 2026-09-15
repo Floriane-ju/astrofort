@@ -25,6 +25,7 @@ import {
 } from '../src/ui/saisie-persistee.ts'
 import type { SaisieLieu, SaisieMateriel } from '../src/ui/app-saisie.ts'
 import { masqueDepuisPoints } from '../src/core/site.ts'
+import { BASE_BOITIERS } from '../src/data/boitiers.ts'
 
 /** Les commandes de la saisie ne servent à rien ici : c'est la valeur qui voyage. */
 const RIEN = () => undefined
@@ -51,6 +52,8 @@ function saisieLieu(champs: Partial<SaisieLieu> = {}): SaisieLieu {
 
 function saisieMateriel(champs: Partial<SaisieMateriel> = {}): SaisieMateriel {
   return {
+    boitierId: '',
+    surBoitierId: RIEN,
     boitier: {
       formatCapteur: 'PLEIN_FORMAT',
       resolutionMpx: '',
@@ -190,5 +193,25 @@ describe('T-0082 — l’export cesse d’être vide', () => {
     await importeDonneesUtilisateur(fichier)
     expect(departLieu(await litSiteActif())).toEqual(attenduLieu)
     expect(departMateriel(await litProfilActif())).toEqual(attenduMateriel)
+  })
+})
+
+describe('T-0204 — le boîtier choisi survit au rechargement', () => {
+  it('rend l’identifiant de la ligne, et non une copie de ses grandeurs', async () => {
+    const choisi = BASE_BOITIERS[0]!
+    const relu = await rechargeMateriel(saisieMateriel({ boitierId: choisi.id }))
+    expect(relu?.boitierId).toBe(choisi.id)
+  })
+
+  it('n’enregistre aucun identifiant en mode personnalisé', async () => {
+    expect((await rechargeMateriel(saisieMateriel()))?.boitierId).toBeUndefined()
+  })
+
+  it('accepte un identifiant disparu de la base plutôt que de refuser tout le profil', async () => {
+    // Une ligne supprimée du fichier ne doit pas faire perdre la focale, l'ouverture et le
+    // site avec elle : c'est `useSaisieMateriel` qui retombe sur le mode personnalisé.
+    const relu = await rechargeMateriel(saisieMateriel({ boitierId: 'boitier-disparu' }))
+    expect(relu?.boitierId).toBe('boitier-disparu')
+    expect(relu?.focale).toBe(saisieMateriel().focale)
   })
 })

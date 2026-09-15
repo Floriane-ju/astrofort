@@ -303,7 +303,19 @@ function champRequis(texte: string, domaine: DomaineId): number {
 }
 
 /**
- * §5.1 — le boîtier tel que la saisie le décrit : jamais choisi dans une liste.
+ * T-0203 — d'où vient le boîtier, quand il ne vient pas de la saisie : une ligne de la base
+ * `boitiers.md`. Elle apporte son identité et, seule chose que la saisie ne sait pas exprimer,
+ * la courbe complète du bruit de lecture — un point par ISO au lieu d'un seul.
+ */
+export interface OrigineBoitier {
+  readonly id: string
+  readonly libelle: string
+  readonly source: string
+  readonly readNoiseE: Readonly<Record<number, number>>
+}
+
+/**
+ * §5.1 — le boîtier tel que la saisie le décrit, ou tel que la base le donne.
  *
  * Le format de capteur et la résolution sont exigés : sans eux, ni champ ni échantillonnage
  * n'existent, et une valeur inventée produirait un cadrage faux sans le dire. Le pitch qui en
@@ -311,8 +323,12 @@ function champRequis(texte: string, domaine: DomaineId): number {
  * ment incohérents entre eux sont donc toujours refusés, en nommant le pitch. Les grandeurs du
  * mode avancé, elles, tolèrent l'absence — le registre fournit son repli, l'application
  * l'affiche, et la sortie porte [ESTIMÉ] plutôt que de passer pour une mesure.
+ *
+ * Une ligne de la base emprunte exactement ce chemin : elle est validée comme une saisie, et
+ * n'obtient aucune dispense. `origine` ne remplace que ce que la saisie ne sait pas dire —
+ * l'identité du modèle et sa courbe de bruit de lecture complète.
  */
-export function resoutBoitier(saisie: SaisieBoitier): Boitier {
+export function resoutBoitier(saisie: SaisieBoitier, origine?: OrigineBoitier): Boitier {
   const format = ligneFormatCapteur(saisie.formatCapteur as FormatCapteur)
   const resolutionMpx = champRequis(saisie.resolutionMpx, 'resolution_mpx')
   const capteurLMm = format.capteurLMm
@@ -325,21 +341,29 @@ export function resoutBoitier(saisie: SaisieBoitier): Boitier {
   const tailleRawMo = champ(saisie.tailleRawMo, 'taille_raw_mo')
 
   return Object.freeze({
-    id: 'saisi',
-    libelle: `Boîtier saisi — ${format.libelle}, ${resolutionMpx} Mpx, pitch ${pitchUm.toFixed(2)} µm`,
+    id: origine?.id ?? 'saisi',
+    libelle:
+      origine?.libelle ??
+      `Boîtier saisi — ${format.libelle}, ${resolutionMpx} Mpx, pitch ${pitchUm.toFixed(2)} µm`,
     capteurLMm,
     capteurHMm,
     pitchUm,
     // Le recadrage reste un mode du boîtier : il change les dimensions, jamais le pitch.
     recadrageApsc: Object.freeze(recadrageApsc(capteurLMm, capteurHMm)),
-    readNoiseE: Object.freeze(
-      readNoiseE === null || seuilDoubleGainIso === null ? {} : { [seuilDoubleGainIso]: readNoiseE },
-    ),
+    // Sans courbe de base, le bruit de lecture saisi ne vaut qu'à l'ISO auquel il se rattache :
+    // un seul point, et rien ailleurs, plutôt qu'une valeur étendue à des ISO qu'elle ne décrit pas.
+    readNoiseE:
+      origine?.readNoiseE ??
+      Object.freeze(
+        readNoiseE === null || seuilDoubleGainIso === null
+          ? {}
+          : { [seuilDoubleGainIso]: readNoiseE },
+      ),
     ...(seuilDoubleGainIso === null ? {} : { seuilDoubleGainIso }),
     ...(fullWellE === null ? {} : { fullWellE }),
     ...(zpSys === null ? {} : { zpSys }),
     tailleRawMo: tailleRawMo ?? K('TAILLE_RAW_MO_GENERIQUE'),
-    source: 'saisie utilisateur — mode custom',
+    source: origine?.source ?? 'saisie utilisateur — mode custom',
   })
 }
 

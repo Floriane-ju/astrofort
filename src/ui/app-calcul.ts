@@ -52,6 +52,7 @@ import {
   type IsoRetenu,
   type PointZeroSysteme,
 } from '../data/equipment.ts'
+import { boitierDeBase, ligneBoitier } from '../data/boitiers.ts'
 import { K } from '../registry/constants.ts'
 import type { Traced } from '../core/traced.ts'
 import { modeObjectif } from './PanneauMateriel.tsx'
@@ -180,6 +181,7 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     () => evalueMateriel(materiel),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
+      materiel.boitierId,
       materiel.boitier,
       materiel.iso,
       materiel.focale,
@@ -360,13 +362,36 @@ export function evalueCiel(site: Site, lieu: SaisieLieu): CalculCiel {
  * T-0149 — le lieu n'entre plus ici. Une focale effacée le temps de la retaper refusait
  * jusqu'à la nuit et au fond de ciel, et la scène disparaissait avec eux.
  */
+/**
+ * T-0204 — le boîtier du calcul : la ligne de la base quand une est choisie, la saisie sinon.
+ *
+ * La base fait foi tant qu'un boîtier est choisi, plutôt qu'une copie figée dans le profil :
+ * corriger une ligne de `boitiers.md` recalcule les plans au redémarrage, ce qu'exige §2.1.
+ *
+ * T-0205 — sauf le poids d'une image, qui vient de la saisie même sous un boîtier de la base :
+ * ce n'est pas une grandeur du capteur mais du réglage RAW, et la ligne n'en donne qu'un départ.
+ */
+function boitierCourant(materiel: SaisieMateriel): Boitier {
+  const ligne = ligneBoitier(materiel.boitierId)
+  return ligne === null
+    ? resoutBoitier(materiel.boitier)
+    : boitierDeBase(ligne, materiel.boitier.tailleRawMo)
+}
+
 export function evalueMateriel(materiel: SaisieMateriel): Calcul {
   try {
-    const boitier = resoutBoitier(materiel.boitier)
+    const boitier = boitierCourant(materiel)
     const capteur = capteurEffectif(boitier, materiel.capteurMode)
     const focaleMm = Number(materiel.focale)
     const ouvertureN = Number(materiel.ouverture)
-    const isoChoisi = materiel.iso.trim() === '' ? null : valide('iso_capture', Number(materiel.iso))
+    // T-0206 — sous un boîtier de la base, l'ISO ne se force plus : c'est le seuil de double
+    // gain de sa ligne qui le désigne. Ignorer ici la valeur saisie évite qu'un ISO tapé avant
+    // le choix du boîtier — ou relu d'un profil enregistré — pilote en douce la pose calculée
+    // alors que l'écran affiche le palier du seuil.
+    const isoChoisi =
+      ligneBoitier(materiel.boitierId) !== null || materiel.iso.trim() === ''
+        ? null
+        : valide('iso_capture', Number(materiel.iso))
     return {
       ok: true,
       optique: profilOptique({ focaleMm, ouvertureN, ...capteur }),

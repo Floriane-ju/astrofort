@@ -39,6 +39,8 @@ const ECRAN_SITE = renderToStaticMarkup(
 
 const ECRAN_MATERIEL = renderToStaticMarkup(
   <PanneauMateriel
+    boitierId=""
+    surBoitierId={rien}
     boitier={{
       formatCapteur: 'PLEIN_FORMAT',
       resolutionMpx: '24',

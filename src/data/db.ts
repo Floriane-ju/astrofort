@@ -44,10 +44,16 @@ export interface ProfilMateriel {
   readonly ouvertureN: number
   readonly typeObjectif: 'RECTILINEAIRE' | 'FISHEYE'
   /**
-   * Format de capteur et résolution saisis (§5.1, aucun boîtier ne se choisit dans une
-   * liste) — le pitch s'en déduit, il ne se persiste pas séparément. Ne se retéléchargent
-   * pas : sans eux dans l'export, un profil réimporté décrirait le capteur d'un autre
-   * appareil (§12.3).
+   * T-0204 — identifiant d'une ligne de la base `boitiers.md`. Absent, ou disparu de la base :
+   * le mode personnalisé s'applique, avec les champs ci-dessous. Le boîtier n'est pas recopié
+   * dans le profil — seul son identifiant l'est, pour qu'une correction de la base profite
+   * aussi aux profils déjà enregistrés (§2.1).
+   */
+  readonly boitierId?: string
+  /**
+   * Format de capteur et résolution saisis (§5.1, mode personnalisé) — le pitch s'en déduit,
+   * il ne se persiste pas séparément. Ne se retéléchargent pas : sans eux dans l'export, un
+   * profil réimporté décrirait le capteur d'un autre appareil (§12.3).
    */
   readonly formatCapteur: string
   readonly resolutionMpx?: number
