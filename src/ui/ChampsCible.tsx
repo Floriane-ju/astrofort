@@ -9,10 +9,14 @@
  *
  * Les valeurs sont donc des lectures, empruntant la ligne des grandeurs non tracées
  * (§6.4) : elles viennent d'OpenNGC, pas d'une formule, et rien ne s'y déplie. T-0158 —
- * les trois dimensions apparentes se rangent sous leur propre sous-titre.
+ * les trois dimensions apparentes se rangent ensemble, sans sous-titre.
  *
  * T-0228 — la région ne dit plus d'où viennent ces valeurs. La provenance est la même à
  * chaque cible et n'arbitre rien ; elle se lit dans le tiroir « info » de la barre haute.
+ *
+ * T-0233 — le sous-titre « Dimensions » disparaît (redondant avec les libellés), et
+ * « Grand axe » / « Petit axe » deviennent « Dimension grand axe » / « Dimension petit
+ * axe » pour rester lisibles sans lui.
  */
 
 import type { ObjetCielProfond } from '../data/deepsky.ts'
@@ -44,8 +48,12 @@ function Lecture({
 /** Les dimensions que le catalogue porte réellement — une absente ne produit pas de ligne. */
 function lignesDimensions(objet: ObjetCielProfond) {
   return [
-    objet.majAxArcmin === null ? null : { libelle: 'Grand axe', valeur: `${objet.majAxArcmin} ’` },
-    objet.minAxArcmin === null ? null : { libelle: 'Petit axe', valeur: `${objet.minAxArcmin} ’` },
+    objet.majAxArcmin === null
+      ? null
+      : { libelle: 'Dimension grand axe', valeur: `${objet.majAxArcmin} ’` },
+    objet.minAxArcmin === null
+      ? null
+      : { libelle: 'Dimension petit axe', valeur: `${objet.minAxArcmin} ’` },
     objet.posAngDeg === null
       ? null
       : { libelle: 'Angle de position', valeur: `${objet.posAngDeg} °` },
@@ -62,7 +70,6 @@ function Dimensions({ objet }: ChampsCibleProps) {
 
   return (
     <>
-      <h3>Dimensions</h3>
       {lignes.length === 0 ? (
         <p className="etat">{MANQUANTE}</p>
       ) : (

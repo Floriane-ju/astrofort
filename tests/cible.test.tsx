@@ -167,24 +167,24 @@ describe('T-0128 — la fiche décrit la cible, elle ne la choisit plus', () => 
   })
 
   it('garde les champs qui décrivent la cible', () => {
-    for (const champ of ['Désignation', 'Type d’objet', 'Grand axe', 'Petit axe']) {
+    for (const champ of ['Désignation', 'Type d’objet', 'Dimension grand axe', 'Dimension petit axe']) {
       expect(rendu, champ).toContain(champ)
     }
   })
 })
 
 describe('T-0158 — « À propos », et des dimensions qui ne meublent pas', () => {
-  it('titre la section « À propos » et groupe les dimensions sous leur sous-titre', () => {
+  it('titre la section « À propos » et groupe les dimensions sans sous-titre', () => {
     const rendu = ficheDe(AU_DESSUS)
     expect(rendu).toContain('<h2>À propos</h2>')
-    expect(rendu).toContain('<h3>Dimensions</h3>')
+    expect(rendu).not.toContain('<h3>Dimensions</h3>')
   })
 
   it('n’affiche pas la ligne d’une dimension absente du catalogue', () => {
     // AU_DESSUS n'a pas d'angle de position : une ligne « [DONNÉE MANQUANTE] » de plus
     // n'apprendrait rien de la cible.
     const rendu = ficheDe(AU_DESSUS)
-    expect(rendu).toContain('Grand axe')
+    expect(rendu).toContain('Dimension grand axe')
     expect(rendu).not.toContain('Angle de position')
   })
 
@@ -194,8 +194,8 @@ describe('T-0158 — « À propos », et des dimensions qui ne meublent pas', ()
     )
     // Les verdicts en aval nomment aussi ce qui leur manque : on ne juge que la section.
     const aPropos = rendu.slice(0, rendu.indexOf('</section>'))
-    expect(aPropos).not.toContain('Grand axe')
-    expect(aPropos).not.toContain('Petit axe')
+    expect(aPropos).not.toContain('Dimension grand axe')
+    expect(aPropos).not.toContain('Dimension petit axe')
     expect(aPropos.match(/DONNÉE MANQUANTE/g) ?? []).toHaveLength(1)
   })
 
