@@ -8,26 +8,26 @@
    globale resterait trop élevée. La palette est CONÇUE en rouge sur noir, canaux vert et
    bleu strictement nuls.
 
-   T-0113 — LANGAGE VISUEL. La palette de jour est verte-menthe sur noir profond, pas grise
-   sur gris : un instrument de terrain se lit à la lampe frontale, et une interface déjà
-   sombre et déjà monochrome le jour rend le basculement au rouge continu au lieu d'être une
-   rupture. Les angles sont vifs, les traits font un pixel, les micro-libellés sont en
-   capitales espacées : cette grammaire distingue une ÉTIQUETTE d'une VALEUR sans recourir à
-   la luminance, qui est justement ce que §11.1 confisque. Les jetons de forme — familles,
-   suivis, épaisseur de trait — vivent dans le second bloc `:root`, avec les couleurs que le
-   navigateur peint tout seul : ce ne sont pas des couleurs, ils n'ont rien à repeindre.
+   LANGAGE VISUEL. La palette de jour est verte-menthe sur noir profond, pas grise sur gris :
+   un instrument de terrain se lit à la lampe frontale, et une interface déjà sombre et déjà
+   monochrome le jour rend le basculement au rouge continu au lieu d'être une rupture. Les
+   angles sont vifs, les traits font un pixel, les micro-libellés sont en capitales espacées :
+   cette grammaire distingue une ÉTIQUETTE d'une VALEUR sans recourir à la luminance, qui est
+   justement ce que §11.1 confisque. Les jetons de forme — familles, suivis, épaisseur de
+   trait — vivent dans le second bloc `:root`, avec les couleurs que le navigateur peint tout
+   seul : ce ne sont pas des couleurs, ils n'ont rien à repeindre.
 
-   T-0194 — TOUT ÉCART ET TOUTE TAILLE DE TEXTE PASSENT PAR UN JETON, pour la même raison que
-   les couleurs : une valeur écrite en dur dans une règle est un choix que personne ne peut
-   plus comparer aux autres. Les deux échelles — sept pas d'espacement, six rangs de texte —
-   sont déclarées dans le second bloc `:root`, avec les jetons de forme. Les GABARITS (barres,
+   TOUT ÉCART ET TOUTE TAILLE DE TEXTE PASSENT PAR UN JETON, pour la même raison que les
+   couleurs : une valeur écrite en dur dans une règle est un choix que personne ne peut plus
+   comparer aux autres. Les deux échelles — sept pas d'espacement, six rangs de texte — sont
+   déclarées dans le second bloc `:root`, avec les jetons de forme. Les GABARITS (barres,
    cartes, panneau, bulle) en sont exclus : ils mesurent des objets, pas l'air entre eux.
 
-   T-0193 — POURQUOI CETTE FEUILLE RESTE D'UN SEUL TENANT, malgré le plafond de 800 lignes.
-   Le plafond vise les fichiers qu'on lit pour comprendre une décision ; cette feuille est une
-   TABLE, comme `registry/constants.ts` : une région par bloc, aucune logique à suivre d'un
-   bout à l'autre. La découper coûterait davantage qu'elle ne rapporte — `mode-nuit.test.tsx`
-   et `coque.test.tsx` lisent son TEXTE pour calculer des ratios de contraste et vérifier
+   POURQUOI CETTE FEUILLE RESTE D'UN SEUL TENANT, malgré le plafond de 800 lignes. Le plafond
+   vise les fichiers qu'on lit pour comprendre une décision ; cette feuille est une TABLE,
+   comme `registry/constants.ts` : une région par bloc, aucune logique à suivre d'un bout à
+   l'autre. La découper coûterait davantage qu'elle ne rapporte — `mode-nuit.test.tsx` et
+   `coque.test.tsx` lisent son TEXTE pour calculer des ratios de contraste et vérifier
    qu'aucune couleur n'est écrite en dur ; ils devraient concaténer des fragments, et cette
    garantie-là — la seule qui rende le mode nuit total — deviendrait dépendante d'une liste de
    fichiers à tenir à jour. Le jour où un `@import` est justifié, c'est la charge de preuve qui
@@ -55,15 +55,15 @@
 /* §11.1 — sortie = (R, 0, 0). Le facteur de luminance est réglable jusqu'à un plancher
    d'environ 2 % de la luminance nominale, et il multiplie toute la palette.
 
-   T-0071 — CONTRASTE DU TEXTE. Ratios WCAG 2.2 (§ « contrast ratio » et « relative
-   luminance », https://www.w3.org/TR/WCAG22/#dfn-contrast-ratio) : pour un canal c dans
-   [0, 1], lin(c) = c/12,92 si c ≤ 0,03928, sinon ((c + 0,055)/1,055)^2,4 ; la luminance
-   relative vaut L = 0,2126·lin(R) + 0,7152·lin(V) + 0,0722·lin(B) — donc L = 0,2126·lin(R)
-   en mode nuit, puisque V et B y sont nuls ; le ratio est (L_clair + 0,05)/(L_sombre + 0,05).
-   Seuil AA texte courant : 4,5:1 (3:1 seulement à ≥ 18,66 px ou en gras — aucun texte
-   d'information n'est dans ce cas ici, les libellés sont sous 12,75 px).
+   CONTRASTE DU TEXTE. Ratios WCAG 2.2 (§ « contrast ratio » et « relative luminance »,
+   https://www.w3.org/TR/WCAG22/#dfn-contrast-ratio) : pour un canal c dans [0, 1],
+   lin(c) = c/12,92 si c ≤ 0,03928, sinon ((c + 0,055)/1,055)^2,4 ; la luminance relative vaut
+   L = 0,2126·lin(R) + 0,7152·lin(V) + 0,0722·lin(B) — donc L = 0,2126·lin(R) en mode nuit,
+   puisque V et B y sont nuls ; le ratio est (L_clair + 0,05)/(L_sombre + 0,05). Seuil AA
+   texte courant : 4,5:1 (3:1 seulement à ≥ 18,66 px ou en gras — aucun texte d'information
+   n'est dans ce cas ici, les libellés sont sous 12,75 px).
 
-   MODE JOUR — T-0113. Le pire couple de la palette est --alerte sur --fond-accent, à 6,5:1 ;
+   MODE JOUR — le pire couple de la palette est --alerte sur --fond-accent, à 6,5:1 ;
    --attenue plancher à 8,0:1, --texte à 17:1. La marge vient de ce que les fonds sont
    presque noirs — la même raison qui rend le passage au rouge continu plutôt que brutal.
 
@@ -113,7 +113,7 @@ body {
   transition: background-color 600ms ease, color 600ms ease;
 }
 
-/* T-0072 — arbitrage entre §11.1 et WCAG 2.3.3.
+/* Arbitrage entre §11.1 et WCAG 2.3.3.
 
    La préférence système demande qu'aucun mouvement ne s'impose ; §11.1 interdit le
    basculement brutal et le flash. Les deux sont tenables parce que cette transition ne
@@ -134,7 +134,7 @@ body {
   box-sizing: border-box;
 }
 
-/* T-0070 — ce que le navigateur peint quand la feuille se tait.
+/* Ce que le navigateur peint quand la feuille se tait.
 
    L'en-tête ci-dessus ne vaut que pour les couleurs ÉCRITES ici. L'anneau de focus, la
    sélection, le caret, la couleur d'accent et les ascenseurs sont peints par le navigateur
@@ -142,11 +142,11 @@ body {
    écrites nulle part, elles échappent au basculement de palette ET au test qui le vérifie.
    Les déclarer les rend rouges en mode nuit, et inspectables.
 
-   T-0113 — les jetons de FORME logent ici plutôt qu'avec la palette : le mode nuit repeint
-   des couleurs, il ne redessine pas la grammaire. Un jeton de forme placé dans le premier
-   bloc obligerait à en déclarer un équivalent rouge, qui n'existe pas.
+   Les jetons de FORME logent ici plutôt qu'avec la palette : le mode nuit repeint des
+   couleurs, il ne redessine pas la grammaire. Un jeton de forme placé dans le premier bloc
+   obligerait à en déclarer un équivalent rouge, qui n'existe pas.
 
-   T-0191 — les deux familles du dessin sont livrées avec les sources (`@font-face` plus bas),
+   Les deux familles du dessin sont livrées avec les sources (`@font-face` plus bas),
    puis leurs substituts système. Un jeton qui nomme une famille absente du dépôt promettrait
    un rendu que la CSP interdit d'aller chercher (§12.2, §13.1) : le repli deviendrait le cas
    nominal et le dessin varierait d'un poste à l'autre. `tests/polices.test.ts` tient la
@@ -163,27 +163,26 @@ body {
   --suivi-micro: 0.14em;
   --suivi-titre: 0.24em;
   --suivi-marque: 0.4em;
-  /* T-0215 — trois suivis échappaient à la famille, écrits en dur dans leur règle. Ils n'y
-     rentrent pas — ce ne sont pas des capitales espacées mais des textes qu'on aère à peine —
-     et ils sont donc nommés par leur rôle, comme les trois autres. Une valeur de suivi écrite
-     en dur est désormais un bug, au même titre qu'une couleur ou qu'un écart. */
+  /* Trois suivis distincts de la famille micro/titre/marque — pas des capitales espacées
+     mais des textes qu'on aère à peine — nommés par leur rôle. Une valeur de suivi écrite
+     en dur est un bug, au même titre qu'une couleur ou qu'un écart. */
   --suivi-saisie: 0.05em;
   --suivi-horaire: 0.08em;
   --suivi-etape: 0.12em;
   --trait: 1px;
-  /* T-0215 — le filet ÉPAIS, celui qui marque le bord gauche d'une alerte, d'une cause ou
-     d'une carte. Trois fois la valeur de `--trait`, et cité trois fois : §11.1 veut que le
-     rouge ne porte jamais seul, et c'est ce filet qui le double. */
+  /* Le filet ÉPAIS, celui qui marque le bord gauche d'une alerte, d'une cause ou d'une
+     carte. Trois fois la valeur de `--trait`, et cité trois fois : §11.1 veut que le rouge
+     ne porte jamais seul, et c'est ce filet qui le double. */
   --trait-marque: 3px;
   /* Le décalage du pointillé qui annonce « il y a quelque chose à lire » — un terme du
      glossaire, un titre de carte porteur d'aide. Cité aux deux endroits. */
   --decalage-souligne: 3px;
-  /* T-0194 — L'ÉCHELLE D'ESPACEMENT. La feuille portait vingt et une valeurs d'écart entre
-     0,05 et 2 rem : à ce grain, deux marges voisines ne se distinguent plus à l'œil mais
-     divergent au pixel, et rien ne dit laquelle est la bonne quand on en ajoute une. Sept
-     pas en multiples de 4 px suffisent à tout ce que la feuille pose — le choix redevient
-     un pas, pas un nombre. Un écart écrit en dur dans une règle est désormais un bug, au
-     même titre qu'une couleur.
+  /* L'ÉCHELLE D'ESPACEMENT. La feuille portait vingt et une valeurs d'écart entre 0,05 et
+     2 rem : à ce grain, deux marges voisines ne se distinguent plus à l'œil mais divergent
+     au pixel, et rien ne dit laquelle est la bonne quand on en ajoute une. Sept pas en
+     multiples de 4 px suffisent à tout ce que la feuille pose — le choix redevient un pas,
+     pas un nombre. Un écart écrit en dur dans une règle est un bug, au même titre qu'une
+     couleur.
 
      Les GABARITS ci-dessous (barres, cartes, panneau, bulle) restent hors échelle : ils
      mesurent des objets, pas l'air entre eux. */
@@ -194,11 +193,10 @@ body {
   --pas-4: 1rem;
   --pas-5: 1.5rem;
   --pas-6: 2rem;
-  /* T-0194 — L'ÉCHELLE TYPOGRAPHIQUE. Même constat sur le corps du texte : treize tailles,
-     dont cinq tenaient dans un dixième de rem. §11.1 confisque la luminance comme moyen de
-     hiérarchie (voir la palette) — la taille est donc l'un des deux seuls étages qui
-     restent, avec la casse. Un étage qu'on ne voit pas n'étage rien : six rangs, et chacun
-     porte un rôle.
+  /* L'ÉCHELLE TYPOGRAPHIQUE. Même constat sur le corps du texte : treize tailles, dont cinq
+     tenaient dans un dixième de rem. §11.1 confisque la luminance comme moyen de hiérarchie
+     (voir la palette) — la taille est donc l'un des deux seuls étages qui restent, avec la
+     casse. Un étage qu'on ne voit pas n'étage rien : six rangs, et chacun porte un rôle.
 
      `.icone` garde son corps propre (1,25 rem) : c'est la taille d'un glyphe, pas d'un
      texte. `.tracee-plage` reste en `em` : elle se règle sur ce qui la contient. */
@@ -208,42 +206,42 @@ body {
   --texte-legende: 0.78rem;
   --texte-micro: 0.7rem;
   --texte-mini: 0.65rem;
-  /* T-0194 — la durée du retour d'état d'un contrôle. Un survol qui bascule d'un coup se lit
-     comme un défaut d'affichage ; au-delà de ~250 ms, la commande paraît lente. Ce n'est pas
-     du mouvement — rien ne se déplace, c'est le même fondu de luminance que le basculement de
-     §11.1, et il tombe donc sous la même règle sous `prefers-reduced-motion` (T-0072). */
+  /* Durée du retour d'état d'un contrôle. Un survol qui bascule d'un coup se lit comme un
+     défaut d'affichage ; au-delà de ~250 ms, la commande paraît lente. Ce n'est pas du
+     mouvement — rien ne se déplace, c'est le même fondu de luminance que le basculement de
+     §11.1, et il tombe donc sous la même règle sous `prefers-reduced-motion`. */
   --fondu-etat: 150ms;
   /* Écart entre un nombre réglable et le trait qui l'annonce. Cité deux fois : par le
      compteur, et par la phrase qui le contient et doit réserver la place du trait. */
   --jour-trait: 0.2em;
-  /* T-0113 — les gabarits de la coque. Les deux barres et le panneau sont posés en absolu
-     sur la scène : leur encombrement doit être connu d'ailleurs — le panneau part sous la
-     barre haute, les cartes s'ancrent entre les deux. Un seul endroit le déclare, et le
-     bornage du déplacement (`Carte.tsx`) le MESURE plutôt que de le recopier. */
+  /* Les gabarits de la coque. Les deux barres et le panneau sont posés en absolu sur la
+     scène : leur encombrement doit être connu d'ailleurs — le panneau part sous la barre
+     haute, les cartes s'ancrent entre les deux. Un seul endroit le déclare, et le bornage du
+     déplacement (`Carte.tsx`) le MESURE plutôt que de le recopier. */
   --barre-haut: 2.75rem;
   --barre-bas: 3rem;
   --lateral: 22rem;
-  /* T-0197 — le flanc gauche : le matériel n'est plus une carte, c'est une colonne à demeure.
-     Plus étroite que celle de droite — elle porte des champs courts, là où le catalogue porte
+  /* Le flanc gauche : le matériel n'est plus une carte, c'est une colonne à demeure. Plus
+     étroite que celle de droite — elle porte des champs courts, là où le catalogue porte
      des lignes de texte. */
   --materiel: 19rem;
-  /* T-0213 — le rail des bascules de vue : une cible de clic de large, plus son filet. Il est
-     cité deux fois — par le rail lui-même et par la note qui se pose à sa droite. */
+  /* Le rail des bascules de vue : une cible de clic de large, plus son filet. Il est cité
+     deux fois — par le rail lui-même et par la note qui se pose à sa droite. */
   --rail: calc(var(--cible-clic) + var(--trait));
   --carte-large: 19rem;
-  /* T-0183 — le plan porte une table de budget de nuit : à 19 rem elle défilerait
-     horizontalement, et un tableau qu'on fait glisser ne se compare plus d'une ligne à
-     l'autre. Sa carte a donc son propre gabarit. */
+  /* Le plan porte une table de budget de nuit : à 19 rem elle défilerait horizontalement, et
+     un tableau qu'on fait glisser ne se compare plus d'une ligne à l'autre. Sa carte a donc
+     son propre gabarit. */
   --carte-plan: 29rem;
   --jour-carte: var(--pas-3);
-  /* T-0145 — l'écart entre deux éléments d'une barre. Nommé parce que la bande de commandes
-     l'annule par marge négative : la valeur doit être lue au même endroit des deux côtés. */
+  /* L'écart entre deux éléments d'une barre. Nommé parce que la bande de commandes l'annule
+     par marge négative : la valeur doit être lue au même endroit des deux côtés. */
   --jour-barre: var(--pas-2);
-  /* T-0215 — l'air réservé entre un flottant et le bord de l'écran. Cité par les quatre
-     surfaces qui se posent en absolu et peuvent atteindre ce bord : les deux fenêtres de
-     tiroir, la bulle rabattue, la carte du plan. */
+  /* L'air réservé entre un flottant et le bord de l'écran. Cité par les quatre surfaces qui
+     se posent en absolu et peuvent atteindre ce bord : les deux fenêtres de tiroir, la bulle
+     rabattue, la carte du plan. */
   --jour-ecran: var(--pas-5);
-  /* T-0147 — largeur maximale d'une bulle de survol. Une infobulle est une phrase, pas un
+  /* Largeur maximale d'une bulle de survol. Une infobulle est une phrase, pas un
      paragraphe : au-delà, ce n'est plus un survol qu'il faut, c'est la fiche. */
   --bulle-large: 18rem;
   /* L'air entre la bulle et ce qu'elle nomme, et entre la bulle et le bord de l'écran :
@@ -251,7 +249,7 @@ body {
   --bulle-jour: var(--pas-1);
 }
 
-/* T-0191 — les deux familles de texte de la charte, livrées avec les sources.
+/* Les deux familles de texte de la charte, livrées avec les sources.
 
    Sous-ensembles latins en WOFF2 (U+0000-00FF et les signes typographiques) : le français y
    tient entièrement, et les 68 ko des cinq fichiers se précachent avec le reste (§12.2 —
@@ -305,7 +303,7 @@ body {
   src: url('../fonts/BarlowCondensed-700.woff2') format('woff2');
 }
 
-/* T-0122 — les icônes viennent d'une police à ligatures, embarquée avec les sources.
+/* Les icônes viennent d'une police à ligatures, embarquée avec les sources.
 
    Une icône n'a pas de repli — sans le fichier, la ligature retombe sur son nom écrit en
    clair (« close » au milieu d'un libellé français). §12.2 interdit d'aller la chercher sur le
@@ -331,8 +329,8 @@ body {
 
    Les remises à zéro ne sont pas cosmétiques : une ligature ne se forme plus si le texte est
    passé en capitales ou espacé — or `--suivi-micro` et `text-transform: uppercase` sont la
-   grammaire des libellés de T-0113, et une icône se pose souvent dans l'un d'eux. Sans ces
-   trois lignes, le bouton affiche « CLOSE ». */
+   grammaire des micro-libellés, et une icône se pose souvent dans l'un d'eux. Sans ces trois
+   lignes, le bouton affiche « CLOSE ». */
 .icone {
   font-family: var(--police-icone);
   font-weight: normal;
@@ -376,7 +374,7 @@ body {
 
 
 
-/* T-0113 — chasse fixe pour tout le texte courant. Un relevé se compare en colonne : le
+/* Chasse fixe pour tout le texte courant. Un relevé se compare en colonne : le
    chasse fixe aligne les chiffres, `tabular-nums` le garantit encore sous une police de
    repli dont les chiffres seraient proportionnels. */
 body {
@@ -389,10 +387,10 @@ body {
 
 /* §11.2 — la coque : la scène occupe tout, le reste se pose dessus.
 
-   T-0113 — les trois colonnes du lot 6 tenaient la promesse « la scène au centre » mais lui
-   laissaient la moitié de l'écran. Ici la scène est le fond, et chaque région se pose en
-   absolu par-dessus : deux barres sur toute la largeur, des cartes déplaçables, un panneau
-   qui s'ouvre à droite.
+   Une disposition antérieure en trois colonnes tenait la promesse « la scène au centre »
+   mais lui laissait la moitié de l'écran. Ici la scène est le fond, et chaque région se pose
+   en absolu par-dessus : deux barres sur toute la largeur, des cartes déplaçables, un
+   panneau qui s'ouvre à droite.
 
    `overflow: hidden` sur la coque : une carte traînée jusqu'au bord ne doit pas faire
    apparaître d'ascenseur de page — le bornage du déplacement l'en empêche déjà, ce filet ne
@@ -404,7 +402,7 @@ body {
   background: var(--fond);
 }
 
-/* T-0113 — la barre est une réglette, pas un bandeau : un seul trait la sépare de la scène
+/* La barre est une réglette, pas un bandeau : un seul trait la sépare de la scène
    et son fond descend en dégradé, pour que le regard passe de l'interface au ciel sans
    buter sur une arête franche. */
 /* L'empilement, du fond vers la surface : la scène, les cartes, le panneau, les barres. Les
@@ -438,7 +436,7 @@ body {
   background: linear-gradient(var(--surface), var(--surface-haute));
 }
 
-/* T-0145 — la marque et la lecture du matériel tiennent ensemble le bord gauche ; les commandes
+/* La marque et la lecture du matériel tiennent ensemble le bord gauche ; les commandes
    forment un bloc calé à droite. La poussée est portée par le premier élément qui suit la
    lecture : ce qui vient après reste soudé, quelle que soit la largeur de la fenêtre. Le
    sélecteur cite la barre : `.etat` repose ses marges plus bas dans la feuille, et une classe
@@ -461,21 +459,21 @@ body {
   flex: none;
 }
 
-/* T-0145 — les commandes de la barre forment une bande continue : ni jour, ni double filet.
-   La marge négative absorbe le `gap` de la barre et superpose les deux traits voisins, si bien
-   qu'une pastille et sa suivante ne partagent qu'un trait. La règle démarre au DEUXIÈME élément
-   qui suit la lecture — le premier garde son jour, sinon la bande collerait au texte.
+/* Les commandes de la barre forment une bande continue : ni jour, ni double filet. La marge
+   négative absorbe le `gap` de la barre et superpose les deux traits voisins, si bien qu'une
+   pastille et sa suivante ne partagent qu'un trait. La règle démarre au DEUXIÈME élément qui
+   suit la lecture — le premier garde son jour, sinon la bande collerait au texte.
 
-   T-0180 — la bascule de mode est exclue de la bande : elle en est sortie, et une marge
-   négative déplacerait une boîte centrée sur la fenêtre. */
+   La bascule de mode est exclue de la bande : elle en est sortie, et une marge négative
+   déplacerait une boîte centrée sur la fenêtre. */
 .coque-topbar > .barrehaut-lectures-fin ~ * ~ *:not(.barrehaut-mode) {
   margin-left: calc(-1 * (var(--jour-barre) + var(--trait)));
 }
 
-/* T-0180 — le centre de la BARRE, pas celui de ce que la lecture matériel laisse : hors du
-   flux, la bascule ne bouge donc pas quand la focale passe de 8 à 300 mm. Le segment porte le
-   filet que ses positions n'ont pas (T-0145) — sans lui, deux boutons voisins ne se lisent pas
-   comme les deux positions d'un même commutateur. */
+/* Le centre de la BARRE, pas celui de ce que la lecture matériel laisse : hors du flux, la
+   bascule ne bouge donc pas quand la focale passe de 8 à 300 mm. Le segment porte le filet
+   que ses positions n'ont pas — sans lui, deux boutons voisins ne se lisent pas comme les
+   deux positions d'un même commutateur. */
 .barrehaut-mode {
   position: absolute;
   left: 50%;
@@ -491,14 +489,14 @@ body {
   border-left: var(--trait) solid var(--bordure-controle);
 }
 
-/* T-0145 — dans la barre, un onglet n'a pas de rangée sous laquelle se poser : il prend le
+/* Dans la barre, un onglet n'a pas de rangée sous laquelle se poser : il prend le
    dessin de pastille du tiroir voisin (plus bas, avec `.tiroir > summary`). Ici, seul ce qui
    relève du placement en rangée. */
 .coque-topbar .onglet {
   flex: none;
 }
 
-/* T-0153 — la phrase qui date l'image tient le centre de la barre basse : elle prend ce que le
+/* La phrase qui date l'image tient le centre de la barre basse : elle prend ce que le
    lieu et le transport laissent, et s'y centre. Elle est la SEULE chose qui se rogne ici — un
    transport amputé ne se rattrape pas, une phrase tronquée se relit en élargissant la fenêtre. */
 /* Le rognage est horizontal par intention, mais `overflow: hidden` rogne aussi en bas : sans
@@ -514,7 +512,7 @@ body {
   text-overflow: ellipsis;
 }
 
-/* T-0162 — un compteur est un nombre qu'on tire à l'horizontale. Le curseur l'annonce avant
+/* Un compteur est un nombre qu'on tire à l'horizontale. Le curseur l'annonce avant
    le clic : sans `ew-resize`, rien ne distingue une valeur réglable d'une lecture. La
    sélection est coupée — un glisser sur du texte surligne au lieu de compter — et
    `touch-action: none` retire le geste au défilement de la page, sans quoi le doigt ferait
@@ -529,7 +527,7 @@ body {
   padding-bottom: var(--jour-trait);
 }
 
-/* T-0194 — le compteur et le curseur sont les deux contrôles qu'on TIRE, tous deux peints en
+/* Le compteur et le curseur sont les deux contrôles qu'on TIRE, tous deux peints en
    --alerte au repos (voir `.curseur-rail`). Ils répondaient pourtant au survol par deux
    couleurs différentes — vert d'accent ici, orange d'avertissement là — alors que le geste et
    la promesse sont les mêmes. C'est --avertissement qui est retenu : rester dans la famille du
@@ -563,7 +561,7 @@ body {
   max-height: calc(100dvh - var(--barre-bas) - 1rem);
 }
 
-/* T-0196 — la légende n'a que six lignes courtes : elle prend la largeur de son texte au lieu
+/* La légende n'a que six lignes courtes : elle prend la largeur de son texte au lieu
    des 32 rem du tiroir du lieu, qui laisseraient une fenêtre vide aux trois quarts. */
 .coque-barrebas .tiroir-legende[open] > .tiroir-contenu {
   width: max-content;
@@ -621,7 +619,7 @@ body {
   background: none;
 }
 
-/* T-0137 — le transport ferme la barre : il se pousse à droite et y reste. */
+/* Le transport ferme la barre : il se pousse à droite et y reste. */
 .barretemps {
   position: relative;
   margin-left: auto;
@@ -675,7 +673,7 @@ input.barretemps-instant {
   color: var(--texte);
 }
 
-/* T-0164 — un seul instant, donc une seule typographie, et c'est celle des autres lectures
+/* Un seul instant, donc une seule typographie, et c'est celle des autres lectures
    de la barre : la visée dit son azimut en `.etat`, le transport dit son heure de même. La
    date atténuée en 0,8 rem devant une heure en 1 rem se lisait comme deux informations. Le
    point médian les sépare sans les distinguer. */
@@ -719,10 +717,10 @@ input.barretemps-instant {
   padding: 0;
 }
 
-/* T-0040 — la scène n'a plus qu'un enfant : le canevas. Les lectures qui la datent sont
-   passées dans le menu d'information de la barre haute (T-0039), donc la rangée basse à
-   hauteur réservée de T-0037 n'a plus lieu d'être — la taille du canevas ne dépend plus de
-   ce qui s'écrit, elle ne dépend plus que de la place disponible.
+/* La scène n'a plus qu'un enfant : le canevas. Les lectures qui la datent sont passées dans
+   le menu d'information de la barre haute, donc une rangée basse à hauteur réservée n'a plus
+   lieu d'être — la taille du canevas ne dépend plus de ce qui s'écrit, elle ne dépend plus
+   que de la place disponible.
 
    Ni remplissage ni marge : le canevas remplit la coque entière, barres comprises. Les
    barres sont translucides sur leurs bords : c'est le ciel qui passe dessous, pas du vide. */
@@ -733,7 +731,7 @@ input.barretemps-instant {
   padding: 0;
 }
 
-/* T-0068 — la description du canevas : ce que la vue montre en ce moment, et les raccourcis
+/* La description du canevas : ce que la vue montre en ce moment, et les raccourcis
    qui la pilotent. Elle est retirée du flux visuel mais reste dans l'arbre d'accessibilité,
    où `display: none` l'aurait supprimée. */
 .scene-description {
@@ -747,7 +745,7 @@ input.barretemps-instant {
   white-space: nowrap;
 }
 
-/* T-0040 — le canevas remplit sa boîte, sans `object-fit` : sa définition de rendu suit la
+/* Le canevas remplit sa boîte, sans `object-fit` : sa définition de rendu suit la
    boîte (`resolutionRendu`), donc l'image n'a plus à s'y loger. Un rendu 16/9 figé se logeait
    en `contain` et laissait des bandes noires en haut et en bas dès que la place disponible
    n'était pas en 16/9 — c'est-à-dire presque toujours.
@@ -763,7 +761,7 @@ input.barretemps-instant {
   border: 0;
 }
 
-/* T-0113 — les cartes posées sur la scène.
+/* Les cartes posées sur la scène.
 
    `display: contents` : le conteneur n'existe que pour l'ordre du DOM. Chaque carte se
    positionne par rapport à la COQUE, pas à lui — sinon son propre rectangle deviendrait la
@@ -786,7 +784,7 @@ input.barretemps-instant {
   width: max-content;
 }
 
-/* T-0183 — le plan s'ancre en bas à droite, calé sur le panneau : c'est le bord libre, et
+/* Le plan s'ancre en bas à droite, calé sur le panneau : c'est le bord libre, et
    celui d'où il ne recouvre ni le matériel ni le rail. */
 .carte-plan {
   width: var(--carte-plan);
@@ -795,7 +793,7 @@ input.barretemps-instant {
 }
 
 
-/* T-0213 — LE RAIL DE LA VUE : les bascules de rendu, collées au flanc gauche de la scène.
+/* LE RAIL DE LA VUE : les bascules de rendu, collées au flanc gauche de la scène.
 
    Elles vivaient dans une carte repliée par défaut. Un réglage qui se prend EN regardant le
    ciel n'a pas à se déplier : le rail borde la scène sans jamais la couvrir, et chaque
@@ -867,7 +865,7 @@ input.barretemps-instant {
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* T-0171 — sous l'aperçu peint sur toute la scène, ces couches ne commandent rien. La bascule
+/* Sous l'aperçu peint sur toute la scène, ces couches ne commandent rien. La bascule
    le montre au lieu de faire semblant ; sa bulle dit pourquoi, et le clic reste possible :
    ce qui est éteint est l'effet, pas la commande. */
 .bascule.eteinte {
@@ -891,7 +889,7 @@ input.barretemps-instant {
   touch-action: none;
 }
 
-/* T-0194 — l'en-tête est le seul bouton de la feuille qui n'annonçait rien au survol : il
+/* L'en-tête est le seul bouton de la feuille qui n'annonçait rien au survol : il
    changeait de curseur, et rien d'autre. Or il fait DEUX choses — il replie la carte, et il la
    déplace — donc c'est le contrôle qu'il faut le plus désigner avant le clic. Le filet passe à
    l'accent comme sur les autres commandes ; le fond monte d'un cran, l'en-tête étant déjà
@@ -918,10 +916,10 @@ input.barretemps-instant {
   color: var(--attenue);
 }
 
-/* T-0182 — la note de facilité a quitté l'en-tête de la carte Cible pour celui du panneau, où
-   elle n'est plus dans un bouton : elle y est ANNONCÉE, plus masquée. La glose aligne son
+/* La note de facilité a quitté l'en-tête de la carte Cible pour celui du panneau, où elle
+   n'est plus dans un bouton : elle y est ANNONCÉE, plus masquée. La glose aligne son
    contenu ; `Bulle` insère son ancre entre l'en-tête et elle, d'où deux niveaux. */
-/* T-0221 — la facilité et la visée se rangent ensemble à droite du titre. */
+/* La facilité et la visée se rangent ensemble à droite du titre. */
 .lateral-actions {
   display: inline-flex;
   align-items: center;
@@ -963,10 +961,10 @@ input.barretemps-instant {
   margin-top: var(--pas-2);
 }
 
-/* T-0113 — le panneau latéral : ce qui se lit en longueur, à côté de la scène.
+/* Le panneau latéral : ce qui se lit en longueur, à côté de la scène.
 
-   T-0181 — il ne se ferme plus : le mode décide de son contenu, jamais de sa présence. Sa
-   largeur est donc toujours réservée, à la scène comme au bornage des cartes. */
+   Il ne se ferme plus : le mode décide de son contenu, jamais de sa présence. Sa largeur est
+   donc toujours réservée, à la scène comme au bornage des cartes. */
 .coque-lateral {
   position: absolute;
   right: 0;
@@ -981,7 +979,7 @@ input.barretemps-instant {
   background: var(--surface);
 }
 
-/* T-0197 — le flanc gauche : même colonne que celle de droite, même en-tête, même corps
+/* Le flanc gauche : même colonne que celle de droite, même en-tête, même corps
    défilant. Elle se distingue par son bord — un filet à droite, pas à gauche — et par sa
    largeur. Ce qui la sépare vraiment de la droite est ailleurs : son contenu ne change jamais,
    le mode ne la commande pas. */
@@ -999,7 +997,7 @@ input.barretemps-instant {
   background: var(--surface);
 }
 
-/* T-0182 — l'en-tête se lit de gauche à droite : le retour, ce qu'on lit, puis ce que la
+/* L'en-tête se lit de gauche à droite : le retour, ce qu'on lit, puis ce que la
    cible vaut. Le rappel se serre à droite par sa marge, pas par une répartition — trois
    éléments répartis auraient poussé le titre au milieu, loin du bouton qui le précède. */
 .lateral-entete {
@@ -1011,7 +1009,7 @@ input.barretemps-instant {
   background: var(--fond-accent);
 }
 
-/* T-0182 — le retour n'existe que sur la fiche : il ouvre l'en-tête, à gauche du titre, et
+/* Le retour n'existe que sur la fiche : il ouvre l'en-tête, à gauche du titre, et
    garde la cible de clic gantée de §11.2. */
 .lateral-retour {
   min-height: var(--cible-clic);
@@ -1069,7 +1067,7 @@ input.barretemps-instant {
     padding: var(--pas-2) var(--pas-3);
   }
 
-  /* T-0153 — sous le repli, le lieu et le transport remplissent déjà la rangée : la phrase
+  /* Sous le repli, le lieu et le transport remplissent déjà la rangée : la phrase
      y serait réduite à ses points de suspension. Elle prend donc sa propre ligne. */
   .coque-barrebas > .barrebas-visee {
     flex-basis: 100%;
@@ -1084,7 +1082,7 @@ input.barretemps-instant {
     border-top: var(--trait) solid var(--bordure);
   }
 
-  /* T-0213 — sous le repli le rail n'a plus de flanc à border : il devient une rangée de
+  /* Sous le repli le rail n'a plus de flanc à border : il devient une rangée de
      bascules dans le flux, à la place qu'il tenait en flottant — juste après la scène. Les
      filets de groupe basculent d'horizontaux à verticaux, sinon les trois groupes se lisent
      comme trois rangées superposées. */
@@ -1114,8 +1112,8 @@ input.barretemps-instant {
   }
 
   /* Sous 1100 px plus rien ne flotte : une fenêtre de tiroir se pose dans le flux, sous son
-     bouton. T-0121 — le tiroir ouvert est alors un élément flexible dimensionné par son
-     contenu : sans bornage, il élargit la barre au-delà de l'écran. */
+     bouton. Le tiroir ouvert est alors un élément flexible dimensionné par son contenu :
+     sans bornage, il élargit la barre au-delà de l'écran. */
   .tiroir {
     min-width: 0;
     max-width: 100%;
@@ -1146,8 +1144,8 @@ input.barretemps-instant {
 /* §11.2 — les onglets d'intention du panneau droit. Un seul jeu de réglages à l'écran ; la
    cible de clic garde sa hauteur d'usage ganté.
 
-   T-0113 — la rangée est un bandeau plein, séparé du contenu par un unique filet : l'onglet
-   actif se pose dessus au lieu de flotter au-dessus d'un liseré. */
+   La rangée est un bandeau plein, séparé du contenu par un unique filet : l'onglet actif se
+   pose dessus au lieu de flotter au-dessus d'un liseré. */
 .onglets {
   display: flex;
   flex-wrap: wrap;
@@ -1189,9 +1187,9 @@ input.barretemps-instant {
 /* Tiroirs de la barre haute : mode nuit et vérification du socle. L'élément natif porte
    l'état ouvert/fermé, le clavier et l'annonce — aucun état React n'est nécessaire.
 
-   T-0113 — un tiroir fermé est une pastille : angles vifs, filet d'un pixel, capitales
-   espacées. Ouvert, il prend le trait d'accent et le fond teinté, comme un onglet actif. */
-/* T-0145 — un tiroir ne pousse plus rien : c'est la première lecture de la barre qui cale le
+   Un tiroir fermé est une pastille : angles vifs, filet d'un pixel, capitales espacées.
+   Ouvert, il prend le trait d'accent et le fond teinté, comme un onglet actif. */
+/* Un tiroir ne pousse plus rien : c'est la première lecture de la barre qui cale le
    bloc entier à droite. Une poussée par tiroir disloquait la bande dès qu'un bouton le
    précédait. */
 .tiroir {
@@ -1230,7 +1228,7 @@ input.barretemps-instant {
   color: var(--accent);
 }
 
-/* T-0145 — dans la barre haute, une commande ne porte pas de filet : la barre est déjà son
+/* Dans la barre haute, une commande ne porte pas de filet : la barre est déjà son
    cadre, et une rangée jointive de pastilles redessinait une grille de traits verticaux. Le
    filet passe à `transparent` plutôt qu'à zéro — la géométrie ne bouge pas, donc rien ne se
    décale entre l'état au repos, le survol et l'état actif, qui se signalent au fond et à la
@@ -1244,7 +1242,7 @@ input.barretemps-instant {
   border-color: transparent;
 }
 
-/* T-0041 — un tiroir fermé cache ce qu'il contient. Le bouton change d'aspect quand il a
+/* Un tiroir fermé cache ce qu'il contient. Le bouton change d'aspect quand il a
    quelque chose à dire ; le compte, lui, est écrit en toutes lettres dans le libellé — le
    rouge ne porte jamais seul une information (§11.1). */
 .tiroir[data-alerte='true'] > summary {
@@ -1254,7 +1252,7 @@ input.barretemps-instant {
   font-weight: 700;
 }
 
-/* T-0121 — la fenêtre est fixée à l'ÉCRAN, pas au flux : la verticale s'ancre à la barre,
+/* La fenêtre est fixée à l'ÉCRAN, pas au flux : la verticale s'ancre à la barre,
    qui ne bouge pas, et la largeur est bornée par les deux marges. L'horizontale est calée à
    l'ouverture par `tiroir-ancrage.ts`, qui pose la fenêtre sous SON bouton et la fait
    glisser quand elle toucherait un bord — ce que le CSS ne sait pas faire. Les valeurs ci-
@@ -1274,7 +1272,7 @@ input.barretemps-instant {
   border-radius: 0;
 }
 
-/* T-0113 — la marque est le seul endroit où le suivi s'ouvre à ce point : elle se lit comme
+/* La marque est le seul endroit où le suivi s'ouvre à ce point : elle se lit comme
    le cartouche d'un instrument, pas comme un titre de page. */
 h1 {
   margin: 0;
@@ -1316,7 +1314,7 @@ h3 {
   gap: var(--pas-2);
 }
 
-/* T-0231 — UNE SECTION ORDINAIRE EST UNE CARTE D'INSTRUMENT.
+/* UNE SECTION ORDINAIRE EST UNE CARTE D'INSTRUMENT.
  *
  * Les rubriques d'un panneau — « À propos », « Cadrage de la cible » — ne se séparaient que
  * par le filet bas de leur `h2` et l'air au-dessus. Empilées à cinq ou six dans une colonne
@@ -1368,7 +1366,7 @@ section:not([class])::before {
     right bottom, right bottom;
 }
 
-/* T-0216 — LE RYTHME VERTICAL EST CELUI DE LA SECTION, PAS CELUI DE LA GRILLE.
+/* LE RYTHME VERTICAL EST CELUI DE LA SECTION, PAS CELUI DE LA GRILLE.
  *
  * Il vivait sur `.champs`, dont le `gap` ne joue qu'entre les enfants de SA grille. Un
  * interrupteur posé à côté d'elle, une seconde grille collée à la première, un champ sorti
@@ -1399,7 +1397,7 @@ section:not([class]) > * + *,
 /* Un libellé est une ÉTIQUETTE : petit, en capitales, espacé. Ce qui le sépare de la valeur
    n'est pas sa luminance — §11.1 n'en laisse pas assez — mais sa casse et son suivi.
 
-   T-0215 — LE MICRO-LIBELLÉ est ce quadruplet, et il vaut pour neuf règles de la feuille :
+   LE MICRO-LIBELLÉ est ce quadruplet, et il vaut pour neuf règles de la feuille :
    `--attenue`, `--texte-micro`, `--suivi-micro`, `uppercase`. Il ne forme pas une règle
    groupée — un onglet actif, un tiroir ouvert et un survol reposent chacun sur l'ordre de la
    feuille pour surcharger leur couleur, et les rassembler les déplacerait. C'est
@@ -1411,7 +1409,7 @@ label {
   gap: var(--pas-1);
 }
 
-/* T-0215 — CE QUI NOMME LE CHAMP, ET RIEN D'AUTRE.
+/* CE QUI NOMME LE CHAMP, ET RIEN D'AUTRE.
  *
  * Ces quatre déclarations vivaient sur `label`, qui ENVELOPPE son contrôle : elles
  * descendaient donc sur l'`<input>`, sur le `<select>`, sur la bulle de glose et — sans que
@@ -1461,7 +1459,7 @@ input[type='checkbox'] {
   height: 1.1rem;
 }
 
-/* T-0169 — le rail de `Curseur.tsx`. Il remplace `input[type=range]`, qui ne sait pas peindre
+/* Le rail de `Curseur.tsx`. Il remplace `input[type=range]`, qui ne sait pas peindre
    un repère à une valeur arbitraire : sur la pose unitaire, ce repère est la pose maximale à
    étoiles ponctuelles (§9.1), et c'est la seule chose que le rail avait à montrer.
 
@@ -1584,7 +1582,7 @@ th {
   text-transform: uppercase;
 }
 
-/* T-0113 — un état porte des PHRASES, pas des étiquettes : il reste en casse normale.
+/* Un état porte des PHRASES, pas des étiquettes : il reste en casse normale.
    Les capitales espacées sont réservées à ce qui nomme un champ ou une colonne ; appliquées
    à une explication, elles la rendent illisible et lui donnent un poids qu'elle n'a pas. */
 .etat {
@@ -1608,7 +1606,7 @@ th {
 /* §11.1 — le rouge ne porte jamais seul une information : l'alerte se distingue aussi par
    sa forme, sa barre latérale et son signe.
 
-   T-0215 — le signe était « ⚠ » posé en `content` par cette règle : rendu dans la police de
+   Le signe était « ⚠ » posé en `content` par cette règle : rendu dans la police de
    TEXTE, il échappait à `.icone` — ni la même grille optique, ni la même graisse, et un
    SECOND endroit à toucher le jour où le dessin des icônes change. Il vient maintenant du
    balisage (`Mention.tsx`), par `Icone`, comme toutes les autres icônes du produit.
@@ -1633,7 +1631,7 @@ th {
   min-height: var(--cible-clic);
 }
 
-/* T-0147 — la bulle de survol, à la place de l'infobulle du navigateur.
+/* La bulle de survol, à la place de l'infobulle du navigateur.
 
    Tout ce qui la dessine vient des jetons : filet d'un pixel, angles vifs, fond de surface
    haute, police mono du corps de texte. C'est la condition pour qu'elle bascule au rouge
@@ -1645,8 +1643,8 @@ th {
 
    RIEN DE CRITIQUE AU SURVOL (§11.2) : la bulle ne fait que répéter un nom déjà porté par
    le contrôle. `pointer-events: none` l'empêche de voler le survol qui la maintient
-   ouverte. Elle paraît et disparaît d'un coup : T-0072 ne laisse d'animation qu'au fondu
-   de luminance du basculement nuit, et un fondu de bulle n'en est pas un. */
+   ouverte. Elle paraît et disparaît d'un coup : seul le fondu de luminance du basculement
+   nuit garde une transition, et un fondu de bulle n'en est pas un. */
 .bulle-ancre {
   position: relative;
   anchor-name: var(--bulle-ancre-nom);
@@ -1680,7 +1678,7 @@ th {
   visibility: visible;
 }
 
-/* T-0147 — LA BULLE NE SORT PAS DE L'ÉCRAN.
+/* LA BULLE NE SORT PAS DE L'ÉCRAN.
 
    Deux façons de la perdre, et une seule réponse. Elle peut passer sous le bord de la
    fenêtre ; elle peut aussi être rognée par un ancêtre qui défile — la liste des cibles est
@@ -1844,7 +1842,7 @@ th {
   color: var(--attenue);
 }
 
-/* T-0149 — la lecture qui ne se calcule pas encore garde la ligne de sa voisine tracée :
+/* La lecture qui ne se calcule pas encore garde la ligne de sa voisine tracée :
    elle ne se déplie pas, faute de formule, mais elle occupe la même place. */
 .tracee-vide {
   display: flex;
@@ -1924,7 +1922,7 @@ th {
   align-items: center;
 }
 
-/* T-0113 — un bouton est un cadre, pas un relief : filet d'un pixel, fond transparent, et
+/* Un bouton est un cadre, pas un relief : filet d'un pixel, fond transparent, et
    l'aplat teinté ne vient qu'au survol. Rien ne brille tant qu'on ne le désigne pas — sur
    un écran regardé dans le noir, un aplat permanent est une lampe permanente. */
 button,
@@ -1958,7 +1956,7 @@ button:disabled {
   display: none;
 }
 
-/* §8.3 — plan de session. T-0113 — une étape est une ligne d'horaire, pas une carte : un
+/* §8.3 — plan de session. Une étape est une ligne d'horaire, pas une carte : un
    filet dessous, pas de cadre complet. La séquence se lit comme un tableau de départs. */
 .etape {
   margin: 0;
@@ -2039,7 +2037,7 @@ button:disabled {
   font-weight: 700;
 }
 
-/* T-0215 — les trois repères du schéma étaient des caractères Unicode (« ✛ », « ● », « ★ »)
+/* Les trois repères du schéma étaient des caractères Unicode (« ✛ », « ● », « ★ »)
    rendus dans la police de TEXTE : ni la grille optique, ni la graisse, ni l'alignement des
    icônes de l'application, et un dessin qui changeait d'un poste à l'autre selon la police de
    repli disponible. Ils passent par `Icone` comme tout le reste.
@@ -2094,7 +2092,7 @@ button:disabled {
     display: none;
   }
 
-  /* T-0183 — la carte du plan fait exception, et son corps avec : il s'imprime replié comme
+  /* La carte du plan fait exception, et son corps avec : il s'imprime replié comme
      déplié, dans les deux modes. Le corps replié porte `hidden` ; la règle d'auteur l'emporte
      sur celle du navigateur, sans quoi imprimer une carte fermée sortirait une page blanche. */
   .carte-plan,
@@ -2139,7 +2137,7 @@ button:disabled {
   border-bottom: var(--trait) solid var(--bordure-faible);
 }
 
-/* T-0087 — les cinq poids C-15 dans le tiroir des réglages. Le poids effectif se lit au bout
+/* Les cinq poids C-15 dans le tiroir des réglages. Le poids effectif se lit au bout
    de la ligne du critère : c'est lui que le plan utilise, pas la position brute du curseur. */
 .poids-scoring {
   border: var(--trait) solid var(--bordure);
@@ -2159,7 +2157,7 @@ button:disabled {
   color: var(--texte);
 }
 
-/* T-0128 — la liste du catalogue (§6.4).
+/* La liste du catalogue (§6.4).
 
    La ligne est un bloc de trois rangées, pas une carte : trois cents d'entre elles se
    parcourent à l'œil, et une bordure par objet transformerait la colonne en damier. Ce qui
@@ -2367,7 +2365,7 @@ button:disabled {
   object-fit: cover;
 }
 
-/* T-0166 — la case en attente. Elle n'emprunte pas le fond de `.image-cible-vue` : en mode
+/* La case en attente. Elle n'emprunte pas le fond de `.image-cible-vue` : en mode
    nuit celui-ci passe au clair pour le fondu multiplicatif de l'image, et le glyphe y
    disparaîtrait dans sa propre teinte. Atténué, jamais accentué : il annonce une place, pas
    un défaut. */
@@ -2435,7 +2433,7 @@ button:disabled {
   opacity: 1;
 }
 
-/* T-0072, T-0194 — même arbitrage que pour le fondu de bascule plus haut : sous la préférence,
+/* Même arbitrage que pour le fondu de bascule plus haut : sous la préférence,
    la durée se coupe, le fondu reste. À zéro, le survol redeviendrait le basculement brutal que
    §11.1 proscrit. La surcharge est posée ICI, après la valeur nominale : un jeton se résout à
    l'ordre de la feuille, et le même bloc placé plus haut aurait été réécrit par elle. */
@@ -2445,7 +2443,7 @@ button:disabled {
   }
 }
 
-/* T-0194 — LE RETOUR D'ÉTAT, DÉCLARÉ UNE FOIS POUR TOUS LES CONTRÔLES.
+/* LE RETOUR D'ÉTAT, DÉCLARÉ UNE FOIS POUR TOUS LES CONTRÔLES.
 
    L'anneau de focus ci-dessus était le seul état commun de la feuille : le survol et l'appui
    étaient écrits contrôle par contrôle, et n'y étaient donc pas écrits partout. Onze commandes
@@ -2453,7 +2451,7 @@ button:disabled {
    d'un coup se lit comme un défaut d'affichage, pas comme une réponse au geste.
 
    TROIS ÉTATS, TROIS RANGS. Au repos, rien ne brille — sur un écran regardé dans le noir, un
-   aplat permanent est une lampe permanente (T-0113). Au survol, le contrôle prend le fond
+   aplat permanent est une lampe permanente. Au survol, le contrôle prend le fond
    teinté et son filet passe à l'accent : il se désigne. À l'appui, il monte d'un cran sur
    `--surface-haute` : c'est le seul moment où il pèse plus que ce qui l'entoure, et il ne dure
    que le temps du doigt.
@@ -2497,7 +2495,7 @@ button:not(:disabled):active,
 }
 
 
-/* T-0072, WCAG 2.3.3 — le seul mouvement de la feuille en dehors du fondu de bascule.
+/* WCAG 2.3.3 — le seul mouvement de la feuille en dehors du fondu de bascule.
 
    §11.2 refuse l'animation NON SOLLICITÉE ; celle-ci ne part qu'au survol de l'encart, donc
    d'un geste. Ce qui la rend acceptable n'est pas sa brièveté, c'est le média : hors
@@ -2525,7 +2523,7 @@ button:not(:disabled):active,
   height: auto;
 }
 
-/* T-0199 — le dépliant des grandeurs avancées : une LIGNE, pas un paragraphe à puce.
+/* Le dépliant des grandeurs avancées : une LIGNE, pas un paragraphe à puce.
    Le marqueur natif se pose avant le texte ; dès que l'étiquette passe à la ligne, il reste
    seul sur la sienne. Il disparaît donc au profit d'un chevron poussé à droite, du côté où
    se rangent déjà les signes de la ligne — l'alerte l'y précède. */
@@ -2566,8 +2564,8 @@ button:not(:disabled):active,
 }
 
 /* Le chevron indique le SENS du geste : il pointe vers le bas quand il reste à ouvrir, vers
-   le haut une fois ouvert. T-0072 ne laisse d'animation qu'au fondu du mode nuit : la
-   rotation est instantanée. */
+   le haut une fois ouvert. Seul le fondu du mode nuit porte une animation : la rotation est
+   instantanée. */
 .avancees > summary > .chevron {
   flex: none;
   color: var(--attenue);
@@ -2581,7 +2579,7 @@ button:not(:disabled):active,
   color: var(--texte);
 }
 
-/* T-0199 — la ligne qui nomme un champ, et le signe qui dit ce qui lui manque.
+/* La ligne qui nomme un champ, et le signe qui dit ce qui lui manque.
    L'alerte se pose au bout du libellé, pas sous la section : un signe dans la ligne du champ
    désigne ce qu'il faut remplir, là où un encadré en pied de section ne désigne rien. */
 .champ-titre {
@@ -2608,7 +2606,7 @@ button:not(:disabled):active,
   cursor: help;
 }
 
-/* T-0210 — l'écran que l'on voit quand plus rien ne se rend. Il vit HORS de la coque : celle-ci
+/* L'écran que l'on voit quand plus rien ne se rend. Il vit HORS de la coque : celle-ci
    est justement ce qui vient d'être démonté, et il ne reste que le fond et une phrase. */
 .garde-erreur {
   display: flex;
