@@ -203,10 +203,17 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
           <p className="etat">Les montures altazimutales ne sont pas encore gérées.</p>
         )}
         {/* §5.2 — fermer le ciel profond et le justifier sont un seul geste (core/tracking.ts) :
-            cette cause doit rester visible sans naviguer, qu'on suive ou non. */}
-        {lectures?.suivi.cause !== null && lectures?.suivi.cause !== undefined && (
-          <Mention ton="cause">{lectures.suivi.cause}</Mention>
+            cette cause doit rester visible sans naviguer, qu'on suive ou non. Sans suivi, ce
+            n'est pas un défaut de saisie mais le régime naturel du grand champ : `etat`, pas
+            de signe d'alerte. La phrase longue (grand champ, NPF) reste dans `profilSuivi` —
+            `domaineCpFerme` (PanneauCibles) en a besoin pour justifier l'exclusion du ciel
+            profond ; ce panneau n'affiche que le repère court. */}
+        {lectures?.suivi.mode === 'AUCUN' && (
+          <Mention ton="etat">Sans suivi, la pose est plafonnée par la rotation du ciel.</Mention>
         )}
+        {lectures?.suivi.cause !== null &&
+          lectures?.suivi.cause !== undefined &&
+          lectures.suivi.mode !== 'AUCUN' && <Mention ton="cause">{lectures.suivi.cause}</Mention>}
         {lectures?.suivi.gainMiseEnStation !== undefined && (
           <Mention ton="cause">{lectures.suivi.gainMiseEnStation}</Mention>
         )}

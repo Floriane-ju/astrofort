@@ -42,8 +42,9 @@ describe('contrat d’entrée — écran par défaut, setup de l’Annexe A', ()
     expect(ecran).toContain('horizon plat')
   })
 
-  it('ferme le ciel profond faute de suivi, en renvoyant au grand champ', () => {
-    expect(ecran).toMatch(/domaine ciel profond est fermé/)
+  it('signale, en informatif, que la pose sans suivi reste plafonnée par la rotation du ciel', () => {
+    expect(ecran).toMatch(/Sans suivi, la pose est plafonnée par la rotation du ciel\./)
+    expect(ecran).toMatch(/<p class="etat">Sans suivi/)
   })
 
   it('offre le choix du type de capteur, sans sélection de boîtier (§5.1)', () => {
