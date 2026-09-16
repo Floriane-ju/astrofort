@@ -12,11 +12,12 @@ import { useSyncExternalStore } from 'react'
 import { DOMAINES } from '../registry/domains.ts'
 import { TYPES_OBJET, type TypeObjet } from '../data/deepsky.ts'
 
-/** Les deux portées de la liste. La seconde est un sur-ensemble de contraintes, pas un tri. */
-export type Portee = 'CATALOGUE' | 'PHOTOGRAPHIABLES'
-
 export interface EtatCatalogue {
-  readonly portee: Portee
+  /**
+   * Vrai au départ : la liste répond d'abord « que photographier cette nuit ». Le catalogue
+   * entier reste à une case — la base d'objets n'est pas fermée, c'est la séance qui l'est.
+   */
+  readonly photographiablesSeules: boolean
   readonly recherche: string
   /** Les types cochés du filtre — tous au départ, aucun restreint. */
   readonly types: ReadonlySet<TypeObjet>
@@ -24,7 +25,7 @@ export interface EtatCatalogue {
 }
 
 const ETAT_INITIAL: EtatCatalogue = Object.freeze({
-  portee: 'CATALOGUE',
+  photographiablesSeules: true,
   recherche: '',
   types: new Set(TYPES_OBJET),
   // La borne du domaine, jamais un nombre écrit ici : le curseur lit le même registre.

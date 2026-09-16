@@ -310,7 +310,7 @@ describe('T-0156 — sans cible désignée, il n’y a pas de fiche', () => {
     reinitialiseSeance()
     const sansCible = renderToStaticMarkup(<App />)
     // T-0182 — le panneau rend la liste : une fiche sans cible désignée n'existe plus.
-    expect(sansCible).toContain('Tout le catalogue')
+    expect(sansCible).toContain('Ne montrer que les objets photographiables')
     expect(sansCible).not.toContain('Cadrage de la cible')
     ouvreCible(CIBLE_REFERENCE)
   })

@@ -6,7 +6,7 @@
  * catalogue » du tiroir des réglages. Un troisième chemin de plus n'aurait rien réglé : ce
  * sont les deux autres qui disparaissent au même commit.
  *
- * La bascule « Photographiables » porte sur le CRÉNEAU de la nuit, jamais sur la hauteur à
+ * La liste par défaut — case « Ne montrer que les objets photographiables » cochée — porte sur le CRÉNEAU de la nuit, jamais sur la hauteur à
  * l'instant affiché. §6.4 l'interdit nommément : « fusionner les deux ferait disparaître de
  * la vue une cible qui sera bonne dans deux heures ». Une galaxie à 12° au-dessus de
  * l'horizon maintenant, qui culmine à 60° avant l'aube, est photographiable — et le reste.
@@ -48,15 +48,8 @@ import { prechargeVignettes } from './image-cible-memoire.ts'
 import { Pastilles } from './Pastilles.tsx'
 import { LIBELLE_TYPE_OBJET, nomCommun } from './libelles-objet.ts'
 import { ouvreCible } from './seance-etat.ts'
-import { majCatalogue, useCatalogue, type Portee } from './catalogue-etat.ts'
+import { majCatalogue, useCatalogue } from './catalogue-etat.ts'
 import { minuteAffichee, useTrancheScene, MS_PAR_MINUTE } from './scene-etat.ts'
-
-const LIBELLE_PORTEE: Readonly<Record<Portee, string>> = Object.freeze({
-  CATALOGUE: 'Tout le catalogue',
-  PHOTOGRAPHIABLES: 'Photographiables',
-})
-
-const PORTEES: readonly Portee[] = ['CATALOGUE', 'PHOTOGRAPHIABLES']
 
 const DOMAINE_MAG = DOMAINES.m_int
 const PAS_MAG = 0.5
@@ -87,7 +80,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
   const { catalogue, site, sbCiel, mLimOeil, dMm, fovHDeg, echApx, capteurHMm, etats } = props
   // T-0182 — la saisie vit dans le magasin : la fiche démonte cette liste, et une recherche
   // perdue au retour ferait recommencer le tri à chaque cible consultée.
-  const { portee, recherche, types, magMax } = useCatalogue()
+  const { photographiablesSeules, recherche, types, magMax } = useCatalogue()
 
   // T-0056 — la minute affichée, pas l'instant : la scène publie deux fois par seconde, et
   // une minute de granularité ne change pas la hauteur au degré près sur 14 000 entrées.
@@ -113,19 +106,13 @@ export function PanneauCibles(props: PanneauCiblesProps) {
 
   const typesOfferts = useMemo(() => typesPresents(lignes), [lignes])
 
-  // Calculé indépendamment de la portée active : le libellé de l'onglet « Photographiables »
-  // en a besoin même quand c'est « Tout le catalogue » qui est affiché.
-  const photographiables = useMemo(() => {
-    const filtrees = filtreLignes(lignes, { types, magMax, recherche })
-    // Une cible écartée porte une note et pas de pose : elle n'est pas photographiable, donc
-    // elle ne passe pas cette portée-là. C'est la POSE qui décide, pas la présence d'une note.
-    return filtrees.filter((l) => etats.get(l.objet.designation)?.pose != null)
-  }, [lignes, types, magMax, recherche, etats])
-
   const retenues = useMemo(() => {
-    if (portee === 'CATALOGUE') return filtreLignes(lignes, { types, magMax, recherche })
-    return photographiables
-  }, [lignes, types, magMax, recherche, portee, photographiables])
+    const filtrees = filtreLignes(lignes, { types, magMax, recherche })
+    if (!photographiablesSeules) return filtrees
+    // Une cible écartée porte une note et pas de pose : elle n'est pas photographiable, donc
+    // elle ne passe pas. C'est la POSE qui décide, pas la présence d'une note.
+    return filtrees.filter((l) => etats.get(l.objet.designation)?.pose != null)
+  }, [lignes, types, magMax, recherche, photographiablesSeules, etats])
 
   // §6.4 — le haut de la liste est demandé au réseau, une fois, après que la saisie s'est
   // posée. Ce sont les RÉSULTATS qui déclenchent, donc les trois gestes en sont couverts :
@@ -140,10 +127,11 @@ export function PanneauCibles(props: PanneauCiblesProps) {
     return () => clearTimeout(attente)
   }, [aPrecharger])
 
-  // Le verrou ne vaut que pour la portée « Photographiables » : le catalogue reste consultable
-  // sans suivi, c'est la SÉANCE qui est fermée, pas la base d'objets.
-  const domaineCpFerme =
-    portee === 'PHOTOGRAPHIABLES' ? (props.contexteSession?.domaineCpFerme ?? null) : null
+  // Le verrou ne vaut que case cochée : le catalogue reste consultable sans suivi, c'est la
+  // SÉANCE qui est fermée, pas la base d'objets.
+  const domaineCpFerme = photographiablesSeules
+    ? (props.contexteSession?.domaineCpFerme ?? null)
+    : null
 
   const plafond = K('CIBLES_LISTEES_MAX')
   const listees = retenues.slice(0, plafond)
@@ -161,23 +149,14 @@ export function PanneauCibles(props: PanneauCiblesProps) {
         onChange={(e) => majCatalogue({ recherche: e.target.value })}
       />
 
-      {/* La bascule ne trie pas, elle restreint : le libellé doit dire laquelle est active. */}
-      <div className="cibles-portee" role="group" aria-label="Portée de la liste">
-        {PORTEES.map((p) => (
-          <button
-            key={p}
-            type="button"
-            className={portee === p ? 'onglet actif' : 'onglet'}
-            aria-pressed={portee === p}
-            onClick={() => majCatalogue({ portee: p })}
-          >
-            {LIBELLE_PORTEE[p]}
-            {p === 'PHOTOGRAPHIABLES' ? ` (${photographiables.length.toLocaleString('fr-FR')})` : ''}
-          </button>
-        ))}
-      </div>
+      <Interrupteur
+        actif={photographiablesSeules}
+        surChangement={(actif) => majCatalogue({ photographiablesSeules: actif })}
+      >
+        Ne montrer que les objets photographiables
+      </Interrupteur>
 
-      {portee === 'PHOTOGRAPHIABLES' && (
+      {photographiablesSeules && (
         <p className="etat">Objets à plus de {seuil}° cette nuit, qui tiennent dans votre cadre.</p>
       )}
 

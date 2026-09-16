@@ -2193,12 +2193,6 @@ button:disabled {
   margin: var(--pas-2) 0;
 }
 
-.cibles-portee {
-  display: flex;
-  gap: var(--pas-1);
-  border-bottom: var(--trait) solid var(--bordure-faible);
-}
-
 .cibles-filtres {
   display: grid;
   gap: var(--pas-2);

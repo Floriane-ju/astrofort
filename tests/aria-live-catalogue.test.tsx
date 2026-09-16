@@ -55,7 +55,7 @@ describe('T-0187 — Le catalogue annonce ses changements sans geste', () => {
     const avantRecherche = panneau.slice(debutLive, panneau.indexOf('</div>', debutLive))
 
     // Chercher un terme
-    majCatalogue({ recherche: 'andro' })
+    majCatalogue({ recherche: 'andro', photographiablesSeules: false })
     const avecRecherche = ecran()
 
     // Isoler le panneau de nouveau
@@ -78,7 +78,7 @@ describe('T-0187 — Le catalogue annonce ses changements sans geste', () => {
 
   it('affiche le message de liste vide dans la région vive', () => {
     // Chercher quelque chose qui n'existe pas
-    majCatalogue({ recherche: 'ZZZZZZZ' })
+    majCatalogue({ recherche: 'ZZZZZZZ', photographiablesSeules: false })
     const html = ecran()
 
     // Isoler le panneau du catalogue
@@ -94,7 +94,7 @@ describe('T-0187 — Le catalogue annonce ses changements sans geste', () => {
   })
 
   it("n'affiche que le message de liste vide si la recherche ne trouve rien", () => {
-    majCatalogue({ recherche: 'ZZZZZZZ' })
+    majCatalogue({ recherche: 'ZZZZZZZ', photographiablesSeules: false })
     const html = ecran()
 
     // Isoler le panneau du catalogue

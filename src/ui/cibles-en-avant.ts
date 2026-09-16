@@ -8,8 +8,8 @@
  * tombe parmi le reste, ce qui est précisément ce qu'on cherche à voir.
  *
  * Le tamis est celui de `filtreObjets`, appelé ici tel quel : c'est la seule garantie que le
- * marqueur plein et la ligne de liste désignent le même ensemble. Pour la portée
- * « Photographiables », le critère reste celui de la liste — une pose annoncée par le moteur
+ * marqueur plein et la ligne de liste désignent le même ensemble. Case « Ne montrer que les objets
+ * photographiables » cochée, le critère reste celui de la liste — une pose annoncée par le moteur
  * de séance, donc un créneau cette nuit, jamais la hauteur à l'instant affiché.
  */
 
@@ -28,11 +28,11 @@ export function useCiblesEnAvant(
   catalogue: readonly ObjetCielProfond[],
   etats: ReadonlyMap<string, EtatCible>,
 ): ReadonlySet<string> | null {
-  const { portee, recherche, types, magMax } = useCatalogue()
+  const { photographiablesSeules, recherche, types, magMax } = useCatalogue()
 
   return useMemo(() => {
     const filtreActif =
-      portee !== 'CATALOGUE' ||
+      photographiablesSeules ||
       recherche.trim() !== '' ||
       restreintParType(types) ||
       magMax < DOMAINES.m_int.max
@@ -41,7 +41,7 @@ export function useCiblesEnAvant(
     const retenus = filtreObjets(catalogue, { types, magMax, recherche })
     // Une cible écartée porte une note et pas de pose : même critère que la liste, au mot près.
     const photographiable = (o: ObjetCielProfond) =>
-      portee === 'CATALOGUE' || etats.get(o.designation)?.pose != null
+      !photographiablesSeules || etats.get(o.designation)?.pose != null
     return new Set(retenus.filter(photographiable).map((o) => o.designation))
-  }, [catalogue, etats, portee, recherche, types, magMax])
+  }, [catalogue, etats, photographiablesSeules, recherche, types, magMax])
 }

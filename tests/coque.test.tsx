@@ -233,13 +233,13 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
 describe('§11.2 — un seul jeu de réglages à la fois', () => {
   it('ne monte que le contenu du mode courant', () => {
     const profond = ecran()
-    expect(profond).toContain('Tout le catalogue')
+    expect(profond).toContain('Ne montrer que les objets photographiables')
     expect(profond).not.toContain('Séquence de filé')
 
     poseMode('PANORAMA')
     const panorama = ecran()
     expect(panorama).toContain('Séquence de filé')
-    expect(panorama).not.toContain('Tout le catalogue')
+    expect(panorama).not.toContain('Ne montrer que les objets photographiables')
   })
 
   it('ne monte pas le corps d’une carte repliée', () => {
@@ -423,7 +423,7 @@ describe('§3.4 — un objet cliqué ouvre sa fiche', () => {
     // La liste tient le panneau tant qu'aucun objet n'a été désigné : le clic sur la scène
     // doit y mettre la fiche, sinon le geste se termine sans que rien ne se voie.
     expect(etatSeance().vueCibles).toBe('LISTE')
-    expect(ecran()).toContain('Tout le catalogue')
+    expect(ecran()).toContain('Ne montrer que les objets photographiables')
     ouvreCible(M31)
     expect(etatSeance().vueCibles).toBe('FICHE')
     expect(etatSeance().cible?.designation).toBe('M31')
@@ -434,15 +434,15 @@ describe('§3.4 — un objet cliqué ouvre sa fiche', () => {
     expect(html).toContain('Détectabilité')
     expect(html).toContain('Cadrage')
     // La liste est démontée : elle ne reste pas vivante derrière la fiche.
-    expect(html).not.toContain('Tout le catalogue')
+    expect(html).not.toContain('Ne montrer que les objets photographiables')
   })
 
   it('rend la liste au retour, recherche et filtre intacts', () => {
-    majCatalogue({ recherche: 'andro', portee: 'PHOTOGRAPHIABLES' })
+    majCatalogue({ recherche: 'andro', photographiablesSeules: false })
     ouvreCible(M31)
     montreListeCibles()
     const html = ecran()
-    expect(html).toContain('Tout le catalogue')
+    expect(html).toContain('Ne montrer que les objets photographiables')
     expect(html).toContain('value="andro"')
     // La cible reste désignée : c'est la LECTURE qui change, pas le choix.
     expect(etatSeance().cible?.designation).toBe('M31')
@@ -899,12 +899,11 @@ describe('T-0228 — un tiroir « info » porte les sources', () => {
 describe('T-0128 — le catalogue remplace les deux chemins vers les cibles', () => {
   it('est le contenu du panneau en Ciel profond, et le seul monté (§11.2)', () => {
     const ouvert = ecran()
-    expect(ouvert).toContain('Tout le catalogue')
-    expect(ouvert).toContain('Photographiables')
+    expect(ouvert).toContain('Ne montrer que les objets photographiables')
     expect(ouvert).not.toContain('Séquence de filé')
     // T-0181 — il n'est plus derrière un bouton : le mode Ciel profond le porte.
     poseMode('PANORAMA')
-    expect(ecran()).not.toContain('Tout le catalogue')
+    expect(ecran()).not.toContain('Ne montrer que les objets photographiables')
   })
 
   it('porte la recherche et les deux filtres, que plus personne d’autre ne porte', () => {
