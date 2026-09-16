@@ -9,7 +9,7 @@
  *   - la barre HAUTE nomme l'application, dit où pointe la vue et ouvre les panneaux ;
  *   - la barre BASSE porte le lieu et le temps — les deux entrées qui datent toute la nuit ;
  *   - le RAIL borde la scène à gauche et porte les bascules de la vue (T-0213) ;
- *   - les cartes du MATÉRIEL, Boîtier et Optique, se posent contre lui (T-0238) : c'est la
+ *   - les cartes du MATÉRIEL, Boîtier et Optique, se posent en haut à droite (T-0245) : c'est la
  *     saisie qu'on relit le plus, dépliée au démarrage, mais repliable quand elle est réglée ;
  *   - les CARTES portent le plan de nuit, repliable ;
  *   - le PANNEAU latéral porte ce qui se lit en longueur : le catalogue, le filé.

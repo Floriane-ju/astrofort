@@ -787,23 +787,25 @@ input.barretemps-instant {
   bottom: calc(var(--barre-bas) + var(--jour-carte));
 }
 
-/* LES CARTES DU MATÉRIEL : Boîtier puis Optique, empilées contre le rail.
+/* LES CARTES DU MATÉRIEL : Boîtier puis Optique, côte à côte en haut à droite, contre le
+   panneau (T-0245).
 
-   Deux cartes de hauteur variable ne s'ancrent pas l'une sous l'autre en absolu — la
-   première grandit dès qu'on déplie le mode avancé, et viendrait couvrir la seconde. Le
-   conteneur les met en colonne et tient la hauteur laissée par les deux barres ; quand elles
-   n'y tiennent plus ensemble, chacune rétrécit et son corps défile chez lui.
+   Pendues sous la barre haute, elles s'ouvrent vers le BAS : le conteneur tient la hauteur
+   laissée par les deux barres et aligne les cartes sur son haut, si bien qu'une carte qui se
+   déplie — ou grandit au mode avancé — descend sans jamais couvrir sa voisine. Quand elle n'y
+   tient plus, elle s'arrête sur la barre basse et son corps défile chez lui. Le panneau est
+   décollé du bord d'un jour de carte (T-0243), d'où les deux jours.
 
    Le conteneur laisse passer le pointeur : l'air entre les cartes et sous elles reste du ciel
    qu'on fait glisser. */
 .cartes-materiel {
   position: absolute;
   z-index: 2;
-  left: calc(var(--rail) + 2 * var(--jour-carte));
+  right: calc(var(--lateral) + 2 * var(--jour-carte));
   top: calc(var(--barre-haut) + var(--jour-carte));
   bottom: calc(var(--barre-bas) + var(--jour-carte));
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-start;
   gap: var(--jour-carte);
   pointer-events: none;
@@ -814,6 +816,7 @@ input.barretemps-instant {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  max-height: 100%;
   max-width: none;
   pointer-events: auto;
 }
