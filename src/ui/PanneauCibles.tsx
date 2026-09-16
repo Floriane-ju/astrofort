@@ -23,8 +23,9 @@
 
 import { useEffect, useMemo } from 'react'
 import {
+  ajouteCoordonnees,
   filtreLignes,
-  lignesCatalogue,
+  lignesInvariantes,
   restreintParType,
   typesPresents,
   type EtatCible,
@@ -89,19 +90,19 @@ export function PanneauCibles(props: PanneauCiblesProps) {
   // Les dépendances sont énumérées champ par champ, jamais `props` : l'objet de props est
   // neuf à chaque rendu, et 14 000 verdicts recalculés à chaque frappe rendraient la
   // recherche inutilisable.
+  // T-0190, T-0248 — détectabilité, cadrage et tri ne dépendent pas de l'instant : ils ne se
+  // recalculent qu'avec le catalogue ou l'optique. La minute n'ajoute qu'azimut et hauteur.
+  const invariantes = useMemo(
+    () => lignesInvariantes({ catalogue, sbCiel, mLimOeil, dMm, fovHDeg, echApx, capteurHMm }),
+    [catalogue, sbCiel, mLimOeil, dMm, fovHDeg, echApx, capteurHMm],
+  )
   const lignes = useMemo(
     () =>
-      lignesCatalogue({
-        catalogue,
-        matriceCiel: cielInstantane(site, new Date(minute * MS_PAR_MINUTE)).matrice,
-        sbCiel,
-        mLimOeil,
-        dMm,
-        fovHDeg,
-        echApx,
-        capteurHMm,
-      }),
-    [catalogue, site, minute, sbCiel, mLimOeil, dMm, fovHDeg, echApx, capteurHMm],
+      ajouteCoordonnees(
+        invariantes,
+        cielInstantane(site, new Date(minute * MS_PAR_MINUTE)).matrice,
+      ),
+    [invariantes, site, minute],
   )
 
   const typesOfferts = useMemo(() => typesPresents(lignes), [lignes])

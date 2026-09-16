@@ -193,8 +193,8 @@ describe('T-0056 — s’abonner à une tranche, pas au magasin entier', () => {
   })
 
   /**
-   * Dix secondes de temps qui défile, à la cadence à laquelle la boucle de rendu publie son
-   * compte rendu (`PERIODE_DIAGNOSTIC_MS` = 500 ms) et le facteur de défilement par défaut
+   * Dix secondes de temps qui défile, à la cadence à laquelle la boucle de rendu publie
+   * l'instant (`PERIODE_PUBLICATION_MS` = 500 ms) et le facteur de défilement par défaut
    * (×60). Chaque publication change l'identité de l'état : c'est le nombre de rendus qu'un
    * abonnement complet — celui que `App` portait — impose à tout l'arbre.
    */
@@ -204,13 +204,7 @@ describe('T-0056 — s’abonner à une tranche, pas au magasin entier', () => {
     const epoques = new Set<number>()
     for (let n = 1; n <= 20; n++) {
       // ×60 : une demi-seconde de montre vaut trente secondes de ciel.
-      afficheInstant(depart + n * 30_000, {
-        fps: 24 + (n % 3),
-        etoilesExaminees: 10_000 + n,
-        etoilesDessinees: 2_000 + n,
-        cellules: 40,
-        labels: 12,
-      })
+      afficheInstant(depart + n * 30_000)
       etats.add(etatScene())
       epoques.add(epoqueAffichee(etatScene()))
     }
@@ -224,6 +218,12 @@ describe('T-0056 — s’abonner à une tranche, pas au magasin entier', () => {
     // Après : l'époque de précession est prise au jour près, dix minutes de ciel ne la
     // changent pas — `App` ne se rend plus du tout pendant ces dix secondes.
     expect(mesure.epoques).toBe(1)
+  })
+
+  it('T-0248 — republier le même instant ne réveille personne', () => {
+    const avant = etatScene()
+    afficheInstant(avant.msAffiche)
+    expect(etatScene()).toBe(avant)
   })
 
   it('réveille quand même l’application quand le jour affiché change', () => {

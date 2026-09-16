@@ -2,11 +2,16 @@
  * §3 — La boucle de rendu du ciel, en marge de React.
  *
  * Le rendu vit dans un `requestAnimationFrame` qui lit un état mutable ; React ne réagit
- * qu'aux commandes et aux diagnostics, jamais à l'image. Sans cette séparation, une
+ * qu'aux commandes et à l'instant publié, jamais à l'image. Sans cette séparation, une
  * animation à 60 Hz déclencherait soixante rendus React par seconde.
+ *
+ * T-0248 — la boucle tourne en continu mais ne PEINT que ce qui a changé. Le ciel de
+ * `MAINTENANT` dérive d'un pixel toutes les vingt-cinq secondes à 200° de champ : le repeindre
+ * trente fois par seconde, c'était un cœur de processeur occupé à reproduire la même image.
  */
 
 import { useEffect, useRef, type RefObject } from 'react'
+import { pxParDegre, vitesseEcran } from '../core/curseur-temps.ts'
 import type { Etoile } from '../data/catalog.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { PaquetConstellations } from '../data/constellations.ts'
@@ -44,12 +49,14 @@ const NOMS_CORPS: Readonly<Record<string, string>> = {
   Uranus: 'Uranus',
 }
 
-/** Rafraîchissement des compteurs de diagnostic : lisible sans clignoter. */
-const PERIODE_DIAGNOSTIC_MS = 500
-/** Plafond de rendu : 24 im/s max. Les scènes plus lourdes restent en dessous, sans forcer. */
+/** Publication de l'instant rendu et des compteurs du filé : lisible sans clignoter. */
+const PERIODE_PUBLICATION_MS = 500
+/** Plafond de rendu : 30 im/s max. Les scènes plus lourdes restent en dessous, sans forcer. */
 const FPS_MAX = 30
 const INTERVALLE_MIN_MS = 1000 / FPS_MAX
 const MS_PAR_S = 1000
+/** La plus petite dérive que l'écran sait montrer. Fait de plateforme, pas seuil de rendu. */
+const DERIVE_VISIBLE_PX = 1
 
 /** Tout ce que la boucle lit à chaque image, réécrit à chaque rendu React. */
 export interface EtatBoucle {
@@ -85,8 +92,53 @@ export interface EtatBoucle {
   readonly anime: boolean
 }
 
+/** T-0248 — ce qu'une image a lu : de quoi dire si la suivante peindrait autre chose. */
+export interface ImageLue {
+  /** Son identité change à chaque rendu React de la scène : vue, couches, filé, mode nuit… */
+  readonly etat: Pick<EtatBoucle, 'vue' | 'modeTemps' | 'anime'>
+  /** L'astre survolé, pas l'entrée de `cibles` qui le porte : celle-ci est neuve à chaque image. */
+  readonly survole: unknown
+  /** Définition du canevas : la réécrire l'efface. */
+  readonly largeurPx: number
+  readonly hauteurPx: number
+  readonly instantMs: number
+}
+
 /**
- * Démarre la boucle et rend la liste des cibles à l'écran, réécrite à chaque image : c'est
+ * T-0248 — l'image courante diffère-t-elle de la dernière peinte ?
+ *
+ * En `MAINTENANT`, le ciel tourne sans qu'aucun état ne change : on repeint quand sa rotation
+ * a déplacé l'écran d'un pixel, à la vitesse de §3.2 (`vitesseEcran`, facteur 1). En
+ * défilement, chaque image est neuve. Temps figé, seul un changement d'état compte.
+ */
+export function doitDessiner(peinte: ImageLue | null, courante: ImageLue): boolean {
+  if (peinte === null) return true
+  if (
+    courante.etat !== peinte.etat ||
+    courante.survole !== peinte.survole ||
+    courante.largeurPx !== peinte.largeurPx ||
+    courante.hauteurPx !== peinte.hauteurPx
+  ) {
+    return true
+  }
+  if (courante.etat.anime) return true
+  if (courante.etat.modeTemps !== 'MAINTENANT') return false
+  const { largeurPx, fovDeg } = courante.etat.vue
+  const pxParS = vitesseEcran(1, pxParDegre(largeurPx, fovDeg)).value
+  const deriveS = Math.abs(courante.instantMs - peinte.instantMs) / MS_PAR_S
+  return deriveS * pxParS >= DERIVE_VISIBLE_PX
+}
+
+/** L'astre que le survol désigne, stable d'une image à l'autre ; `null` sans survol. */
+function astreSurvole(survol: SurvolEcran | null): unknown {
+  const cible = survol?.cible
+  if (cible === undefined) return null
+  // Un corps mobile est repositionné à chaque image : son nom est sa seule identité stable.
+  return cible.objet ?? cible.etoileNommee ?? cible.etoile ?? cible.nom
+}
+
+/**
+ * Démarre la boucle et rend la liste des cibles à l'écran, réécrite à chaque image peinte : c'est
  * elle que le clic interroge pour savoir ce qui se trouve sous le curseur.
  */
 export function useBoucleRendu(entree: {
@@ -103,14 +155,16 @@ export function useBoucleRendu(entree: {
   const ephemerides = useRef<EtatEphemerides | null>(null)
 
   useEffect(() => {
-    const contexte = canevas.current?.getContext('2d') ?? null
+    // T-0248 — opaque : `passeFond` recouvre tout le canevas avant la moindre couche, et le
+    // compositeur n'a plus à mélanger la scène avec ce qui se trouve derrière elle.
+    const contexte = canevas.current?.getContext('2d', { alpha: false }) ?? null
     if (contexte === null) return
 
     let actif = true
     let dernierTs: number | null = null
-    let dernierDiag = 0
-    let images = 0
-    // T-0116 — les compteurs du filé se publient au rythme du diagnostic, jamais par image :
+    let dernierePublication = 0
+    let peinte: ImageLue | null = null
+    // T-0116 — les compteurs du filé se publient avec l'instant, jamais par image :
     // `poseRenduFile` passe par le magasin de séance, donc par un rendu React.
     const publieFile = publicateurRenduFile(poseRenduFile)
     // Boîte réécrite par image plutôt qu'une variable locale : la passe de filé écrit depuis
@@ -122,11 +176,9 @@ export function useBoucleRendu(entree: {
 
     const image = (ts: number): void => {
       if (!actif) return
-      if (dernierTs !== null && ts - dernierTs < INTERVALLE_MIN_MS) {
-        // Plafond 24 im/s : on saute ce tick, la prochaine frame réévaluera.
-        requestAnimationFrame(image)
-        return
-      }
+      requestAnimationFrame(image)
+      // Plafond de cadence : on saute ce tick, la prochaine frame réévaluera.
+      if (dernierTs !== null && ts - dernierTs < INTERVALLE_MIN_MS) return
       const courant = etat.current
       const dt = dernierTs === null ? 0 : ts - dernierTs
       dernierTs = ts
@@ -140,6 +192,30 @@ export function useBoucleRendu(entree: {
         instant.ms += dt * courant.facteur
       }
 
+      const courante: ImageLue = {
+        etat: courant,
+        survole: astreSurvole(survol.current),
+        largeurPx: contexte.canvas.width,
+        hauteurPx: contexte.canvas.height,
+        instantMs: instant.ms,
+      }
+      if (doitDessiner(peinte, courante)) {
+        dessine(courant)
+        peinte = courante
+      }
+
+      // L'horloge d'affichage avance même quand rien ne se peint : la barre de temps compte
+      // les secondes d'un ciel qui ne bouge pas d'un pixel.
+      if (ts - dernierePublication >= PERIODE_PUBLICATION_MS) {
+        afficheInstant(instant.ms)
+        // `parametresFile` fait foi sur l'extinction : la boîte, elle, garde la dernière passe.
+        const rendu = parametresFile.current === null ? null : derniereFile.sortie
+        publieFile(rendu === null ? null : { reelles: rendu.etoilesReelles })
+        dernierePublication = ts
+      }
+    }
+
+    const dessine = (courant: EtatBoucle): void => {
       instantDate.setTime(instant.ms)
       const ciel = cielInstantane(courant.site, instantDate)
       ephemerides.current = avanceEphemerides(
@@ -221,27 +297,6 @@ export function useBoucleRendu(entree: {
               },
       })
       cibles.current = sortie.cibles
-
-      images++
-      if (ts - dernierDiag >= PERIODE_DIAGNOSTIC_MS) {
-        afficheInstant(instant.ms, {
-          fps: (images * MS_PAR_S) / (ts - dernierDiag),
-          etoilesExaminees: sortie.stats.etoilesExaminees,
-          etoilesDessinees: sortie.etoilesDessinees,
-          cellules: sortie.stats.cellulesRetenues,
-          labels: sortie.labels.length,
-        })
-        // `params` fait foi sur l'extinction : la boîte, elle, garde la dernière passe.
-        const rendu = params === null ? null : derniereFile.sortie
-        publieFile(
-          rendu === null
-            ? null
-            : { reelles: rendu.etoilesReelles },
-        )
-        images = 0
-        dernierDiag = ts
-      }
-      requestAnimationFrame(image)
     }
 
     const id = requestAnimationFrame(image)

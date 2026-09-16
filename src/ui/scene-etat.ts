@@ -119,15 +119,6 @@ export interface RenduScene {
   readonly vueRealiste: boolean
 }
 
-/** §3 — le compte rendu de la boucle : publié deux fois par seconde, jamais à chaque image. */
-export interface DiagnosticRendu {
-  readonly fps: number
-  readonly etoilesExaminees: number
-  readonly etoilesDessinees: number
-  readonly cellules: number
-  readonly labels: number
-}
-
 /** §3.4 — l'objet cliqué dans la scène, décrit en clair. */
 export interface SelectionScene {
   readonly titre: string
@@ -143,9 +134,12 @@ export interface SelectionScene {
  * Depuis qu'elles sont posées dans le menu d'information de la barre haute — à l'autre bout
  * de l'arbre — elles suivent le même chemin que le pointage : le magasin de module, lisible
  * en rendu serveur comme dans le navigateur.
+ *
+ * T-0248 — le diagnostic de rendu (images par seconde, étoiles examinées) n'y est plus. Personne
+ * ne le lisait depuis T-0153, et sa publication neuve toutes les 500 ms réveillait tous les
+ * abonnés du magasin, temps figé compris.
  */
 export interface LecturesScene {
-  readonly diagnostic: DiagnosticRendu
   readonly selection: SelectionScene | null
 }
 
@@ -192,10 +186,7 @@ const ETAT_INITIAL: EtatScene = {
     },
     vueRealiste: false,
   },
-  lectures: {
-    diagnostic: { fps: 0, etoilesExaminees: 0, etoilesDessinees: 0, cellules: 0, labels: 0 },
-    selection: null,
-  },
+  lectures: { selection: null },
   msAffiche: instant.ms,
 }
 
@@ -261,11 +252,9 @@ export function majLectures(retouche: Retouche<LecturesScene>): void {
  * Publie l'instant rendu. L'égalité est testée avant de notifier : en temps figé, la boucle
  * republie le même instant deux fois par seconde et rien ne doit se redessiner pour autant.
  */
-export function afficheInstant(ms: number, diagnostic?: DiagnosticRendu): void {
-  const lectures =
-    diagnostic === undefined ? etat.lectures : { ...etat.lectures, diagnostic }
-  if (ms === etat.msAffiche && lectures === etat.lectures) return
-  pose({ ...etat, msAffiche: ms, lectures })
+export function afficheInstant(ms: number): void {
+  if (ms === etat.msAffiche) return
+  pose({ ...etat, msAffiche: ms })
 }
 
 /**
@@ -343,6 +332,19 @@ export function useTrancheScene<T>(selecteur: (etat: EtatScene) => T): T {
   return useSyncExternalStore(abonne, lit, lit)
 }
 
+/** Tranches du pointage, du temps et du rendu : leur identité ne change qu'à leur écriture. */
+export function vueScene(etat: EtatScene): VueScene {
+  return etat.vue
+}
+
+export function tempsScene(etat: EtatScene): TempsScene {
+  return etat.temps
+}
+
+export function renduScene(etat: EtatScene): RenduScene {
+  return etat.rendu
+}
+
 /** Les commandes du magasin, telles que la scène et ses gestes les reçoivent. */
 export interface ActionsScene {
   readonly majVue: typeof majVue
@@ -352,6 +354,16 @@ export interface ActionsScene {
   readonly vaA: typeof vaA
   readonly reprend: typeof reprend
 }
+
+/** Des fonctions de module : un seul objet suffit, et son identité ne relance aucun effet. */
+export const ACTIONS_SCENE: ActionsScene = Object.freeze({
+  majVue,
+  majTemps,
+  majRendu,
+  majLectures,
+  vaA,
+  reprend,
+})
 
 export function useScene(): {
   readonly vue: VueScene
@@ -370,6 +382,6 @@ export function useScene(): {
     lectures: courant.lectures,
     msAffiche: courant.msAffiche,
     instant,
-    actions: { majVue, majTemps, majRendu, majLectures, vaA, reprend },
+    actions: ACTIONS_SCENE,
   }
 }

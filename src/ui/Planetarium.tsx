@@ -31,7 +31,19 @@ import { sbEffectifRendu, sbZenithAvecCrepuscule } from '../core/fond-ciel-rendu
 import { separationDeg, versVecteur } from '../core/mat3.ts'
 import type { LuneEcran } from './dessine-fond-ciel.ts'
 import { etatProfondeur, type ModeProjection } from '../core/projection.ts'
-import { majVue, resolutionRendu, useScene } from './scene-etat.ts'
+import {
+  ACTIONS_SCENE,
+  instant,
+  majVue,
+  minuteAffichee,
+  MS_PAR_MINUTE,
+  renduScene,
+  resolutionRendu,
+  tempsScene,
+  useScene,
+  useTrancheScene,
+  vueScene,
+} from './scene-etat.ts'
 import { useSeance } from './seance-etat.ts'
 import type { ProfilCadre } from '../core/cadre.ts'
 import { positionCorps, type Site } from '../core/ephem.ts'
@@ -128,7 +140,14 @@ export function Planetarium(props: PlanetariumProps) {
   const survol = useRef<SurvolEcran | null>(null)
 
   // Pointage, temps et couches sont ceux de la scène, réglés depuis le panneau droit.
-  const { vue: pointage, temps, rendu, msAffiche, instant, actions } = useScene()
+  // T-0248 — par tranches, et l'instant à la minute : la boucle publie deux fois par seconde,
+  // et chaque rendu de ce composant repeint le canevas. La Lune et le crépuscule ne bougent
+  // pas d'un pixel en une minute ; le ciel, lui, tourne dans la boucle à l'instant exact.
+  const pointage = useTrancheScene(vueScene)
+  const temps = useTrancheScene(tempsScene)
+  const rendu = useTrancheScene(renduScene)
+  const minute = useTrancheScene(minuteAffichee)
+  const actions = ACTIONS_SCENE
   const { fovDeg, largeurPx, hauteurPx } = pointage
   const { file, mode } = useSeance()
 
@@ -139,7 +158,7 @@ export function Planetarium(props: PlanetariumProps) {
   )
   const frontieres = useMemo(() => coucheFrontieres(props.constellations), [props.constellations])
 
-  const dateAffichee = useMemo(() => new Date(msAffiche), [msAffiche])
+  const dateAffichee = useMemo(() => new Date(minute * MS_PAR_MINUTE), [minute])
   // T-0100 — la Lune de l'instant affiché : le halo est centré sur ELLE, donc sur le même
   // état que le corps dessiné. §12.5 — un instant hors du domaine des séries n'éteint pas la
   // scène : la Lune sort du calcul, le reste continue.
@@ -227,11 +246,6 @@ export function Planetarium(props: PlanetariumProps) {
     () => reglageVitesse(temps.facteur, largeurPx, fovDeg),
     [temps.facteur, largeurPx, fovDeg],
   )
-  const ciel = useMemo(
-    () => cielInstantane(props.site, dateAffichee),
-    [props.site, dateAffichee],
-  )
-
   // T-0116 — le filé se peint dans la boucle, sur toute la scène : ce hook ne fournit plus que
   // ce qu'il tient du matériel et du panneau. La vue, le fond et le pôle viennent de l'image.
   const parametresFile = useParametresFile({
@@ -321,9 +335,23 @@ export function Planetarium(props: PlanetariumProps) {
           affichée à la barre basse : `ligneVisee` est la seule à composer la phrase.
           Hors flux visuel — la colonne centrale ne réserve aucune hauteur sous le canevas
           (T-0040) — mais présente dans l'arbre d'accessibilité. */}
-      <p className="scene-description" id={ID_DESCRIPTION}>
-        {ligneVisee(pointage, ciel.matrice, dateAffichee)}. {RACCOURCIS_CLAVIER}
-      </p>
+      <DescriptionScene site={props.site} />
     </section>
+  )
+}
+
+/**
+ * T-0248 — la description suit l'instant exact, comme la phrase de la barre basse dont elle
+ * emprunte les mots. Composant à part : ses rendus deux fois par seconde ne touchent ni le
+ * planétarium ni son état de boucle, donc ne repeignent pas le canevas.
+ */
+function DescriptionScene({ site }: { readonly site: Site }) {
+  const { vue, msAffiche } = useScene()
+  const date = useMemo(() => new Date(msAffiche), [msAffiche])
+  const ciel = useMemo(() => cielInstantane(site, date), [site, date])
+  return (
+    <p className="scene-description" id={ID_DESCRIPTION}>
+      {ligneVisee(vue, ciel.matrice, date)}. {RACCOURCIS_CLAVIER}
+    </p>
   )
 }
