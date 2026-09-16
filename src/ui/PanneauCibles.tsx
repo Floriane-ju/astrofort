@@ -15,12 +15,17 @@
  * facilité arrivent en props, calculées une fois par la chaîne, qui réemploie le moteur du
  * plan de séance : la liste, la carte Cible et le plan ne peuvent pas annoncer deux poses —
  * ni deux notes — différentes pour la même cible.
+ *
+ * §6.4 — le filtre par type est un choix MULTIPLE (`types_retenus`). Des cases repliées
+ * derrière un résumé plutôt qu'un `<select multiple>` : ce dernier demande Ctrl ou Cmd pour
+ * cocher, ce qui ne se fait pas au gant (§11.2).
  */
 
 import { useEffect, useMemo } from 'react'
 import {
   filtreLignes,
   lignesCatalogue,
+  restreintParType,
   typesPresents,
   type EtatCible,
   type LigneCible,
@@ -33,9 +38,11 @@ import type { ContexteSession } from '../core/session.ts'
 import { K } from '../registry/constants.ts'
 import { DOMAINES } from '../registry/domains.ts'
 import { I } from '../registry/imagerie.ts'
-import type { ObjetCielProfond, TypeObjet } from '../data/deepsky.ts'
+import { TYPES_OBJET, type ObjetCielProfond, type TypeObjet } from '../data/deepsky.ts'
 import { BoutonVisee } from './BoutonVisee.tsx'
 import { Curseur } from './Curseur.tsx'
+import { Icone } from './Icone.tsx'
+import { Interrupteur } from './Interrupteur.tsx'
 import { VignetteCible } from './ImageCible.tsx'
 import { prechargeVignettes } from './image-cible-memoire.ts'
 import { Pastilles } from './Pastilles.tsx'
@@ -80,7 +87,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
   const { catalogue, site, sbCiel, mLimOeil, dMm, fovHDeg, echApx, capteurHMm, etats } = props
   // T-0182 — la saisie vit dans le magasin : la fiche démonte cette liste, et une recherche
   // perdue au retour ferait recommencer le tri à chaque cible consultée.
-  const { portee, recherche, type, magMax } = useCatalogue()
+  const { portee, recherche, types, magMax } = useCatalogue()
 
   // T-0056 — la minute affichée, pas l'instant : la scène publie deux fois par seconde, et
   // une minute de granularité ne change pas la hauteur au degré près sur 14 000 entrées.
@@ -109,16 +116,16 @@ export function PanneauCibles(props: PanneauCiblesProps) {
   // Calculé indépendamment de la portée active : le libellé de l'onglet « Photographiables »
   // en a besoin même quand c'est « Tout le catalogue » qui est affiché.
   const photographiables = useMemo(() => {
-    const filtrees = filtreLignes(lignes, { type, magMax, recherche })
+    const filtrees = filtreLignes(lignes, { types, magMax, recherche })
     // Une cible écartée porte une note et pas de pose : elle n'est pas photographiable, donc
     // elle ne passe pas cette portée-là. C'est la POSE qui décide, pas la présence d'une note.
     return filtrees.filter((l) => etats.get(l.objet.designation)?.pose != null)
-  }, [lignes, type, magMax, recherche, etats])
+  }, [lignes, types, magMax, recherche, etats])
 
   const retenues = useMemo(() => {
-    if (portee === 'CATALOGUE') return filtreLignes(lignes, { type, magMax, recherche })
+    if (portee === 'CATALOGUE') return filtreLignes(lignes, { types, magMax, recherche })
     return photographiables
-  }, [lignes, type, magMax, recherche, portee, photographiables])
+  }, [lignes, types, magMax, recherche, portee, photographiables])
 
   // §6.4 — le haut de la liste est demandé au réseau, une fois, après que la saisie s'est
   // posée. Ce sont les RÉSULTATS qui déclenchent, donc les trois gestes en sont couverts :
@@ -175,22 +182,36 @@ export function PanneauCibles(props: PanneauCiblesProps) {
       )}
 
       <div className="cibles-filtres">
-        <label>
-          <span className="libelle">Type</span>
-          <select
-            value={type ?? ''}
-            onChange={(e) =>
-              majCatalogue({ type: e.target.value === '' ? null : (e.target.value as TypeObjet) })
-            }
-          >
-            <option value="">Tous types</option>
+        <details className="cibles-types">
+          {/* Le résumé dit la sélection fermé : un filtre replié qui restreint sans le dire
+              ferait chercher pourquoi la liste est courte. */}
+          <summary>
+            <span className="libelle">Type</span>
+            <span className="cibles-types-valeur">
+              {resumeTypes(typesOfferts, types)}
+              <Icone nom="expand_more" classe="chevron" />
+            </span>
+          </summary>
+          <div className="cibles-types-choix" role="group" aria-label="Types d’objet retenus">
+            <div className="cibles-types-tout">
+              <button type="button" onClick={() => majCatalogue({ types: new Set(TYPES_OBJET) })}>
+                Tout cocher
+              </button>
+              <button type="button" onClick={() => majCatalogue({ types: new Set() })}>
+                Tout décocher
+              </button>
+            </div>
             {typesOfferts.map((t) => (
-              <option key={t} value={t}>
+              <Interrupteur
+                key={t}
+                actif={types.has(t)}
+                surChangement={(actif) => majCatalogue({ types: bascule(types, t, actif) })}
+              >
                 {LIBELLE_TYPE_OBJET[t]}
-              </option>
+              </Interrupteur>
             ))}
-          </select>
-        </label>
+          </div>
+        </details>
         <label>
           <span className="libelle">
             Jusqu’à la magnitude{' '}
@@ -249,6 +270,25 @@ export function PanneauCibles(props: PanneauCiblesProps) {
       )}
     </section>
   )
+}
+
+function bascule(
+  types: ReadonlySet<TypeObjet>,
+  type: TypeObjet,
+  actif: boolean,
+): ReadonlySet<TypeObjet> {
+  return new Set(actif ? [...types, type] : [...types].filter((t) => t !== type))
+}
+
+/** Compté sur les types PROPOSÉS : « 3 types sur 10 » ne doit pas compter ceux qu'on ne voit pas. */
+function resumeTypes(offerts: readonly TypeObjet[], types: ReadonlySet<TypeObjet>): string {
+  if (!restreintParType(types)) return 'Tous types'
+  const coches = offerts.filter((t) => types.has(t))
+  if (coches.length === 0) return 'Aucun type'
+  if (coches.length === offerts.length) return 'Tous types'
+  const [premier] = coches
+  if (coches.length === 1 && premier !== undefined) return LIBELLE_TYPE_OBJET[premier]
+  return `${coches.length} types sur ${offerts.length}`
 }
 
 /**

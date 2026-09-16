@@ -10,7 +10,7 @@
 
 import { useSyncExternalStore } from 'react'
 import { DOMAINES } from '../registry/domains.ts'
-import type { TypeObjet } from '../data/deepsky.ts'
+import { TYPES_OBJET, type TypeObjet } from '../data/deepsky.ts'
 
 /** Les deux portées de la liste. La seconde est un sur-ensemble de contraintes, pas un tri. */
 export type Portee = 'CATALOGUE' | 'PHOTOGRAPHIABLES'
@@ -18,14 +18,15 @@ export type Portee = 'CATALOGUE' | 'PHOTOGRAPHIABLES'
 export interface EtatCatalogue {
   readonly portee: Portee
   readonly recherche: string
-  readonly type: TypeObjet | null
+  /** Les types cochés du filtre — tous au départ, aucun restreint. */
+  readonly types: ReadonlySet<TypeObjet>
   readonly magMax: number
 }
 
 const ETAT_INITIAL: EtatCatalogue = Object.freeze({
   portee: 'CATALOGUE',
   recherche: '',
-  type: null,
+  types: new Set(TYPES_OBJET),
   // La borne du domaine, jamais un nombre écrit ici : le curseur lit le même registre.
   magMax: DOMAINES.m_int.max,
 })

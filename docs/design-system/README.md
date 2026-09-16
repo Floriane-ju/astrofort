@@ -212,10 +212,12 @@ rupture (1100px) : un jeton pour une valeur unique serait une abstraction « au 
 </Interrupteur>
 ```
 
-> **Deux champs du produit n'utilisent pas `ChampChoix`, et c'est écrit dans son en-tête :** le
-> filtre « Type » de `PanneauCibles` (libellé en texte brut, sentinelle `''` ↔ `null`) et le
-> choix de RSB de `Verdicts` (valeur numérique). Les faire entrer aurait coûté trois props pour
-> deux appelants.
+> **Un champ du produit n'utilise pas `ChampChoix`, et c'est écrit dans son en-tête :** le
+> choix de RSB de `Verdicts` (valeur numérique).
+>
+> Le filtre « Type » de `PanneauCibles` est un **choix multiple** : un `<details>` dont le
+> résumé garde l'allure d'un `<select>`, et une `Interrupteur` par type présent. Pas de
+> `<select multiple>` — il faut Ctrl ou Cmd pour y cocher, ce qui ne se fait pas au gant (§11.2).
 
 ### Texte et explication
 

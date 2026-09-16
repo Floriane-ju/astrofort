@@ -2237,6 +2237,49 @@ button:disabled {
   font-family: var(--police-mono);
 }
 
+/* Le filtre par type : des cases repliées derrière un résumé qui garde l'allure du `<select>`
+   qu'il remplace. Il se déplie DANS le flux, pas en surimpression : la liste descend, mais rien
+   ne vient masquer les lignes que le filtre est justement en train de changer. */
+.cibles-types > summary {
+  display: grid;
+  gap: var(--pas-1);
+  cursor: pointer;
+  list-style: none;
+}
+.cibles-types > summary::-webkit-details-marker {
+  display: none;
+}
+.cibles-types-valeur {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pas-2);
+  min-height: var(--cible-clic);
+  padding: var(--pas-2);
+  background: var(--fond-accent);
+  color: var(--texte);
+  border: var(--trait) solid var(--bordure-controle);
+  font: var(--texte-appui)/1.4 var(--police-mono);
+  letter-spacing: var(--suivi-saisie);
+}
+.cibles-types > summary:hover > .cibles-types-valeur {
+  border-color: var(--accent);
+}
+.cibles-types .chevron {
+  color: var(--attenue);
+}
+.cibles-types[open] .chevron {
+  transform: rotate(180deg);
+}
+.cibles-types-choix {
+  display: grid;
+  padding-top: var(--pas-1);
+}
+.cibles-types-tout {
+  display: flex;
+  gap: var(--pas-1);
+}
+
 .cibles-liste {
   margin: 0;
   padding: 0;

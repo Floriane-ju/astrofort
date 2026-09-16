@@ -19,7 +19,7 @@ import { cielInstantane } from '../src/core/horloges.ts'
 import { applique, versSpherique, versVecteur } from '../src/core/mat3.ts'
 import { DOMAINES } from '../src/registry/domains.ts'
 import type { Site } from '../src/core/ephem.ts'
-import { decodeObjets, type ObjetCielProfond } from '../src/data/deepsky.ts'
+import { decodeObjets, TYPES_OBJET, type ObjetCielProfond } from '../src/data/deepsky.ts'
 
 /** Annexe A : Bordeaux, 45° N. */
 const SITE: Site = { latitudeDeg: 44.84, longitudeDeg: -0.58, altitudeM: 20 }
@@ -31,7 +31,7 @@ const OPTIQUE = { fovHDeg: 16.4, echApx: 10.1, capteurHMm: 24, dMm: 42.86 }
 const CIEL = { sbCiel: 21.0, mLimOeil: 6.1 }
 const SETUP = { ...OPTIQUE, ...CIEL, matriceCiel: MATRICE }
 
-const SANS_FILTRE = { type: null, magMax: DOMAINES.m_int.max, recherche: '' }
+const SANS_FILTRE = { types: new Set(TYPES_OBJET), magMax: DOMAINES.m_int.max, recherche: '' }
 
 function hauteurDe(adDeg: number, decDeg: number): number {
   return versSpherique(applique(MATRICE, versVecteur(adDeg, decDeg))).latitudeDeg
@@ -200,8 +200,23 @@ describe('filtreLignes — les trois restrictions de §6.4', () => {
 
   it('ne garde que les objets du type retenu', () => {
     expect(
-      filtreLignes(LIGNES, { ...SANS_FILTRE, type: 'AMAS_GLOB' }).map((l) => l.objet.designation),
+      filtreLignes(LIGNES, { ...SANS_FILTRE, types: new Set(['AMAS_GLOB'] as const) }).map(
+        (l) => l.objet.designation,
+      ),
     ).toEqual(['GLOB'])
+  })
+
+  it('garde les objets de chacun des types cochés, et d’eux seuls', () => {
+    expect(
+      filtreLignes(LIGNES, {
+        ...SANS_FILTRE,
+        types: new Set(['AMAS_GLOB', 'NEB_OBSCURE'] as const),
+      }).map((l) => l.objet.designation),
+    ).toEqual(['GLOB', 'OBSCURE_SOUS_HORIZON'])
+  })
+
+  it('ne garde rien quand aucun type n’est coché', () => {
+    expect(filtreLignes(LIGNES, { ...SANS_FILTRE, types: new Set() })).toEqual([])
   })
 
   it('écarte une magnitude absente dès que le filtre de magnitude est actif', () => {
@@ -245,7 +260,7 @@ describe('filtreLignes — les trois restrictions de §6.4', () => {
 
     expect(lignes.slice(0, 200).some((l) => l.objet.designation === 'GLOB_FAIBLE')).toBe(false)
     expect(
-      filtreLignes(lignes, { ...SANS_FILTRE, type: 'AMAS_GLOB' })
+      filtreLignes(lignes, { ...SANS_FILTRE, types: new Set(['AMAS_GLOB'] as const) })
         .slice(0, 200)
         .map((l) => l.objet.designation),
     ).toEqual(['GLOB_FAIBLE'])

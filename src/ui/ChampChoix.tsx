@@ -13,13 +13,10 @@
  * dehors, et une prop capable de les décrire aurait fait un second schéma de données pour
  * remplacer du balisage qui se lit déjà. Le site d'appel garde ses `<option>`.
  *
- * DEUX CHAMPS DU PRODUIT NE PASSENT PAS PAR ICI, délibérément :
- *   - le filtre « Type » de `PanneauCibles` porte un libellé en texte brut et une sentinelle
- *     `''` ↔ `null` — deux axes de plus pour un seul site ;
- *   - le choix de RSB de `Verdicts` porte une valeur NUMÉRIQUE, là où un `<select>` ne rend
- *     que des chaînes : sa conversion est sa particularité, pas un défaut à rattraper.
- * Les faire entrer ici aurait ajouté trois props pour deux appelants. Ils restent écrits en
- * clair, et l'inventaire le dit.
+ * UN CHAMP DU PRODUIT NE PASSE PAS PAR ICI, délibérément : le choix de RSB de `Verdicts`
+ * porte une valeur NUMÉRIQUE, là où un `<select>` ne rend que des chaînes — sa conversion est
+ * sa particularité, pas un défaut à rattraper. Il reste écrit en clair, et l'inventaire le dit.
+ * (Le filtre « Type » de `PanneauCibles` n'est plus un `<select>` : c'est un choix multiple.)
  */
 
 import type { ReactNode } from 'react'

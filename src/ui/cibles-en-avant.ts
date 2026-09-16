@@ -14,7 +14,7 @@
  */
 
 import { useMemo } from 'react'
-import { filtreObjets, type EtatCible } from '../core/cibles-liste.ts'
+import { filtreObjets, restreintParType, type EtatCible } from '../core/cibles-liste.ts'
 import { DOMAINES } from '../registry/domains.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import { useCatalogue } from './catalogue-etat.ts'
@@ -28,20 +28,20 @@ export function useCiblesEnAvant(
   catalogue: readonly ObjetCielProfond[],
   etats: ReadonlyMap<string, EtatCible>,
 ): ReadonlySet<string> | null {
-  const { portee, recherche, type, magMax } = useCatalogue()
+  const { portee, recherche, types, magMax } = useCatalogue()
 
   return useMemo(() => {
     const filtreActif =
       portee !== 'CATALOGUE' ||
       recherche.trim() !== '' ||
-      type !== null ||
+      restreintParType(types) ||
       magMax < DOMAINES.m_int.max
     if (!filtreActif) return null
 
-    const retenus = filtreObjets(catalogue, { type, magMax, recherche })
+    const retenus = filtreObjets(catalogue, { types, magMax, recherche })
     // Une cible écartée porte une note et pas de pose : même critère que la liste, au mot près.
     const photographiable = (o: ObjetCielProfond) =>
       portee === 'CATALOGUE' || etats.get(o.designation)?.pose != null
     return new Set(retenus.filter(photographiable).map((o) => o.designation))
-  }, [catalogue, etats, portee, recherche, type, magMax])
+  }, [catalogue, etats, portee, recherche, types, magMax])
 }

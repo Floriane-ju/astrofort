@@ -193,7 +193,11 @@ export function typesPresents(lignes: readonly LigneCible[]): readonly TypeObjet
 }
 
 export interface FiltreListe {
-  readonly type: TypeObjet | null
+  /**
+   * Les types cochés. Tous cochés, le filtre ne restreint pas ; aucun coché, il ne laisse rien
+   * passer — une liste vide est la réponse honnête à « aucun type », pas un filtre à ignorer.
+   */
+  readonly types: ReadonlySet<TypeObjet>
   /** Magnitude intégrée maximale retenue. Au maximum du domaine, le filtre ne restreint pas. */
   readonly magMax: number
   readonly recherche: string
@@ -213,8 +217,9 @@ export function filtreObjets(
   objets: readonly ObjetCielProfond[],
   filtre: FiltreListe,
 ): readonly ObjetCielProfond[] {
-  const parType =
-    filtre.type === null ? objets : objets.filter((o) => o.type === filtre.type)
+  const parType = restreintParType(filtre.types)
+    ? objets.filter((o) => filtre.types.has(o.type))
+    : objets
 
   const parMag =
     filtre.magMax >= DOMAINES.m_int.max
@@ -224,6 +229,11 @@ export function filtreObjets(
   if (filtre.recherche.trim() === '') return parMag
 
   return chercheCatalogue(parMag, filtre.recherche, parMag.length)
+}
+
+/** Vrai dès qu'un type au moins est décoché : la scène n'estompe rien tant que tout l'est. */
+export function restreintParType(types: ReadonlySet<TypeObjet>): boolean {
+  return TYPES_OBJET.some((t) => !types.has(t))
 }
 
 /**

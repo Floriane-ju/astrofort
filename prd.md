@@ -1708,6 +1708,13 @@ FILTRE PAR TYPE D'OBJET
   complète de §6.3 : offrir « nébuleuse obscure » quand aucune n'est levée est une
   impasse. Le filtre s'applique AVANT tout plafond d'affichage — filtrer les 200
   premières lignes ne dirait rien du ciel.
+  Le choix est MULTIPLE : « galaxies et amas globulaires » est une seule question, et un
+  filtre à valeur unique la fait poser en deux fois sans jamais afficher la réponse commune.
+  Tous les types sont cochés au départ — le filtre ne restreint rien tant qu'on n'a rien
+  décoché. Deux gestes cochent ou décochent tout d'un coup. Aucun type coché ne laisse passer
+  AUCUN objet : une liste vide est la réponse à « aucun type », pas un filtre à ignorer.
+  Fermé, le filtre dit ce qu'il retient (tous, aucun, le type seul, ou le compte) : un filtre
+  replié qui restreint sans le dire ferait chercher pourquoi la liste est courte.
 
 RECHERCHE DU CATALOGUE — portée entière, jamais plafonnée
   Cherche dans la désignation et dans chacun des noms communs, casse et accents ignorés.
@@ -1805,7 +1812,7 @@ UNE IMAGE DE L'OBJET, ET CE QU'ELLE COÛTE
 | `sb_ciel`, `m_lim_oeil` | float | mag/as², mag | §2.2 | |
 | `d_mm` | float | mm | §5.1 | gain instrumental de §6.3 |
 | `saisie_recherche` | string | — | — | vide = aucun résultat |
-| `type_retenu` | enum ou nul | — | types présents | filtre |
+| `types_retenus` | ensemble d'enum | — | sous-ensemble de §6.3 | filtre ; tous au départ, vide = aucun objet |
 | `visibles` | array | — | sortie | objet, azimut, hauteur, verdict |
 | `types_presents` | array | — | sortie | sous-ensemble de §6.3 |
 | `image_objet` | blob ou nul | — | sortie | nul = aucune image, pas une erreur |
@@ -1834,6 +1841,16 @@ Et aucun verdict n'est estimé pour lui
 Étant donné aucune nébuleuse obscure levée à cet instant            # cas limite
 Quand j'ouvre le filtre par type
 Alors ce type n'est pas proposé
+
+Étant donné les types « galaxie » et « amas globulaire » cochés, et eux seuls
+Quand la liste est composée
+Alors elle porte les objets de chacun de ces deux types, et d'aucun autre
+Et la scène estompe les marqueurs des autres types
+
+Étant donné tous les types décochés                                  # cas limite
+Quand la liste est composée
+Alors elle est vide
+Et elle le dit, plutôt que de retomber sur le catalogue entier
 
 Étant donné la saisie « pleiades » sans accent ni majuscule
 Quand je cherche dans le catalogue

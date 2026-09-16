@@ -894,6 +894,15 @@ describe('T-0128 — le catalogue remplace les deux chemins vers les cibles', ()
     expect(ouvert).toContain('Jusqu’à la magnitude')
   })
 
+  it('filtre par plusieurs types à la fois, et se coche ou se vide d’un geste', () => {
+    const ouvert = ecran()
+    expect(ouvert).not.toContain('<option value="">Tous types')
+    expect(ouvert).toContain('Tout cocher')
+    expect(ouvert).toContain('Tout décocher')
+    majCatalogue({ types: new Set() })
+    expect(ecran()).toContain('Aucun type')
+  })
+
   it('a vidé la fiche de son choix de cible : elle ne fait plus que décrire', () => {
     ouvreCible(M31)
     const fiche = ecran()
