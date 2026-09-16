@@ -96,7 +96,7 @@ export function ChampsSite(props: ChampsSiteProps) {
 
       {props.cielRefus !== null && (
         <Mention ton="erreur" role="status">
-          {props.cielRefus} — le ciel affiché reste celui de la dernière saisie valide.
+          {props.cielRefus} — le ciel garde la dernière valeur valide.
         </Mention>
       )}
 

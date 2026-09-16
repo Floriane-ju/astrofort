@@ -201,9 +201,7 @@ export function deltaSbLune(entree: EntreeDeltaSbLune): Traced<number> {
       value: 0,
       formula: 'DELTA_SB_LUNE',
       inputs,
-      note:
-        'Lune sous l’horizon ou cible non levée : la Lune n’entre pas dans le calcul du fond ' +
-        'de ciel. Une Lune couchée ne dégrade rien, quelle que soit sa phase.',
+      note: 'Lune couchée ou cible non levée : aucune gêne.',
     })
   }
 
@@ -218,9 +216,8 @@ export function deltaSbLune(entree: EntreeDeltaSbLune): Traced<number> {
     inputs,
     constants,
     note:
-      `La Lune éclaircit le fond de ciel de ${delta.toFixed(2)} mag/arcsec² sur cette cible. ` +
-      'Ce n’est pas une nuit perdue : le fond monte, donc les poses raccourcissent et ' +
-      'l’intégration s’allonge. Le moteur le chiffre plutôt que d’écarter la nuit.',
+      `La Lune éclaircit le ciel de ${delta.toFixed(2)} mag/arcsec² sur cette cible : ` +
+      'poses plus courtes, temps total plus long.',
   })
 }
 
@@ -324,7 +321,7 @@ export function fenetreUtile(site: Site, nuit: FenetreNocturne): FenetreUtile {
       dureeH: 0,
       dureeNuitH: 0,
       luneInterfere: false,
-      note: 'Aucune fenêtre nocturne cette nuit-là : la fenêtre utile n’est pas calculée.',
+      note: 'Pas de nuit noire à cette date.',
     }
   }
 
@@ -361,9 +358,7 @@ export function fenetreUtile(site: Site, nuit: FenetreNocturne): FenetreUtile {
       dureeNuitH,
       luneInterfere: true,
       note:
-        `La Lune reste levée toute la nuit : la fenêtre sans Lune est nulle, sur ` +
-        `${dureeNuitH.toFixed(2)} h de nuit. Les cibles tolérantes à la Lune restent ` +
-        'planifiables, avec leur dégradation chiffrée.',
+        'Lune levée toute la nuit : préférez les nébuleuses en émission.',
     }
   }
 
@@ -376,10 +371,7 @@ export function fenetreUtile(site: Site, nuit: FenetreNocturne): FenetreUtile {
     dureeNuitH,
     luneInterfere,
     note: luneInterfere
-      ? `Fenêtre sans Lune : ${dureeH.toFixed(2)} h, sur ${dureeNuitH.toFixed(2)} h de nuit. ` +
-        'Les deux durées sont affichées séparément : la seconde n’est pas perdue, elle est ' +
-        'seulement plus claire.'
-      : `La Lune ne gêne pas cette nuit : la fenêtre utile couvre les ${dureeNuitH.toFixed(2)} h ` +
-        'de nuit.',
+      ? `${dureeH.toFixed(2)} h sans Lune sur ${dureeNuitH.toFixed(2)} h de nuit.`
+      : 'La Lune ne gêne pas cette nuit.',
   }
 }

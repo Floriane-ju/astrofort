@@ -69,10 +69,6 @@ export function CadrageDuFile({
 
       {mode === 'PANORAMA' && (
         <>
-          <p className="etat">
-            Le temps de la scène est figé : un filé est une composition fixe, la vue animée
-            reste celui du planétarium.
-          </p>
           {lectures.mentionProj !== null && (
             <>
               <Mention ton="cause">{lectures.mentionProj}</Mention>
@@ -112,10 +108,7 @@ export function PoseMaximale({
         Afficher la pose maximale dans le cadre
       </Interrupteur>
       {file.poseDansCadre && (
-        <p className="etat">
-          Le cadre du capteur porte la grille de pose : il est masqué le temps qu'elle s'y
-          lise, étoiles et repères compris.
-        </p>
+        <p className="etat">Le cadre est masqué tant que la grille est affichée.</p>
       )}
       <TracedValue terme="pose_max_cadre" trace={carte.tMaxCadreS} decimales={1} unite="s" />
       {carte.messages.map((message) => (
@@ -189,10 +182,8 @@ export function ProfondeurDUnePose({
       />
       {poseDepassee && carte.poseOperanteS !== null && (
         <Mention ton="cause">
-          Pose de {file.tPoseS.toFixed(0)} s au-delà de la pose max du cadre (
-          {carte.poseOperanteS.toFixed(1)} s) : les étoiles sont rendues ovalisées, avec une
-          traînée de {trainee.value.toFixed(1)} px. Ramener la pose à{' '}
-          {carte.poseOperanteS.toFixed(0)} s les rend ponctuelles.
+          Pose trop longue : étoiles étirées de {trainee.value.toFixed(1)} px. Maximum{' '}
+          {carte.poseOperanteS.toFixed(0)} s.
         </Mention>
       )}
       {poseDepassee && carte.poseOperanteS !== null && (
@@ -205,8 +196,7 @@ export function ProfondeurDUnePose({
       )}
       {renduFile !== null && renduFile.reelles === 0 && (
         <Mention ton="cause">
-          Aucun repère brillant dans ce champ : aucune étoile catalographiée n’y tombe. En
-          pointage manuel, ce cadre sera difficile à retrouver dans le viseur.
+          Aucune étoile repère dans ce cadre : difficile à trouver sans GoTo.
         </Mention>
       )}
     </section>

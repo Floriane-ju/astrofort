@@ -36,52 +36,48 @@ const MODULATIONS: Readonly<Record<TypeObjet, ModulationType>> = Object.freeze({
   EMISSION: {
     toleranceLune: 'FORTE',
     conseil:
-      'Nébuleuse en émission : un filtre bi-bande Hα/OIII lui fait tolérer la Lune et un ' +
-      'ciel Bortle 5 à 6. En large bande, la même cible devient non recommandée.',
+      'Nébuleuse en émission : avec un filtre bi-bande, la Lune et un ciel moyen passent. ' +
+      'Sans filtre, déconseillée.',
   },
   RESTE_SUPERNOVA: {
     toleranceLune: 'FORTE',
     conseil:
-      'Reste de supernova : émission en raies, donc même tolérance qu’une nébuleuse en ' +
-      'émission avec un filtre bi-bande.',
+      'Reste de supernova : avec un filtre bi-bande, la Lune passe.',
   },
   NEB_PLANETAIRE: {
     toleranceLune: 'FORTE',
-    conseil: 'Nébuleuse planétaire : tolère la Lune et récompense la focale longue.',
+    conseil: 'Nébuleuse planétaire : la Lune gêne peu, une longue focale aide.',
   },
   AMAS_OUVERT: {
     toleranceLune: 'MOYENNE',
-    conseil: 'Amas : peu sensible à la pollution lumineuse, les étoiles restent ponctuelles.',
+    conseil: 'Amas : peu gêné par la pollution lumineuse.',
   },
   AMAS_GLOB: {
     toleranceLune: 'MOYENNE',
-    conseil: 'Amas : peu sensible à la pollution lumineuse, les étoiles restent ponctuelles.',
+    conseil: 'Amas : peu gêné par la pollution lumineuse.',
   },
   GALAXIE: {
     toleranceLune: 'FAIBLE',
     conseil:
-      'Galaxie : large bande obligatoire, aucun filtre n’aide. Elle exige un ciel noir ET ' +
-      'la Lune couchée.',
+      'Galaxie : aucun filtre n’aide, il faut un ciel noir et la Lune couchée.',
   },
   REFLEXION: {
     toleranceLune: 'FAIBLE',
     conseil:
-      'Nébuleuse par réflexion : large bande obligatoire, et plus exigeante encore qu’une ' +
-      'galaxie sur la noirceur du ciel.',
+      'Nébuleuse par réflexion : aucun filtre n’aide, il faut un ciel très noir.',
   },
   NEB_OBSCURE: {
     toleranceLune: 'FAIBLE',
     conseil:
-      'Nébuleuse obscure : elle se lit en contraste sur le fond, donc exige le ciel le plus ' +
-      'noir. Aucun filtre n’aide.',
+      'Nébuleuse obscure : aucun filtre n’aide, il faut le ciel le plus noir possible.',
   },
   INCONNU: {
     toleranceLune: 'MOYENNE',
-    conseil: 'Type absent du catalogue : aucune modulation par type n’est appliquée.',
+    conseil: 'Type d’objet inconnu.',
   },
   AUTRE: {
     toleranceLune: 'MOYENNE',
-    conseil: 'Type non modélisé : aucune modulation par type n’est appliquée.',
+    conseil: 'Type d’objet non pris en compte.',
   },
 })
 
@@ -163,8 +159,7 @@ function manquant(champ: string, formula: FormulaId): Traced<number | null> {
     formula,
     flags: ['DONNEE_MANQUANTE'],
     note:
-      `${champ} absente du catalogue : ni brillance de surface, ni verdict, ni estimation de ` +
-      'temps de pose ne sont produits.',
+      `${champ} absente du catalogue : pas de calcul possible.`,
   })
 }
 
@@ -183,8 +178,7 @@ export function detectabilite(entree: EntreeDetectabilite): Detectabilite {
       toleranceLune: modulation.toleranceLune,
       conseilType: modulation.conseil,
       explication:
-        `${champ} absente du catalogue pour cette cible. Aucun verdict n’est produit : une ` +
-        'estimation inventée serait pire qu’une absence annoncée.',
+        `${champ} absente du catalogue : pas de verdict pour cette cible.`,
       mLimInstr: manquant(champ, 'MAGNITUDE_LIMITE_INSTRUMENT'),
       ...(noteLune === undefined ? {} : { noteLune }),
     }
@@ -216,8 +210,7 @@ export function detectabilite(entree: EntreeDetectabilite): Detectabilite {
       ? {
           flags: ['DONNEE_MANQUANTE' as const],
           note:
-            'Le fond de ciel sort du domaine de la table Bortle : la magnitude limite à l’œil ' +
-            'nu n’est pas extrapolée, donc les verdicts visuels ne sont pas évalués.',
+            'Ciel hors de l’échelle de Bortle : observation à l’œil non évaluée.',
         }
       : {}),
   })
@@ -294,25 +287,19 @@ function explique(
 ): string {
   if (verdict === 'PHOTO_SEULE' && deltaSb < 0) {
     return (
-      `Sa brillance de surface (${sbObj.toFixed(2)}) est sous le fond de ciel ` +
-      `(${sbCiel.toFixed(2)}) : par seconde d’arc au carré, le signal est ` +
-      `${rapportAuFondDeCiel(deltaSb).toFixed(0)} fois plus faible que le ciel. Une magnitude ` +
-      `intégrée de ${mInt.toFixed(1)} n’implique donc aucune visibilité : elle additionne toute ` +
-      'la lumière de l’objet sur toute sa surface, alors que l’œil ne compare que point à ' +
-      'point. Ce n’est pas un refus — c’est une durée d’intégration.'
+      `Objet ${rapportAuFondDeCiel(deltaSb).toFixed(0)} fois plus pâle que le ciel ` +
+      `(${sbObj.toFixed(2)} contre ${sbCiel.toFixed(2)}) : invisible à l’œil, mais une ` +
+      'longue pose le fera apparaître.'
     )
   }
   if (verdict === 'PHOTO_SEULE') {
     return (
-      `Objet trop faible pour ${mLimOeil === null ? 'être évalué en visuel' : 'le visuel depuis ce site'}` +
-      ` : magnitude ${mInt.toFixed(1)}. L’intégration franchit tout contraste, la question ` +
-      'devient combien d’heures.'
+      `Trop faible pour l’œil${mLimOeil === null ? '' : ' depuis ce site'} (magnitude ` +
+      `${mInt.toFixed(1)}) : une longue pose le fera apparaître.`
     )
   }
   return (
-    `Contraste suffisant à sa taille apparente : ΔSB = ${deltaSb.toFixed(2)} mag/arcsec². ` +
-    'L’instrument n’augmente pas la brillance de surface, il agrandit l’objet — et c’est ' +
-    'l’agrandissement qui abaisse le seuil de détection.'
+    `Assez contrasté pour être vu à sa taille (écart ${deltaSb.toFixed(2)} mag/arcsec²).`
   )
 }
 
@@ -320,13 +307,12 @@ function messageLune(lune: EtatLune | undefined, modulation: ModulationType): st
   if (lune === undefined) return undefined
   if (lune.altitudeDeg <= 0) {
     return (
-      `La Lune est sous l’horizon (${lune.altitudeDeg.toFixed(0)}°) : elle n’entre pas dans le ` +
-      'calcul du fond de ciel, et la cible n’est pénalisée d’aucune façon.'
+      'Lune couchée : aucune gêne.'
     )
   }
   return (
     `Lune levée à ${lune.altitudeDeg.toFixed(0)}° de hauteur` +
     `${lune.separationDeg === undefined ? '' : `, à ${lune.separationDeg.toFixed(0)}° de la cible`}` +
-    `. Tolérance de ce type d’objet : ${modulation.toleranceLune}. ${modulation.conseil}`
+    `. ${modulation.conseil}`
   )
 }

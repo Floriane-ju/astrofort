@@ -62,7 +62,7 @@ describe('paquet des tracés §3.4', () => {
     const constellations = new Set(PAQUET.figures.map((f) => f.nom))
     for (const nom of noms) expect(constellations.has(nom), nom).toBe(false)
     expect(RAPPEL_ASTERISME).toMatch(/n’est pas une constellation/)
-    expect(RAPPEL_FIGURES).toMatch(/aucune existence officielle/)
+    expect(RAPPEL_FIGURES).toMatch(/dessins traditionnels/)
   })
 
   it('porte les désignations Bayer et les métadonnées du clic sur une étoile', () => {

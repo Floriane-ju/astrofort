@@ -43,8 +43,7 @@ export interface FondDeCiel {
 export class FondDeCielIndeterminableError extends Error {
   constructor() {
     super(
-      'Aucune source de fond de ciel : renseigner un SQM mesuré ou un Bortle déclaré ' +
-        '(§4.1).',
+      'Indiquez un Bortle ou une mesure SQM pour estimer le fond de ciel.',
     )
     this.name = 'FondDeCielIndeterminableError'
   }
@@ -83,7 +82,7 @@ export function fondDeCiel(entree: EntreeFondDeCiel): FondDeCiel {
         value: sqmMesure,
         formula: 'MESURE_SQM',
         inputs: { sqm_mesure: sqmMesure },
-        note: 'Mesure au SQM : elle prévaut sur le Bortle estimé du profil.',
+        note: 'Mesure SQM utilisée à la place du Bortle.',
       }),
       mLimOeil: trace({
         value: mLim,
@@ -93,8 +92,7 @@ export function fondDeCiel(entree: EntreeFondDeCiel): FondDeCiel {
           ? {
               flags: ['DONNEE_MANQUANTE' as const],
               note:
-                'Brillance hors du domaine de la table : la magnitude limite à l’œil nu ' +
-                'n’est pas extrapolée.',
+                'Ciel hors de l’échelle de Bortle : non calculée.',
             }
           : {}),
       }),
@@ -103,10 +101,8 @@ export function fondDeCiel(entree: EntreeFondDeCiel): FondDeCiel {
       return {
         ...result,
         confirmationRequise:
-          `Un SQM de ${sqmMesure} mag/arcsec² dépasse le fond de ciel naturel le plus ` +
-          `sombre connu (${SB_PLANCHER_NATUREL} mag/arcsec², limité par la lueur ` +
-          'atmosphérique, la lumière zodiacale et la lumière stellaire intégrée). ' +
-          'Confirmer la saisie ou la corriger.',
+          `SQM ${sqmMesure} : plus noir que le ciel le plus noir connu ` +
+          `(${SB_PLANCHER_NATUREL}). Confirmez ou corrigez.`,
       }
     }
     return result

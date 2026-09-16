@@ -107,9 +107,8 @@ export function useSaisieRestauree(): SaisieRestauree | null {
           lieu: null,
           materiel: null,
           erreur:
-            'Données enregistrées illisibles, la saisie repart des valeurs par défaut et ' +
-            'plus rien n’est enregistré, pour ne pas écraser ce qui n’a pas su être lu. ' +
-            'Exporter avant de continuer. ' +
+            'Données enregistrées illisibles : valeurs par défaut, et plus rien ne s’enregistre. ' +
+            'Exportez avant de continuer. ' +
             (erreur instanceof Error ? erreur.message : 'Cause inconnue.'),
         })
       }
@@ -174,9 +173,8 @@ export function usePersistance(entree: EntreePersistance): Persistance {
     const accorde = await demandePersistance()
     setAvis({
       texte: accorde
-        ? 'Stockage persistant accordé : les données résistent désormais à la pression disque.'
-        : 'Stockage persistant refusé. Installer l’application améliore les chances de l’obtenir ; ' +
-          'en attendant, conserver l’export.',
+        ? 'Vos données sont conservées durablement.'
+        : 'Le navigateur peut effacer vos données : installez l’application ou gardez un export.',
       echec: false,
     })
   }
@@ -213,8 +211,7 @@ export function usePersistance(entree: EntreePersistance): Persistance {
       } catch (erreur) {
         setAvis({
           texte:
-            'Enregistrement impossible : la saisie n’est pour l’instant qu’en mémoire et ' +
-            'disparaîtra au rechargement. Exporter pour ne rien perdre. ' +
+            'Enregistrement impossible : exportez pour ne rien perdre au rechargement. ' +
             (erreur instanceof Error ? erreur.message : 'Cause inconnue.'),
           echec: true,
         })
@@ -255,9 +252,7 @@ export function usePersistance(entree: EntreePersistance): Persistance {
       setSuspendues(true)
       setAvis({
         texte:
-          'Import terminé : les sites, profils et plans ont été restaurés. Recharger la page ' +
-          'pour repartir du lieu et du matériel importés — d’ici là, la saisie à l’écran n’est ' +
-          'plus enregistrée, pour ne pas réécrire par-dessus l’import.',
+          'Import terminé. Rechargez la page pour l’utiliser.',
         echec: false,
       })
     } catch (erreur) {

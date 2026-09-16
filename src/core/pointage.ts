@@ -128,9 +128,7 @@ export function angleOrientation(
       dec_deg: decDeg,
       latitude_deg: site.latitudeDeg,
     },
-    note:
-      'Le champ tourne au cours de la nuit : le schéma est orienté à cet instant précis. ' +
-      'Deux pointages à deux heures différentes ne donnent pas la même orientation.',
+    note: 'Le ciel tourne : ce schéma vaut pour cette heure-là.',
   })
 }
 
@@ -196,13 +194,11 @@ function carteDirecte(entree: EntreePointage): CartePointage {
       message: 'Aucune étoile d’ancrage dans le cadre.',
       cause:
         magLimite === null
-          ? 'Le fond de ciel sort du domaine de la table Bortle : la magnitude limite à l’œil ' +
-            'nu n’est pas extrapolée, donc aucun ancrage n’est proposé.'
-          : `Aucune étoile de magnitude ${magLimite.toFixed(2)} ou plus brillante dans le cadre. ` +
-            'L’application le déclare plutôt que de proposer une étoile invisible depuis ce site.',
+          ? 'Ciel hors de l’échelle de Bortle : aucune étoile repère proposée.'
+          : `Aucune étoile visible à l’œil (magnitude ${magLimite.toFixed(2)}) dans le cadre.`,
       contraintesARelacher: [
-        'Se déplacer vers un site plus sombre relève la magnitude limite à l’œil nu.',
-        'Un chercheur, même modeste, abaisse la magnitude exploitable de plusieurs unités.',
+        'Un site plus sombre montre plus d’étoiles repères.',
+        'Un chercheur, même petit, montre bien plus d’étoiles.',
       ],
     }
   }
@@ -214,15 +210,14 @@ function carteDirecte(entree: EntreePointage): CartePointage {
     deltaAdH: premier.deltaAdH,
     deltaDecDeg: premier.deltaDecDeg,
     message:
-      `Champ de ${entree.fovHDeg.toFixed(1)}° : une seule étape de pointage. ` +
-      `${ancrages.length} étoile${ancrages.length > 1 ? 's' : ''} d’ancrage dans le cadre` +
+      `Pointage direct : ${ancrages.length} étoile${ancrages.length > 1 ? 's' : ''} repère` +
+      `${ancrages.length > 1 ? 's' : ''} dans le cadre` +
       (principale === undefined
-        ? `, mais aucune sous magnitude ${K('MAG_ANCRAGE_PRINCIPAL_MAX')} : le repérage sera ` +
-          'moins sûr en ciel dégradé.'
-        : `, la plus brillante à magnitude ${premier.magV.toFixed(1)}.`) +
-      ` Décalage vers la cible : ${premier.deltaAdH.toFixed(3)} h d’ascension droite et ` +
-      `${premier.deltaDecDeg.toFixed(2)}° de déclinaison. Le schéma est orienté à ` +
-      `${orientation.value.toFixed(0)}° pour cette heure et ce lieu.`,
+        ? ', toutes assez faibles : repérage délicat sous un ciel voilé.'
+        : `, la plus brillante de magnitude ${premier.magV.toFixed(1)}.`) +
+      ` Écart : ${premier.deltaAdH.toFixed(3)} h en ascension droite, ` +
+      `${premier.deltaDecDeg.toFixed(2)}° en déclinaison. Schéma tourné de ` +
+      `${orientation.value.toFixed(0)}°.`,
   }
 }
 
@@ -302,16 +297,14 @@ function cheminement(entree: EntreePointage): CartePointage {
       sauts: [],
       deltaAdH: 0,
       deltaDecDeg: 0,
-      message: 'Aucun itinéraire trouvé sous la contrainte déclarée.',
+      message: 'Aucun chemin d’étoile en étoile trouvé.',
       cause:
-        `Aucun chemin en ${sautsMax} sauts au plus depuis une étoile de magnitude ` +
-        `${K('MAG_DEPART_CHEMINEMENT_MAX')}, avec des sauts d’au plus ${sautMax.toFixed(1)}° ` +
-        `(${K('RECOUVREMENT_SAUT')} × ${chercheur.toFixed(1)}° de chercheur). Aucun itinéraire ` +
-        'n’est inventé au-delà de la contrainte.',
+        `Aucun chemin en ${sautsMax} sauts au plus, de ${sautMax.toFixed(1)}° maximum chacun, ` +
+        `depuis une étoile de magnitude ${K('MAG_DEPART_CHEMINEMENT_MAX')}.`,
       contraintesARelacher: [
-        `Accepter des étoiles de départ plus faibles que magnitude ${K('MAG_DEPART_CHEMINEMENT_MAX')}.`,
+        `Partir d’une étoile plus faible que magnitude ${K('MAG_DEPART_CHEMINEMENT_MAX')}.`,
         `Autoriser plus de ${sautsMax} sauts.`,
-        'Déclarer un chercheur de champ plus large, qui allonge la distance de saut admise.',
+        'Utiliser un chercheur au champ plus large.',
       ],
     }
   }
@@ -334,12 +327,10 @@ function cheminement(entree: EntreePointage): CartePointage {
     deltaAdH: entree.adCibleH - depart.adH,
     deltaDecDeg: entree.decCibleDeg - depart.decDeg,
     message:
-      `Champ de ${entree.fovHDeg.toFixed(1)}° : cheminement en ${sauts.length} saut` +
-      `${sauts.length > 1 ? 's' : ''} depuis une étoile de magnitude ${depart.magV.toFixed(1)}. ` +
-      `Chaque saut reste sous ${sautMax.toFixed(1)}°, ce qui garantit le recouvrement du champ ` +
-      'de chercheur entre deux vignettes. Décalage total : ' +
-      `${(entree.adCibleH - depart.adH).toFixed(3)} h d’ascension droite et ` +
-      `${(entree.decCibleDeg - depart.decDeg).toFixed(2)}° de déclinaison. Schéma orienté à ` +
+      `${sauts.length} saut${sauts.length > 1 ? 's' : ''} d’étoile en étoile, depuis une ` +
+      `étoile de magnitude ${depart.magV.toFixed(1)}. Écart total : ` +
+      `${(entree.adCibleH - depart.adH).toFixed(3)} h en ascension droite, ` +
+      `${(entree.decCibleDeg - depart.decDeg).toFixed(2)}° en déclinaison. Schéma tourné de ` +
       `${orientation.value.toFixed(0)}°.`,
   }
 }
@@ -355,5 +346,4 @@ export function cartePointage(entree: EntreePointage): CartePointage {
 }
 
 export const RAPPEL_MISE_EN_STATION =
-  'La mise en station reste à la charge de l’observateur : l’application aide à trouver les ' +
-  'objets, elle ne prétend ni mesurer ni corriger l’installation.'
+  'La mise en station reste à faire vous-même : l’application aide seulement à trouver les objets.'

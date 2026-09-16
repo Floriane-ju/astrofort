@@ -90,7 +90,7 @@ describe('T-0187 — Le catalogue annonce ses changements sans geste', () => {
     const contenuLive = panneau.slice(debutLive, panneau.indexOf('</div>', debutLive))
 
     // La région vive doit contenir le message de liste vide
-    expect(contenuLive).toContain('Aucun objet du catalogue ne porte ce nom')
+    expect(contenuLive).toContain('Aucun objet de ce nom')
   })
 
   it("n'affiche que le message de liste vide si la recherche ne trouve rien", () => {
@@ -106,7 +106,7 @@ describe('T-0187 — Le catalogue annonce ses changements sans geste', () => {
     const contenuLive = panneau.slice(debutLive, finDiv > -1 ? finDiv : panneau.length)
 
     // Le message de liste vide doit être présent
-    expect(contenuLive).toContain('Aucun objet du catalogue ne porte ce nom')
+    expect(contenuLive).toContain('Aucun objet de ce nom')
     // Il ne doit y avoir qu'une seule région aria-live
     expect(contenuLive).toContain('aria-live="polite"')
   })

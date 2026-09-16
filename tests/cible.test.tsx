@@ -61,16 +61,16 @@ describe('fiche de cible — écran par défaut, M33 depuis le site de l’Annex
   })
 
   it('ne présente jamais photo seulement comme un refus, mais comme une durée', () => {
-    expect(ecran).toMatch(/Ce n’est pas un refus/)
+    expect(ecran).toMatch(/une longue pose le fera apparaître/)
     expect(ecran).toMatch(/d’intégration/)
   })
 
   it('affiche la pose avec sa plage utile, présentée comme équivalente', () => {
     // Le profil par défaut est sans suivi : c'est la NPF, 2,10 s, qui plafonne la pose, et
     // le régime bascule en LIMITE_SUIVI avec sa cause. La plage reste [t/2 ; t×2].
-    expect(ecran).toMatch(/poser 2 s — de 1 à 4 s, c’est équivalent/)
+    expect(ecran).toMatch(/poser 2 s — de 1 à 4 s, même résultat/)
     expect(ecran).toContain('LIMITE_SUIVI')
-    expect(ecran).toMatch(/bruit de lecture dominera/)
+    expect(ecran).toMatch(/La monture limite la pose/)
   })
 
   it('déplie chaque nombre jusqu’à sa formule et sa constante source', () => {
@@ -82,7 +82,7 @@ describe('fiche de cible — écran par défaut, M33 depuis le site de l’Annex
 
   it('nomme le facteur dominant et propose un levier gratuit avant tout achat', () => {
     expect(ecran).toContain('sb_obj')
-    expect(ecran).toMatch(/Levier de premier rang : se déplacer vers un site plus sombre/)
+    expect(ecran).toMatch(/Premier levier : se déplacer vers un site plus sombre/)
   })
 
   it('prescrit un plan de calibration, sans jamais offrir d’écran de calibration', () => {
@@ -96,7 +96,7 @@ describe('fiche de cible — écran par défaut, M33 depuis le site de l’Annex
 
   it('affiche le budget de stockage et la loi en racine du temps', () => {
     expect(ecran).toMatch(/Go de carte/)
-    expect(ecran).toMatch(/QUADRUPLE LE TEMPS/)
+    expect(ecran).toMatch(/quatre fois plus de temps/)
   })
 })
 

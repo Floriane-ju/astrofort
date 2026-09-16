@@ -39,7 +39,6 @@ const SEUIL_CRAN_PX = 10
 const MEMOIRE_PAVE_MS = 400
 /** T-0069 — pas d'une touche fléchée, en fraction du champ affiché (§3.3, registre). */
 const PAS_VISEE_FRACTION = K('PAS_VISEE_CLAVIER_FRACTION')
-const POURCENT = 100
 /** Les bornes du pointage, partagées avec les compteurs de la barre basse (T-0163). */
 export const HAUTEUR_MIN_DEG = -90
 export const HAUTEUR_MAX_DEG = 90
@@ -425,9 +424,7 @@ export function viseeApresCommande(
  * phrase promettrait un pas que le code n'applique pas.
  */
 export const RACCOURCIS_CLAVIER =
-  'Au clavier, la scène ayant le focus : ← ↑ ↓ → déplacent la visée de ' +
-  `${(PAS_VISEE_FRACTION * POURCENT).toFixed(0)} % du champ, + et − zooment d’un cran de ` +
-  'molette, Entrée ou Espace choisit l’objet le plus proche du centre.'
+  '← ↑ ↓ → déplacer la vue · + − zoomer · Entrée choisir l’objet au centre'
 
 /**
  * T-0069 — WCAG 2.1.1 : le pilotage de la scène au clavier, dans les bornes du pointeur.

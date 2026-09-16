@@ -71,9 +71,7 @@ export function offsetMidiSolaireMin(
     value: valeur,
     formula: 'OFFSET_MIDI_SOLAIRE',
     inputs: { longitude_deg: longitudeDeg, offset_fuseau_h: offsetFuseauH },
-    note:
-      'Le milieu de nuit ne tombe pas à minuit légal : les créneaux se centrent sur le ' +
-      'milieu de nuit vrai.',
+    note: 'Le vrai milieu de la nuit ne tombe pas à minuit.',
   })
 }
 
@@ -134,8 +132,7 @@ export function fenetreNocturne(site: Site, depart: Date): FenetreNocturne {
       modeDegrade: false,
       penaliteSbMag: 0,
       cause:
-        `À la latitude ${site.latitudeDeg}°, le Soleil ne franchit pas l'horizon à cette ` +
-        `date (${soleilCirculaire}). Aucune fenêtre nocturne n'est produite.`,
+        `Le Soleil ne se couche pas à cette date (${soleilCirculaire}) : pas de nuit.`,
     }
   }
 
@@ -166,15 +163,11 @@ export function fenetreNocturne(site: Site, depart: Date): FenetreNocturne {
       modeDegrade: degrade,
       penaliteSbMag: degrade ? K('PENALITE_SB_CREPUSCULE_NAUTIQUE_MAG') : 0,
       cause:
-        `À la latitude ${site.latitudeDeg}°, le Soleil ne descend pas sous ` +
-        `${K('HAUTEUR_CREPUSCULE_ASTRONOMIQUE_DEG')}° à cette date : la nuit astronomique est ` +
-        'nulle, sans que cela produise une durée négative. ' +
+        'Pas de nuit complètement noire à cette date. ' +
         (degrade
-          ? `La fenêtre nautique (${K('HAUTEUR_CREPUSCULE_NAUTIQUE_DEG')}°) est retenue en mode ` +
-            `dégradé, avec une pénalité de fond de ciel de ` +
-            `${K('PENALITE_SB_CREPUSCULE_NAUTIQUE_MAG')} mag/arcsec² appliquée et affichée.`
-          : 'Le Soleil ne descend pas non plus sous le crépuscule nautique : aucune fenêtre ' +
-            'exploitable cette nuit-là.'),
+          ? 'Mode dégradé : la partie la plus sombre est retenue, avec un ciel plus clair de ' +
+            `${K('PENALITE_SB_CREPUSCULE_NAUTIQUE_MAG')} mag/arcsec² (pénalité de fond de ciel).`
+          : 'Aucun moment assez sombre pour photographier.'),
     }
   }
 

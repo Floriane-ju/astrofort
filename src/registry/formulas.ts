@@ -16,17 +16,20 @@ export interface FormulaEntry {
 
 export const FORMULES = Object.freeze({
   // Optique et cadrage — §5.1, §6.1, §6.2
+  // L'arctangente est utilisée partout, sans condition de bascule : l'approximation linéaire
+  // donne 205,7° à 10 mm sur plein format.
   FOV: {
     expression: 'FOV_deg = 2 × atan( dimension_capteur_mm / (2 × focale_mm) )',
     unite: '°',
     section: '5.1',
-    note: "L'arctangente est utilisée partout, sans condition de bascule : l'approximation linéaire donne 205,7° à 10 mm sur plein format.",
   },
+  // Objectif fisheye, projection équidistante R = f·θ : le champ est linéaire en d / f.
+  // L'arctangente de §5.1 est la loi d'un rectilinéaire ; l'appliquer à un fisheye projetterait
+  // en équidistante un champ de rectilinéaire (T-0218).
   FOV_FISHEYE: {
     expression: 'FOV_deg = min( dimension_capteur_mm / focale_mm × 180/π , CHAMP_MAX_FISHEYE_DEG )',
     unite: '°',
     section: '5.1',
-    note: "Objectif fisheye, projection équidistante R = f·θ : le champ est linéaire en d / f. L'arctangente de §5.1 est la loi d'un rectilinéaire ; l'appliquer à un fisheye projetterait en équidistante un champ de rectilinéaire (T-0218).",
   },
   DIAMETRE_PUPILLE: {
     expression: 'D_mm = focale_mm / ouverture_N',
@@ -48,13 +51,19 @@ export const FORMULES = Object.freeze({
     unite: '—',
     section: '6.2',
   },
+  // φ est l’angle du grand axe de la cible dans le repère du cadre, roulis du boîtier compris
+  // (§3.5). u et v sont la boîte englobante de l’ELLIPSE (§6.3), pas d’un rectangle : une cible
+  // ronde resterait sinon grossie d’un facteur √2 à 45°, alors qu’un disque n’a pas
+  // d’orientation. La corde du rectangle est écartée pour la raison inverse — elle donnerait à
+  // 45° plus de marge qu’un grand axe aligné sur la grande dimension. À φ = 90° l’expression se
+  // réduit exactement à REMPLISSAGE, ce qui préserve la calibration de la table de cadrage
+  // (§6.2).
   REMPLISSAGE_ORIENTE: {
     expression:
       'u = √( maj²·cos²φ + min²·sin²φ ) · v = √( maj²·sin²φ + min²·cos²φ ) · ' +
       'remplissage = max( u / FOV_L_deg , v / FOV_H_deg )',
     unite: '—',
     section: '6.2',
-    note: 'φ est l’angle du grand axe de la cible dans le repère du cadre, roulis du boîtier compris (§3.5). u et v sont la boîte englobante de l’ELLIPSE (§6.3), pas d’un rectangle : une cible ronde resterait sinon grossie d’un facteur √2 à 45°, alors qu’un disque n’a pas d’orientation. La corde du rectangle est écartée pour la raison inverse — elle donnerait à 45° plus de marge qu’un grand axe aligné sur la grande dimension. À φ = 90° l’expression se réduit exactement à REMPLISSAGE, ce qui préserve la calibration de la table de cadrage (§6.2).',
   },
   DIAMETRE_PIXELS: {
     expression: 'diam_px = taille_objet_arcsec / ech_apx',
@@ -70,25 +79,24 @@ export const FORMULES = Object.freeze({
     expression: 'taille_min_deg = FOV_H_deg / 3 · taille_max_deg = FOV_H_deg / 2',
     unite: '°',
     section: '6.1',
-    note: 'La contrainte porte sur la PETITE dimension du champ : c’est elle qui limite.',
+    note: 'C’est le petit côté du cadre qui limite.',
   },
+  // Le PRD écrit « taille / (2 × 0,42) / 2 » et annonce 4 200 mm pour M84 : les deux ne
+  // concordent pas. La focale visant 42 % du champ est retenue, et la plage affichée couvre
+  // toute la fenêtre C-05 — sa borne basse est le 4 200 mm du PRD.
   FOCALE_IDEALE: {
     expression:
       'focale_ideale_mm = capteur_H_mm / ( 2 × tan( (taille_objet_deg / remplissage_cible) / 2 ) )',
     unite: 'mm',
     section: '6.1',
-    note:
-      'Le PRD écrit « taille / (2 × 0,42) / 2 » et annonce 4 200 mm pour M84 : les deux ne ' +
-      'concordent pas. La focale visant 42 % du champ est retenue, et la plage affichée ' +
-      'couvre toute la fenêtre C-05 — sa borne basse est le 4 200 mm du PRD.',
   },
 
   // Détectabilité — §6.3
+  // Le facteur 2827,4 du PRD est ce produit, calculé plutôt qu’écrit en dur.
   AIRE_ELLIPSE: {
     expression: "aire_arcsec2 = (π / 4) × 3600 × a'_arcmin × b'_arcmin",
     unite: 'arcsec²',
     section: '6.3',
-    note: 'Le facteur 2827,4 du PRD est ce produit, calculé plutôt qu’écrit en dur.',
   },
   BRILLANCE_SURFACE: {
     expression: 'SB_obj = m_int + 2,5 × log10( aire_arcsec2 )',
@@ -114,25 +122,20 @@ export const FORMULES = Object.freeze({
     expression: 'G = D_mm / pupille_oeil_mm',
     unite: '×',
     section: '6.3',
-    note:
-      'Grossissement à pupille de sortie pleine, celui du champ le plus riche. C’est le ' +
-      'réglage qui favorise la détection d’un objet étendu.',
+    note: 'Le grossissement qui montre le mieux un objet étendu.',
   },
   TAILLE_APPARENTE: {
     expression: 'taille_apparente_arcmin = taille_reelle_arcmin × G',
     unite: "'",
     section: '6.3',
-    note:
-      'Un instrument n’augmente jamais la brillance de surface : il augmente la taille ' +
-      'apparente, et c’est par elle qu’il abaisse le seuil de contraste.',
+    note: 'Un instrument agrandit l’objet sans le rendre plus lumineux.',
   },
+  // Tables Blackwell / Clark embarquées. Au-delà de la plus grande taille tabulée, la sommation
+  // spatiale est complète : le seuil plafonne, il n’est pas extrapolé.
   SEUIL_CONTRASTE: {
     expression: 'seuil_ΔSB = table_de_contraste( taille_apparente_arcmin )',
     unite: 'mag/arcsec²',
     section: '6.3',
-    note:
-      'Tables Blackwell / Clark embarquées. Au-delà de la plus grande taille tabulée, la ' +
-      'sommation spatiale est complète : le seuil plafonne, il n’est pas extrapolé.',
   },
 
   // Pose et intégration — §7
@@ -150,20 +153,13 @@ export const FORMULES = Object.freeze({
     expression: 'attenuation = 10^( −0,4 × k × X )',
     unite: '—',
     section: '7.6',
-    note:
-      'Une magnitude de catalogue est une magnitude HORS ATMOSPHÈRE : le flux qui atteint le ' +
-      'capteur est atténué par la traversée. Le fond de ciel, lui, est relevé AU SOL — SQM ou ' +
-      'table Bortle — donc déjà atténué : l’éteindre une seconde fois le compterait deux fois. ' +
-      'Comme T_requis ∝ 1 / E_obj², la perte se paie au carré : le temps est multiplié par ' +
-      '10^( +0,8 × k × X ), soit 1,37 au zénith et 1,88 à 30° de hauteur.',
+    note: 'Une cible basse perd plus de lumière dans l’air : il faut poser plus longtemps.',
   },
   FLUX_OBJET_REEL: {
     expression: 'E_obj_reel = E_obj × attenuation',
     unite: 'e⁻/s/px',
     section: '7.6',
-    note:
-      'C’est ce flux, et non celui du catalogue, qui alimente la pose et l’intégration de ' +
-      '§7.3. Une cible basse coûte près du double du temps d’une cible au zénith.',
+    note: 'Lumière de la cible qui atteint vraiment le capteur.',
   },
   POSE_OPTIMALE: {
     expression: 't_opt = C × RN² / E_ciel',
@@ -199,7 +195,7 @@ export const FORMULES = Object.freeze({
     expression: 'plage_utile = [ t_opt / 2 ; t_opt × 2 ]',
     unite: 's',
     section: '2.3',
-    note: 'Les trois durées sont équivalentes en pratique : l’optimum de pose est plat.',
+    note: 'Ces durées donnent le même résultat.',
   },
   VOLUME_STOCKAGE: {
     expression: 'volume_go = N_poses × taille_raw_mo / 1024',
@@ -247,10 +243,7 @@ export const FORMULES = Object.freeze({
     expression: 't_max_cadre = t_npf( δ_min_abs présent dans le cadre )',
     unite: 's',
     section: '9.1',
-    note:
-      'Sur un grand champ la déclinaison varie de plusieurs dizaines de degrés d’un bord à ' +
-      'l’autre : la pose est dictée par la zone la plus contraignante du cadre, jamais par ' +
-      'son centre.',
+    note: 'C’est la zone la plus exigeante du cadre qui fixe la pose.',
   },
   MAGNITUDE_LIMITE_PREVISU: {
     expression:
@@ -258,10 +251,7 @@ export const FORMULES = Object.freeze({
       'F_seuil × t = ( S² + √(S⁴ + 4 S² n_px (E_ciel t + RN²)) ) / 2',
     unite: 'mag',
     section: '9.2',
-    note:
-      'Profondeur réellement atteinte par la capture, marquée [À CALCULER] par le PRD : elle ' +
-      'dépend de la pose, de l’ouverture et du fond de ciel, et pilote le nombre d’étoiles ' +
-      'affichées dans la prévisualisation.',
+    note: 'Dépend de la pose, de l’ouverture et du ciel.',
   },
   VIGNETTAGE: {
     expression: 'attenuation_diaph = v_coins × (r / r_max)²',
@@ -272,9 +262,7 @@ export const FORMULES = Object.freeze({
     expression: 'altitude_pole = |latitude| · azimut_pole = 0 si latitude > 0, sinon 180',
     unite: '°',
     section: '9.3',
-    note:
-      'Le pôle est très souvent HORS du cadre : une prévisualisation qui le force dans ' +
-      'l’image est fausse et induit un cadrage raté sur le terrain.',
+    note: 'Le pôle est souvent hors du cadre.',
   },
   INTENSITE_TRACE: {
     expression:
@@ -282,15 +270,13 @@ export const FORMULES = Object.freeze({
       'opacite = min( 1, 10^( −(mag − m_lim(pose_par_pixel_s)) / 2,5 ) )',
     unite: '—',
     section: '9.3',
-    note:
-      'Une étoile qui file est moins brillante par pixel qu’une étoile ponctuelle : le même ' +
-      'flux s’étale sur toute la trace.',
+    note: 'Une étoile qui file paraît moins brillante.',
   },
   TROU_TRACE: {
     expression: 'trou_deg = 15,041 × intervalle_s / 3600 × cos(δ)',
     unite: '°',
     section: '9.4',
-    note: 'Trou entre deux poses successives, défaut irréparable en post-traitement.',
+    note: 'Trou entre deux poses, irréparable ensuite.',
   },
 
   // Position et temps — §4, §8
@@ -303,16 +289,13 @@ export const FORMULES = Object.freeze({
     expression: 'masse_air ≈ 1 / sin( alt )',
     unite: '—',
     section: '8.2',
-    note: 'Valide au-dessus d’environ 15° de hauteur.',
+    note: 'Valable au-dessus d’environ 15° de hauteur.',
   },
   MASSE_AIR_MOYENNE: {
     expression: 'X_moyen = moyenne( 1 / sin(alt_i) ) sur les échantillons du créneau',
     unite: '—',
     section: '8.2',
-    note:
-      'La masse d’air d’un créneau n’est pas celle de la culmination : une cible passe une ' +
-      'partie de son créneau plus bas, et l’extinction se paie sur toute la durée. La ' +
-      'moyenne est donc supérieure à la masse d’air minimale affichée par ailleurs.',
+    note: 'Moyenne sur tout le créneau : plus forte qu’au point le plus haut.',
   },
   DECLINAISON_CIRCUMPOLAIRE: {
     expression: 'circumpolaire si δ > 90° − latitude',
@@ -323,13 +306,13 @@ export const FORMULES = Object.freeze({
     expression: 'δ_min_imagerie = latitude − 60°',
     unite: '°',
     section: '4.1',
-    note: 'Seuil C-01 : la cible doit atteindre 30° de hauteur.',
+    note: 'La cible doit monter à 30° au moins.',
   },
   DECLINAISON_MIN_VISUEL: {
     expression: 'δ_min_visuel = latitude − 70°',
     unite: '°',
     section: '4.1',
-    note: 'Seuil C-02 : la cible doit atteindre 20° de hauteur.',
+    note: 'La cible doit monter à 20° au moins.',
   },
   TEMPS_SIDERAL_LOCAL: {
     expression: 'TSL = TSG(t) + longitude_deg / 15',
@@ -355,7 +338,7 @@ export const FORMULES = Object.freeze({
     expression: 'offset_midi_min = (longitude_deg / 15) × 60 − offset_fuseau_h × 60',
     unite: 'min',
     section: '4.1',
-    note: 'Le milieu de nuit ne tombe pas à minuit légal : les créneaux se centrent sur le milieu de nuit vrai.',
+    note: 'Le vrai milieu de la nuit ne tombe pas à minuit.',
   },
   PRECESSION: {
     expression: 'precession_deg = 50,29 × n_annees / 3600',
@@ -368,13 +351,13 @@ export const FORMULES = Object.freeze({
     expression: 'illumination = ( 1 + cos(α) ) / 2, α = angle de phase',
     unite: '—',
     section: '8.1',
-    note: 'Une Lune sous l’horizon ne dégrade rien, quelle que soit sa phase.',
+    note: 'Une Lune couchée ne gêne pas, quelle que soit sa phase.',
   },
+  // Masse d’air du modèle de Krisciunas & Schaefer, valide jusqu’à l’horizon.
   MASSE_AIR_KS: {
     expression: 'X(Z) = ( 1 − 0,96 × sin²(Z) )^(−1/2)',
     unite: '—',
     section: '8.1',
-    note: 'Masse d’air du modèle de Krisciunas & Schaefer, valide jusqu’à l’horizon.',
   },
   DELTA_SB_LUNE: {
     expression:
@@ -382,46 +365,39 @@ export const FORMULES = Object.freeze({
       'ΔSB_lune = 2,5 × log10( (B_ciel + B_lune) / B_ciel )',
     unite: 'mag/arcsec²',
     section: '8.1',
-    note:
-      'Modèle de Krisciunas & Schaefer (1991). Une nuit de Lune n’est pas perdue : elle a un ' +
-      'fond de ciel plus élevé, donc des poses plus courtes et une intégration plus longue.',
+    note: 'Une nuit de Lune reste utilisable : poses plus courtes, temps total plus long.',
   },
   // Fond de ciel peint — extension de rendu de §3.3 (T-0096)
+  // La luminance d’écran est proportionnelle à la brillance physique du ciel : une seule
+  // constante libre, l’exposition. Le rapport entre deux fonds de ciel n’est donc jamais
+  // choisi, il est celui des brillances.
   LUMINANCE_FOND_CIEL: {
     expression: 'Y_ecran = K_exposition × B(sb) · (R,V,B)_lin = Y_ecran × (chroma_R, chroma_V, chroma_B)',
     unite: '—',
     section: '3.3',
-    note:
-      'La luminance d’écran est proportionnelle à la brillance physique du ciel : une seule ' +
-      'constante libre, l’exposition. Le rapport entre deux fonds de ciel n’est donc jamais ' +
-      'choisi, il est celui des brillances.',
   },
+  // van Rhijn (1921) : la couche émissive est vue sous une épaisseur croissante quand la visée
+  // baisse. Le terme d’extinction n’est pas décoratif — van Rhijn seul donnerait ×6 à
+  // l’horizon, valeur non observée ; avec l’extinction, ×3,2.
   HALO_HORIZON: {
     expression:
       'vanRhijn(h) = 1 / √( 1 − (R / (R + H))² cos²h ) · ' +
       'facteur(h) = vanRhijn(h) × 10^(−0,4 k (X(h) − 1))',
     unite: '—',
     section: '3.3',
-    note:
-      'van Rhijn (1921) : la couche émissive est vue sous une épaisseur croissante quand la ' +
-      'visée baisse. Le terme d’extinction n’est pas décoratif — van Rhijn seul donnerait ×6 ' +
-      'à l’horizon, valeur non observée ; avec l’extinction, ×3,2.',
   },
+  // Les brillances s’additionnent en nanolamberts, jamais en magnitudes : c’est déjà la règle
+  // de ΔSB_lune (§8.1). Le rendu réemploie ce moteur, il ne le réécrit pas.
   SB_EFFECTIF_RENDU: {
     expression: 'B_total = B_site × facteur(h) + B_lune(ρ, h_lune, α) · sb_effectif = B⁻¹(B_total)',
     unite: 'mag/arcsec²',
     section: '3.3',
-    note:
-      'Les brillances s’additionnent en nanolamberts, jamais en magnitudes : c’est déjà la ' +
-      'règle de ΔSB_lune (§8.1). Le rendu réemploie ce moteur, il ne le réécrit pas.',
   },
   DUREE_NUIT_NAUTIQUE: {
     expression: 'fenetre_nautique = [ Soleil à −12° en descente ; Soleil à −12° en montée ]',
     unite: 'h',
     section: '8.1',
-    note:
-      'Retenue en mode dégradé quand la nuit astronomique est nulle, avec sa pénalité de fond ' +
-      'de ciel chiffrée. Jamais une durée négative, jamais un plantage.',
+    note: 'Utilisée quand il n’y a pas de nuit complètement noire.',
   },
 
   // Créneaux et plan de session — §8.2, §8.3
@@ -429,14 +405,14 @@ export const FORMULES = Object.freeze({
     expression: 'creneau = [ alt > seuil ] ∩ fenetre_utile ∩ [ alt > masque(azimut) ]',
     unite: 'min',
     section: '8.2',
-    note: 'Consommée par l’objectif de qualité (§7.3) : elle décide si N_poses tient dans la nuit.',
+    note: 'Dit si le nombre de poses tient dans la nuit.',
   },
   SCORE_CIBLE: {
     expression:
       'score = w_c·S_cadrage + w_h·S_hauteur + w_s·S_signal + w_f·S_fenetre + w_l·S_lune',
     unite: '—',
     section: '8.3',
-    note: 'Pondération explicite C-15, exposée et réglable. La sortie est une chronologie, pas un palmarès.',
+    note: 'Poids réglables dans les réglages.',
   },
   SCORE_CADRAGE: {
     expression: 'S_cadrage = 1 − | remplissage − 0,42 | / 0,42',
@@ -468,9 +444,7 @@ export const FORMULES = Object.freeze({
       'budget = temps_capture + temps_calibration + temps_mise_en_station + temps_pointage × n_cibles',
     unite: 'min',
     section: '8.3',
-    note:
-      'Dépassement → retrait de la cible de plus faible score. Jamais de troncature ' +
-      'silencieuse d’une intégration.',
+    note: 'Si la nuit est trop courte, la cible la moins bien notée est retirée.',
   },
 
   // Cheminement et pointage — §8.4
@@ -478,9 +452,7 @@ export const FORMULES = Object.freeze({
     expression: 'tan(q) = sin(H) / ( tan(φ) × cos(δ) − sin(δ) × cos(H) )',
     unite: '°',
     section: '8.4',
-    note:
-      'Angle de position du zénith à l’instant du pointage. Un schéma non orienté est ' +
-      'inutilisable dans le noir.',
+    note: 'Oriente le schéma de pointage comme le ciel à cette heure.',
   },
   DECALAGE_POINTAGE: {
     expression: 'Δad_h = AD_cible − AD_ancrage · Δdec_deg = δ_cible − δ_ancrage',
@@ -491,7 +463,7 @@ export const FORMULES = Object.freeze({
     expression: 'distance_saut_deg ≤ 0,7 × FOV_chercheur_deg',
     unite: '°',
     section: '8.4',
-    note: 'Recouvrement garanti entre deux vignettes successives.',
+    note: 'Deux vues successives se chevauchent toujours.',
   },
   SEPARATION_ANGULAIRE: {
     expression: 'cos(d) = sin(δ₁)·sin(δ₂) + cos(δ₁)·cos(δ₂)·cos(AD₁ − AD₂)',
@@ -504,9 +476,7 @@ export const FORMULES = Object.freeze({
     expression: 'gain_snr = √( E_ciel_sans / E_ciel_avec )',
     unite: '—',
     section: '7.5',
-    note:
-      'Le dual-band ne transmet que Hα et OIII : il rejette l’essentiel du fond de ciel en ' +
-      'conservant le signal de la nébuleuse. Jamais appliqué à un objet en spectre continu.',
+    note: 'Le filtre bi-bande coupe la pollution lumineuse, pas les nébuleuses en émission.',
   },
   TRANSMISSION_FOND_DE_CIEL: {
     expression: 'fraction_transmise = Σ bandes_passantes_nm / largeur_bande_large_nm',
@@ -534,37 +504,32 @@ export const FORMULES = Object.freeze({
     expression: 'mag_rendue = min( mag_limite, m_lim_oeil )',
     unite: 'mag',
     section: '3.3',
-    note:
-      'Vue réaliste : le fond de ciel local plafonne la profondeur affichée. Le rendu montre ' +
-      'le ciel tel qu’il serait vu, non le catalogue complet.',
+    note: 'En vue réaliste, seules les étoiles visibles depuis ce ciel sont affichées.',
   },
+  // Une seule implémentation : le mode ne change que la fonction radiale R. Deux bases de code
+  // feraient diverger le cadre du planétarium et la prévisualisation.
   PROJECTION_RADIALE: {
     expression:
       'R(θ) = 2·tan(θ/2) [stéréographique] · tan(θ) [gnomonique] · θ [équidistante] · ' +
       'x = k·R·sin(φ), y = −k·R·cos(φ), k = (largeur_px / 2) / R(fov / 2)',
     unite: 'px',
     section: '3.3',
-    note:
-      'Une seule implémentation : le mode ne change que la fonction radiale R. Deux bases de ' +
-      'code feraient diverger le cadre du planétarium et la prévisualisation.',
   },
+  // Précession générale autour du pôle de l’écliptique. Ni nutation, ni termes planétaires du
+  // développement IAU 2006 : à l’échelle de lecture d’un planétarium, l’écart reste très
+  // inférieur au pixel sur le domaine des séries.
   PRECESSION_MATRICE: {
     expression:
       'P = R_x(−ε) · R_z(ψ) · R_x(ε), avec ψ = 50,29"/an × (époque − 2000)',
     unite: '—',
     section: '3.1',
-    note:
-      'Précession générale autour du pôle de l’écliptique. Ni nutation, ni termes planétaires ' +
-      'du développement IAU 2006 : à l’échelle de lecture d’un planétarium, l’écart reste très ' +
-      'inférieur au pixel sur le domaine des séries.',
   },
+  // Interpolation linéaire entre deux échantillons d’éphémérides. Les étoiles ne sont JAMAIS
+  // interpolées : seule la matrice de rotation du ciel change.
   INTERPOLATION_CORPS: {
     expression: 'pos(t) = pos(t₀) + ( pos(t₁) − pos(t₀) ) × (t − t₀) / (t₁ − t₀)',
     unite: '°',
     section: '3.1',
-    note:
-      'Interpolation linéaire entre deux échantillons d’éphémérides. Les étoiles ne sont ' +
-      'JAMAIS interpolées : seule la matrice de rotation du ciel change.',
   },
   VITESSE_ECRAN: {
     expression: 'v_ecran = 15,041 × facteur × px_par_degre / 3600',
@@ -576,31 +541,32 @@ export const FORMULES = Object.freeze({
     unite: '—',
     section: '3.2',
   },
+  // Sert à désigner le facteur dominant d’un verdict.
   SENSIBILITE: {
     expression: 'sensibilite = | ∂ln(sortie) / ∂ln(variable) |',
     unite: '—',
     section: '10.2',
-    note: 'Sert à désigner le facteur dominant d’un verdict.',
   },
 
   // Fond de ciel — §2.2
+  // Interpolation autorisée entre deux lignes ; extrapolation interdite hors [1 ; 9].
   INTERPOLATION_BORTLE: {
     expression: 'SB(b) = SB(⌊b⌋) + (b − ⌊b⌋) × ( SB(⌈b⌉) − SB(⌊b⌋) )',
     unite: 'mag/arcsec²',
     section: '2.2',
-    note: 'Interpolation autorisée entre deux lignes ; extrapolation interdite hors [1 ; 9].',
   },
+  // Utilisée quand un SQM mesuré prévaut sur le Bortle. Hors du domaine de la table, aucune
+  // valeur n’est produite.
   INVERSION_BORTLE: {
     expression: 'm_lim_oeil = interpolation de la colonne « magnitude limite » à SB donnée',
     unite: 'mag',
     section: '2.2',
-    note: 'Utilisée quand un SQM mesuré prévaut sur le Bortle. Hors du domaine de la table, aucune valeur n’est produite.',
   },
+  // Une mesure prévaut toujours sur une estimation : ce n’est pas un calcul, c’est une donnée.
   MESURE_SQM: {
     expression: 'SB_ciel = sqm_mesure',
     unite: 'mag/arcsec²',
     section: '2.2',
-    note: 'Une mesure prévaut toujours sur une estimation : ce n’est pas un calcul, c’est une donnée.',
   },
 } as const satisfies Record<string, FormulaEntry>)
 

@@ -339,7 +339,7 @@ function expliqueVerdict(
     )
 
   return explication({
-    verdictN1: `${r.detect.verdict} — environ ${dureeLisible(r.integration.tRequisS.value)} d’intégration pour la qualité visée.`,
+    verdictN1: `${r.detect.verdict} — environ ${dureeLisible(r.integration.tRequisS.value)} de pose au total.`,
     phraseFacteur: r.detect.explication,
     etapes: [
       { libelle: 'Brillance de surface de l’objet', trace: r.detect.sbObj },

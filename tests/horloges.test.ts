@@ -83,8 +83,7 @@ describe('précession §3.1', () => {
   it('signale que les figures perdent leur sens au-delà des mouvements propres ignorés', () => {
     expect(avertissementEpoque(2100)).toBeNull()
     const lointain = avertissementEpoque(12000)
-    expect(lointain).toMatch(/mouvements propres/)
-    expect(lointain).toMatch(/mêmes étoiles/)
+    expect(lointain).toMatch(/ne sont plus fidèles/)
   })
 
   it('date l’époque affichée en année fractionnaire', () => {
@@ -149,8 +148,7 @@ describe('domaine des séries §3.1, §12.4', () => {
   it('masque les corps du système solaire hors domaine, en nommant la cause', () => {
     const ciel = cielInstantane(SITE, new Date('1500-06-01T22:00:00Z'))
     expect(ciel.corpsMasques).toBe(true)
-    expect(ciel.cause).toMatch(/domaine de validité/)
-    expect(ciel.cause).toMatch(/étoiles et les constellations restent affichées/)
+    expect(ciel.cause).toMatch(/masqués/)
     const etat = avanceEphemerides(null, SITE, Date.UTC(1500, 5, 1), pasEphemeridesMs(1))
     expect(positionsInterpolees(etat, Date.UTC(1500, 5, 1))).toEqual([])
   })

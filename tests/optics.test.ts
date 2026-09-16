@@ -35,9 +35,8 @@ describe('champ §5.1', () => {
     expect(grandAngle.fovLDeg.value).toBeLessThan(180)
   })
 
-  it('cite la formule de champ et sa mise en garde', () => {
+  it('cite la formule de champ', () => {
     expect(profilOptique(REFERENCE).fovLDeg.formula.id).toBe('FOV')
-    expect(profilOptique(REFERENCE).fovLDeg.formula.note).toMatch(/arctangente/)
   })
 })
 
@@ -59,7 +58,7 @@ describe('champ d’un fisheye §5.1 (T-0218)', () => {
     const huit = profilOptique({ ...FISHEYE, focaleMm: 8 })
     expect(REFERENCE.capteurLMm / 8 / DEG).toBeGreaterThan(K('CHAMP_MAX_FISHEYE_DEG'))
     expect(huit.fovLDeg.value).toBe(K('CHAMP_MAX_FISHEYE_DEG'))
-    expect(huit.fovLDeg.note).toMatch(/cercle image/)
+    expect(huit.fovLDeg.note).toMatch(/cercle de l’image/)
   })
 
   it('ne change ni l’échantillonnage ni la pupille', () => {

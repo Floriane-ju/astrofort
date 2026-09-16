@@ -52,5 +52,5 @@ export function ViseeCible({ objet, site }: { readonly objet: ObjetCielProfond; 
  */
 function libelleVisee(designation: string, hauteurDeg: number): string {
   const cible = `Centrer la scène sur ${designation}`
-  return hauteurDeg > 0 ? cible : `${cible} — sous l’horizon, masquée par le sol`
+  return hauteurDeg > 0 ? cible : `${cible} — sous l’horizon`
 }

@@ -33,54 +33,45 @@ export const GLOSSAIRE = Object.freeze({
   // §4.1 — profil Lieu
   latitude: terme({
     libelle: 'Latitude',
-    glose: 'position nord-sud du site',
+    glose: 'position nord-sud du lieu',
     explication:
-      'La latitude fixe quelle portion du ciel est atteignable depuis ce site. Elle décide ' +
-      'de la hauteur maximale de chaque cible et de la limite australe au-delà de laquelle ' +
-      'plus rien ne se lève assez haut. C’est la donnée la plus structurante du profil de lieu.',
-    consequence:
-      'Une erreur d’un degré déplace de la même valeur tous les seuils de déclinaison du site.',
+      'Elle fixe la partie du ciel visible depuis chez vous. Plus on s’éloigne de l’équateur, ' +
+      'plus le ciel de l’autre hémisphère reste bas.',
+    consequence: 'Une erreur d’un degré décale d’autant la hauteur de chaque cible.',
     sections: ['4.1'],
   }),
   longitude: terme({
     libelle: 'Longitude',
-    glose: 'position est-ouest du site',
+    glose: 'position est-ouest du lieu',
     explication:
-      'La longitude ne change pas ce qui est visible, mais quand ça l’est. Elle produit le ' +
-      'décalage entre l’heure légale et le vrai midi solaire du lieu.',
-    consequence: 'Elle décale le milieu de nuit vrai, sur lequel se centrent tous les créneaux.',
+      'Elle ne change pas ce qui est visible, seulement à quelle heure. Elle décale le vrai ' +
+      'milieu de la nuit.',
+    consequence: 'Elle cale les horaires des créneaux.',
     sections: ['4.1'],
   }),
   altitude_site: terme({
     libelle: 'Altitude du site',
-    glose: 'hauteur du lieu d’observation',
-    explication:
-      'L’altitude influe marginalement sur la réfraction et sur l’extinction atmosphérique. ' +
-      'Elle n’est pas critique pour la planification. Une valeur approchée suffit.',
-    consequence: 'Une centaine de mètres d’écart ne change aucune recommandation.',
+    glose: 'hauteur du lieu',
+    explication: 'Elle joue très peu sur les calculs. Une valeur approchée suffit.',
+    consequence: 'Cent mètres d’écart ne changent rien.',
     sections: ['4.1'],
   }),
   midi_solaire_vrai: terme({
     libelle: 'Décalage du midi solaire vrai',
-    glose: 'écart au midi légal',
+    glose: 'écart au midi de l’horloge',
     explication:
-      'Le Soleil ne culmine pas à midi pile, ni le milieu de nuit à minuit. L’écart vient de ' +
-      'la longitude du lieu et du fuseau horaire qui lui a été attribué. L’application centre ' +
-      'ses créneaux sur le milieu de nuit vrai, jamais sur l’heure ronde.',
-    consequence:
-      'Viser minuit légal plutôt que le milieu de nuit vrai décale la meilleure fenêtre.',
+      'Le milieu de la nuit ne tombe pas à minuit pile. L’écart dépend de la longitude et du ' +
+      'fuseau horaire.',
+    consequence: 'Les créneaux se centrent sur le vrai milieu de la nuit, pas sur minuit.',
     sections: ['4.1', '8.1'],
   }),
   masque_horizon: terme({
     libelle: 'Masque d’horizon',
-    glose: 'relief qui bouche l’horizon',
+    glose: 'relief qui cache l’horizon',
     explication:
-      'Le masque donne, pour chaque azimut, la hauteur sous laquelle le ciel est caché par le ' +
-      'relief, les arbres ou les bâtiments. Sans lui, une cible annoncée visible peut se ' +
-      'trouver derrière une crête toute la nuit. Faute de donnée de relief, un horizon plat ' +
-      'est supposé et signalé comme tel.',
-    consequence:
-      'Sur un site encaissé, compléter le masque évite des recommandations inatteignables.',
+      'Pour chaque direction, la hauteur sous laquelle arbres, collines ou bâtiments cachent le ' +
+      'ciel. Sans relevé, l’horizon est supposé plat.',
+    consequence: 'Sur un site encaissé, le renseigner évite de viser une cible cachée.',
     sections: ['4.1', '8.1'],
   }),
   hypothese: terme({
@@ -94,83 +85,74 @@ export const GLOSSAIRE = Object.freeze({
   }),
   declinaison: terme({
     libelle: 'Déclinaison',
-    glose: 'latitude céleste d’un objet',
+    glose: 'latitude d’un astre dans le ciel',
     explication:
-      'La déclinaison est l’équivalent céleste de la latitude, comptée depuis l’équateur du ' +
-      'ciel. Combinée à celle du site, elle décide de la hauteur atteinte par une cible et de ' +
-      'la durée pendant laquelle elle est exploitable.',
-    consequence:
-      'Comparer une déclinaison aux seuils du site dit tout de suite si la cible est jouable.',
+      'C’est la position nord-sud d’un astre sur la voûte céleste. Avec votre latitude, elle ' +
+      'fixe la hauteur maximale de la cible.',
+    consequence: 'Comparée aux seuils du lieu, elle dit tout de suite si la cible est accessible.',
     sections: ['4.1', '8.2'],
   }),
   circumpolaire: terme({
     libelle: 'Circumpolaire',
-    glose: 'objet ne se couchant jamais',
+    glose: 'astre qui ne se couche jamais',
     explication:
-      'Au-delà d’une certaine déclinaison, un objet tourne autour du pôle sans jamais passer ' +
-      'sous l’horizon. Il est alors disponible toute la nuit, à une hauteur qui varie mais ne ' +
-      's’annule pas.',
-    consequence: 'Une cible circumpolaire tolère une séance longue, sans fenêtre à respecter.',
+      'Près du pôle, un astre tourne autour sans passer sous l’horizon. Il reste visible toute ' +
+      'la nuit.',
+    consequence: 'Il se photographie à toute heure, sans course contre la montre.',
     sections: ['4.1', '8.2'],
   }),
   seuil_imagerie: terme({
     libelle: 'Imagerie impossible sous δ',
-    glose: 'limite australe en imagerie',
+    glose: 'limite pour la photo',
     explication:
-      'Sous cette déclinaison, une cible ne dépasse jamais trente degrés de hauteur depuis ce ' +
-      'site, soit deux masses d’air. La turbulence et l’extinction y annulent le bénéfice de ' +
-      'toute pose supplémentaire.',
-    consequence:
-      'Les cibles sous ce seuil sont hors de portée d’ici, quelle que soit la durée investie.',
+      'Sous cette déclinaison, une cible ne dépasse jamais trente degrés de hauteur d’ici. ' +
+      'L’atmosphère traversée gâche alors la photo.',
+    consequence: 'Les cibles sous ce seuil sont hors de portée photo depuis ce lieu.',
     sections: ['4.1'],
   }),
   seuil_visuel: terme({
     libelle: 'Visuel impossible sous δ',
-    glose: 'limite australe en visuel',
+    glose: 'limite pour l’œil',
     explication:
-      'Le seuil visuel est plus permissif que le seuil d’imagerie, car l’œil se contente de ' +
-      'vingt degrés de hauteur. En dessous, la cible reste hors de portée depuis ce site.',
-    consequence: 'Entre les deux seuils, l’observation reste possible mais pas la capture.',
+      'L’œil se contente d’une cible plus basse que l’appareil photo. Sous cette déclinaison, ' +
+      'même l’observation est impossible d’ici.',
+    consequence: 'Entre les deux seuils, on peut observer mais pas photographier.',
     sections: ['4.1'],
   }),
   fond_de_ciel: terme({
     libelle: 'Fond de ciel',
-    glose: 'luminosité propre du ciel',
+    glose: 'luminosité du ciel nocturne',
     explication:
-      'Le fond de ciel est la lumière qu’émet le ciel lui-même, pollution lumineuse comprise. ' +
-      'Il se mesure en magnitude par seconde d’arc au carré, et une valeur plus grande ' +
-      'signifie un ciel plus sombre. C’est lui qui fixe le contraste disponible sur toute ' +
-      'cible étendue.',
-    consequence: 'Un fond de ciel plus sombre réduit directement le temps d’intégration requis.',
+      'C’est la lumière du ciel lui-même, pollution lumineuse comprise. Plus le chiffre est ' +
+      'grand, plus le ciel est noir.',
+    consequence: 'Un ciel plus noir réduit le temps de pose total.',
     sections: ['2.2', '4.1'],
   }),
   bortle: terme({
     libelle: 'Bortle',
     glose: 'échelle de pollution lumineuse',
     explication:
-      'L’échelle de Bortle classe un ciel de un, désertique, à neuf, centre-ville. Elle sert ' +
-      'd’estimation quand aucune mesure n’est disponible. La table du registre la convertit ' +
-      'en brillance de fond de ciel, sans jamais extrapoler hors de ses bornes.',
-    consequence: 'Un Bortle déclaré à la louche suffit à cadrer l’ordre de grandeur du site.',
+      'Elle va de 1, ciel parfaitement noir, à 9, centre-ville. Elle sert d’estimation quand on ' +
+      'n’a pas de mesure.',
+    consequence: 'Une estimation à un cran près suffit.',
     sections: ['2.2', '4.1'],
   }),
   sqm: terme({
     libelle: 'SQM mesuré',
-    glose: 'mesure directe du ciel',
+    glose: 'mesure réelle du ciel',
     explication:
-      'Un sky quality meter mesure la brillance réelle du fond de ciel au moment et à ' +
-      'l’endroit de l’observation. Une mesure prévaut toujours sur une estimation, quelle que ' +
-      'soit la source de cette dernière.',
-    consequence: 'Renseigner un SQM remplace l’estimation Bortle pour tous les calculs suivants.',
+      'Un SQM est un petit appareil qui mesure la noirceur du ciel. Une mesure est plus fiable ' +
+      'que l’échelle de Bortle.',
+    consequence: 'Si vous avez une mesure, elle remplace le Bortle.',
     sections: ['2.2', '4.1'],
   }),
   magnitude_limite_oeil: terme({
     libelle: 'Magnitude limite à l’œil nu',
     glose: 'étoile la plus faible visible',
     explication:
-      'C’est la magnitude de la plus faible étoile perceptible à l’œil nu sous ce ciel, une ' +
-      'fois la vision adaptée à l’obscurité. Elle découle de la brillance du fond de ciel.',
-    consequence: 'Elle sert de repère de terrain pour vérifier le fond de ciel supposé du site.',
+      'C’est l’étoile la plus faible visible à l’œil nu sous ce ciel, une fois les yeux habitués ' +
+      'au noir. Elle découle du fond de ciel.',
+    consequence: 'Sur place, elle sert de repère pour juger la qualité du ciel.',
     sections: ['2.2', '4.1'],
   }),
 
@@ -179,41 +161,36 @@ export const GLOSSAIRE = Object.freeze({
     libelle: 'Focale',
     glose: 'longueur focale de l’objectif',
     explication:
-      'La focale détermine à la fois le champ couvert et l’échelle de l’image. Elle entre dans ' +
-      'presque toutes les grandeurs dérivées du profil matériel.',
-    consequence: 'Doubler la focale divise par deux le champ et l’échantillonnage angulaire.',
+      'Plus elle est longue, plus le champ est étroit et les objets grands. Elle entre dans ' +
+      'presque tous les calculs.',
+    consequence: 'Doubler la focale divise le champ par deux.',
     sections: ['5.1'],
   }),
   ouverture: terme({
     libelle: 'Ouverture',
-    glose: 'rapport focale sur diamètre',
+    glose: 'nombre f de l’objectif',
     explication:
-      'Le nombre f est le rapport entre la focale et le diamètre de la pupille d’entrée. Plus ' +
-      'il est petit, plus le flux collecté par pixel est élevé. Il pilote le temps de pose ' +
-      'utile autant que la profondeur atteinte.',
-    consequence: 'Ouvrir d’un cran double le flux reçu, donc réduit de moitié le temps requis.',
+      'Plus le nombre f est petit, plus l’objectif collecte de lumière. C’est lui qui fixe le ' +
+      'temps de pose.',
+    consequence: 'Ouvrir d’un cran divise par deux le temps de pose nécessaire.',
     sections: ['5.1', '7.1'],
   }),
   champ: terme({
     libelle: 'Champ',
     glose: 'portion de ciel cadrée',
     explication:
-      'Le champ est l’angle couvert par le capteur, calculé par l’arctangente du rapport entre ' +
-      'la dimension du capteur et la focale. L’approximation linéaire souvent citée devient ' +
-      'fausse en grand angle, où elle produit des valeurs supérieures à cent quatre-vingts ' +
-      'degrés. L’arctangente est donc employée partout, sans exception.',
-    consequence: 'Comparer le champ à la taille d’une cible dit immédiatement si elle tient.',
+      'C’est l’angle de ciel couvert par la photo. Il dépend de la taille du capteur et de la ' +
+      'focale.',
+    consequence: 'Comparez-le à la taille de la cible pour savoir si elle tient dans l’image.',
     sections: ['5.1', '6.2'],
   }),
   pitch: terme({
     libelle: 'Pitch',
-    glose: 'taille d’un photosite',
+    glose: 'taille d’un pixel',
     explication:
-      'Le pitch est la distance entre deux pixels voisins du capteur. Il fixe l’échantillonnage ' +
-      'et entre dans la pose maximale sans suivi. Un recadrage de capteur ne le change jamais.',
-    consequence:
-      'Le pitch se déduit toujours du type de capteur choisi et de sa résolution, et ne se ' +
-      'règle jamais au moment de la prise.',
+      'C’est la distance entre deux pixels du capteur. Il se déduit du type de capteur et de la ' +
+      'résolution.',
+    consequence: 'Rien à saisir : il est calculé pour vous.',
     sections: ['5.1'],
   }),
   echantillonnage: terme({
@@ -249,13 +226,11 @@ export const GLOSSAIRE = Object.freeze({
   }),
   recadrage_capteur: terme({
     libelle: 'Format du capteur',
-    glose: 'utiliser une portion du capteur',
+    glose: 'plein format ou APS-C',
     explication:
-      'Le recadrage n’utilise qu’une partie centrale du capteur. Il réduit le champ et rien ' +
-      'd’autre : le pitch ne bouge pas, donc ni l’échantillonnage, ni la pose maximale, ni le ' +
-      'pouvoir séparateur. Le capteur jette des pixels sur les bords, il n’en ajoute aucun au ' +
-      'centre.',
-    consequence: 'Passer en recadrage ne rapproche de rien, cela cadre seulement plus serré.',
+      'Le recadrage n’utilise que le centre du capteur. Il réduit le champ, sans grossir les ' +
+      'détails.',
+    consequence: 'Passer en recadrage cadre plus serré, sans rapprocher la cible.',
     sections: ['5.1'],
   }),
   plein_format: terme({
@@ -279,121 +254,93 @@ export const GLOSSAIRE = Object.freeze({
   }),
   format_capteur: terme({
     libelle: 'Type de capteur',
-    glose: 'taille physique de la surface sensible',
+    glose: 'taille du capteur',
     explication:
-      'Le type de capteur fixe ses dimensions en millimètres — plein format, APS-C, micro 4/3, ' +
-      '1 pouce. Croisées à la résolution, elles donnent le pitch pixel, donc le champ et ' +
-      'l’échantillonnage. La fiche technique du boîtier, ou la première page de son mode ' +
-      'd’emploi, la donne toujours.',
-    consequence:
-      'Se tromper de format déplace le champ d’un facteur 1,5 sans que rien ne le signale.',
+      'C’est la taille physique du capteur : plein format, APS-C, micro 4/3. Elle figure sur la ' +
+      'fiche technique de l’appareil.',
+    consequence: 'Se tromper de format fausse le champ sans alerte.',
     sections: ['5.1'],
   }),
   resolution_capteur: terme({
     libelle: 'Résolution',
-    glose: 'nombre de pixels du capteur, en millions',
-    explication:
-      'La résolution, croisée aux dimensions du capteur, donne le pitch pixel — et c’est le ' +
-      'pitch, jamais le nombre de mégapixels, qui entre dans l’échantillonnage et dans la NPF. ' +
-      'Elle se lit sur la fiche technique du boîtier, où la valeur arrondie annoncée suffit.',
-    consequence:
-      'Sans elle, ni champ ni échantillonnage : c’est, avec le format, la seule grandeur exigée.',
+    glose: 'nombre de mégapixels',
+    explication: 'Elle figure sur la fiche technique de l’appareil. La valeur arrondie suffit.',
+    consequence: 'Indispensable, avec le type de capteur, pour calculer le champ.',
     sections: ['5.1'],
   }),
   bruit_de_lecture: terme({
     libelle: 'Bruit de lecture',
-    glose: 'électrons parasites ajoutés à chaque pose',
+    glose: 'bruit ajouté à chaque photo',
     explication:
-      'Le bruit de lecture est le nombre d’électrons que l’électronique ajoute à chaque lecture ' +
-      'du capteur, à un ISO donné. La pose optimale varie comme son CARRÉ : diviser le bruit ' +
-      'par deux divise la pose par quatre. Aucun constructeur ne le publie — il se lit sur les ' +
-      'courbes « Read Noise vs ISO » de Photons to Photos, ou sur la fiche capteur d’une caméra ' +
-      'dédiée.',
+      'Le capteur ajoute un peu de bruit à chaque image, quelle que soit la pose. Plus il est ' +
+      'faible, plus les poses peuvent être courtes.',
     consequence:
-      'Laissé vide, le repli du registre s’applique et toute pose calculée sort en [ESTIMÉ].',
+      'Valeur sur Photons to Photos ; laissé vide, une valeur type est utilisée [ESTIMÉ].',
     sections: ['5.1', '7.2'],
   }),
   seuil_double_gain: terme({
     libelle: 'Seuil de double gain',
-    glose: 'ISO où le bruit de lecture chute d’un coup',
+    glose: 'ISO où le bruit chute',
     explication:
-      'Beaucoup de capteurs CMOS basculent d’amplification au-delà d’un certain ISO : le bruit ' +
-      'de lecture y chute brutalement. Au-dessus de ce palier il ne baisse plus, tandis que la ' +
-      'capacité de saturation chute proportionnellement — monter l’ISO n’achète plus rien et ' +
-      'coûte de la dynamique. Le seuil se voit comme une marche sur la courbe « Read Noise vs ' +
-      'ISO » de Photons to Photos.',
-    consequence:
-      'C’est lui qui rattache le bruit de lecture saisi à un ISO, et qui justifie l’ISO ' +
-      'recommandé.',
+      'Beaucoup de capteurs voient leur bruit baisser d’un coup au-delà d’un certain ISO. Monter ' +
+      'plus haut n’apporte ensuite plus rien.',
+    consequence: 'Il désigne le meilleur ISO pour vos poses.',
     sections: ['5.1', '7.2'],
   }),
   capacite_saturation: terme({
     libelle: 'Capacité de saturation',
-    glose: 'électrons qu’un pixel encaisse avant de saturer',
+    glose: 'lumière maximale par pixel',
     explication:
-      'La capacité de saturation, ou full well, est le nombre d’électrons qu’un pixel accepte ' +
-      'avant d’être plein. Elle borne la dynamique et dit à partir de quelle pose les étoiles ' +
-      'brillantes du champ crament. Photons to Photos la publie sous « Saturation Capacity » ; ' +
-      'les caméras dédiées la donnent sur leur fiche capteur.',
-    consequence:
-      'Aucune sortie n’en dépend aujourd’hui : la saturation des étoiles brillantes n’est pas ' +
-      'chiffrée.',
+      'C’est la quantité de lumière qu’un pixel encaisse avant de saturer. Elle se trouve sur ' +
+      'Photons to Photos.',
+    consequence: 'Facultatif : aucun calcul ne l’utilise pour l’instant.',
     sections: ['5.1'],
   }),
   poids_image: terme({
     libelle: 'Poids d’une image',
-    glose: 'taille d’un fichier RAW sur la carte',
+    glose: 'taille d’un fichier RAW',
     explication:
-      'Le poids d’un RAW, multiplié par le nombre de poses, donne le volume à rapporter d’une ' +
-      'séance. Il ne se devine pas : il dépend du boîtier, du format et de la compression ' +
-      'choisis. Le plus sûr est de lire la taille d’un fichier déjà pris avec ces réglages.',
-    consequence:
-      'Laissé vide, le budget de stockage repose sur un générique et s’affiche en [ESTIMÉ].',
+      'Multipliée par le nombre de poses, elle donne la place à prévoir sur la carte. Regardez ' +
+      'la taille d’un RAW déjà pris.',
+    consequence: 'Laissée vide, une taille type est utilisée [ESTIMÉ].',
     sections: ['5.1', '7.3'],
   }),
   point_zero_systeme: terme({
     libelle: 'Point zéro système',
-    glose: 'sensibilité globale de la chaîne',
+    glose: 'sensibilité globale du matériel',
     explication:
-      'Le point zéro système résume en une magnitude le rendement complet de la chaîne ' +
-      'optique et électronique. Il permet de convertir une brillance de ciel en flux ' +
-      'd’électrons par pixel et par seconde. Aucun constructeur ne le publie : il se mesure ' +
-      'sur un champ stellaire calibré, ou se laisse au générique du registre, qui l’affiche ' +
-      'alors comme estimé.',
-    consequence: 'Une erreur d’un facteur deux dessus coûte peu, car l’optimum de pose est plat.',
+      'Il résume en un chiffre l’efficacité de l’objectif et du capteur. Il se mesure sur un ' +
+      'champ d’étoiles connu.',
+    consequence: 'Facultatif : une erreur dessus change peu la pose conseillée.',
     sections: ['2.3', '5.1'],
   }),
 
   // §5.2 — profil Suivi
   suivi: terme({
     libelle: 'Suivi',
-    glose: 'monture compensant la rotation',
+    glose: 'monture qui suit les étoiles',
     explication:
-      'Une monture qui suit compense la rotation de la Terre et permet des poses bien plus ' +
-      'longues que la pose maximale à étoiles ponctuelles. Sans elle, le domaine du ciel ' +
-      'profond reste fermé et seul le grand champ est exploitable.',
-    consequence: 'Activer le suivi ouvre les cibles faibles, hors de portée en pose courte.',
+      'Une monture motorisée compense la rotation du ciel. Elle permet des poses bien plus ' +
+      'longues.',
+    consequence: 'Sans suivi, seules les photos grand champ sont possibles.',
     sections: ['5.2'],
   }),
   mise_en_station: terme({
     libelle: 'Mise en station',
-    glose: 'alignement sur l’axe polaire',
+    glose: 'alignement sur le pôle',
     explication:
-      'La mise en station aligne l’axe de rotation de la monture sur celui du ciel. Faite à la ' +
-      'boussole, elle tient des poses courtes ; faite au viseur polaire réglé, elle en tient ' +
-      'plusieurs fois plus. C’est la seule question posée à l’utilisateur, et « je ne sais ' +
-      'pas » vaut réponse approximative.',
-    consequence: 'Soigner la mise en station est le levier le moins cher pour allonger la pose.',
+      'C’est l’alignement de l’axe de la monture sur le pôle céleste. Au viseur polaire, les ' +
+      'poses tiennent bien plus longtemps qu’à la boussole.',
+    consequence: 'La soigner est le moyen le moins cher d’allonger les poses.',
     sections: ['5.2'],
   }),
   type_monture: terme({
     libelle: 'Type de monture',
-    glose: 'équatoriale allemande ou rotule',
+    glose: 'équatoriale ou rotule',
     explication:
-      'Une équatoriale allemande impose un retournement au passage du méridien, une monture ' +
-      'sur rotule non. L’altazimutale, qui fait tourner le champ pendant la pose, n’est pas ' +
-      'proposée : ce calcul n’existe pas dans cette version.',
-    consequence: 'Le type déclaré décide du retournement à prévoir, donc du découpage du créneau.',
+      'Une équatoriale allemande doit se retourner quand la cible passe le méridien. Une monture ' +
+      'sur rotule, non.',
+    consequence: 'Avec une équatoriale, prévoyez une pause pour le retournement.',
     sections: ['5.2', '8.2'],
   }),
   pose_max_suivi: terme({
@@ -408,13 +355,11 @@ export const GLOSSAIRE = Object.freeze({
   }),
   npf: terme({
     libelle: 'Pose maximale sans suivi',
-    glose: 'pose gardant les étoiles ponctuelles',
+    glose: 'pose avant que les étoiles filent',
     explication:
-      'La règle NPF donne la pose la plus longue avant que la rotation du ciel n’allonge les ' +
-      'étoiles en traits, à partir de l’ouverture, du pitch et de la focale. Elle dépend de la ' +
-      'déclinaison visée : il n’existe pas une pose maximale, mais une par région du ciel. ' +
-      'Près du pôle, les poses tolérées deviennent très longues.',
-    consequence: 'Sans suivi, c’est elle qui borne la pose, et donc la profondeur atteignable.',
+      'Sans suivi, les étoiles s’étirent en traits au-delà de cette durée. Elle dépend de la ' +
+      'focale, de l’ouverture et de la zone du ciel visée.',
+    consequence: 'Sans monture, ne posez pas plus longtemps.',
     sections: ['9.1'],
   }),
   rotation_de_champ: terme({
@@ -451,44 +396,38 @@ export const GLOSSAIRE = Object.freeze({
   }),
   remplissage: terme({
     libelle: 'Remplissage du champ',
-    glose: 'part du champ occupée',
+    glose: 'part du cadre occupée',
     explication:
-      'Le remplissage est le rapport entre le grand axe de la cible et la petite dimension du ' +
-      'champ. Au-delà de un, la cible déborde et demande une mosaïque ; très en dessous, elle ' +
-      'se perd dans l’image.',
-    consequence: 'Il classe la cible en six verdicts, de la mosaïque au hors-domaine.',
+      'C’est la taille de la cible comparée au petit côté de l’image. Au-delà de cent pour cent, ' +
+      'elle déborde ; très en dessous, elle se perd.',
+    consequence: 'Visez une cible qui occupe du tiers à la moitié du cadre.',
     sections: ['6.2'],
   }),
   diametre_pixels: terme({
     libelle: 'Diamètre en pixels',
     glose: 'taille de l’objet en pixels',
     explication:
-      'C’est la taille de la cible sur le capteur, en pixels, une fois l’échantillonnage ' +
-      'appliqué. Sous une cinquantaine de pixels, l’objet est un amas de pixels sans détail ' +
-      'exploitable, quelle que soit la durée d’intégration. Recadrer au traitement n’y change ' +
-      'rien : cela n’ajoute aucun pixel.',
-    consequence: 'C’est ce diamètre, pas la magnitude, qui décide si une cible mérite la sortie.',
+      'C’est la taille de la cible sur la photo. Sous une cinquantaine de pixels, on ne ' +
+      'distingue aucun détail.',
+    consequence: 'Recadrer ensuite n’ajoute rien : seule une focale plus longue aide.',
     sections: ['6.2'],
   }),
   focale_ideale: terme({
     libelle: 'Focale nécessaire',
-    glose: 'focale pour cadrer proprement',
+    glose: 'focale pour bien cadrer',
     explication:
-      'Quand une cible est trop petite pour ce setup, l’application indique la focale qui la ' +
-      'cadrerait dans la fenêtre visée. La valeur vise le milieu de la fenêtre ; la plage en ' +
-      'couvre les deux bornes.',
-    consequence: 'Elle chiffre l’écart au matériel actuel, au lieu d’annoncer un refus sec.',
+      'C’est la focale qui ferait bien remplir le cadre à cette cible. La plage donne les ' +
+      'limites acceptables.',
+    consequence: 'Elle dit de combien votre focale est trop courte.',
     sections: ['6.1'],
   }),
   mosaique: terme({
     libelle: 'Mosaïque',
-    glose:
-      'La cible déborde du champ : elle demande une mosaïque, donc autant de sessions ' +
-      'partielles que de tuiles.',
+    glose: 'plusieurs photos assemblées',
     explication:
-      'Une cible qui déborde du champ s’assemble en tuiles se recouvrant partiellement. Le ' +
-      'nombre de tuiles multiplie d’autant le temps total de session, calibration comprise.',
-    consequence: 'Une mosaïque de quatre tuiles demande quatre sessions, pas une session longue.',
+      'La cible déborde du cadre : il faut plusieurs photos qui se chevauchent. Chaque photo ' +
+      'demande son propre temps de pose.',
+    consequence: 'Quatre tuiles demandent quatre fois plus de temps.',
     sections: ['6.2'],
   }),
 
@@ -497,30 +436,27 @@ export const GLOSSAIRE = Object.freeze({
     libelle: 'Magnitude intégrée',
     glose: 'éclat total de l’objet',
     explication:
-      'La magnitude intégrée additionne toute la lumière de l’objet comme s’il était ponctuel. ' +
-      'Pour un objet étendu, elle ment : M33, de magnitude 5,7, est bien plus difficile que ' +
-      'M57, de magnitude 8,8, parce que sa lumière est étalée sur mille fois plus de surface.',
-    consequence: 'Ne jamais juger la visibilité d’un objet étendu sur sa seule magnitude.',
+      'C’est toute la lumière de l’objet, comme s’il était un point. Pour un objet étendu, elle ' +
+      'trompe : sa lumière est étalée.',
+    consequence: 'Ne jugez pas une nébuleuse ou une galaxie sur ce seul chiffre.',
     sections: ['6.3'],
   }),
   brillance_surface: terme({
     libelle: 'Brillance de surface',
-    glose: 'éclat par seconde d’arc carrée',
+    glose: 'éclat par zone de ciel',
     explication:
-      'La brillance de surface répartit la lumière de l’objet sur sa surface apparente. C’est ' +
-      'elle, et non la magnitude, qui se compare au fond de ciel. Une valeur plus grande ' +
-      'signifie un objet plus faible.',
-    consequence: 'Comparée au fond de ciel, elle décide de tout : visuel, filtre, durée.',
+      'C’est la lumière de l’objet répartie sur sa surface. Plus le chiffre est grand, plus ' +
+      'l’objet est pâle.',
+    consequence: 'Comparée au fond de ciel, elle dit si l’objet ressort.',
     sections: ['6.3'],
   }),
   contraste_ciel: terme({
     libelle: 'Contraste sur le fond de ciel',
-    glose: 'écart objet moins ciel',
+    glose: 'écart entre objet et ciel',
     explication:
-      'Le contraste est l’écart entre la brillance du fond de ciel et celle de l’objet. ' +
-      'Positif, l’objet est plus brillant que le ciel par seconde d’arc carrée ; négatif, il ' +
-      'est plus faible, et seule l’intégration le fera sortir.',
-    consequence: 'Un contraste négatif n’interdit pas la photo, il en fixe la durée.',
+      'Positif, l’objet est plus lumineux que le ciel autour. Négatif, il est plus pâle et seule ' +
+      'une longue pose le révèle.',
+    consequence: 'Un contraste négatif n’empêche pas la photo, il allonge la pose.',
     sections: ['6.3'],
   }),
   verdict_detectabilite: terme({
@@ -538,365 +474,307 @@ export const GLOSSAIRE = Object.freeze({
     libelle: 'Tolérance à la Lune',
     glose: 'sensibilité au clair de Lune',
     explication:
-      'Elle découle du type d’objet. Une nébuleuse en émission tolère la Lune avec un filtre ' +
-      'bi-bande ; une galaxie exige un ciel noir et la Lune couchée, aucun filtre n’y aide. ' +
-      'Une Lune sous l’horizon n’entre pas dans le calcul.',
-    consequence: 'Elle réordonne les cibles d’une nuit selon la phase lunaire, sans en exclure.',
+      'Les nébuleuses en émission supportent la Lune avec un filtre bi-bande. Les galaxies ' +
+      'demandent une nuit sans Lune.',
+    consequence: 'Par nuit de Lune, préférez une nébuleuse en émission.',
     sections: ['6.3'],
   }),
   magnitude_limite_instrument: terme({
     libelle: 'Magnitude limite de l’instrument',
     glose: 'étoile la plus faible atteinte',
     explication:
-      'Le gain d’un instrument sur l’œil nu ne dépend que du rapport des diamètres collecteurs. ' +
-      'Il déplace la limite sur les objets ponctuels ; sur les objets étendus, il ne fait rien ' +
-      'd’autre qu’agrandir.',
-    consequence: 'Elle tranche pour les étoiles et les amas, jamais seule pour les nébuleuses.',
+      'Plus l’instrument est grand, plus il montre des étoiles faibles. Sur une nébuleuse, il ' +
+      'agrandit sans rendre plus lumineux.',
+    consequence: 'Utile pour les étoiles et les amas, pas pour les nébuleuses.',
     sections: ['6.3'],
   }),
 
   // §7 — moteur Pose
   flux_ciel: terme({
     libelle: 'Flux du fond de ciel',
-    glose: 'électrons par seconde et pixel',
+    glose: 'lumière du ciel par pixel',
     explication:
-      'Le flux du fond de ciel par pixel ne dépend pas du diamètre de l’instrument : il dépend ' +
-      'du rapport d’ouverture et de la taille des pixels. Deux setups de même ouverture et même ' +
-      'pitch collectent le même fond de ciel, quel que soit leur diamètre.',
-    consequence: 'C’est lui qui fixe la pose optimale : plus il est fort, plus la pose est courte.',
+      'C’est la lumière du fond de ciel reçue par chaque pixel. Elle dépend de l’ouverture et de ' +
+      'la taille des pixels.',
+    consequence: 'Plus elle est forte, plus les poses doivent être courtes.',
     sections: ['7.1'],
   }),
   flux_objet: terme({
     libelle: 'Flux de l’objet',
-    glose: 'signal utile par pixel',
+    glose: 'lumière de la cible par pixel',
     explication:
-      'Même conversion que pour le fond de ciel, appliquée à la brillance de surface de la ' +
-      'cible. C’est le signal utile, celui dont dépend directement la durée totale requise.',
-    consequence: 'Diviser ce flux par deux quadruple le temps nécessaire à qualité égale.',
+      'C’est la lumière de la cible reçue par chaque pixel. C’est le signal que la photo cherche ' +
+      'à capter.',
+    consequence: 'Deux fois moins de lumière demande quatre fois plus de temps.',
     sections: ['7.1'],
   }),
   masse_air: terme({
     libelle: 'Masse d’air',
     glose: 'épaisseur d’atmosphère traversée',
     explication:
-      'La masse d’air compte les épaisseurs d’atmosphère que la lumière traverse avant ' +
-      'd’atteindre le capteur : 1 au zénith, 2 à 30° de hauteur, près de 3 à 20°. Elle ne ' +
-      'dépend que de la hauteur de la cible, et l’approximation employée cesse d’être valide ' +
-      'sous une quinzaine de degrés.',
-    consequence:
-      'À 30° de hauteur, une cible demande près du double du temps de pose qu’au zénith.',
+      'Elle vaut 1 quand la cible est au zénith et grandit quand elle descend. Près de ' +
+      'l’horizon, l’image se dégrade vite.',
+    consequence: 'Photographiez la cible quand elle est haute.',
     sections: ['7.6', '8.2'],
   }),
   extinction_atmospherique: terme({
     libelle: 'Atténuation atmosphérique',
-    glose: 'part du flux qui survit',
+    glose: 'lumière perdue dans l’air',
     explication:
-      'Une magnitude de catalogue est mesurée hors atmosphère : le flux qui arrive vraiment au ' +
-      'capteur est plus faible, d’autant plus que la cible est basse. Le fond de ciel, lui, est ' +
-      'relevé depuis le sol : il est déjà atténué, et n’est donc pas éteint une seconde fois.',
-    consequence:
-      'Le temps d’intégration varie comme le carré de cette perte : viser haut coûte deux fois ' +
-      'moins de temps que viser bas.',
+      'L’atmosphère absorbe une partie de la lumière de la cible. Plus la cible est basse, plus ' +
+      'la perte est forte.',
+    consequence: 'Viser haut peut diviser le temps de pose par deux.',
     sections: ['7.6'],
   }),
   pose_unitaire: terme({
     libelle: 'Pose unitaire',
-    glose: 'durée d’une image',
+    glose: 'durée d’une photo',
     explication:
-      'La pose unitaire noie le bruit de lecture sous le bruit de photons du ciel. Elle est ' +
-      'plafonnée par ce que la monture sait suivre. Un ciel plus sombre exige des poses PLUS ' +
-      'LONGUES, pas plus courtes : c’est l’inverse de l’intuition.',
-    consequence: 'C’est la réponse chiffrée au « je pose combien de secondes » du débutant.',
+      'C’est la durée conseillée pour chaque photo. Sous un ciel noir, elle est plus longue, pas ' +
+      'plus courte.',
+    consequence: 'Réglez cette durée sur l’appareil.',
     sections: ['7.2'],
   }),
   plage_utile: terme({
     libelle: 'Plage utile de pose',
-    glose: 'durées équivalentes en pratique',
-    explication:
-      'L’optimum de pose est plat : de la moitié au double de la valeur retenue, le résultat est ' +
-      'équivalent. C’est cette platitude qui rend toute calibration du matériel inutile — et il ' +
-      'n’en existe aucune dans l’application.',
-    consequence: 'Choisir la durée d’obturateur la plus pratique dans la plage ne coûte rien.',
+    glose: 'durées équivalentes',
+    explication: 'Toute durée dans cette plage donne le même résultat. Inutile d’être précis.',
+    consequence: 'Prenez la durée la plus pratique sur votre appareil.',
     sections: ['2.3', '7.2'],
   }),
   mode_permissif: terme({
     libelle: 'Mode permissif',
-    glose: 'pose courte assumée',
+    glose: 'poses plus courtes',
     explication:
-      'Le facteur de pose descend à sa variante permissive : la pose unitaire est divisée par ' +
-      'plus de trois, et la perte de rapport signal sur bruit triple. C’est l’arbitrage d’un ' +
-      'soir de vent, de ciel pollué ou de suivi imprécis, quand une pose sur deux part à la ' +
-      'poubelle. Les deux valeurs chiffrées sont affichées avec la pose obtenue.',
-    consequence:
-      'Hors de ces conditions, ce mode ne fait que dégrader le résultat : il reste désactivé.',
+      'Il raccourcit les poses au prix d’un peu de qualité. Utile quand le vent, un ciel pollué ' +
+      'ou un suivi imprécis gâchent des photos.',
+    consequence: 'Par nuit calme, laissez-le désactivé.',
     sections: ['2.3', '7.2'],
   }),
   regime_pose: terme({
     libelle: 'Régime de pose',
-    glose: 'physique ou monture limitante',
+    glose: 'ce qui limite la pose',
     explication:
-      'En régime nominal, la physique décide et poser plus longtemps n’apporte rien. En régime ' +
-      'limité par le suivi, c’est la monture qui bride : le bruit de lecture domine, et la perte ' +
-      'de rapport signal sur bruit est chiffrée.',
-    consequence: 'En régime bridé, soigner la mise en station rapporte plus que tout achat.',
+      'En temps normal, la pose conseillée est la meilleure possible. Si la monture la limite, ' +
+      'la photo perd un peu en qualité.',
+    consequence: 'Si la monture limite, soignez la mise en station.',
     sections: ['7.2'],
   }),
   mon_boitier: terme({
     libelle: 'Mon boîtier',
-    glose: 'modèle, ou saisie à la main',
+    glose: 'votre appareil photo',
     explication:
-      'Choisir son modèle apporte d’un coup ce qu’une fiche produit ne dit pas : la courbe de ' +
-      'bruit de lecture, le seuil de double gain, la capacité de saturation. Ce sont ces ' +
-      'grandeurs, et elles seules, qui permettent de recommander un ISO et de chiffrer une ' +
-      'pose sans repli générique.',
-    consequence:
-      'Boîtier absent de la liste : le décrire à la main par son type de capteur et sa ' +
-      'résolution, puis l’ajouter à la base pour ne plus avoir à recommencer.',
+      'Choisir le modèle apporte les caractéristiques de son capteur. La pose et l’ISO ' +
+      'conseillés sont alors propres à votre appareil.',
+    consequence: 'Absent de la liste : indiquez le type de capteur et la résolution.',
     sections: ['5.1'],
   }),
   iso_recommande: terme({
     libelle: 'ISO recommandé',
-    glose: 'palier du double gain',
+    glose: 'meilleur ISO pour ce boîtier',
     explication:
-      'Les capteurs à double gain de conversion voient leur bruit de lecture chuter d’un coup ' +
-      'au-delà d’un seuil d’ISO. Comme la pose optimale varie comme le carré de ce bruit, ' +
-      'franchir le seuil divise la pose par plusieurs. Monter au-delà ne gagne plus rien et ' +
-      'sacrifie la dynamique.',
-    consequence:
-      'Régler l’ISO sur ce palier une fois pour toutes, sachant qu’en changer sans courbe de ' +
-      'bruit à cet ISO fait appliquer le repli du registre et porter [ESTIMÉ] à la pose.',
+      'Au-delà de cet ISO, le bruit ne baisse plus. Monter plus haut réduit seulement la ' +
+      'dynamique.',
+    consequence: 'Réglez l’appareil sur cet ISO pour toute la séance.',
     sections: ['7.2'],
   }),
   snr_cible: terme({
     libelle: 'Qualité visée',
-    glose: 'rapport signal sur bruit voulu',
+    glose: 'qualité de l’image finale',
     explication:
-      'La qualité visée se choisit avant de calculer une durée : aperçu, correct, bon ou ' +
-      'excellent. Le rapport signal sur bruit croît comme la racine du temps, donc doubler la ' +
-      'qualité quadruple la durée.',
-    consequence: 'Viser « correct » puis rallonger une autre nuit coûte moins qu’un abandon.',
+      'Plus elle est haute, plus l’image est lisse. Doubler la qualité demande quatre fois plus ' +
+      'de temps.',
+    consequence: 'Commencez modeste, quitte à compléter une autre nuit.',
     sections: ['7.3'],
   }),
   integration_totale: terme({
     libelle: 'Intégration totale',
-    glose: 'durée cumulée sur la cible',
+    glose: 'temps de pose cumulé',
     explication:
-      'C’est le temps cumulé de toutes les poses sur une cible, pour atteindre la qualité visée. ' +
-      'Il se répartit sur autant de nuits que nécessaire, chacune demandant son propre lot de ' +
-      'darks.',
-    consequence: 'Elle dit si la cible tient dans une nuit, ou s’il faut planifier une série.',
+      'C’est la somme de toutes les poses sur une cible. Elle peut se répartir sur plusieurs ' +
+      'nuits.',
+    consequence: 'Elle dit si la cible tient dans une nuit.',
     sections: ['7.3'],
   }),
   nombre_poses: terme({
     libelle: 'Nombre de poses',
-    glose: 'combien d’images empiler',
+    glose: 'combien de photos prendre',
     explication:
-      'Le nombre de poses est l’intégration totale divisée par la pose unitaire, arrondi au ' +
-      'supérieur. C’est aussi lui qui fixe le volume de carte mémoire à emporter.',
-    consequence: 'Il se vérifie avant la sortie : une carte pleine à trois heures du matin est perdue.',
+      'C’est le temps total divisé par la durée d’une pose. Il fixe aussi la place à prévoir sur ' +
+      'la carte.',
+    consequence: 'Vérifiez la place sur la carte avant de partir.',
     sections: ['7.3'],
   }),
   volume_stockage: terme({
     libelle: 'Volume de stockage',
-    glose: 'place occupée sur la carte',
+    glose: 'place sur la carte',
     explication:
-      'Le volume est le nombre de poses multiplié par la taille d’un fichier brut. Une seule ' +
-      'cible exigeante peut saturer une carte de 32 Go, et une session de trois cibles y arrive ' +
-      'presque toujours.',
-    consequence: 'C’est une contrainte bloquante en pratique, annoncée avant la sortie.',
+      'C’est le nombre de photos multiplié par la taille d’un fichier. Une seule cible peut ' +
+      'remplir une carte de 32 Go.',
+    consequence: 'Emportez une carte assez grande.',
     sections: ['7.3'],
   }),
   nombre_nuits: terme({
     libelle: 'Nombre de nuits',
-    glose: 'sessions nécessaires à la cible',
+    glose: 'nuits nécessaires',
     explication:
-      'Quand l’intégration dépasse le créneau exploitable d’une nuit, la capture se répartit ' +
-      'sur plusieurs sorties. Chaque nuit demande alors son propre lot de darks, la ' +
-      'température du capteur n’étant jamais la même deux soirs de suite.',
-    consequence: 'Il transforme une cible « impossible » en une série de sessions ordinaires.',
+      'Quand le temps total dépasse une nuit, la cible se photographie sur plusieurs nuits. ' +
+      'Chaque nuit demande ses propres darks.',
+    consequence: 'Une cible longue devient une série de nuits ordinaires.',
     sections: ['7.3'],
   }),
   plan_calibration: terme({
     libelle: 'Plan de calibration',
-    glose: 'images de correction à prendre',
+    glose: 'photos de correction',
     explication:
-      'Offsets, darks et flats corrigent trois défauts différents du capteur et de l’optique. ' +
-      'L’ordre d’importance affiché n’est pas alphabétique : à grande ouverture, les flats ' +
-      'passent avant tout, car le vignettage atteint un à deux diaphragmes dans les coins.',
-    consequence: 'C’est l’étape oubliée qui ruine le plus de sessions, budget de temps compris.',
+      'Offsets, darks et flats corrigent les défauts du capteur et de l’objectif. À grande ' +
+      'ouverture, les flats comptent le plus.',
+    consequence: 'Prévoyez leur temps dans la séance.',
     sections: ['7.4'],
   }),
   dithering: terme({
     libelle: 'Dithering',
-    glose: 'décalage aléatoire entre poses',
+    glose: 'léger décalage entre photos',
     explication:
-      'Le dithering décale l’image de quelques pixels entre les poses. Il supprime le bruit à ' +
-      'motif fixe et les colonnes chaudes que les darks laissent passer. Sans autoguidage, la ' +
-      'dérive naturelle du suivi le fournit gratuitement.',
-    consequence: 'Il coûte zéro minute de session et rattrape ce qu’aucun dark ne corrige.',
+      'Décaler l’image de quelques pixels entre les poses efface les pixels chauds. Sans ' +
+      'autoguidage, la dérive naturelle suffit.',
+    consequence: 'Il ne coûte rien et améliore nettement l’image.',
     sections: ['7.4'],
   }),
 
   // §10.2 — explication de verdict
   facteur_dominant: terme({
     libelle: 'Facteur dominant',
-    glose: 'variable qui décide du verdict',
+    glose: 'ce qui décide du verdict',
     explication:
-      'Le facteur dominant est calculé, pas rédigé : c’est la variable dont une petite ' +
-      'variation change le plus le résultat. Deux variables de sensibilité voisine sont ' +
-      'présentées ensemble plutôt que départagées arbitrairement.',
-    consequence: 'Il désigne où agir en premier, et rend l’explication impossible à diverger du calcul.',
+      'C’est la condition qui pèse le plus sur le résultat. Quand deux pèsent autant, les deux ' +
+      'sont citées.',
+    consequence: 'C’est là qu’il faut agir en premier.',
     sections: ['10.2'],
   }),
   levier: terme({
     libelle: 'Levier',
-    glose: 'action qui déplace le verdict',
+    glose: 'action pour améliorer',
     explication:
-      'Les leviers sont classés par coût croissant : changer de cible, attendre un meilleur ' +
-      'créneau, gagner un site plus sombre, intégrer plus longtemps, et seulement ensuite un ' +
-      'achat. L’application ne recommande jamais un achat en premier.',
-    consequence: 'Le premier levier proposé est toujours gratuit ou presque.',
+      'Les actions sont classées de la moins chère à la plus chère. Un achat n’arrive jamais en ' +
+      'premier.',
+    consequence: 'Le premier levier est toujours gratuit ou presque.',
     sections: ['10.2'],
   }),
 
   // §8.1 — fenêtre nocturne et Lune
   nuit_astronomique: terme({
     libelle: 'Nuit astronomique',
-    glose: 'Soleil sous −18°',
+    glose: 'nuit vraiment noire',
     explication:
-      'La nuit astronomique commence quand le Soleil descend sous 18° sous l’horizon : au-delà, ' +
-      'sa lumière diffusée ne contribue plus au fond de ciel. C’est la fenêtre de référence de ' +
-      'toute planification. À nos latitudes, elle fond de 11 h 43 en décembre à 2 h 35 en juin.',
-    consequence:
-      'Le budget d’une nuit d’été n’est pas celui d’une nuit d’hiver : le plan raisonne en ' +
-      'temps disponible, pas en faisabilité binaire.',
+      'Le Soleil est assez bas pour ne plus éclairer le ciel. En été, elle est très courte, ' +
+      'voire absente.',
+    consequence: 'Placez vos cibles dans cette fenêtre.',
     sections: ['8.1'],
   }),
   fenetre_utile: terme({
     libelle: 'Fenêtre utile',
-    glose: 'nuit noire sans la Lune',
+    glose: 'nuit noire sans Lune',
     explication:
-      'La part de la nuit où la Lune est sous l’horizon. Une Lune couchée ne dégrade rien, ' +
-      'quelle que soit sa phase ; une Lune levée éclaircit le fond de ciel sans rendre la nuit ' +
-      'inutilisable. Les deux durées sont affichées séparément.',
-    consequence:
-      'Une fenêtre utile plus courte que la nuit signifie des poses plus courtes et une ' +
-      'intégration plus longue, pas une nuit perdue.',
+      'C’est la partie de la nuit où la Lune est couchée. Une Lune levée éclaircit le ciel sans ' +
+      'rendre la nuit inutile.',
+    consequence: 'Réservez ce moment aux cibles les plus pâles.',
     sections: ['8.1'],
   }),
   degradation_lunaire: terme({
     libelle: 'Dégradation lunaire',
-    glose: 'apport lunaire au ciel',
+    glose: 'ciel éclairé par la Lune',
     explication:
-      'La Lune diffuse sa lumière dans l’atmosphère et éclaircit le fond de ciel d’autant plus ' +
-      'qu’elle est pleine, haute et proche de la cible. Le modèle de Krisciunas & Schaefer (1991) ' +
-      'chiffre cet apport en magnitudes par seconde d’arc au carré.',
-    consequence:
-      'Une nuit de Lune reste exploitable : le moteur raccourcit la pose et allonge ' +
-      'l’intégration au lieu de barrer la nuit.',
+      'La Lune éclaircit le ciel, surtout pleine, haute et proche de la cible. Le chiffre dit de ' +
+      'combien.',
+    consequence: 'Une nuit de Lune reste utilisable, avec des poses plus courtes.',
     sections: ['8.1'],
   }),
   mode_degrade_nuit: terme({
     libelle: 'Mode dégradé de nuit',
-    glose: 'repli sur le crépuscule nautique',
+    glose: 'pas de nuit noire',
     explication:
-      'Au-delà de 48,6° de latitude, la nuit astronomique disparaît une partie de l’été. ' +
-      'L’application ne produit alors ni durée négative ni erreur : elle retient la fenêtre ' +
-      'nautique — Soleil sous 12° — et chiffre la pénalité de fond de ciel qui l’accompagne.',
-    consequence: 'Les cibles les plus brillantes restent accessibles, avec une pénalité affichée.',
+      'En été, loin de l’équateur, le ciel ne devient jamais complètement noir. La fenêtre la ' +
+      'plus sombre est retenue, avec un ciel plus clair.',
+    consequence: 'Visez les cibles les plus brillantes.',
     sections: ['8.1'],
   }),
 
   // §8.2 — créneau
   creneau: terme({
     libelle: 'Créneau d’observation',
-    glose: 'quand la cible est exploitable',
+    glose: 'quand photographier la cible',
     explication:
-      'L’intervalle où la cible est simultanément assez haute, hors du relief et dans la ' +
-      'fenêtre nocturne. Sur une monture équatoriale allemande, le passage au méridien le ' +
-      'scinde en deux : le tube heurte le pied et l’orientation du capteur bascule de 180°.',
-    consequence:
-      'C’est la durée du créneau, et non celle de la nuit, qui décide si l’intégration ' +
-      'requise tient en une seule nuit.',
+      'C’est le moment où la cible est assez haute, hors du relief et de nuit. Avec une ' +
+      'équatoriale allemande, le retournement au méridien le coupe en deux.',
+    consequence: 'Il dit si la cible tient en une nuit.',
     sections: ['8.2'],
   }),
   cause_exclusion: terme({
     libelle: 'Cause d’exclusion',
     glose: 'pourquoi la cible est écartée',
     explication:
-      'Hauteur, relief, Lune, fenêtre ou cible qui ne se lève jamais depuis ce site : toute ' +
-      'cible écartée nomme la contrainte qui l’écarte. Une cible rejetée sans motif est la ' +
-      'première source de méfiance envers une application de planification.',
-    consequence:
-      'La cause dit quoi changer : la date, le site, la latitude ou simplement la cible.',
+      'Trop basse, cachée par le relief, gênée par la Lune ou jamais levée. Chaque cible écartée ' +
+      'dit pourquoi.',
+    consequence: 'La cause dit quoi changer : date, lieu ou cible.',
     sections: ['8.2'],
   }),
 
   // §8.3 — plan de session
   plan_session: terme({
     libelle: 'Plan de session',
-    glose: 'chronologie exécutable de la nuit',
+    glose: 'déroulé de la nuit',
     explication:
-      'Une liste de cibles ordonnée dans le temps, chacune avec son créneau alloué, sa pose, ' +
-      'son nombre d’images et sa consigne. La sortie est une chronologie, pas un palmarès : un ' +
-      'palmarès n’est pas exécutable sur le terrain.',
-    consequence: 'Le plan se suit dans l’ordre, de la première cible au lever du jour.',
+      'Ce sont les cibles dans l’ordre de la nuit, avec horaire, pose et nombre de photos. Il se ' +
+      'lit de haut en bas.',
+    consequence: 'Suivez-le dans l’ordre.',
     sections: ['8.3'],
   }),
   score_cible: terme({
     libelle: 'Score de cible',
-    glose: 'arbitrage entre cibles concurrentes',
+    glose: 'départage les cibles',
     explication:
-      'Cinq composantes pondérées — cadrage, hauteur, signal, fenêtre et Lune — avec des poids ' +
-      'déclarés au registre, exposés et réglables. Aucun apprentissage, aucune dérive : deux ' +
-      'exécutions identiques donnent le même plan.',
-    consequence:
-      'Quand deux créneaux se chevauchent, c’est le score qui tranche, et sa décomposition ' +
-      'est affichée.',
+      'Il combine cadrage, hauteur, signal, durée disponible et Lune. Le poids de chaque critère ' +
+      'se règle.',
+    consequence: 'Quand deux cibles se chevauchent, la mieux notée passe.',
     sections: ['8.3'],
   }),
   budget_nuit: terme({
     libelle: 'Budget de nuit',
-    glose: 'temps total de la session',
+    glose: 'temps total de la séance',
     explication:
-      'La capture, la calibration, la mise en station et le pointage de chaque cible tiennent ' +
-      'dans la durée de la nuit — ou le plan retire une cible entière. Aucune intégration n’est ' +
-      'tronquée en silence pour faire tenir la liste.',
-    consequence: 'Un budget serré se corrige en retirant une cible, jamais en rognant une pose.',
+      'Photos, calibration, mise en station et pointage doivent tenir dans la nuit. Sinon, une ' +
+      'cible entière est retirée.',
+    consequence: 'Trop chargé : retirez une cible plutôt que de raccourcir les poses.',
     sections: ['8.3'],
   }),
 
   // §8.4 — pointage
   mode_pointage: terme({
     libelle: 'Mode de pointage',
-    glose: 'carte directe ou cheminement',
+    glose: 'comment trouver la cible',
     explication:
-      'Au-delà de 8° de champ, le cadre contient toujours plusieurs étoiles à l’œil nu : une ' +
-      'carte directe suffit, en une seule étape. Sous 8°, il faut cheminer d’étoile en étoile ' +
-      'depuis un repère brillant, chaque saut recouvrant le champ du chercheur.',
-    consequence: 'Le mode est déduit du matériel, jamais choisi à la main.',
+      'Avec un grand champ, une carte suffit : le cadre contient toujours des étoiles repères. ' +
+      'Avec un champ étroit, on saute d’étoile en étoile depuis une étoile brillante.',
+    consequence: 'Il est choisi selon votre matériel.',
     sections: ['8.4'],
   }),
   angle_orientation: terme({
     libelle: 'Orientation du champ',
-    glose: 'angle de position du zénith',
+    glose: 'rotation du schéma',
     explication:
-      'Le champ tourne au cours de la nuit dans le référentiel de l’observateur. Le schéma de ' +
-      'pointage est orienté pour l’heure et le lieu exacts du pointage, avec le haut et le bas ' +
-      'réels tels que l’œil les verra.',
-    consequence: 'Un schéma non orienté est inutilisable dans le noir.',
+      'Le ciel tourne pendant la nuit. Le schéma est orienté comme vous verrez le ciel à cette ' +
+      'heure.',
+    consequence: 'Consultez-le à l’heure du pointage.',
     sections: ['8.4'],
   }),
   decalage_pointage: terme({
     libelle: 'Décalage de pointage',
-    glose: 'écart chiffré vers la cible',
+    glose: 'écart jusqu’à la cible',
     explication:
-      'L’écart en ascension droite, en heures d’angle horaire, et en déclinaison, en degrés, ' +
-      'entre l’étoile d’ancrage et la cible. Il se reporte directement sur des cercles gradués ' +
-      'ou sur les flexibles d’une monture.',
-    consequence:
-      'La mise en station reste à la charge de l’observateur : l’application aide à trouver, ' +
-      'elle ne corrige pas l’installation.',
+      'C’est la distance entre l’étoile repère et la cible, en ascension droite et en ' +
+      'déclinaison. Elle se reporte sur les cercles gradués de la monture.',
+    consequence: 'Partez de l’étoile repère et déplacez-vous de cet écart.',
     sections: ['8.4'],
   }),
 
@@ -916,13 +794,11 @@ export const GLOSSAIRE = Object.freeze({
   }),
   luminance_mode_nuit: terme({
     libelle: 'Luminance du mode nuit',
-    glose: 'plancher à 2 %',
+    glose: 'luminosité de l’écran',
     explication:
-      'La luminance du rouge est réglable jusqu’à un plancher d’environ 2 % de la luminance ' +
-      'nominale. Sur une dalle OLED le noir est un pixel éteint ; sur une dalle LCD le ' +
-      'rétroéclairage traverse toujours et une fuite de bleu subsiste.',
-    consequence:
-      'Sur LCD, le mode nuit reste efficace mais imparfait : l’application le dit une fois.',
+      'Baissez-la au minimum confortable pour garder la vision de nuit. Sur un écran LCD, un peu ' +
+      'de lumière passe toujours.',
+    consequence: 'Plus l’écran est sombre, mieux vos yeux restent adaptés au noir.',
     sections: ['11.1'],
   }),
 
@@ -964,14 +840,11 @@ export const GLOSSAIRE = Object.freeze({
   }),
   magnitude_limite_rendue: terme({
     libelle: 'Profondeur affichée',
-    glose: 'magnitude la plus faible tracée',
+    glose: 'étoiles les plus faibles affichées',
     explication:
-      'La profondeur suit le zoom : un champ deux fois plus serré descend d’environ 1,5 ' +
-      'magnitude. En vue réaliste, elle est en outre plafonnée par le fond de ciel du site — ' +
-      'le rendu montre alors ce que l’œil verrait, non le catalogue complet.',
-    consequence:
-      'Quand la profondeur dépasse celle du catalogue chargé, l’application le déclare plutôt ' +
-      'que de compléter le champ par des étoiles inventées.',
+      'Zoomer affiche des étoiles plus faibles. En vue réaliste, seules celles visibles depuis ' +
+      'votre ciel apparaissent.',
+    consequence: 'Désactivez la vue réaliste pour voir tout le catalogue.',
     sections: ['3.3'],
   }),
   precession: terme({
@@ -991,37 +864,29 @@ export const GLOSSAIRE = Object.freeze({
   // §9 — grand champ, prévisualisation et filé
   pose_max_cadre: terme({
     libelle: 'Pose max du cadre',
-    glose: 'pose de la zone limitante',
+    glose: 'pose max sur tout le cadre',
     explication:
-      'Il n’existe pas une pose maximale, mais une pose maximale par déclinaison : une étoile ' +
-      'proche du pôle se déplace moins vite qu’une étoile équatoriale. Sur un grand champ, la ' +
-      'déclinaison varie de plusieurs dizaines de degrés d’un bord du cadre à l’autre. La pose ' +
-      'retenue est celle de la zone la plus contraignante, jamais celle du centre de visée.',
-    consequence:
-      'Recadrer vers le pôle rallonge la pose utile, et l’application nomme la zone qui la bride.',
+      'Les étoiles bougent plus vite loin du pôle. La pose retenue est celle de la zone du cadre ' +
+      'la plus exigeante.',
+    consequence: 'Cadrer plus près du pôle autorise des poses plus longues.',
     sections: ['9.1'],
   }),
   trainee: terme({
     libelle: 'Traînée',
-    glose: 'filé inscrit sur le capteur',
+    glose: 'étirement des étoiles',
     explication:
-      'La traînée est la longueur, en pixels, du déplacement d’une étoile pendant la pose. ' +
-      'Elle croît avec la pose et la focale, et décroît avec la déclinaison. Au-delà d’un ' +
-      'pixel ou deux, les étoiles cessent d’être ponctuelles à l’examen à cent pour cent.',
-    consequence:
-      'La prévisualisation ovalise les étoiles dès que la pose dépasse la pose max du cadre.',
+      'C’est la longueur en pixels du trait laissé par une étoile pendant la pose. Au-delà d’un ' +
+      'ou deux pixels, les étoiles ne sont plus rondes.',
+    consequence: 'Raccourcissez la pose pour garder des étoiles rondes.',
     sections: ['9.1', '9.2'],
   }),
   profondeur_previsu: terme({
     libelle: 'Profondeur par photo',
-    glose: 'magnitude enregistrée par la pose',
+    glose: 'étoiles les plus faibles photographiées',
     explication:
-      'La profondeur atteinte dit jusqu’à quelle magnitude la pose enregistre une étoile au ' +
-      'seuil de détection retenu. Elle dépend de la pose, du diamètre de pupille, du bruit de ' +
-      'lecture et du fond de ciel du site. C’est elle qui fixe le nombre d’étoiles affichées ' +
-      'dans la prévisualisation, et non le zoom.',
-    consequence:
-      'Un ciel plus pollué ou une pose plus courte vident visiblement le champ prévisualisé.',
+      'C’est jusqu’où la photo enregistre des étoiles faibles. Elle dépend de la pose, de ' +
+      'l’objectif et du ciel.',
+    consequence: 'Un ciel pollué ou une pose courte montrent moins d’étoiles.',
     sections: ['9.2'],
   }),
   semis_generatif: terme({
@@ -1053,71 +918,54 @@ export const GLOSSAIRE = Object.freeze({
   }),
   vignettage: terme({
     libelle: 'Vignettage',
-    glose: 'coins plus sombres que centre',
+    glose: 'coins plus sombres',
     explication:
-      'Un objectif ouvert assombrit les coins de l’image de un à deux diaphragmes à pleine ' +
-      'ouverture. La prévisualisation le simule pour que le cadrage tienne compte de la ' +
-      'répartition réelle de lumière. Fermer d’un cran le réduit fortement.',
-    consequence:
-      'Placer un sujet important dans un coin le condamne à sortir plus sombre que prévu.',
+      'Objectif grand ouvert, les coins de l’image sont plus sombres que le centre. Fermer d’un ' +
+      'cran le réduit nettement.',
+    consequence: 'Évitez de placer la cible dans un coin.',
     sections: ['9.2'],
   }),
   pole_celeste: terme({
     libelle: 'Centre de rotation',
-    glose: 'pôle céleste, souvent hors cadre',
+    glose: 'centre de rotation du ciel',
     explication:
-      'Le pôle céleste est fixe dans le repère local : sa hauteur vaut la latitude du site. ' +
-      'Il tombe très souvent hors du cadre, et les arcs sont alors concentriques autour d’un ' +
-      'point situé en dehors de l’image. L’application ne le ramène jamais artificiellement ' +
-      'dans le cadre.',
-    consequence:
-      'Le panneau dit si le pôle tombe dans le cadre, à quelle hauteur et à quel azimut.',
+      'Les étoiles tournent autour de ce point, à une hauteur égale à votre latitude. Il est ' +
+      'souvent hors du cadre.',
+    consequence: 'Cadrez-le pour obtenir des cercles concentriques.',
     sections: ['9.3'],
   }),
   longueur_arc: terme({
     libelle: 'Longueur d’arc',
-    glose: 'trace décrite par une étoile',
+    glose: 'longueur des traînées',
     explication:
-      'La longueur d’arc croît avec la durée d’accumulation et décroît avec la déclinaison. ' +
-      'Elle varie donc d’une étoile à l’autre dans le même cadre, et c’est l’effet le plus ' +
-      'caractéristique du filé. À vingt minutes, l’arc ne fait qu’environ cinq pour cent de ' +
-      'la hauteur du cadre.',
-    consequence:
-      'Un filé lisible demande typiquement au moins une heure, et devient spectaculaire vers deux.',
+      'Plus la séquence dure, plus les traînées sont longues. Près du pôle, elles restent ' +
+      'courtes.',
+    consequence: 'Comptez au moins une heure pour un filé lisible.',
     sections: ['9.3'],
   }),
   duree_file: terme({
     libelle: 'Durée d’accumulation',
-    glose: 'temps total de la séquence',
-    explication:
-      'La durée totale est le temps couvert par l’ensemble des poses empilées, intervalles ' +
-      'compris. Elle fixe la longueur des arcs et le nombre de fichiers. Elle n’est pas la ' +
-      'durée d’une pose unitaire, qui reste courte.',
-    consequence:
-      'Doubler la durée totale double la longueur des arcs, sans rien changer à la pose unitaire.',
+    glose: 'durée totale de la séquence',
+    explication: 'C’est le temps couvert par toutes les poses. Il fixe la longueur des traînées.',
+    consequence: 'Doubler la durée double la longueur des traînées.',
     sections: ['9.3', '9.4'],
   }),
   intervalle_file: terme({
     libelle: 'Intervalle inter-pose',
-    glose: 'temps mort entre deux poses',
+    glose: 'pause entre deux poses',
     explication:
-      'Chaque seconde d’obturateur fermé laisse un trou dans toutes les traces. Au-delà d’une ' +
-      'seconde, ces trous deviennent visibles et le défaut est irréparable en post-traitement. ' +
-      'La réduction de bruit longue exposition du boîtier crée à elle seule un intervalle égal ' +
-      'à la pose.',
-    consequence:
-      'Désactiver la réduction de bruit longue exposition avant de partir est une consigne bloquante.',
+      'Chaque seconde de pause laisse un trou dans les traînées. La réduction de bruit longue ' +
+      'pose de l’appareil crée une pause aussi longue que la pose.',
+    consequence: 'Désactivez la réduction de bruit longue pose avant de partir.',
     sections: ['9.4'],
   }),
   n_poses_file: terme({
     libelle: 'Nombre de poses',
-    glose: 'images de la séquence',
+    glose: 'photos de la séquence',
     explication:
-      'Le nombre de poses découle de la durée totale divisée par la cadence, pose et intervalle ' +
-      'compris. Il fixe le volume de fichiers à rapporter. La pose unique très longue est ' +
-      'écartée : bruit thermique et ciel cramé en présence de pollution lumineuse.',
-    consequence:
-      'Les poses courtes s’empilent ensuite en mode éclaircir pour reconstituer le filé complet.',
+      'C’est la durée totale divisée par la durée d’une pose et de sa pause. Les photos ' +
+      's’empilent ensuite en mode éclaircir.',
+    consequence: 'Prévoyez la place sur la carte.',
     sections: ['9.4'],
   }),
 

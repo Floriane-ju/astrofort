@@ -50,10 +50,7 @@ function ReglagePoids(props: SaisiePoids) {
       <legend>
         <Etiquette cle="score_cible" />
       </legend>
-      <p className="etat">
-        Le score n’ordonne pas la nuit — la chronologie suit les culminations. Il tranche les
-        créneaux qui se chevauchent et désigne la cible retirée quand le budget déborde.
-      </p>
+      <p className="etat">Départage deux cibles qui se disputent le même moment de la nuit.</p>
       {CRITERES_SCORING.map((critere) => (
         <label key={critere}>
           <span className="libelle">
@@ -74,12 +71,8 @@ function ReglagePoids(props: SaisiePoids) {
           />
         </label>
       ))}
-      <p className="etat">
-        Rien n’est appris de vos choix passés : deux séances réglées de la même façon
-        produisent le même plan.
-      </p>
       <button type="button" onClick={props.surDefaut}>
-        Revenir aux poids C-15
+        Revenir aux poids par défaut
       </button>
     </fieldset>
   )

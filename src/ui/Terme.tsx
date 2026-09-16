@@ -46,7 +46,7 @@ export function Glose({ cle, contexte }: GloseProps) {
       <p>{entree.explication}</p>
       <p className="glossaire-contexte">
         {contexte === undefined
-          ? 'Valeur non calculée : compléter le profil pour l’obtenir.'
+          ? 'Pas encore calculée : complétez le lieu ou le matériel.'
           : `Ta valeur : ${contexte}`}
       </p>
       <p className="glossaire-consequence">{entree.consequence}</p>

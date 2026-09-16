@@ -72,7 +72,7 @@ describe('§9.1 — pose max par déclinaison', () => {
       Math.abs(cellule.decDeg) > Math.abs(max.decDeg) ? cellule : max,
     )
     expect(polaire.tNpfS === null || polaire.tNpfS > K('POSE_LONGUE_AVERTISSEMENT_S')).toBe(true)
-    expect(resultat.messages.join(' ')).toMatch(/bruit thermique/)
+    expect(resultat.messages.join(' ')).toMatch(/c’est le bruit et le ciel/)
   })
 
   it('bascule sur le plafond de la monture quand le suivi est actif, en le disant', () => {
@@ -83,7 +83,7 @@ describe('§9.1 — pose max par déclinaison', () => {
     expect(avecSuivi.poseOperanteS).toBe(120)
     // La NPF reste calculée et affichée, à titre informatif.
     expect(avecSuivi.tMaxCadreS.value).toBeCloseTo(25.16, 1)
-    expect(avecSuivi.messages.join(' ')).toMatch(/à titre informatif/)
+    expect(avecSuivi.messages.join(' ')).toMatch(/c’est la monture qui limite/)
   })
 
   it('produit une carte, pas un nombre', () => {

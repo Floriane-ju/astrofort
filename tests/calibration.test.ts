@@ -37,13 +37,12 @@ describe('plan de calibration §7.4', () => {
 
   it('recommande le dithering à chaque pose sans autoguidage, et dit ce qu’il supprime', () => {
     expect(plan.dithering).toMatch(/à chaque pose/)
-    expect(plan.dithering).toMatch(/motif fixe/)
-    expect(plan.dithering).toMatch(/ce que les darks, eux, ne suppriment pas/)
+    expect(plan.dithering).toMatch(/dérive naturelle/)
   })
 
   it('invalide les flats au changement de focale ou d’orientation', () => {
     const suivante = planCalibration({ ...SESSION, changementFocaleOuOrientation: true })
-    expect(suivante.avertissements.join(' ')).toMatch(/flats de la cible précédente ne sont plus valides/)
+    expect(suivante.avertissements.join(' ')).toMatch(/refaites des flats/)
   })
 })
 
@@ -56,7 +55,7 @@ describe('aucune bibliothèque de darks réutilisable §7.4', () => {
   })
 
   it('dit quand les prendre plutôt que de comparer une température', () => {
-    expect(plan.surcoutTempsMin.note).toMatch(/fin de session, capteur encore froid/)
+    expect(plan.surcoutTempsMin.note).toMatch(/fin de séance, capteur encore froid/)
     expect(JSON.stringify(plan)).not.toMatch(/°C/)
   })
 })

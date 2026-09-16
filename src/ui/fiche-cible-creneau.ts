@@ -18,8 +18,7 @@ export type CreneauFiche =
   | { readonly chiffre: false; readonly cause: string }
 
 export const CAUSE_NUIT_NON_CHIFFREE =
-  'La nuit n’est pas chiffrable pour ce lieu et cette date, ou le matériel est incomplet : ' +
-  'aucun créneau photo n’est annoncé plutôt qu’un créneau inventé.'
+  'Pas de créneau photo : complétez le lieu, la date ou le matériel.'
 
 export function creneauFiche(
   contexte: ContexteSession | null,

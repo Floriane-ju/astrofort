@@ -642,10 +642,9 @@ export function diagnosticFile(entree: EntreeDiagnosticFile): DiagnosticFile {
   const pourcent = (fractionHauteurCadre * 100).toFixed(0)
   if (entree.dureeMin < K('DUREE_FILE_LISIBLE_MIN')) {
     messages.push(
-      `L’arc le plus long fait ${longueurArcMaxDeg.value.toFixed(2)}°, soit environ ${pourcent} % ` +
-        'de la hauteur du cadre : le résultat ressemblera à des étoiles légèrement étirées, pas ' +
-        `à un filé. Un filé lisible demande typiquement au moins ${K('DUREE_FILE_LISIBLE_MIN')} min, ` +
-        `et devient spectaculaire à partir de ${K('DUREE_FILE_SPECTACULAIRE_MIN')} min.`,
+      `Traînées courtes (${pourcent} % du cadre) : des étoiles étirées plutôt qu’un filé. ` +
+        `Comptez au moins ${K('DUREE_FILE_LISIBLE_MIN')} min, ` +
+        `idéalement ${K('DUREE_FILE_SPECTACULAIRE_MIN')} min.`,
     )
   }
 

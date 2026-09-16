@@ -22,7 +22,6 @@ import {
   HAUTEUR_SCENE_PX,
   LARGEUR_SCENE_PX,
   etatScene,
-  majRendu,
   reinitialiseScene,
   resolutionRendu,
 } from '../src/ui/scene-etat.ts'
@@ -213,25 +212,6 @@ describe('§11.2 — un seul jeu de réglages à la fois', () => {
       expect(bloc, libelle).toContain(`aria-label="${libelle}"`)
     }
     expect((bloc.match(/aria-pressed=/g) ?? []).length).toBe(9)
-  })
-
-  /**
-   * T-0096 — l'aveu de modélisation du fond peint n'est PAS dans une bulle : une infobulle ne
-   * s'ouvre pas au doigt, et sur écran tactile le geste qui la révélerait a déjà basculé le
-   * réglage (§11.2, rien de critique au survol). Il est affiché, et seulement tant qu'il
-   * porte — sinon c'est un paragraphe qui mange le ciel pour rien.
-   */
-  it('affiche les limites du fond peint pendant qu’il est peint, et pas avant', () => {
-    // « van Rhijn » seul ne prouverait rien : le registre de constantes le cite déjà dans le
-    // tiroir de vérification. C'est l'aveu de PORTÉE qui n'existe qu'ici.
-    const aveu = 'Hors périmètre, et dit plutôt que supposé'
-    expect(ecran()).not.toContain(aveu)
-    majRendu({ vueRealiste: true })
-    const allume = ecran()
-    expect(allume).toContain('rail-note')
-    expect(allume).toContain(aveu)
-    majRendu({ vueRealiste: false })
-    expect(ecran()).not.toContain('rail-note')
   })
 
   /**
@@ -555,8 +535,8 @@ describe('T-0116 — les compteurs du filé ne rendent pas par image', () => {
 describe('§5.1 — la scène déclare l’écart de projection avec l’objectif', () => {
   it('annonce quand la projection de la scène n’est pas celle de l’objectif', () => {
     expect(mentionProjection('MODE_CADRE', 'MODE_CADRE')).toBeNull()
-    expect(mentionProjection('MODE_PLANETARIUM', 'MODE_CADRE')).toMatch(/gnomonique/)
-    expect(mentionProjection('MODE_PLANETARIUM', 'MODE_FISHEYE')).toMatch(/équidistante/)
+    expect(mentionProjection('MODE_PLANETARIUM', 'MODE_CADRE')).toMatch(/Voir comme l’objectif/)
+    expect(mentionProjection('MODE_PLANETARIUM', 'MODE_FISHEYE')).toMatch(/fisheye/)
   })
 })
 
@@ -778,15 +758,14 @@ describe('T-0047 — la roue crantée reloge le choix brut dans le catalogue', (
     // T-0169 — les rails sont ceux de `Curseur`, plus des `input[type=range]` : c'est le rôle
     // qui les compte, et c'est aussi lui que la technologie d'assistance lit.
     expect(rendu.match(/role="slider"/g)).toHaveLength(5)
-    expect(rendu).toContain('Revenir aux poids C-15')
+    expect(rendu).toContain('Revenir aux poids par défaut')
     // Le poids effectif s'affiche : c'est lui que le plan utilise, pas la position brute.
     expect(rendu).toContain('25 %')
   })
 
   it('T-0087 — dit que le score arbitre les conflits, sans ordonner la nuit', () => {
     const rendu = renderToStaticMarkup(<MenuReglages {...REGLAGES_INERTES} />)
-    expect(rendu).toMatch(/chronologie suit les culminations/)
-    expect(rendu).toMatch(/Rien n’est appris/)
+    expect(rendu).toMatch(/Départage deux cibles/)
   })
 
   it('garde la cible de clic de §11.2 : le tiroir est un `.tiroir` comme les autres', () => {
@@ -911,7 +890,7 @@ describe('T-0128 — le catalogue remplace les deux chemins vers les cibles', ()
   })
 
   it('nomme le SNR sur lequel la pose est calculée : un temps sans sa cible ne se lit pas', () => {
-    expect(ecran()).toMatch(/rapport signal sur bruit de \d+/)
+    expect(ecran()).toMatch(/signal\/bruit de \d+/)
   })
 })
 

@@ -135,7 +135,7 @@ describe('T-0137 — la barre basse pilote le temps', () => {
     // La pastille porte le facteur APPLIQUÉ ; le ×1500 demandé ne survit que dans la phrase
     // qui explique son écrêtage.
     expect(html).toMatch(/barretemps-facteur">×374</)
-    expect(html).toMatch(/ramené de ×1500 à ×374/)
+    expect(html).toMatch(/ramenée de ×1500 à ×374/)
   })
 
   it('ne signale rien quand la vitesse tient dans la plage lisible', () => {

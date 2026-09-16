@@ -80,9 +80,7 @@ export function capteurEffectif(boitier: Boitier, mode: CapteurMode): CapteurEff
     capteurHMm: boitier.recadrageApsc.capteurHMm,
     pitchUm: boitier.pitchUm,
     noteRecadrage:
-      'Recadrage, pas grossissement — même détail, moins de champ. L’échantillonnage, la ' +
-      'pose maximale et le pouvoir séparateur restent identiques : le capteur jette des ' +
-      'pixels sur les bords, il n’en ajoute aucun au centre.',
+      'Recadrage, pas grossissement : moins de champ, mêmes détails.',
   }
 }
 
@@ -111,9 +109,7 @@ export function pointZeroSysteme(boitier: Boitier | null): PointZeroSysteme {
     estime: true,
     constante: ref('ZP_SYS_GENERIQUE'),
     note:
-      'Boîtier absent de la base matériel : point zéro générique appliqué. La plage utile ' +
-      'de pose absorbe l’incertitude — une pose de 10, 15 ou 20 s est indifférente quand ' +
-      'l’optimum est 13 s.',
+      'Boîtier inconnu : sensibilité type utilisée, la pose conseillée reste fiable.',
   }
 }
 
@@ -148,8 +144,7 @@ export function isoRecommande(boitier: Boitier | null, isoChoisi: number | null 
       isoRecommandeParSeuil: null,
       choisiParUtilisateur: isoChoisi !== null,
       message:
-        'Aucun boîtier de la base : le bruit de lecture de repli sera appliqué et affiché ' +
-        '[ESTIMÉ], et aucun ISO n’est recommandé.',
+        'Boîtier inconnu : pas d’ISO conseillé, bruit de lecture estimé [ESTIMÉ].',
     }
   }
   const isos = Object.keys(boitier.readNoiseE)
@@ -179,18 +174,13 @@ function messageIso(
 ): string {
   const justification =
     seuil === undefined
-      ? `ISO ${retenu} : le seuil de double gain de ce boîtier n’est pas renseigné, aucun ` +
-        'palier ne justifie donc un autre réglage.'
+      ? `ISO ${retenu} : seuil de double gain pas renseigné, pas de meilleur réglage connu.`
       : retenu === recommande
-        ? `ISO ${retenu} : c’est le premier palier au-dessus du seuil de double gain de ce ` +
-          `boîtier (${seuil}). Monter plus haut ne réduit plus le bruit de lecture et ` +
-          'sacrifie la dynamique.'
-        : `ISO ${retenu}, choisi à la main : le seuil de double gain de ce boîtier ` +
-          `(${seuil}) recommande ISO ${String(recommande)}. En dessous, le bruit de lecture ` +
-          'impose des poses plus longues ; au-dessus, la dynamique est sacrifiée sans gain.'
+        ? `ISO ${retenu} : le bruit ne baisse plus au-delà (seuil de double gain ${seuil}).`
+        : `ISO ${retenu}, choisi à la main : ISO ${String(recommande)} conseillé pour ce ` +
+          'boîtier.'
   return readNoiseE === null
-    ? `${justification} Le bruit de lecture n’est pas connu à cet ISO : le repli du registre ` +
-      'sera appliqué et affiché [ESTIMÉ].'
+    ? `${justification} Bruit de lecture inconnu à cet ISO [ESTIMÉ].`
     : justification
 }
 
@@ -254,38 +244,32 @@ export function notesEstimation(
   ...(vide(saisie.readNoiseE)
     ? {
         readNoiseE:
-          `Non renseigné : ${K('READ_NOISE_DEFAUT_E')} e⁻ du registre sont appliqués et ` +
-          'affichés [ESTIMÉ] — la pose optimale varie comme le carré de cette valeur.',
+          `Vide : ${K('READ_NOISE_DEFAUT_E')} e⁻ par défaut [ESTIMÉ].`,
       }
     : {}),
   ...(vide(saisie.seuilDoubleGainIso)
     ? {
         seuilDoubleGainIso: vide(saisie.readNoiseE)
-          ? 'Non renseigné : aucun palier ne justifie un ISO plutôt qu’un autre, aucune ' +
-            'recommandation n’est donc affichée.'
-          : 'Non renseigné : le bruit de lecture saisi n’est rattaché à aucun ISO, donc ' +
-            'inutilisable — le repli du registre s’applique et s’affiche [ESTIMÉ].',
+          ? 'Vide : pas d’ISO conseillé.'
+          : 'Vide : le bruit de lecture saisi ne peut pas servir [ESTIMÉ].',
       }
     : {}),
   ...(vide(saisie.zpSys)
     ? {
         zpSys:
-          `Non renseigné : point zéro générique ${K('ZP_SYS_GENERIQUE')} mag, zp_source ` +
-          'GENERIQUE [ESTIMÉ] — la plage utile de pose absorbe l’incertitude.',
+          `Vide : ${K('ZP_SYS_GENERIQUE')} mag par défaut, zp_source GENERIQUE [ESTIMÉ].`,
       }
     : {}),
   ...(vide(saisie.tailleRawMo)
     ? {
         tailleRawMo:
-          `Non renseigné : ${K('TAILLE_RAW_MO_GENERIQUE')} Mo génériques [ESTIMÉ] — le budget ` +
-          'de stockage annoncé est alors un ordre de grandeur, pas une mesure.',
+          `Vide : ${K('TAILLE_RAW_MO_GENERIQUE')} Mo par défaut [ESTIMÉ].`,
       }
     : {}),
   ...(vide(saisie.fullWellE)
     ? {
         fullWellE:
-          'Non renseignée : aucune sortie n’en dépend aujourd’hui, la saturation des étoiles ' +
-          'brillantes n’est donc pas chiffrée.',
+          'Vide : aucun calcul ne l’utilise pour l’instant.',
       }
     : {}),
   })

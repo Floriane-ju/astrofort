@@ -137,18 +137,14 @@ export function cielInstantane(site: Site, date: Date): CielInstantane {
       formula: 'PRECESSION',
       inputs: { n_annees: Math.round(annee) - K('EPOQUE_J2000_ANNEE') },
       constants: ['PRECESSION_ARCSEC_AN'],
-      note:
-        'Les positions sont précessées ; ni les magnitudes ni les noms ne le sont. Les ' +
-        'mouvements propres restent ignorés.',
+      note: 'Positions des étoiles corrigées pour la date affichée.',
     }),
     corpsMasques: masques,
     ...(masques
       ? {
           cause:
-            `L’année ${date.getUTCFullYear()} sort du domaine de validité des séries ` +
-            `[${K('ANNEE_MIN_SERIES')} ; ${K('ANNEE_MAX_SERIES')}] : les corps du système ` +
-            'solaire sont masqués plutôt qu’extrapolés en silence. Les étoiles et les ' +
-            'constellations restent affichées.',
+            `Année hors de ${K('ANNEE_MIN_SERIES')}–${K('ANNEE_MAX_SERIES')} : Soleil, Lune ` +
+            'et planètes masqués.',
         }
       : {}),
   }
@@ -163,10 +159,8 @@ export function avertissementEpoque(anneeEpoque: number): string | null {
   const arrondi = Math.round(ecart)
   if (ecart <= K('HORIZON_MOUVEMENTS_PROPRES_AN')) return null
   return (
-    `À ${arrondi} ans de J2000, les mouvements propres — ignorés par le catalogue ` +
-    '(§3.3) — dépassent la tolérance de 0,1° : les figures restent reliées aux mêmes étoiles, ' +
-    'mais elles perdent le dessin qui leur a donné leur nom. Les positions affichées sont ' +
-    'précessées, elles ne sont pas propagées.'
+    `À ${arrondi} ans de l’an 2000, les étoiles ont bougé : les figures des constellations ` +
+    'ne sont plus fidèles.'
   )
 }
 

@@ -125,7 +125,7 @@ describe('domaine de validité §7.6', () => {
     expect(bas.eObjReel.value).toBeNull()
     expect(bas.attenuation.flags).toContain('HORS_DOMAINE')
     // Le refus est nommé : rien n'est extrapolé en silence.
-    expect(bas.eObjReel.note).toMatch(/n’est plus valide/)
+    expect(bas.eObjReel.note).toMatch(/trop basse/)
   })
 
   it('reste calculable juste au-dessus de la borne', () => {
@@ -142,7 +142,7 @@ describe('domaine de validité §7.6', () => {
     expect(sansHauteur.attenuation.flags).toContain('HYP')
     expect(sansHauteur.eObjReel.value).toBe(E_OBJ_DOMINE.value)
     expect(sansHauteur.plageEObj).toBeNull()
-    expect(sansHauteur.attenuation.note).toMatch(/PLANCHER/)
+    expect(sansHauteur.attenuation.note).toMatch(/minimum/)
   })
 })
 

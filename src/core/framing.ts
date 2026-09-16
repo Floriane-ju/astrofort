@@ -34,8 +34,7 @@ export type { Domaine, VerdictCadrage }
  * « je recadrerai au traitement ».
  */
 export const REFUS_RECADRAGE_LOGICIEL =
-  'Recadrer au traitement n’ajoute aucun pixel : l’objet garde le diamètre en pixels ' +
-  'calculé ici. Seule une focale plus longue le change.'
+  'Recadrer ensuite n’ajoute pas de détail : seule une focale plus longue aide.'
 
 // ---------------------------------------------------------------------------
 // §6.1 — verdict de domaine
@@ -102,9 +101,7 @@ export function verdictDomaine(
     ...(cibles.length === 0
       ? {
           causeAbsence:
-            `Aucune cible cataloguée entre ${min.toFixed(2)}° et ${max.toFixed(2)}° : à cette ` +
-            'échelle, le catalogue embarqué est vide. Aucune liste par défaut hors fenêtre ' +
-            'n’est proposée en remplacement.',
+            `Aucun objet du catalogue ne mesure entre ${min.toFixed(2)}° et ${max.toFixed(2)}°.`,
         }
       : {}),
   }
@@ -234,23 +231,21 @@ function orientation(
     return {
       angleBoitierDeg: null,
       noteOrientation:
-        'Cible assez ronde pour que l’orientation du boîtier ne change rien : garder le ' +
-        'cadrage par défaut.',
+        'Cible presque ronde : l’orientation du boîtier ne change rien.',
     }
   }
   if (posAngDeg === null || posAngDeg === undefined) {
     return {
       angleBoitierDeg: null,
       noteOrientation:
-        'La cible est allongée, mais le catalogue ne donne pas son angle de position : ' +
-        'orientation par défaut du boîtier. Aucun angle n’est affiché faute de donnée.',
+        'Cible allongée, orientation inconnue : pas d’angle conseillé.',
     }
   }
   return {
     angleBoitierDeg: posAngDeg,
     noteOrientation:
-      `Cible allongée (rapport ${rapport.toFixed(1)}) : orienter le boîtier à ` +
-      `${posAngDeg.toFixed(0)}° pour aligner le grand axe sur la grande dimension du capteur.`,
+      `Cible allongée : tournez le boîtier à ${posAngDeg.toFixed(0)}° pour l’aligner sur la ` +
+      'longueur du capteur.',
   }
 }
 
@@ -273,13 +268,13 @@ export function ficheCadrage(entree: EntreeCadrage): FicheCadrage {
   const causes: string[] = []
   if (!ligne.faisable) {
     causes.push(
-      `${ligne.message} La cible n’occupe que ${(remplissage * POURCENT).toFixed(2)} % du champ.`,
+      `${ligne.message} Elle occupe ${(remplissage * POURCENT).toFixed(2)} % du cadre.`,
     )
   }
   if (tropPetitEnPixels) {
     causes.push(
-      `Elle ne fait que ${diamPx.toFixed(0)} px de diamètre, sous les ` +
-        `${K('DIAMETRE_PIXELS_MIN')} px en deçà desquels aucun détail n’est exploitable.`,
+      `Seulement ${diamPx.toFixed(0)} px de large : aucun détail visible sous ` +
+        `${K('DIAMETRE_PIXELS_MIN')} px.`,
     )
   }
   if (causes.length > 0) causes.push(REFUS_RECADRAGE_LOGICIEL)
@@ -309,8 +304,7 @@ export function ficheCadrage(entree: EntreeCadrage): FicheCadrage {
             inputs: { taille_objet_deg: tailleObjetDeg, fov_h_deg: entree.fovHDeg },
             constants: ['RECOUVREMENT_MOSAIQUE'],
             note:
-              `Le nombre de tuiles multiplie d’autant le temps total de session : ` +
-              `${nTuilesValeur} fois la durée d’une cible unique.`,
+              `${nTuilesValeur} fois plus de temps qu’une seule photo.`,
           }),
         }),
     ...orientation(tailleMajArcmin, entree.tailleMinArcmin, entree.posAngDeg),

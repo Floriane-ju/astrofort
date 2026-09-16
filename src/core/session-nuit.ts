@@ -119,10 +119,9 @@ export function retireJusquAuBudget(
       designation: plusFaible.objet.designation,
       code: 'BUDGET',
       cause:
-        `Budget de nuit dépassé de ` +
+        `Nuit trop courte de ` +
         `${(courantBudget.totalMin.value - courantBudget.disponibleMin).toFixed(0)} min : cette ` +
-        'cible, de plus faible score, est retirée entièrement. Aucune intégration n’est ' +
-        'tronquée pour faire tenir le plan.',
+        'cible, la moins bien notée, est retirée.',
     })
     courantBudget = calculeBudget(contexte, courantes, calibration)
   }

@@ -31,10 +31,7 @@ export interface EtatStockage {
 const OCTETS_PAR_MO = 1024 * 1024
 
 const AVERTISSEMENT_NON_PERSISTANT =
-  'Le stockage n’est pas en mode persistant : le navigateur peut effacer les catalogues ' +
-  'et les données saisies sous pression disque, sans avertissement. Installer ' +
-  'l’application améliore les chances d’obtenir ce mode. En attendant, exporter ses ' +
-  'données protège ce qui ne se retélécharge pas.'
+  'Le navigateur peut effacer vos données : installez l’application ou exportez-les.'
 
 export async function etatStockage(): Promise<EtatStockage> {
   if (typeof navigator === 'undefined' || navigator.storage === undefined) {
@@ -44,8 +41,7 @@ export async function etatStockage(): Promise<EtatStockage> {
       quotaMo: null,
       usageMo: null,
       avertissement:
-        'Ce navigateur n’expose pas l’API de stockage persistant : l’état d’éviction ne ' +
-        'peut pas être connu. Exporter ses données régulièrement.',
+        'Ce navigateur peut effacer vos données : exportez-les régulièrement.',
     }
   }
   const persistant = (await navigator.storage.persisted?.()) ?? false

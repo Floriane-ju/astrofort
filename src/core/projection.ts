@@ -317,18 +317,15 @@ export function magnitudeRendue(
   const horsTable =
     oeil.borne === 'AUCUNE'
       ? ''
-      : ' Le fond de ciel effectif sort de la table Bortle : la magnitude limite est bornée ' +
-        `au bord de table (${oeil.value.toFixed(1)}), jamais extrapolée — ciel ` +
-        `${oeil.borne === 'CIEL_PLUS_CLAIR' ? 'plus clair que Bortle 9' : 'plus sombre que Bortle 1'}.`
+      : ` Ciel ${oeil.borne === 'CIEL_PLUS_CLAIR' ? 'plus clair que Bortle 9' : 'plus noir que Bortle 1'} : ` +
+        `limite fixée à ${oeil.value.toFixed(1)}.`
   return trace({
     value: Math.min(zoom.value, oeil.value),
     formula: 'MAGNITUDE_LIMITE_RENDUE',
     inputs: { mag_limite_zoom: zoom.value, sb_effectif: sbEffectif, m_lim_oeil: oeil.value },
     ...(oeil.borne === 'AUCUNE' ? {} : { flags: ['HORS_DOMAINE'] as const }),
     note:
-      'Vue réaliste : la magnitude affichée est plafonnée par le fond de ciel du site. ' +
-      'Désactiver la vue réaliste montre le catalogue complet, qui n’est pas ce que l’œil voit.' +
-      horsTable,
+      'Vue réaliste : seules les étoiles visibles depuis ce ciel sont affichées.' + horsTable,
   })
 }
 
@@ -366,10 +363,8 @@ export function bornesZoom(gaiaCharge: boolean, mode: ModeProjection): BornesZoo
     fovMinDeg: K('FOV_MIN_SANS_GAIA_DEG'),
     fovMaxDeg,
     cause:
-      `Zoom limité à ${K('FOV_MIN_SANS_GAIA_DEG')}° de champ : sans le paquet Gaia, le ` +
-      'catalogue HYG donne environ 48 étoiles sur un champ de 5°, et le ciel paraîtrait vide. ' +
-      'Le paquet Gaia (≈ 12 Mo) descend le zoom utile à ' +
-      `${K('FOV_MIN_AVEC_GAIA_DEG')}°.`,
+      `Zoom limité à ${K('FOV_MIN_SANS_GAIA_DEG')}° : chargez le catalogue Gaia pour ` +
+      `zoomer jusqu’à ${K('FOV_MIN_AVEC_GAIA_DEG')}°.`,
   }
 }
 
@@ -401,11 +396,8 @@ export function etatProfondeur(
     ...(epuise
       ? {
           cause:
-            `À ${fovDeg.toFixed(1)}° de champ, la profondeur utile atteint la magnitude ` +
-            `${magLimite.value.toFixed(1)}, au-delà de la magnitude ${profondeurCatalogue.toFixed(1)} ` +
-            'du catalogue chargé. Les étoiles plus faibles ne sont pas affichées : elles ne ' +
-            'sont pas générées non plus, et le champ paraît donc plus pauvre qu’il ne l’est. ' +
-            'Charger le paquet Gaia (≈ 12 Mo) comble l’écart.',
+            `Le catalogue s’arrête à la magnitude ${profondeurCatalogue.toFixed(1)} : le ciel ` +
+            'paraît plus pauvre qu’en vrai. Chargez le catalogue Gaia pour le compléter.',
         }
       : {}),
   }

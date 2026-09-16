@@ -105,15 +105,15 @@ export function LegendeCouleurs(props: { readonly modeNuit: boolean }) {
           seule chose que le marqueur a à dire. Les deux témoins sont donc peints en gris
           d'interface — les rattacher à une teinte laisserait croire à une famille. */}
       <section>
-        <h2>Forme — étendue de l’objet</h2>
+        <h2>Forme — taille de l’objet</h2>
         <ul className="legende-couleurs legende-formes">
           <li>
             <span className="legende-pastille legende-forme" aria-hidden="true" />
-            étendue connue : le marqueur est à l’échelle de l’objet dans le ciel
+            taille réelle dans le ciel
           </li>
           <li>
             <Icone nom="close" classe="legende-croix legende-forme" />
-            étendue inconnue au catalogue : une croix, quel que soit le type
+            taille inconnue
           </li>
         </ul>
       </section>

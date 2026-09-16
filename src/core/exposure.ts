@@ -62,9 +62,7 @@ function flux(entree: EntreeFlux, champ: DomaineId, formula: 'FLUX_CIEL' | 'FLUX
     flags,
     ...(entree.zpEstime === true
       ? {
-          note:
-            'Point zéro générique : le flux est estimé. La plage utile de pose absorbe ' +
-            'l’incertitude — il n’existe aucune calibration à effectuer.',
+          note: 'Sensibilité du matériel estimée : la pose conseillée reste fiable.',
         }
       : {}),
   })
@@ -135,10 +133,8 @@ export function fluxObjetReel(
       constants,
       flags: ['HYP'],
       note:
-        'Hauteur de la cible inconnue : aucune extinction n’est appliquée, et aucune hauteur ' +
-        'n’est supposée. L’intégration annoncée est donc un PLANCHER — au zénith elle serait ' +
-        'déjà 1,37 fois plus longue, et près du double à 30° de hauteur. Choisir la cible ' +
-        'dans le catalogue lui donne des coordonnées, donc une masse d’air.',
+        'Hauteur de la cible inconnue : le temps annoncé est un minimum. Choisissez la cible ' +
+        'dans le catalogue pour un calcul complet.',
     })
     return {
       masseAir: masseAirCible,
@@ -155,9 +151,8 @@ export function fluxObjetReel(
 
   if (masseAirCible.flags?.includes('HORS_DOMAINE') === true) {
     const note =
-      `Masse d’air de ${x.toFixed(2)} : sous ${K('HAUTEUR_MIN_MASSE_AIR_DEG')}° de hauteur ` +
-      'l’approximation 1 / sin(alt) n’est plus valide, et l’extinction n’est donc pas ' +
-      'chiffrée. Rien n’est extrapolé : la cible se réévalue plus haut dans le ciel.'
+      `Cible sous ${K('HAUTEUR_MIN_MASSE_AIR_DEG')}° : trop basse pour chiffrer la perte. ` +
+      'Attendez qu’elle monte.'
     return {
       masseAir: masseAirCible,
       attenuation: trace({
@@ -196,10 +191,8 @@ export function fluxObjetReel(
       constants,
       ...(plageAttenuation === null ? {} : { range: plageAttenuation }),
       note:
-        `${((1 - attenuationValeur) * 100).toFixed(0)} % du flux de l’objet est perdu ` +
-        `dans l’atmosphère à cette hauteur, soit ${(K('EXTINCTION_V_MAG_PAR_MASSE_AIR') * x).toFixed(2)} ` +
-        'mag. L’intégration se paie au carré de cette perte : la HAUTEUR de la cible, pas ' +
-        'seulement la cible, dicte le temps de pose.',
+        `${((1 - attenuationValeur) * 100).toFixed(0)} % de la lumière perdue dans l’air à ` +
+        'cette hauteur. Plus la cible est haute, moins la pose totale est longue.',
     }),
     eObjReel: trace({
       value: eObj.value * attenuationValeur,
@@ -287,8 +280,7 @@ export function poseUnitaire(entree: EntreePose): PoseUnitaire {
     ...(readNoiseEstime
       ? {
           note:
-            `Bruit de lecture inconnu pour ce boîtier : ${K('READ_NOISE_DEFAUT_E')} e⁻ appliqué ` +
-            'et affiché. La pose optimale varie comme le carré de cette valeur.',
+            `Bruit de lecture inconnu : ${K('READ_NOISE_DEFAUT_E')} e⁻ par défaut.`,
         }
       : {}),
   })
@@ -318,31 +310,22 @@ export function poseUnitaire(entree: EntreePose): PoseUnitaire {
       formula: 'PLAGE_UTILE_POSE',
       inputs: { t_recommande_s: tRecommande },
       note:
-        `Poser ${plage[0]} s, ${arrondiObturateur(tRecommande)} s ou ${plage[1]} s revient au ` +
-        'même : l’optimum est plat. Cette plage est aussi ce qui rend toute calibration ' +
-        'inutile.',
+        `${plage[0]} s, ${arrondiObturateur(tRecommande)} s ou ${plage[1]} s : même résultat.`,
     }),
     regime,
     message: bride
-      ? 'La monture bride la pose avant la physique : le bruit de lecture dominera, pour une ' +
-        `perte de rapport signal sur bruit d’environ ${(perte * 100).toFixed(0)} %. Soigner la ` +
-        'mise en station est le levier ; à défaut, le grand champ (§9) reste entièrement ouvert.'
+      ? `La monture limite la pose : environ ${(perte * 100).toFixed(0)} % de qualité perdue. ` +
+        'Le grand champ reste possible.'
       : entree.permissif === true
-        ? 'Pose volontairement raccourcie : l’allonger rapprocherait de l’optimum, au prix du ' +
-          'risque de perdre l’image — c’est l’arbitrage demandé, pas un optimum.'
-        : 'Poser plus longtemps n’apporterait quasi rien et augmenterait le risque de perte : ' +
-          'rafale, avion, étoile brillante saturée.',
+        ? 'Pose raccourcie à votre demande : moins de photos perdues, un peu moins de qualité.'
+        : 'Poser plus longtemps n’apporterait presque rien.',
     ...(bride ? { perteSnrBridee: perte } : {}),
     ...(entree.permissif === true
       ? {
           notePermissif:
-            `Mode permissif : facteur C = ${K('FACTEUR_POSE_C_PERMISSIF')} au lieu de ` +
-            `${K('FACTEUR_POSE_C_DEFAUT')}, donc ${arrondiObturateur(tRecommande)} s de pose au ` +
-            `lieu de ${arrondiObturateur(tOptDefaut)} s, pour une perte de ` +
-            `rapport signal sur bruit de ${(perte * 100).toFixed(1)} % contre ` +
-            `${(perteSnr(K('FACTEUR_POSE_C_DEFAUT')) * 100).toFixed(1)} %. À réserver au ciel ` +
-            'pollué, au suivi imprécis et au vent : quand une pose sur deux part à la poubelle, ' +
-            'la pose courte rapporte plus que ces points de rapport signal sur bruit.',
+            `${arrondiObturateur(tRecommande)} s au lieu de ${arrondiObturateur(tOptDefaut)} s, ` +
+            `pour ${(perte * 100).toFixed(1)} % de qualité perdue au lieu de ` +
+            `${(perteSnr(K('FACTEUR_POSE_C_DEFAUT')) * 100).toFixed(1)} %.`,
         }
       : {}),
     readNoiseUtiliseE: rn,
@@ -427,16 +410,15 @@ export function planIntegration(entree: EntreeIntegration): PlanIntegration {
   const messages: string[] = []
   if (horsDePortee) {
     messages.push(
-      `Cette cible demanderait plus de ${K('INTEGRATION_PLAFOND_H')} h d’intégration avec ce ` +
-        'setup : elle est hors de portée, et l’affichage est plafonné plutôt que de chiffrer ' +
-        'des centaines d’heures. Les leviers sont un ciel plus sombre ou une cible plus brillante.',
+      `Plus de ${K('INTEGRATION_PLAFOND_H')} h de pose : hors de portée. Essayez un ciel ` +
+        'plus noir ou une cible plus brillante.',
     )
   }
   const doubleSnr = integrationRequiseS(entree, snrCible * 2)
   if (Number.isFinite(doubleSnr)) {
     messages.push(
-      `Viser un rapport signal sur bruit de ${snrCible * 2} au lieu de ${snrCible} demanderait ` +
-        `${(doubleSnr / S_PAR_H).toFixed(1)} h, soit quatre fois plus.`,
+      `Qualité ${snrCible * 2} au lieu de ${snrCible} : ${(doubleSnr / S_PAR_H).toFixed(1)} h, ` +
+        'quatre fois plus.',
     )
   }
 
@@ -444,14 +426,11 @@ export function planIntegration(entree: EntreeIntegration): PlanIntegration {
   const nNuitsValeur = creneau !== null && creneau > 0 ? Math.ceil(tRequis / creneau) : null
   if (nNuitsValeur !== null && nNuitsValeur > 1) {
     messages.push(
-      `La capture se répartit sur ${nNuitsValeur} nuits. Chacune demande son propre lot de ` +
-        'darks, pris en fin de séance capteur encore froid : un dark ne vaut que pour la ' +
-        'température de la nuit où il a été pris (§7.4).',
+      `À répartir sur ${nNuitsValeur} nuits, avec des darks à chaque nuit.`,
     )
   }
   messages.push(
-    `Prévoir ${volume.toFixed(1)} Go de carte : le budget de stockage se vérifie avant la ` +
-      'sortie, pas pendant.',
+    `Prévoir ${volume.toFixed(1)} Go de carte.`,
   )
 
   return {
@@ -463,9 +442,7 @@ export function planIntegration(entree: EntreeIntegration): PlanIntegration {
       ...(horsDePortee
         ? {
             flags: ['HORS_DOMAINE' as const],
-            note:
-              'Affichage plafonné : au-delà, la cible est annoncée hors de portée de ce setup ' +
-              'plutôt que chiffrée en centaines d’heures.',
+            note: 'Hors de portée avec ce matériel.',
           }
         : {}),
     }),
@@ -490,9 +467,7 @@ export function planIntegration(entree: EntreeIntegration): PlanIntegration {
           }),
         }),
     horsDePortee,
-    loiFondamentale:
-      'Le rapport signal sur bruit croît comme la racine du temps : DOUBLER LA QUALITÉ ' +
-      'QUADRUPLE LE TEMPS.',
+    loiFondamentale: 'Doubler la qualité demande quatre fois plus de temps.',
     messages,
   }
 }

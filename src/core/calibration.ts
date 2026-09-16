@@ -54,13 +54,11 @@ export function planCalibration(entree: EntreeCalibration): PlanCalibration {
   const darks = lots.find((l) => l.type === 'DARKS')!
 
   const avertissements = [
-    'Ne pas toucher à la bague de mise au point avant les flats : ils ne corrigent le ' +
-      'vignettage que pour la mise au point et l’orientation exactes de la session.',
+    'Ne touchez plus à la bague de mise au point avant les flats.',
   ]
   if (entree.changementFocaleOuOrientation === true) {
     avertissements.push(
-      'Changement de focale ou d’orientation : les flats de la cible précédente ne sont plus ' +
-        'valides, il en faut de nouveaux pour cette cible.',
+      'Focale ou orientation changée : refaites des flats pour cette cible.',
     )
   }
   return {
@@ -69,18 +67,14 @@ export function planCalibration(entree: EntreeCalibration): PlanCalibration {
       value: (darks.nombre * entree.tPoseS) / S_PAR_MIN,
       formula: 'TEMPS_DARKS',
       inputs: { n_darks: darks.nombre, t_pose_s: entree.tPoseS },
-      note:
-        'À ajouter au budget de session, hors mise en place. Les darks se prennent en fin de ' +
-        'session, capteur encore froid.',
+      note: 'Darks à prendre en fin de séance, capteur encore froid.',
     }),
     dithering:
       entree.autoguidage === true
-        ? `Dithering de ${DITHERING_PX.min} à ${DITHERING_PX.max} px entre poses, piloté par ` +
-          'l’autoguidage. Il supprime le bruit à motif fixe et les colonnes chaudes que les ' +
-          'darks laissent passer.'
-        : `Sans autoguidage : dithering à chaque pose, de ${DITHERING_PX.min} à ` +
-          `${DITHERING_PX.max} px, en exploitant la dérive naturelle. Il supprime le bruit à ` +
-          'motif fixe et les colonnes chaudes — ce que les darks, eux, ne suppriment pas.',
+        ? `Dithering de ${DITHERING_PX.min} à ${DITHERING_PX.max} px entre les poses, via ` +
+          'l’autoguidage.'
+        : `Dithering de ${DITHERING_PX.min} à ${DITHERING_PX.max} px à chaque pose : la ` +
+          'dérive naturelle de la monture suffit.',
     avertissements,
   }
 }

@@ -179,7 +179,7 @@ function masseAirMoyenneCreneau(visibles: readonly Echantillon[]): Traced<number
       formula: 'MASSE_AIR_MOYENNE',
       inputs,
       flags: ['DONNEE_MANQUANTE'],
-      note: 'Aucun échantillon visible : le créneau est vide, il n’y a pas de masse d’air.',
+      note: 'Cible jamais visible dans ce créneau.',
     })
   }
   if (altMin < K('HAUTEUR_MIN_MASSE_AIR_DEG')) {
@@ -190,9 +190,7 @@ function masseAirMoyenneCreneau(visibles: readonly Echantillon[]): Traced<number
       constants: ['HAUTEUR_MIN_MASSE_AIR_DEG'],
       flags: ['HORS_DOMAINE'],
       note:
-        `Le créneau descend à ${altMin.toFixed(1)}°, sous les ` +
-        `${K('HAUTEUR_MIN_MASSE_AIR_DEG')}° où l’approximation 1 / sin(alt) cesse d’être ` +
-        'valide : la moyenne n’est pas calculée plutôt que calculée sur des termes faux.',
+        `La cible descend à ${altMin.toFixed(1)}° : trop basse pour chiffrer la masse d’air.`,
     })
   }
   const somme = altitudes.reduce((total, alt) => total + masseAirBrute(alt), 0)
@@ -252,9 +250,7 @@ export function creneauCible(entree: EntreeCreneau): CreneauCible {
       ...commun,
       causeExclusion: 'JAMAIS_LEVE',
       message:
-        `Depuis la latitude ${latitude.toFixed(3)}°, une déclinaison de ` +
-        `${entree.decDeg.toFixed(1)}° ne se lève jamais : la cible reste sous l’horizon toute ` +
-        'l’année. Aucun créneau n’existe, à aucune date.',
+        'Cette cible ne se lève jamais depuis ce lieu.',
     }
   }
 
@@ -265,9 +261,8 @@ export function creneauCible(entree: EntreeCreneau): CreneauCible {
       causeExclusion: 'HAUTEUR',
       latitudeAccessibleDeg: latitudeAccessible,
       message:
-        `La cible culmine à ${altCulmination.value.toFixed(1)}°, sous le seuil de ${seuil}° : ` +
-        'elle est hors du domaine depuis ce site, quelle que soit l’heure. Elle deviendrait ' +
-        `accessible depuis une latitude inférieure à ${latitudeAccessible.toFixed(1)}°.`,
+        `La cible ne monte pas au-delà de ${altCulmination.value.toFixed(1)}° d’ici : trop ` +
+        `basse, il faut au moins ${seuil}°.`,
     }
   }
 
@@ -276,9 +271,7 @@ export function creneauCible(entree: EntreeCreneau): CreneauCible {
       ...commun,
       causeExclusion: 'HORS_FENETRE',
       message:
-        `La cible atteint bien ${altCulmination.value.toFixed(1)}° depuis ce site, mais pas ` +
-        'pendant la fenêtre nocturne de cette date : son passage a lieu de jour. Une autre ' +
-        'date de l’année la ramène dans la nuit.',
+        'La cible passe haut, mais de jour à cette date. Essayez une autre saison.',
     }
   }
 
@@ -289,10 +282,8 @@ export function creneauCible(entree: EntreeCreneau): CreneauCible {
       ...commun,
       causeExclusion: 'RELIEF',
       message:
-        `La cible passe assez haut (${altCulmination.value.toFixed(1)}° à la culmination) mais ` +
-        `reste derrière le relief : le masque d’horizon culmine à ` +
-        `${obstructionDeg(entree.masque, azimutBloquant).toFixed(0)}° dans l’azimut ` +
-        `${azimutBloquant}°. C’est le relief qui exclut cette cible, pas sa hauteur.`,
+        `Cachée par le relief (${obstructionDeg(entree.masque, azimutBloquant).toFixed(0)}° ` +
+        `de haut vers l’azimut ${azimutBloquant}°).`,
     }
   }
 
@@ -300,11 +291,9 @@ export function creneauCible(entree: EntreeCreneau): CreneauCible {
     ...commun,
     message:
       `Créneau de ${dureeTotale.toFixed(0)} min au-dessus de ${seuil}°` +
-      (circumpolaire ? ', cible circumpolaire : ni lever ni coucher' : '') +
+      (circumpolaire ? ', ne se couche jamais' : '') +
       (commun.retournementMeridien
-        ? '. Le passage au méridien scinde le créneau en deux : sur une équatoriale ' +
-          'allemande, le tube heurte le pied et l’orientation du capteur bascule de 180°. ' +
-          'Les flats restent valides, le cadrage se re-vérifie et la séquence redémarre.'
+        ? '. Retournement au méridien en cours de route : recadrer, puis relancer la séquence.'
         : '.'),
   }
 }

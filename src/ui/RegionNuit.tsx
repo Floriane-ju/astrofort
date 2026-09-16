@@ -34,9 +34,7 @@ export function RegionNuit(props: RegionNuitProps) {
         <section>
           <h2>Plan de session</h2>
           <Mention ton="cause">
-            Les catalogues ne sont pas encore vérifiés : aucun plan n’est produit tant qu’un
-            binaire non validé pourrait l’alimenter. Les moteurs de cadrage, de pose et
-            d’intégration restent utilisables sur une cible saisie à la main.
+            Catalogues en cours de vérification : pas encore de plan.
           </Mention>
         </section>
       )}

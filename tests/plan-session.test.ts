@@ -165,7 +165,7 @@ describe('plan de session §8.3', () => {
   })
 
   it('rappelle qu’aucun filtre météo n’est appliqué', () => {
-    expect(plan.avertissementMeteo).toMatch(/météo/)
+    expect(plan.avertissementMeteo).toMatch(/Météo/)
     expect(plan.avertissementMeteo).toMatch(/nuages/)
   })
 
@@ -262,8 +262,7 @@ describe('sur le catalogue OpenNGC embarqué', () => {
   it('dit ce que le catalogue ne porte pas, au lieu d’inventer une magnitude', () => {
     const plan = planSession(contexte(), catalogue)
     expect(plan.comptesEcartees.DONNEE_MANQUANTE).toBeGreaterThan(0)
-    expect(plan.noteCouvertureCatalogue).toMatch(/faute de magnitude/)
-    expect(plan.noteCouvertureCatalogue).toMatch(/Aucune valeur n’est inventée/)
+    expect(plan.noteCouvertureCatalogue).toMatch(/faute de taille ou de magnitude/)
   })
 
   it('nomme la cause de chaque cible écartée, sans jamais en laisser une muette', () => {

@@ -125,16 +125,8 @@ export function ModeNuit({ etat, surChangement }: ModeNuitProps) {
         />
         <span className="etat">{(etat.luminance * POURCENT).toFixed(0)} %</span>
       </label>
-      <p className="etat">
-        Si votre écran est une dalle LCD, l’extinction ne peut pas être totale : le
-        rétroéclairage traverse toujours et une fuite de bleu subsiste. Le mode reste efficace,
-        il est simplement imparfait. Sur OLED, un noir est un pixel éteint.
-      </p>
-      <p className="etat">
-        Aucune animation non sollicitée n’est jouée en mode nuit : le défilement du curseur
-        temporel du planétarium est mis en pause, et la vue le signale. Elle reste
-        manipulable — c’est l’animation qui s’arrête, pas la consultation.
-      </p>
+      <p className="etat">Sur un écran LCD, un peu de lumière passe toujours.</p>
+      <p className="etat">Le défilement du ciel est en pause en mode nuit.</p>
     </section>
   )
 }

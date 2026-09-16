@@ -443,7 +443,7 @@ describe('passe de rendu §3.3', () => {
     expect(label!.couleur).toBe(palette(false).voieLactee)
   })
 
-  it('porte la cause et la latitude quand le centre galactique reste hors d’atteinte', () => {
+  it('dit que le centre galactique reste trop bas quand il est hors d’atteinte', () => {
     const { vise } = viseCentreGalactique()
     const decDeg = versSpherique(depuisGalactique(0, 0)).latitudeDeg
     const culmination = altitudeCulmination(SITE.latitudeDeg, decDeg).value
@@ -451,9 +451,7 @@ describe('passe de rendu §3.3', () => {
 
     const { sortie } = rend({ vise })
     const texte = sortie.labels.find((l) => l.texte.startsWith('Centre galactique'))!.texte
-    expect(texte).toContain(culmination.toFixed(1))
-    // La latitude qui le rendrait accessible : δ + (90° − seuil), soit environ 31° N.
-    expect(texte).toContain((decDeg + 90 - K('SEUIL_HAUTEUR_IMAGERIE_DEG')).toFixed(1))
+    expect(texte).toContain('trop bas')
   })
 
   it('n’annonce aucune cause depuis une latitude où le centre galactique passe haut', () => {
@@ -461,7 +459,7 @@ describe('passe de rendu §3.3', () => {
     const decDeg = versSpherique(depuisGalactique(0, 0)).latitudeDeg
     const { sortie } = rend({ vise, latitudeDeg: decDeg })
     const texte = sortie.labels.find((l) => l.texte.startsWith('Centre galactique'))!.texte
-    expect(texte).not.toContain('culmine')
+    expect(texte).not.toContain('trop bas')
   })
 
   it('soumet le repère du centre galactique au budget de labels, sans passe-droit', () => {

@@ -228,8 +228,7 @@ describe('§6.3 — une Lune sous l’horizon ne dégrade rien, et la fiche le d
   })
 
   it('l’annonce explicitement plutôt que de pénaliser la cible', () => {
-    expect(fiche.detect.noteLune).toMatch(/sous l’horizon/)
-    expect(fiche.detect.noteLune).toMatch(/n’est pénalisée d’aucune façon/)
+    expect(fiche.detect.noteLune).toMatch(/Lune couchée : aucune gêne/)
   })
 })
 
@@ -264,8 +263,8 @@ describe('§6.3 et §7.5 — la même Lune ne pénalise pas tous les types de la
   it('porte la tolérance lunaire du type d’objet dans la fiche', () => {
     expect(emission.r.detect.toleranceLune).toBe('FORTE')
     expect(galaxie.r.detect.toleranceLune).toBe('FAIBLE')
-    expect(emission.r.detect.noteLune).toMatch(/FORTE/)
-    expect(galaxie.r.detect.noteLune).toMatch(/FAIBLE/)
+    expect(emission.r.detect.noteLune).toMatch(/bi-bande/)
+    expect(galaxie.r.detect.noteLune).toMatch(/Lune couchée/)
   })
 
   it('déclenche le conseil bi-bande sur la nébuleuse en émission, par la Lune et non par le Bortle', () => {
@@ -276,7 +275,7 @@ describe('§6.3 et §7.5 — la même Lune ne pénalise pas tous les types de la
 
   it('n’émet aucun conseil filtre sur la galaxie : aucun filtre n’aide un spectre continu', () => {
     expect(galaxie.conseils?.filtre.declenche).toBe(false)
-    expect(galaxie.conseils?.filtre.message).toMatch(/spectre continu/)
+    expect(galaxie.conseils?.filtre.message).toMatch(/Aucun filtre n’aide/)
   })
 })
 

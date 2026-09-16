@@ -194,8 +194,6 @@ export function magnitudeLimitePrevisu(entree: EntreeProfondeur): Traced<number>
     },
     constants: ['SNR_DETECTION_PREVISU', 'PIXELS_PSF_ETOILE', 'POGSON', 'RADIAN_EN_ARCSEC'],
     flags: entree.zpEstime === true ? ['ESTIME'] : [],
-    note:
-      'Profondeur de la pose unitaire, pas de l’empilement : elle dit combien d’étoiles la ' +
-      'prévisualisation affiche, et le PRD la marque encore [À CALCULER].',
+    note: 'Pour une seule photo, avant empilement.',
   })
 }

@@ -39,7 +39,7 @@ describe('mode dégradé de la nuit nautique §8.1', () => {
     expect(nuit.modeDegrade).toBe(true)
     expect(nuit.debutReference).toStrictEqual(nuit.debutNautique)
     expect(nuit.penaliteSbMag).toBe(K('PENALITE_SB_CREPUSCULE_NAUTIQUE_MAG'))
-    expect(nuit.cause).toMatch(/mode dégradé/)
+    expect(nuit.cause).toMatch(/Mode dégradé/)
     expect(nuit.cause).toMatch(/pénalité de fond de ciel/)
   })
 
@@ -61,7 +61,7 @@ describe('dégradation lunaire, modèle de Krisciunas & Schaefer §8.1', () => {
       anglePhaseDeg: 0,
     })
     expect(pleineLuneCouchee.value).toBe(0)
-    expect(pleineLuneCouchee.note).toMatch(/quelle que soit sa phase/)
+    expect(pleineLuneCouchee.note).toMatch(/aucune gêne/)
   })
 
   it('chiffre une pleine Lune haute au lieu de barrer la nuit', () => {
@@ -73,7 +73,7 @@ describe('dégradation lunaire, modèle de Krisciunas & Schaefer §8.1', () => {
       anglePhaseDeg: 0,
     })
     expect(delta.value).toBeGreaterThan(1)
-    expect(delta.note).toMatch(/pas une nuit perdue/)
+    expect(delta.note).toMatch(/poses plus courtes/)
     expect(delta.formula.section).toBe('8.1')
   })
 

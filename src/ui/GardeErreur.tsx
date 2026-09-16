@@ -52,10 +52,7 @@ export function EcranInterrompu({ cause }: { readonly cause: string }) {
     <div className="garde-erreur" role="alert">
       <h1>Le calcul s’est interrompu</h1>
       <Mention ton="erreur">{cause}</Mention>
-      <p className="etat">
-        Les données enregistrées sont intactes. Recharger reprend à la dernière saisie
-        valable ; si l’interruption revient, c’est une valeur enregistrée qui la déclenche.
-      </p>
+      <p className="etat">Vos données sont intactes. Rechargez la page.</p>
       <button type="button" onClick={() => window.location.reload()}>
         Recharger
       </button>

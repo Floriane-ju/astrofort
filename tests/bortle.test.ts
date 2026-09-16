@@ -36,7 +36,7 @@ describe('fond de ciel §2.2, §4.1', () => {
 
   it('demande confirmation pour un SQM plus sombre que le fond de ciel naturel', () => {
     const ciel = fondDeCiel({ sqmMesure: 23.0 })
-    expect(ciel.confirmationRequise).toMatch(/fond de ciel naturel/)
+    expect(ciel.confirmationRequise).toMatch(/plus noir que le ciel le plus noir connu/)
     // Hors du domaine de la table : aucune magnitude limite n'est extrapolée.
     expect(ciel.mLimOeil.value).toBeNull()
     expect(ciel.mLimOeil.flags).toContain('DONNEE_MANQUANTE')

@@ -70,8 +70,7 @@ describe('T-0196 — la légende des couleurs du ciel profond', () => {
   it('énonce la croix comme une règle de forme, pas comme un type', () => {
     const html = renderToStaticMarkup(<LegendeCouleurs modeNuit={false} />)
     expect(html).toContain('Forme')
-    expect(html).toContain('étendue inconnue au catalogue')
-    expect(html).toContain('quel que soit le type')
+    expect(html).toContain('taille inconnue')
     // Une croix par ligne indéterminée, plus celle de la section « forme ».
     const indeterminees = LIGNES_LEGENDE.filter((l) => l.croix)
     expect(indeterminees).toHaveLength(1)

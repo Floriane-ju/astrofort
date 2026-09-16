@@ -68,10 +68,8 @@ export function MasqueHorizonSaisie(props: MasqueHorizonProps) {
         cle="masque_horizon"
         contexte={
           props.masque.estHypothese
-            ? `horizon plat à 0° sur les ${props.masque.altitudesDeg.length} azimuts — [HYP]`
-            : `${props.points.length} relevé${props.points.length > 1 ? 's' : ''} interpolé${
-                props.points.length > 1 ? 's' : ''
-              } sur les ${props.masque.altitudesDeg.length} azimuts`
+            ? 'horizon plat supposé [HYP]'
+            : `${props.points.length} relevé${props.points.length > 1 ? 's' : ''}`
         }
       />
       {/* L'hypothèse plate est une alerte — le relevé saisi, lui, n'est qu'une lecture. */}

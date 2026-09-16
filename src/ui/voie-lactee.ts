@@ -20,7 +20,7 @@ import { pointEcran, type PointEcranMut, type Projecteur } from '../core/project
 import { bandeRealiste, fondRealiste } from './couleurs.ts'
 import { champVisible, horsDuChamp } from './champ-visible.ts'
 import type { CandidatLabel } from '../core/labels.ts'
-import { altitudeCulmination, latitudeAccessibleDeg } from '../core/site.ts'
+import { altitudeCulmination } from '../core/site.ts'
 import { K } from '../registry/constants.ts'
 import { HAUTEUR_LABEL_PX, LARGEUR_CARACTERE_PX, RAYON_CORPS_PX } from './libelles-cibles.ts'
 import type { EntreeDessin } from './dessine-ciel.ts'
@@ -346,9 +346,7 @@ export function repereCentreGalactique(
   const seuil = K('SEUIL_HAUTEUR_IMAGERIE_DEG')
   const texte =
     culmination <= seuil
-      ? `${NOM_CENTRE_GALACTIQUE} ${hauteurCouranteDeg.toFixed(0)}° — culmine à ` +
-        `${culmination.toFixed(1)}°, hors imagerie sauf sous ` +
-        `${latitudeAccessibleDeg(decDeg, seuil).toFixed(1)}° N`
+      ? `${NOM_CENTRE_GALACTIQUE} ${hauteurCouranteDeg.toFixed(0)}° — trop bas pour la photo d’ici`
       : `${NOM_CENTRE_GALACTIQUE} ${hauteurCouranteDeg.toFixed(0)}°`
   return {
     texte,

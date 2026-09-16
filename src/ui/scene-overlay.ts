@@ -26,15 +26,9 @@ import type { ModeProjection } from '../core/projection.ts'
  * profondeur doit le dire, sinon il annonce un capteur moins bon qu'il n'est.
  */
 export const MENTION_PLAFOND_CHAMP =
-  'L’aperçu borne le nombre d’étoiles lues par image : au plein ciel, la profondeur atteinte en ' +
-  'demanderait plus que le rendu n’en peut peindre à l’image. Le capteur descend donc plus bas ' +
-  'que ce qui est peint — la profondeur chiffrée ci-dessus, elle, est celle du capteur. Resserrer ' +
-  'le champ rend l’aperçu plus profond.'
+  'La photo montrera plus d’étoiles que l’aperçu. Zoomez pour en voir davantage.'
 
-export const MENTION_PLAFOND_FILE =
-  'L’aperçu du filé ne peint que les traces qui restent lisibles : au-delà, elles se recouvrent ' +
-  'et la longueur du filé cesse d’être visible. Plus le filé est long, moins il montre ' +
-  'd’étoiles — le capteur, lui, en enregistrerait davantage.'
+export const MENTION_PLAFOND_FILE = 'La photo montrera plus de traînées que l’aperçu.'
 
 /** §5.1 — la projection de la scène n'est pas toujours celle que l'objectif produirait. */
 export function mentionProjection(
@@ -43,9 +37,7 @@ export function mentionProjection(
 ): string | null {
   if (modeScene === modeObjectif) return null
   return (
-    'La scène est en projection de planétarium ; l’objectif déclaré, lui, produirait une ' +
-    `projection ${modeObjectif === 'MODE_FISHEYE' ? 'équidistante' : 'gnomonique'}. ` +
-    'Le contenu du cadre est donc à la bonne place dans le ciel, mais déformé autrement que ' +
-    'sur le capteur. « Voir comme l’objectif » recadre la scène sur le champ du cadre.'
+    `La photo sera déformée autrement${modeObjectif === 'MODE_FISHEYE' ? ' (fisheye)' : ''}. ` +
+    '« Voir comme l’objectif » montre le vrai rendu.'
   )
 }

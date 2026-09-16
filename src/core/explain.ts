@@ -209,11 +209,11 @@ export function explication<P extends Readonly<Record<string, number>>>(entree: 
     n1: entree.verdictN1,
     n2:
       `${entree.phraseFacteur} Facteur${facteurs.length > 1 ? 's' : ''} dominant` +
-      `${facteurs.length > 1 ? 's, présentés conjointement car de sensibilité équivalente' : ''} : ` +
+      `${facteurs.length > 1 ? 's' : ''} : ` +
       `${facteurs.join(' et ')}.` +
       (premier === undefined
         ? ''
-        : ` Levier de premier rang : ${premier.libelle.toLowerCase()} — gain ${premier.gain}, coût ${premier.cout}.`),
+        : ` Premier levier : ${premier.libelle.toLowerCase()} — gain ${premier.gain}, coût ${premier.cout}.`),
     n3: chaineCalcul(entree.etapes),
     facteurs,
     sensibilites: sens,

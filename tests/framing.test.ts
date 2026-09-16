@@ -54,7 +54,7 @@ describe('verdict de domaine §6.1', () => {
     expect(verdict.tailleMinDeg.value).toBeCloseTo(3.79, 2)
     expect(verdict.tailleMaxDeg.value).toBeCloseTo(5.69, 2)
     expect(verdict.phrase).toMatch(/Voie lactée/)
-    expect(verdict.phrase).toMatch(/hors domaine/)
+    expect(verdict.phrase).toMatch(/Trop large/)
   })
 
   it('recalcule la fenêtre au basculement en APS-C sans changer de domaine', () => {
@@ -80,7 +80,7 @@ describe('verdict de domaine §6.1', () => {
     // Aucun objet du catalogue ne mesure plusieurs dizaines de degrés.
     const verdict = verdictDomaine(300, OPENNGC)
     expect(verdict.cibles).toHaveLength(0)
-    expect(verdict.causeAbsence).toMatch(/Aucune cible cataloguée/)
+    expect(verdict.causeAbsence).toMatch(/Aucun objet du catalogue/)
     expect(ciblesDansFenetre(OPENNGC, 100, 200)).toHaveLength(0)
   })
 })
@@ -102,21 +102,20 @@ describe('verdict de cadrage §6.2', () => {
     expect(fiche.verdict).toBe('CADRAGE_LARGE')
     expect(fiche.faisable).toBe(true)
     expect(fiche.angleBoitierDeg).toBe(35)
-    expect(fiche.noteOrientation).toMatch(/grand axe/)
+    expect(fiche.noteOrientation).toMatch(/35°/)
   })
 
   it('exige une mosaïque et chiffre le facteur sur le temps total', () => {
     const fiche = cadre(900, 600)
     expect(fiche.verdict).toBe('MOSAIQUE_REQUISE')
     expect(fiche.nTuiles?.value).toBeGreaterThan(1)
-    expect(fiche.nTuiles?.note).toMatch(/temps total/)
+    expect(fiche.nTuiles?.note).toMatch(/fois plus de temps/)
   })
 
   it('signale l’absence d’angle de position au lieu d’en afficher un arbitraire', () => {
     const fiche = cadre(190, 60)
     expect(fiche.angleBoitierDeg).toBeNull()
-    expect(fiche.noteOrientation).toMatch(/ne donne pas son angle de position/)
-    expect(fiche.noteOrientation).toMatch(/orientation par défaut/)
+    expect(fiche.noteOrientation).toMatch(/orientation inconnue/)
   })
 
   it('refuse le verdict « faisable » à une cible de 44 px, cause et focale à l’appui', () => {
@@ -125,7 +124,7 @@ describe('verdict de cadrage §6.2', () => {
     expect(fiche.diamPx.value).toBeCloseTo(44, 0)
     expect(fiche.faisable).toBe(false)
     expect(fiche.verdict).toBe('HORS_DOMAINE')
-    expect(fiche.cause).toMatch(/0.95 % du champ/)
+    expect(fiche.cause).toMatch(/0.95 % du cadre/)
     expect(fiche.cause).toMatch(/44 px/)
     expect(fiche.focaleIdealeMm).toBeDefined()
   })
@@ -134,7 +133,7 @@ describe('verdict de cadrage §6.2', () => {
     const fiche = cadre(6.5, 6.5)
     expect(fiche.cause).toContain(REFUS_RECADRAGE_LOGICIEL)
     expect(fiche.focaleIdealeMm?.note).toContain(REFUS_RECADRAGE_LOGICIEL)
-    expect(REFUS_RECADRAGE_LOGICIEL).toMatch(/n’ajoute aucun pixel/)
+    expect(REFUS_RECADRAGE_LOGICIEL).toMatch(/n’ajoute pas de détail/)
   })
 
   it('nomme toujours une cause quand la cible est écartée', () => {

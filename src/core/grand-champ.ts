@@ -140,8 +140,7 @@ export function cartePoseMax(entree: EntreeCartePose): CartePoseMax {
       ? {
           flags: ['HORS_DOMAINE' as const],
           note:
-            'Le cadre ne contient que le pôle céleste exact : la NPF y diverge et ne limite ' +
-            'plus la pose.',
+            'Cadre centré sur le pôle : les étoiles n’y filent pas.',
         }
       : {}),
   })
@@ -157,16 +156,14 @@ export function cartePoseMax(entree: EntreeCartePose): CartePoseMax {
   if (longue !== null && pose(longue.tNpfS) >= K('POSE_LONGUE_AVERTISSEMENT_S')) {
     const global = zone === null || zone.tNpfS! >= K('POSE_LONGUE_AVERTISSEMENT_S')
     messages.push(
-      `${global ? 'Sur tout le cadre' : 'Près du pôle, dans ce cadre'}, la pose tolérée dépasse ` +
-        `${K('POSE_LONGUE_AVERTISSEMENT_S')} s : le filé cesse d’y être la contrainte, ce sont ` +
-        'le bruit thermique du capteur et le fond de ciel qui limitent désormais la pose.',
+      `${global ? 'Sur tout le cadre' : 'Près du pôle'}, plus de ` +
+        `${K('POSE_LONGUE_AVERTISSEMENT_S')} s possibles : c’est le bruit et le ciel qui limitent ` +
+        'la pose, plus le filé.',
     )
   }
   if (suiviActif) {
     messages.push(
-      'Suivi actif : la NPF reste affichée à titre informatif, mais la pose opérante devient ' +
-        'le plafond de la monture (§5.2), qui dépend de la mise en station et de l’erreur ' +
-        'périodique, pas de la rotation du ciel.',
+      'Avec suivi, c’est la monture qui limite la pose, pas la rotation du ciel.',
     )
   }
 
@@ -174,7 +171,7 @@ export function cartePoseMax(entree: EntreeCartePose): CartePoseMax {
     cellules,
     cote,
     tMaxCadreS,
-    zoneLimitante: zone === null ? 'aucune : le cadre ne contient que le pôle' : nommeZone(zone.uFrac, zone.vFrac, zone.decDeg),
+    zoneLimitante: zone === null ? 'aucune : cadre centré sur le pôle' : nommeZone(zone.uFrac, zone.vFrac, zone.decDeg),
     decMinAbsDeg: decMinAbs,
     decMaxAbsDeg: decMaxAbs,
     poseOperanteS,

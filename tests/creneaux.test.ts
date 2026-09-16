@@ -51,7 +51,7 @@ describe('hauteur et créneau §8.2', () => {
     expect(creneau.altCulminationDeg.value).toBeCloseTo(19.6, 1)
     expect(creneau.causeExclusion).toBe('HAUTEUR')
     expect(creneau.latitudeAccessibleDeg).toBeCloseTo(36, 1)
-    expect(creneau.message).toMatch(/latitude inférieure/)
+    expect(creneau.message).toMatch(/trop basse/)
   })
 
   it('nomme le relief, et non la hauteur, quand c’est le masque qui bloque', () => {
@@ -72,7 +72,7 @@ describe('hauteur et créneau §8.2', () => {
     })
     expect(creneau.causeExclusion).toBe('RELIEF')
     expect(creneau.message).toMatch(/relief/)
-    expect(creneau.message).toMatch(/pas sa hauteur/)
+    expect(creneau.message).toMatch(/Cachée par le relief/)
   })
 
   it('§8.1 — un relief saisi à 22° dans l’azimut 165 écarte une cible culminant à 19°', () => {
@@ -105,7 +105,7 @@ describe('hauteur et créneau §8.2', () => {
     expect(creneau.causeExclusion).not.toBe('HAUTEUR')
     expect(creneau.dureeTotaleMin.value).toBe(0)
     // §10.2 — l'explication nomme l'azimut bloquant et son altitude d'obstruction.
-    expect(creneau.message).toMatch(/22° dans l’azimut \d+°/)
+    expect(creneau.message).toMatch(/22° de haut vers l’azimut \d+°/)
   })
 
   it('déclare une cible qui ne se lève jamais depuis ce site', () => {
@@ -149,7 +149,7 @@ describe('retournement au méridien §8.2', () => {
     expect(gem.creneaux.length).toBe(2)
     expect(gem.creneaux[1]?.apresRetournement).toBe(true)
     expect(gem.retournementMeridien).toBe(true)
-    expect(gem.message).toMatch(/180°/)
+    expect(gem.message).toMatch(/Retournement au méridien/)
   })
 
   it('ne scinde rien sur une monture sans retournement', () => {

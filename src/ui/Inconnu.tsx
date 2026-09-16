@@ -15,8 +15,7 @@ import { Etiquette } from './Terme.tsx'
 
 /** §5.1 — les trois grandeurs sans lesquelles ni champ, ni échantillonnage, ni pose n'existent. */
 export const AIDE_MATERIEL_INCOMPLET =
-  'Non calculable : complétez le matériel — résolution du capteur, focale, ouverture — dans ' +
-  'la carte Matériel.'
+  'À calculer : indiquez résolution du capteur, focale et ouverture dans Matériel.'
 
 export function Inconnu() {
   return (

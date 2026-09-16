@@ -47,8 +47,7 @@ describe('flux du fond de ciel §7.1', () => {
   it('porte [ESTIMÉ] quand le point zéro est générique, sans écran de calibration', () => {
     const estime = fluxCiel({ sbMagArcsec2: 20.95, ...OPTIQUE_REF, zpEstime: true })
     expect(estime.flags).toContain('ESTIME')
-    expect(estime.note).toMatch(/plage utile de pose absorbe/)
-    expect(estime.note).toMatch(/aucune calibration/)
+    expect(estime.note).toMatch(/estimée/)
   })
 
   it('refuse une brillance hors de la plage 16–22 plutôt que d’extrapoler', () => {
@@ -78,7 +77,7 @@ describe('pose unitaire §7.2', () => {
     const pose = poseUnitaire({ eCiel: E_CIEL, readNoiseE: 1.5, tMaxS: 2.1 })
     expect(pose.regime).toBe('LIMITE_SUIVI')
     expect(pose.perteSnrBridee).toBeCloseTo(0.22, 2)
-    expect(pose.message).toMatch(/bruit de lecture dominera/)
+    expect(pose.message).toMatch(/La monture limite la pose/)
     expect(pose.message).toMatch(/grand champ/)
   })
 
@@ -97,7 +96,6 @@ describe('pose unitaire §7.2', () => {
     const perte = (c: number) => (1 - Math.sqrt(c / (c + 1))) * 100
     expect(permissif.notePermissif).toContain(perte(K('FACTEUR_POSE_C_PERMISSIF')).toFixed(1))
     expect(permissif.notePermissif).toContain(perte(K('FACTEUR_POSE_C_DEFAUT')).toFixed(1))
-    expect(permissif.notePermissif).toMatch(/vent/)
     expect(permissif.notePermissif).toContain(`${permissif.tAfficheeS} s`)
 
     // Éteint, aucune sortie ne bouge : le mode est un choix, pas un réglage silencieux.
@@ -131,7 +129,7 @@ describe('pose unitaire §7.2', () => {
     expect(pose.readNoiseUtiliseE).toBe(K('READ_NOISE_DEFAUT_E'))
     expect(pose.readNoiseEstime).toBe(true)
     expect(pose.tOptS.flags).toContain('ESTIME')
-    expect(pose.tOptS.note).toMatch(/3 e⁻ appliqué/)
+    expect(pose.tOptS.note).toMatch(/3 e⁻ par défaut/)
   })
 
   it('arrondit à une valeur d’obturateur usuelle', () => {
@@ -162,7 +160,7 @@ describe('nombre de poses et intégration §7.3', () => {
     const snr10 = planIntegration({ ...BASE, snrCible: 10 }).tRequisS.value
     const snr20 = planIntegration({ ...BASE, snrCible: 20 }).tRequisS.value
     expect(snr20 / snr10).toBeCloseTo(4, 1)
-    expect(planIntegration({ ...BASE, snrCible: 10 }).loiFondamentale).toMatch(/QUADRUPLE LE TEMPS/)
+    expect(planIntegration({ ...BASE, snrCible: 10 }).loiFondamentale).toMatch(/quatre fois plus de temps/)
     expect(planIntegration({ ...BASE, snrCible: 10 }).messages.join(' ')).toMatch(/quatre fois plus/)
   })
 
@@ -174,7 +172,7 @@ describe('nombre de poses et intégration §7.3', () => {
   it('répartit sur plusieurs nuits et prescrit un lot de darks par nuit', () => {
     const plan = planIntegration({ ...BASE, snrCible: 20, dureeCreneauS: 2 * 3600 })
     expect(plan.nNuits?.value).toBeGreaterThan(1)
-    expect(plan.messages.join(' ')).toMatch(/son propre lot de darks/)
+    expect(plan.messages.join(' ')).toMatch(/darks à chaque nuit/)
   })
 
   it('plafonne l’affichage et annonce la cible hors de portée quand le flux tend vers zéro', () => {

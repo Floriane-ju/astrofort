@@ -112,17 +112,14 @@ export function conseilFiltre(entree: EntreeConseilFiltre): ConseilFiltre {
     return {
       ...rien,
       message:
-        'Aucun conseil filtre sur cet objet : il émet en spectre continu, et un filtre à ' +
-        'bande étroite couperait son signal autant que le fond de ciel. Seuls un ciel plus ' +
-        'noir ou plus de temps d’intégration aideront ici.',
+        'Aucun filtre n’aide sur cet objet : visez un ciel plus noir ou un temps de pose plus long.',
     }
   }
   if (entree.filtresPossedes.includes('DUAL_BAND')) {
     return {
       ...rien,
       message:
-        'Filtre bi-bande déjà déclaré au profil : il est intégré au calcul du fond de ciel, ' +
-        'et n’est plus proposé.',
+        'Filtre bi-bande déjà pris en compte.',
     }
   }
   const cielDegrade =
@@ -132,15 +129,14 @@ export function conseilFiltre(entree: EntreeConseilFiltre): ConseilFiltre {
     return {
       ...rien,
       message:
-        'Le fond de ciel n’est pas le facteur limitant ici : aucun conseil filtre n’est émis.',
+        'Le ciel n’est pas le problème ici : pas besoin de filtre.',
     }
   }
   if (!entree.explicationDepliee) {
     return {
       ...rien,
       message:
-        'Conseil disponible dans l’explication du verdict : rien n’est affiché tant qu’elle ' +
-        'n’est pas dépliée.',
+        'Conseil filtre dans l’explication du verdict.',
     }
   }
 
@@ -155,12 +151,9 @@ export function conseilFiltre(entree: EntreeConseilFiltre): ConseilFiltre {
     gainSnr: gain,
     fractionTransmise: fraction,
     message:
-      'Un filtre bi-bande ne transmet que Hα et OIII, deux raies d’émission étroites. Il ' +
-      'rejette l’essentiel du fond de ciel — pollution lumineuse comme Lune — tout en ' +
-      `conservant le signal de la nébuleuse. Sans filtre : ${dureeLisible(tSans)} ` +
-      `d’intégration. Avec : ${dureeLisible(tAvec)}, soit un rapport de ` +
-      `${(tSans / tAvec).toFixed(1)} sur le temps et de ${gain.toFixed(1)} sur le rapport ` +
-      'signal sur bruit. La cible reste planifiable sans filtre : dégradée, pas refusée.',
+      'Un filtre bi-bande coupe la pollution lumineuse et la Lune, pas la nébuleuse. ' +
+      `Sans filtre : ${dureeLisible(tSans)} de pose. Avec : ${dureeLisible(tAvec)}, ` +
+      `${(tSans / tAvec).toFixed(1)} fois moins. La cible reste planifiable sans filtre.`,
   }
 }
 
@@ -201,15 +194,14 @@ export function recommandationsEquipement(
       recommandations: [],
       silencieux: true,
       message:
-        'Aucune recommandation d’équipement tant que l’explication du verdict n’est pas ' +
-        'dépliée : jamais de bandeau, jamais de suggestion en liste de cibles.',
+        'Conseils matériel dans l’explication du verdict.',
     }
   }
   if (!entree.verdictDefavorable) {
     return {
       recommandations: [],
       silencieux: true,
-      message: 'Le verdict est favorable : aucun équipement n’est recommandé.',
+      message: 'Verdict favorable : votre matériel suffit.',
     }
   }
   if (entree.leviersPresentes.length === 0) {
@@ -217,8 +209,7 @@ export function recommandationsEquipement(
       recommandations: [],
       silencieux: true,
       message:
-        'Les leviers de coût inférieur — changer de cible, attendre un meilleur créneau, un ' +
-        'site plus sombre, plus de temps — sont présentés avant toute recommandation d’achat.',
+        'Essayez d’abord une autre cible, un meilleur créneau, un ciel plus noir ou plus de temps.',
     }
   }
 
@@ -247,10 +238,9 @@ export function recommandationsEquipement(
       avec: `${entree.focaleIdealeMm.toFixed(0)} mm`,
       rapport: entree.focaleIdealeMm / entree.focaleActuelleMm,
       explication:
-        `À ${entree.focaleActuelleMm.toFixed(0)} mm la cible est noyée dans le champ. La focale ` +
-        `qui la cadrerait au remplissage visé est de ${entree.focaleIdealeMm.toFixed(0)} mm. ` +
-        'Recadrer au traitement n’ajoute aucun pixel : seule la focale change le diamètre en ' +
-        'pixels.',
+        `À ${entree.focaleActuelleMm.toFixed(0)} mm, la cible est trop petite dans l’image. ` +
+        `Il faudrait environ ${entree.focaleIdealeMm.toFixed(0)} mm ; recadrer ensuite ` +
+        'n’ajoute pas de détail.',
     })
   }
 
@@ -266,9 +256,8 @@ export function recommandationsEquipement(
       avec: '1 tuile',
       rapport: entree.nTuiles,
       explication:
-        `La mosaïque demande ${entree.nTuiles} tuiles, donc ${entree.nTuiles} fois le temps ` +
-        'de session d’une cible unique. Une focale plus courte ramène la cible dans un seul ' +
-        'cadre.',
+        `La mosaïque demande ${entree.nTuiles} photos, donc ${entree.nTuiles} fois plus de ` +
+        'temps. Une focale plus courte fait tenir la cible en une seule.',
     })
   }
 
@@ -280,9 +269,8 @@ export function recommandationsEquipement(
       avec: `${entree.tOptS.toFixed(1)} s de pose`,
       rapport: entree.tOptS / entree.tMaxSuiviS,
       explication:
-        'Sans suivi, la pose est bridée par la rotation du ciel bien avant l’optimum ' +
-        'photométrique : le bruit de lecture domine. Une monture de suivi rend accessible la ' +
-        'pose optimale, et avec elle les cibles faibles aujourd’hui hors de portée.',
+        'Sans suivi, les poses restent trop courtes. Une monture de suivi ouvre les cibles ' +
+        'faibles.',
     })
   }
 
@@ -299,9 +287,8 @@ export function recommandationsEquipement(
       avec: `au-delà de ${K('PLAFOND_POSE_SANS_AUTOGUIDAGE_S')} s`,
       rapport: entree.tOptS / entree.tMaxSuiviS,
       explication:
-        `La pose est au plafond de ${K('PLAFOND_POSE_SANS_AUTOGUIDAGE_S')} s tenable sans ` +
-        'autoguidage, malgré une mise en station soignée. C’est l’autoguidage, et lui seul, ' +
-        'qui lève ce plafond.',
+        `Sans autoguidage, les poses plafonnent à ${K('PLAFOND_POSE_SANS_AUTOGUIDAGE_S')} s, ` +
+        'même bien mis en station.',
     })
   }
 
@@ -310,10 +297,7 @@ export function recommandationsEquipement(
     silencieux: recommandations.length === 0,
     message:
       recommandations.length === 0
-        ? 'Aucun équipement dont le gain soit calculable par les moteurs existants ne ' +
-          'changerait ce verdict. Rien n’est recommandé : un gain non chiffrable est hors ' +
-          'périmètre.'
-        : 'Chaque recommandation nomme une catégorie et chiffre son gain par un différentiel ' +
-          'calculé. Aucune marque, aucun modèle, aucun prix.',
+        ? 'Aucun achat ne changerait ce verdict de façon chiffrable.'
+        : 'Gains calculés pour votre cas.',
   }
 }

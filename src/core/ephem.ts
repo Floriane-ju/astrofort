@@ -45,10 +45,8 @@ export class HorsDomaineSeriesError extends Error {
 
   constructor(annee: number) {
     super(
-      `Année ${annee} hors du domaine de validité des séries analytiques ` +
-        `[${K('ANNEE_MIN_SERIES')} ; ${K('ANNEE_MAX_SERIES')}]. Les corps du système ` +
-        'solaire sont masqués plutôt qu’extrapolés en silence (§3.1, §12.4). Les étoiles ' +
-        'et les constellations restent affichées.',
+      `Année ${annee} hors de ${K('ANNEE_MIN_SERIES')}–${K('ANNEE_MAX_SERIES')} : ` +
+        'Soleil, Lune et planètes masqués.',
     )
     this.name = 'HorsDomaineSeriesError'
     this.annee = annee

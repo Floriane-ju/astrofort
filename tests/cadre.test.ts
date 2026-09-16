@@ -19,7 +19,6 @@ import {
 } from '../src/core/cadre.ts'
 import { ficheCadrage } from '../src/core/framing.ts'
 import { vuePlanetarium } from '../src/ui/scene-etat.ts'
-import { RAPPORT_AXES_ORIENTATION } from '../src/registry/verdicts.ts'
 import { fovDeg } from '../src/core/optics.ts'
 import { BOITIER_REFERENCE, capteurEffectif } from '../src/data/equipment.ts'
 import { IDENTITE, separationDeg, versSpherique, versVecteur } from '../src/core/mat3.ts'
@@ -193,8 +192,7 @@ describe('cible dans le cadre §3.5, §6.2', () => {
     const suggestion = rotationSuggeree(dominante!, CADRE, IDENTITE)
     expect(suggestion.angleDeg).toBeNull()
     // §6.2 — l'absence de donnée est nommée : un silence se lirait « déjà bien cadré ».
-    expect(suggestion.message).toMatch(/angle de position/)
-    expect(suggestion.message).toMatch(/faute de donnée/)
+    expect(suggestion.message).toMatch(/orientation est inconnue/)
   })
 
   it('ne suggère aucun angle sous le seuil de rapport d’axes, et le dit', () => {
@@ -203,14 +201,14 @@ describe('cible dans le cadre §3.5, §6.2', () => {
     const dominante = cibleDominante([ronde], CADRE, IDENTITE)
     const suggestion = rotationSuggeree(dominante!, CADRE, IDENTITE)
     expect(suggestion.angleDeg).toBeNull()
-    expect(suggestion.message).toMatch(String(RAPPORT_AXES_ORIENTATION))
+    expect(suggestion.message).toMatch(/presque ronde/)
   })
 
   it('nomme le petit axe manquant plutôt que de supposer la cible allongée', () => {
     const dominante = cibleDominante([objet('sans petit axe', 0, 60, 23, null)], CADRE, IDENTITE)
     const suggestion = rotationSuggeree(dominante!, CADRE, IDENTITE)
     expect(suggestion.angleDeg).toBeNull()
-    expect(suggestion.message).toMatch(/petit axe/)
+    expect(suggestion.message).toMatch(/Forme de .* inconnue/)
   })
 
   it('propose un angle borné à un demi-tour, appliqué d’un clic', () => {
@@ -219,8 +217,8 @@ describe('cible dans le cadre §3.5, §6.2', () => {
     expect(suggestion.angleDeg).not.toBeNull()
     expect(suggestion.angleDeg!).toBeGreaterThanOrEqual(0)
     expect(suggestion.angleDeg!).toBeLessThan(180)
-    expect(suggestion.message).toMatch(/grande dimension du capteur/)
-    expect(suggestion.message).toMatch(/rotation de champ/)
+    expect(suggestion.message).toMatch(/longueur du capteur/)
+    expect(suggestion.message).toMatch(/à cette heure/)
   })
 
   it('amène le grand axe sur la grande dimension du capteur quand l’angle est appliqué', () => {
@@ -324,7 +322,7 @@ describe('garde-fous du cadre §3.5', () => {
   // T-0153 — le refus n'a plus d'écran : le menu d'information qui le portait est démonté.
   // Reste la règle elle-même, qui interdit au moteur d'inventer un cadre sans profil.
   it('refuse d’inventer un cadre sans profil déclaré', () => {
-    expect(REFUS_SANS_PROFIL).toMatch(/ne superpose pas de cadre par défaut/)
+    expect(REFUS_SANS_PROFIL).toMatch(/Pas de cadre/)
   })
 
   it('borne la comparaison à trois profils simultanés', () => {

@@ -172,8 +172,8 @@ export function PanneauCibles(props: PanneauCiblesProps) {
 
       <p className="etat">
         {portee === 'CATALOGUE'
-          ? `Le catalogue embarqué, ${catalogue.length.toLocaleString('fr-FR')} entrées, sans contrainte de date.`
-          : `Cibles ayant un créneau au-dessus de ${seuil}° cette nuit, cadrables par ce capteur.`}
+          ? `Tout le catalogue, ${catalogue.length.toLocaleString('fr-FR')} objets.`
+          : `Objets à plus de ${seuil}° cette nuit, qui tiennent dans votre cadre.`}
       </p>
 
       <div className="cibles-filtres">
@@ -228,7 +228,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
               ? domaineCpFerme
               : recherche.trim() === ''
                 ? 'Aucun objet ne passe ces filtres.'
-                : 'Aucun objet du catalogue ne porte ce nom.'}
+                : 'Aucun objet de ce nom.'}
           </p>
         )}
       </div>
@@ -245,10 +245,8 @@ export function PanneauCibles(props: PanneauCiblesProps) {
 
       {props.contexteSession !== null && (
         <p className="etat cibles-note">
-          La pose requise vise un rapport signal sur bruit de {props.contexteSession.snrCible} avec
-          le matériel courant et le fond de ciel du site. Elle double si le site perd
-          0,75 mag/as². La note de facilité lit les poids de scoring réglés au plan de séance — un
-          tiret dit que la cible n’a pas été évaluée, pas qu’elle est impossible.
+          Temps de pose total pour un signal/bruit de {props.contexteSession.snrCible}. Un tiret :
+          cible non évaluée.
         </p>
       )}
     </section>

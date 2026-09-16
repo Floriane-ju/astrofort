@@ -115,9 +115,8 @@ export function PlanSessionVue(props: PlanSessionProps) {
         <TracedValue terme="budget_nuit" trace={plan.budget.totalMin} decimales={0} unite="min" />
         <Mention ton={plan.budget.tient ? 'etat' : 'cause'}>
           {plan.budget.tient
-            ? 'Le budget tient dans la nuit disponible.'
-            : 'Le budget dépasse la nuit : une cible entière a été retirée plutôt qu’une ' +
-              'intégration tronquée.'}
+            ? 'Tout tient dans la nuit.'
+            : 'Trop long pour la nuit : une cible a été retirée.'}
         </Mention>
       </section>
 
@@ -154,10 +153,6 @@ export function PlanSessionVue(props: PlanSessionProps) {
 
       <section>
         <h2>Export imprimable</h2>
-        <p className="etat">
-          Un plan qui exige un écran allumé trois heures est un plan qui vide la batterie :
-          l’export est du texte brut, imprimable et lisible hors de l’application.
-        </p>
         <div className="actions">
           <button type="button" onClick={surTelecharge}>
             Télécharger le plan (texte)
@@ -203,7 +198,7 @@ function Etape({ etape, rang, ...props }: EtapeProps) {
         {etape.integration.tRequisS.range !== undefined &&
           ` (${dureeLisible(etape.integration.tRequisS.range[0])} à ${dureeLisible(
             etape.integration.tRequisS.range[1],
-          )} selon la transparence du ciel)`}
+          )} selon le ciel)`}
       </p>
       <p className="etat">
         Verdict {etape.verdict ?? '[DONNÉE MANQUANTE]'} · cadrage {etape.verdictCadrage} · fond
@@ -211,15 +206,13 @@ function Etape({ etape, rang, ...props }: EtapeProps) {
       </p>
       {!etape.integrationComplete && (
         <Mention ton="cause">
-          La nuit ne couvre pas l’intégration requise : {etape.nNuits} nuits sont annoncées
-          plutôt qu’un plan irréalisable. Aucune intégration n’est tronquée en silence.
+          Trop long pour une nuit : prévoir {etape.nNuits} nuits.
         </Mention>
       )}
       {etape.creneau.retournementMeridien && (
         <Mention ton="cause">
-          Retournement au méridien à {heure(etape.creneau.heureCulmination!)} : l’orientation du
-          capteur bascule de 180°, les flats restent valides, le cadrage se re-vérifie et la
-          séquence redémarre.
+          Retournement au méridien à {heure(etape.creneau.heureCulmination!)} : recadrer, puis
+          relancer la séquence.
         </Mention>
       )}
       {/* §7.6 — la masse d'air qui a dosé cette intégration : la MOYENNE du créneau, pas

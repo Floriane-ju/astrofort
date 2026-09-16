@@ -38,32 +38,32 @@ export const TABLE_DOMAINES: readonly LigneDomaine[] = Object.freeze(
       borneHauteDeg: 0.05,
       libelle: 'longue focale',
       phrase:
-        'Excellent pour les galaxies lointaines et les nébuleuses planétaires, hors domaine ' +
-        'pour les grands complexes nébuleux, qui déborderont largement du champ.',
+        'Idéal pour les petites galaxies et les nébuleuses planétaires. Trop serré pour les ' +
+        'grandes nébuleuses.',
     },
     {
       domaine: 'DOMAINE_CLASSIQUE',
       borneHauteDeg: 0.5,
       libelle: 'classique',
       phrase:
-        'Excellent pour le Messier standard, les amas et les galaxies proches, hors domaine ' +
-        'pour les régions entières de la Voie lactée.',
+        'Idéal pour la plupart des objets Messier, amas et galaxies proches. Trop serré pour ' +
+        'la Voie lactée.',
     },
     {
       domaine: 'DOMAINE_GRAND_CHAMP',
       borneHauteDeg: 2.0,
       libelle: 'grand champ',
       phrase:
-        'Excellent pour les grandes nébuleuses, M31, M42 et les Pléiades, hors domaine pour ' +
-        'les galaxies lointaines, qui ne feront que quelques dizaines de pixels.',
+        'Idéal pour les grandes nébuleuses, M31, M42 et les Pléiades. Trop large pour les ' +
+        'petites galaxies.',
     },
     {
       domaine: 'DOMAINE_TRES_GRAND_CHAMP',
       borneHauteDeg: Number.POSITIVE_INFINITY,
       libelle: 'très grand champ',
       phrase:
-        'Excellent pour la Voie lactée et les grands complexes nébuleux, hors domaine pour ' +
-        'les galaxies, qui resteront des taches de quelques pixels.',
+        'Idéal pour la Voie lactée et les grandes régions nébuleuses. Trop large pour les ' +
+        'galaxies.',
     },
   ].map(Object.freeze) as LigneDomaine[],
 )
@@ -102,40 +102,38 @@ export const TABLE_CADRAGE: readonly LigneCadrage[] = Object.freeze(
       remplissageMin: 1.0,
       faisable: true,
       message:
-        'La cible déborde du champ : elle demande une mosaïque, donc autant de sessions ' +
-        'partielles que de tuiles.',
+        'La cible déborde du cadre : il faut une mosaïque de plusieurs photos.',
     },
     {
       verdict: 'CADRAGE_SERRE',
       remplissageMin: K('REMPLISSAGE_CADRE_MAX'),
       faisable: true,
       message:
-        'Cadrage serré : la marge est faible, le centrage et la mise en station deviennent ' +
-        'critiques.',
+        'Cadrage serré : centrez avec soin.',
     },
     {
       verdict: 'CADRAGE_OPTIMAL',
       remplissageMin: K('REMPLISSAGE_CADRE_MIN'),
       faisable: true,
-      message: 'Cadrage optimal : la cible occupe la fenêtre visée par C-05.',
+      message: 'Cadrage idéal.',
     },
     {
       verdict: 'CADRAGE_LARGE',
       remplissageMin: 0.15,
       faisable: true,
-      message: 'Cadrage large : acceptable, la cible est montrée dans son contexte de champ.',
+      message: 'Cadrage large : la cible apparaît avec son environnement.',
     },
     {
       verdict: 'CADRAGE_PERDU',
       remplissageMin: 0.02,
       faisable: false,
-      message: 'Objet noyé dans le champ : il n’occupe qu’une fraction marginale de l’image.',
+      message: 'Cible trop petite : perdue dans l’image.',
     },
     {
       verdict: 'HORS_DOMAINE',
       remplissageMin: 0,
       faisable: false,
-      message: 'Hors domaine de ce setup : la cible est trop petite pour cette focale.',
+      message: 'Cible bien trop petite pour cette focale.',
     },
   ].map(Object.freeze) as LigneCadrage[],
 )
@@ -218,8 +216,7 @@ export const PRESCRIPTIONS_CALIBRATION: readonly PrescriptionCalibration[] = Obj
       max: 30,
       defaut: 25,
       consigne:
-        'Même focale, même mise au point, même orientation, sans jamais démonter l’objectif. ' +
-        'Exposition visant la moitié de la saturation. Ils corrigent le vignettage.',
+        'Sans toucher à la mise au point ni à l’orientation. Exposer à mi-saturation.',
     },
     {
       type: 'DARKS',
@@ -227,8 +224,7 @@ export const PRESCRIPTIONS_CALIBRATION: readonly PrescriptionCalibration[] = Obj
       max: 50,
       defaut: 30,
       consigne:
-        'Même durée, même ISO, même température de capteur. Sur un boîtier non régulé, les ' +
-        'prendre en fin de session, capteur encore froid.',
+        'Bouchon en place, même durée et même ISO. En fin de séance, capteur encore froid.',
     },
     {
       type: 'OFFSETS',
@@ -236,8 +232,7 @@ export const PRESCRIPTIONS_CALIBRATION: readonly PrescriptionCalibration[] = Obj
       max: 100,
       defaut: 50,
       consigne:
-        'Au temps de pose minimum, à l’ISO de session, obturateur fermé. Réutilisables tant ' +
-        'que l’ISO ne change pas.',
+        'Bouchon en place, pose la plus courte, même ISO. Réutilisables tant que l’ISO ne change pas.',
     },
   ].map(Object.freeze) as PrescriptionCalibration[],
 )
@@ -297,13 +292,13 @@ export const CATALOGUE_LEVIERS: readonly LevierCatalogue[] = Object.freeze(
     {
       code: 'PLUS_DE_TEMPS',
       libelle: 'Intégrer plus longtemps',
-      gain: 'en racine du temps — quadrupler le temps double le rapport signal sur bruit',
+      gain: 'quatre fois plus de temps pour deux fois plus de qualité',
       cout: 'temps de session',
     },
     {
       code: 'FILTRE_DUAL_BAND',
       libelle: 'Ajouter un filtre bi-bande',
-      gain: 'fort, mais UNIQUEMENT sur les objets en émission',
+      gain: 'fort, mais seulement sur les nébuleuses en émission',
       cout: 'achat',
     },
     {

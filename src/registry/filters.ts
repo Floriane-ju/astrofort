@@ -38,36 +38,28 @@ export const TABLE_FILTRES: readonly LigneFiltre[] = Object.freeze(
       libelle: 'Sans filtre — large bande',
       bandesNm: [],
       typesUtiles: [],
-      note: 'Tout le spectre visible atteint le capteur, fond de ciel compris.',
+      note: 'Toute la lumière passe, pollution comprise.',
     },
     {
       famille: 'DUAL_BAND',
       libelle: 'Filtre bi-bande Hα / OIII',
       bandesNm: [7, 7],
       typesUtiles: TYPES_EN_EMISSION,
-      note:
-        'Deux fenêtres étroites centrées sur Hα et OIII. Il rejette l’essentiel de la ' +
-        'pollution lumineuse et de la Lune tout en conservant le signal des nébuleuses en ' +
-        'émission. Sur une galaxie, un amas ou une nébuleuse par réflexion, il coupe le ' +
-        'signal aussi : il n’est jamais recommandé sur ces objets.',
+      note: 'Coupe pollution et Lune, garde les nébuleuses en émission. Inutile sur les galaxies.',
     },
     {
       famille: 'UHC',
       libelle: 'Filtre à bande passante élargie',
       bandesNm: [25],
       typesUtiles: TYPES_EN_EMISSION,
-      note:
-        'Fenêtre unique plus large : gain moindre qu’un bi-bande, mais plus tolérant sur la ' +
-        'mise au point et sur les optiques très ouvertes.',
+      note: 'Moins efficace qu’un bi-bande, mais plus tolérant sur les objectifs très ouverts.',
     },
     {
       famille: 'OIII',
       libelle: 'Filtre OIII seul',
       bandesNm: [6],
       typesUtiles: ['NEB_PLANETAIRE', 'RESTE_SUPERNOVA'],
-      note:
-        'Bande unique sur l’oxygène doublement ionisé : réservé aux nébuleuses planétaires ' +
-        'et aux restes de supernova, où cette raie porte l’essentiel du signal.',
+      note: 'Réservé aux nébuleuses planétaires et aux restes de supernova.',
     },
   ].map(Object.freeze) as LigneFiltre[],
 )
@@ -76,6 +68,4 @@ export function ligneFiltre(famille: FamilleFiltre): LigneFiltre {
   return TABLE_FILTRES.find((l) => l.famille === famille) ?? TABLE_FILTRES[0]!
 }
 
-export const SOURCE_TABLE_FILTRES =
-  'Largeurs de bande usuelles par famille de filtres. Aucune donnée commerciale, aucune ' +
-  'marque, aucun prix.'
+export const SOURCE_TABLE_FILTRES = 'largeurs de bande usuelles.'

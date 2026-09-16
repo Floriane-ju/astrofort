@@ -17,8 +17,7 @@ export function rappelBatterie(dureeMin: number): string | null {
   const seuil = K('DUREE_RAPPEL_BATTERIE_MIN')
   if (!Number.isFinite(dureeMin) || dureeMin <= seuil) return null
   return (
-    `Attention à la batterie : ${dureeLisible(dureeMin * S_PAR_MIN)} de prise de vue, au-delà ` +
-    `des ${seuil} min à partir desquelles une charge unique devient juste. Prévoir de quoi ` +
-    'tenir la nuit — l’application ne chiffre aucune autonomie, elle serait fausse.'
+    `Attention à la batterie : ${dureeLisible(dureeMin * S_PAR_MIN)} de prise de vue. ` +
+    'Prévoyez de quoi tenir la nuit.'
   )
 }

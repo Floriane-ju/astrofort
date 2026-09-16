@@ -219,7 +219,7 @@ describe('profondeur asservie au zoom §3.3', () => {
     const bortle8 = interpoleBortle(8)
     expect(magnitudeRendue(60, bortle8.sb, true).value).toBeCloseTo(bortle8.mLimOeil, 9)
     expect(magnitudeRendue(60, bortle8.sb, false).value).toBeCloseTo(K('MAG_BASE_RENDU'), 9)
-    expect(magnitudeRendue(60, bortle8.sb, true).note).toMatch(/plafonnée par le fond de ciel/)
+    expect(magnitudeRendue(60, bortle8.sb, true).note).toMatch(/visibles depuis ce ciel/)
   })
 
   /**
@@ -233,7 +233,7 @@ describe('profondeur asservie au zoom §3.3', () => {
     const sousLaLune = magnitudeRendue(60, horsTableClair, true)
     expect(sousLaLune.value).toBeCloseTo(M_LIM_OEIL_PLANCHER, 9)
     expect(sousLaLune.value).toBeLessThan(magnitudeRendue(60, interpoleBortle(9).sb, true).value + 1e-9)
-    expect(sousLaLune.note).toMatch(/bord de table/)
+    expect(sousLaLune.note).toMatch(/plus clair que Bortle 9/)
     expect(sousLaLune.flags).toContain('HORS_DOMAINE')
 
     // L'autre bord : un SQM plus sombre que la table ne fait pas tomber le plafond non plus.
@@ -248,13 +248,13 @@ describe('profondeur asservie au zoom §3.3', () => {
     const serre = etatProfondeur(5, profondeurHyg, null, false)
     expect(serre.catalogueEpuise).toBe(true)
     expect(serre.cause).toMatch(/Gaia/)
-    expect(serre.cause).toMatch(/ne sont pas générées/)
+    expect(serre.cause).toMatch(/plus pauvre qu’en vrai/)
   })
 
   it('plafonne le zoom à 15° sans le paquet Gaia, et le déclare', () => {
     const sans = bornesZoom(false, 'MODE_PLANETARIUM')
     expect(sans.fovMinDeg).toBe(K('FOV_MIN_SANS_GAIA_DEG'))
-    expect(sans.cause).toMatch(/12 Mo/)
+    expect(sans.cause).toMatch(/Gaia/)
     const avec = bornesZoom(true, 'MODE_PLANETARIUM')
     expect(avec.fovMinDeg).toBe(K('FOV_MIN_AVEC_GAIA_DEG'))
     expect(avec.cause).toBeUndefined()

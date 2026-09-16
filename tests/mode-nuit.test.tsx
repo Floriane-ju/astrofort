@@ -457,7 +457,7 @@ describe('interface rendue', () => {
 
   it('expose le réglage du mode nuit et la limite des dalles LCD', () => {
     expect(ecran).toContain('Activer le mode nuit')
-    expect(ecran).toMatch(/dalle LCD/)
+    expect(ecran).toMatch(/écran LCD/)
     expect(ecran).toMatch(/mode nuit/i)
   })
 

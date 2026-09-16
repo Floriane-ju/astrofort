@@ -54,9 +54,7 @@ export function npf(entree: EntreeNpf): Traced<number | null> {
       constants,
       flags: ['HORS_DOMAINE'],
       note:
-        'Au pôle céleste exact, les étoiles ne se déplacent plus : la NPF diverge et n’est ' +
-        'plus la contrainte. Ce sont le bruit thermique et le fond de ciel qui limitent alors ' +
-        'la pose.',
+        'Au pôle, les étoiles ne filent pas : pas de limite de pose.',
     })
   }
 
@@ -70,9 +68,7 @@ export function npf(entree: EntreeNpf): Traced<number | null> {
     ...(entree.tolerance === 'TOLERANT'
       ? {
           note:
-            'Tolérance k = 2 : les étoiles ne sont plus ponctuelles en visualisation pixel, ' +
-            'mais la traînée reste invisible sur un tirage ou un écran. Jamais appliquée en ' +
-            'silence.',
+            'Tolérance large : étoiles un peu étirées à 100 %, invisibles sur un tirage ou un écran.',
         }
       : {}),
   })
@@ -132,9 +128,7 @@ export function profilSuivi(entree: EntreeSuivi): ProfilSuivi {
 
   if (entree.typeMonture === 'ALTAZ') {
     const cause =
-      'Une monture altazimutale fait tourner le champ pendant la pose. Cette rotation de ' +
-      'champ n’est pas traitée dans cette version : aucune pose unitaire n’est chiffrée pour ' +
-      'ce type de monture, et le domaine ciel profond reste fermé.'
+      'Monture altazimutale non gérée : sa rotation de champ déforme les poses.'
     return {
       mode,
       tMaxSuiviS: suiviIndisponible(cause, focaleMm),
@@ -146,9 +140,8 @@ export function profilSuivi(entree: EntreeSuivi): ProfilSuivi {
 
   if (mode === 'AUCUN') {
     const cause =
-      'Sans suivi, la pose est plafonnée par la rotation du ciel (NPF) et se compte en ' +
-      'secondes : le domaine ciel profond est fermé. Le grand champ, lui, reste entièrement ' +
-      'ouvert — c’est même son régime naturel.'
+      'Sans suivi, les poses sont trop courtes pour le ciel profond. Le grand champ reste ' +
+      'possible.'
     return {
       mode,
       tMaxSuiviS: suiviIndisponible(cause, focaleMm),
@@ -173,8 +166,7 @@ export function profilSuivi(entree: EntreeSuivi): ProfilSuivi {
     ...(plafonne
       ? {
           note:
-            'Pose ramenée au plafond des montures sans autoguidage. Aller au-delà suppose un ' +
-            'autoguidage, hors périmètre de cette version.',
+            'Plafond des montures sans autoguidage.',
         }
       : {}),
   })
@@ -191,7 +183,7 @@ export function profilSuivi(entree: EntreeSuivi): ProfilSuivi {
     retournementMeridien,
     cause: null,
     gainMiseEnStation:
-      `Mise en station supposée approximative : la pose tient ${tMax.toFixed(0)} s. Un viseur ` +
-      `polaire réglé la porterait à ${tSoigne.toFixed(0)} s.`,
+      `Poses de ${tMax.toFixed(0)} s. Avec un viseur polaire bien réglé : ` +
+      `${tSoigne.toFixed(0)} s.`,
   }
 }

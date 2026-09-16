@@ -79,7 +79,7 @@ export function planSession(
       [],
       new Map(),
       contexte.nuit.cause ??
-        'Aucune fenêtre nocturne exploitable à cette date depuis ce site : aucun plan n’est produit.',
+        'Pas de nuit exploitable à cette date : aucun plan.',
     )
   }
 
@@ -119,9 +119,8 @@ export function planSession(
     poids,
     calibration,
     message:
-      `${etapesRetenues.length} cible${etapesRetenues.length > 1 ? 's' : ''} dans la nuit, ` +
-      `ordonnée${etapesRetenues.length > 1 ? 's' : ''} par créneau. Budget total ` +
-      `${dureeLisible(budgetFinal.totalMin.value * S_PAR_MINUTE)} sur ` +
+      `${etapesRetenues.length} cible${etapesRetenues.length > 1 ? 's' : ''} dans l’ordre de ` +
+      `la nuit : ${dureeLisible(budgetFinal.totalMin.value * S_PAR_MINUTE)} sur ` +
       `${dureeLisible(budgetFinal.disponibleMin * S_PAR_MINUTE)} disponibles.`,
     ...(noteCouverture(comptes) === undefined
       ? {}
@@ -180,9 +179,7 @@ function alloueLaNuit(
         designation: candidate.objet.designation,
         code: 'CONFLIT_CRENEAU',
         cause:
-          'Son créneau est déjà entièrement alloué à une cible de score supérieur. ' +
-          'L’arbitrage est exposé plutôt que les deux cibles planifiées en même temps : ' +
-          'elle est reportée à une autre nuit.',
+          'Même moment qu’une cible mieux notée : à garder pour une autre nuit.',
       })
       continue
     }
@@ -256,13 +253,12 @@ function consigneTerrain(
   dureeAlloueeMin: number,
 ): string {
   const base =
-    `Poser ${candidate.pose.tAfficheeS} s à l’ISO de session, ` +
+    `Poses de ${candidate.pose.tAfficheeS} s, ` +
     `${dureeAlloueeMin.toFixed(0)} min sur cette cible. ${candidate.cadrage.noteOrientation}`
   if (complete) return base
   return (
-    `${base} La nuit ne couvre pas l’intégration requise ` +
-    `(${dureeLisible(candidate.integration.tRequisS.value)}) : prévoir ${nNuits} nuits plutôt ` +
-    'qu’un plan irréalisable. Aucune intégration n’est tronquée en silence.'
+    `${base} Il faut ${dureeLisible(candidate.integration.tRequisS.value)} au total : ` +
+    `prévoir ${nNuits} nuits.`
   )
 }
 
@@ -286,8 +282,7 @@ function planVide(
     message:
       causeFenetre ??
       causeDomaine ??
-      'Aucune cible du catalogue ne franchit le pré-filtrage cette nuit-là. La liste des ' +
-        'cibles écartées est donnée à part : le plan n’est pas rempli avec elles.',
+      'Aucune cible adaptée cette nuit. Voir les cibles écartées et leur cause.',
     ...(causeFenetre === null && causeDomaine === null && dominante !== undefined
       ? { contrainteDominante: dominante }
       : {}),
@@ -296,9 +291,7 @@ function planVide(
       : { noteCouvertureCatalogue: noteCouverture(comptes)! }),
     ...(causeFenetre === null
       ? {
-          alternative:
-            'Le domaine grand champ et le filé d’étoiles (§9) restent ouverts cette nuit : ils ' +
-            'ne dépendent ni du cadrage d’une cible ponctuelle ni de sa hauteur de culmination.',
+          alternative: 'Le grand champ et le filé d’étoiles restent possibles cette nuit.',
         }
       : {}),
     avertissementMeteo: AVERTISSEMENT_METEO,
@@ -315,10 +308,8 @@ function noteCouverture(comptes: ReadonlyMap<CauseEcart, number>): string | unde
   const manquantes = comptes.get('DONNEE_MANQUANTE') ?? 0
   if (manquantes === 0) return undefined
   return (
-    `${manquantes} objets du catalogue sont écartés faute de magnitude ou de dimensions ` +
-    'publiées — c’est le cas de beaucoup de grandes nébuleuses en émission. Aucune valeur ' +
-    'n’est inventée pour les rattraper : une estimation fabriquée serait pire qu’une absence ' +
-    'annoncée. Saisir la cible à la main dans la fiche §6 reste possible.'
+    `${manquantes} objets écartés faute de taille ou de magnitude connue, dont beaucoup de ` +
+    'grandes nébuleuses.'
   )
 }
 
@@ -327,7 +318,5 @@ function contrainteDominante(
 ): string | undefined {
   if (comptes.size === 0) return undefined
   const [code, nombre] = [...comptes.entries()].sort((a, b) => b[1] - a[1])[0]!
-  return `Contrainte dominante : ${code} — ${nombre} cible${nombre > 1 ? 's' : ''} écartée${
-    nombre > 1 ? 's' : ''
-  } pour ce motif.`
+  return `Cause principale : ${code} (${nombre} cible${nombre > 1 ? 's' : ''}).`
 }

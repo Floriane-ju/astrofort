@@ -43,10 +43,7 @@ import { Mention } from './Mention.tsx'
  * paragraphe : la règle se relit quand on hésite, elle n'occupe pas la place des champs.
  */
 const AIDE_BOITIER =
-  'Choisir son modèle suffit : ses grandeurs capteur viennent avec. Sinon, type de capteur ' +
-  'et résolution sont exigés — sans eux, ni champ ni échantillonnage n’existent. Le pitch ' +
-  's’en déduit, il ne se saisit jamais. Le reste peut rester vide : le registre fournit son ' +
-  'repli, et les sorties qui en dépendent portent [ESTIMÉ].'
+  'Choisissez votre modèle. Absent de la liste : indiquez le type de capteur et la résolution.'
 
 /**
  * T-0199 — pourquoi remplir un dépliant qu'on peut laisser fermé. Chaque champ porte déjà la
@@ -54,10 +51,7 @@ const AIDE_BOITIER =
  * le mode avancé n'a l'air que d'un recoin technique qu'on referme.
  */
 const AIDE_AVANCEES =
-  'Ces grandeurs décrivent l’électronique du capteur, pas l’optique. Renseignées, la pose ' +
-  'unitaire et l’ISO recommandé deviennent propres à ce boîtier ; laissées vides, un ' +
-  'générique du registre les remplace et toute sortie qui en dépend s’affiche [ESTIMÉ]. ' +
-  'Photons to Photos les publie pour la plupart des boîtiers.'
+  'Facultatif. Rend la pose et l’ISO propres à votre boîtier. Valeurs sur Photons to Photos.'
 
 /**
  * §5.1 — les grandeurs du mode avancé, dans l'ordre où elles se saisissent.
@@ -91,7 +85,7 @@ function resumeManquantes(notes: NotesEstimation): string | undefined {
   return (
     `${manquantes.length} grandeur${s} laissée${s} vide${s} : ` +
     manquantes.map((c) => GLOSSAIRE[c.cle].libelle.toLowerCase()).join(', ') +
-    '. Un générique du registre les remplace, et toute sortie qui en dépend s’affiche [ESTIMÉ].'
+    '. Valeurs types utilisées [ESTIMÉ].'
   )
 }
 
@@ -194,9 +188,7 @@ function ManquesDeLaBase({ ligne }: { readonly ligne: LigneBoitier }) {
     <Mention ton="cause">
       <AlerteChamp
         note={
-          'Cette ligne de la base laisse le bruit de lecture vide : ' +
-          `${K('READ_NOISE_DEFAUT_E')} e⁻ du registre s’appliquent, et la pose optimale varie ` +
-          'comme le carré de cette valeur. Toute sortie qui en dépend s’affiche [ESTIMÉ].'
+          `Bruit de lecture inconnu : ${K('READ_NOISE_DEFAUT_E')} e⁻ par défaut, pose [ESTIMÉ].`
         }
       />{' '}
       Base incomplète pour ce boîtier.

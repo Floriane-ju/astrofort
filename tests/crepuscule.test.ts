@@ -154,7 +154,7 @@ describe('ce que l’utilisateur voit', () => {
     const rendue = magnitudeRendue(FOV_DEG, sb, true)
     expect(rendue.value).toBe(M_LIM_OEIL_PLANCHER)
     expect(rendue.flags).toContain('HORS_DOMAINE')
-    expect(rendue.note).toContain('bord de table')
+    expect(rendue.note).toContain('plus clair que Bortle 9')
     // Et en pleine nuit sur le même site, la scène montre bien plus d'étoiles.
     expect(magnitudeRendue(FOV_DEG, SB_B1, true).value).toBeGreaterThan(rendue.value)
   })

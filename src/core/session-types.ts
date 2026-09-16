@@ -188,10 +188,7 @@ export interface PlanSession {
   readonly avertissementBatterie?: string
 }
 
-export const AVERTISSEMENT_METEO =
-  'Aucun filtre météo n’est appliqué : l’application calcule ce que le ciel permet, pas ce ' +
-  'que les nuages autoriseront. Un plan complet n’annonce donc pas une nuit dégagée — ' +
-  'vérifier la couverture nuageuse reste à la charge de l’observateur, hors de l’application.'
+export const AVERTISSEMENT_METEO = 'Météo non prise en compte : vérifiez les nuages avant de partir.'
 
 /** Une candidate évaluée : tout ce qu'il faut savoir d'elle avant de lui allouer du temps. */
 export interface Candidate {

@@ -874,28 +874,6 @@ input.barretemps-instant {
   color: var(--bordure-controle);
 }
 
-/* T-0096 — l'aveu de modélisation du fond peint, affiché tant que le fond est peint.
-
-   Il n'est pas dans une bulle et ce n'est pas un oubli : une infobulle est une phrase, et
-   elle ne s'ouvre pas au doigt — sur écran tactile, le geste qui la révélerait a déjà basculé
-   le réglage (§11.2, rien de critique au survol). Il se pose donc à droite du rail, au contact
-   de la bascule qu'il explique, et disparaît avec elle. */
-.rail-note {
-  position: absolute;
-  z-index: 2;
-  top: calc(var(--barre-haut) + var(--jour-carte));
-  left: calc(var(--materiel) + var(--rail) + var(--jour-carte));
-  max-width: var(--carte-large);
-  margin: 0;
-  padding: var(--pas-2) var(--pas-3);
-  border: var(--trait) solid var(--bordure);
-  border-left-width: var(--trait-marque);
-  background: var(--surface);
-  color: var(--attenue);
-  font-size: var(--texte-legende);
-  line-height: 1.55;
-}
-
 /* L'en-tête est à la fois la poignée et l'interrupteur : `grab` annonce la première,
    `aria-expanded` annonce le second. */
 .carte-entete {
@@ -1075,7 +1053,6 @@ input.barretemps-instant {
   .coque-scene,
   .carte,
   .coque-rail,
-  .rail-note,
   .coque-materiel,
   .coque-lateral {
     position: static;

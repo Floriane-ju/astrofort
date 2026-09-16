@@ -41,15 +41,15 @@ describe('conseil filtre §7.5', () => {
     expect(conseil.tRequisAvecS!).toBeLessThan(conseil.tRequisSansS)
     expect(conseil.gainSnr!).toBeGreaterThan(1)
     expect(conseil.message).toMatch(/Sans filtre/)
-    expect(conseil.message).toMatch(/dégradée, pas refusée/)
+    expect(conseil.message).toMatch(/reste planifiable sans filtre/)
   })
 
   it('ne se déclenche jamais sur une galaxie, et nomme les seuls leviers utiles', () => {
     const conseil = conseilFiltre(entree({ typeObjet: 'GALAXIE' }))
     expect(conseil.declenche).toBe(false)
     expect(conseil.tRequisAvecS).toBeNull()
-    expect(conseil.message).toMatch(/spectre continu/)
-    expect(conseil.message).toMatch(/ciel plus noir ou plus de temps/)
+    expect(conseil.message).toMatch(/Aucun filtre n’aide/)
+    expect(conseil.message).toMatch(/ciel plus noir/)
   })
 
   it('ne se déclenche pas non plus sur une nébuleuse par réflexion ou un amas', () => {
@@ -61,14 +61,13 @@ describe('conseil filtre §7.5', () => {
   it('disparaît quand le filtre est déjà déclaré, et l’intègre au calcul', () => {
     const conseil = conseilFiltre(entree({ filtresPossedes: ['DUAL_BAND'] }))
     expect(conseil.declenche).toBe(false)
-    expect(conseil.message).toMatch(/déjà déclaré/)
-    expect(conseil.message).toMatch(/intégré au calcul/)
+    expect(conseil.message).toMatch(/déjà pris en compte/)
   })
 
   it('reste muet tant que l’explication n’est pas dépliée', () => {
     const conseil = conseilFiltre(entree({ explicationDepliee: false }))
     expect(conseil.declenche).toBe(false)
-    expect(conseil.message).toMatch(/tant qu’elle n’est pas dépliée/)
+    expect(conseil.message).toMatch(/dans l’explication du verdict/)
   })
 
   it('se déclenche aussi sur un ciel Bortle 5 sans Lune', () => {
@@ -105,13 +104,13 @@ describe('recommandation d’équipement §10.3', () => {
     const sortie = recommandationsEquipement({ ...baseReco, explicationDepliee: false })
     expect(sortie.silencieux).toBe(true)
     expect(sortie.recommandations).toStrictEqual([])
-    expect(sortie.message).toMatch(/jamais de bandeau/)
+    expect(sortie.message).toMatch(/dans l’explication du verdict/)
   })
 
   it('n’affiche rien avant que les leviers gratuits aient été présentés', () => {
     const sortie = recommandationsEquipement({ ...baseReco, leviersPresentes: [] })
     expect(sortie.recommandations).toStrictEqual([])
-    expect(sortie.message).toMatch(/coût inférieur/)
+    expect(sortie.message).toMatch(/Essayez d’abord/)
   })
 
   it('n’affiche rien sur un verdict favorable', () => {
@@ -160,6 +159,6 @@ describe('recommandation d’équipement §10.3', () => {
       conseilFiltre: conseilFiltre(entree({ typeObjet: 'GALAXIE' })),
     })
     expect(sortie.recommandations).toStrictEqual([])
-    expect(sortie.message).toMatch(/gain non chiffrable est hors/)
+    expect(sortie.message).toMatch(/Aucun achat ne changerait/)
   })
 })

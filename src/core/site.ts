@@ -67,8 +67,7 @@ export function masquePlat(): MasqueHorizon {
     estHypothese: true,
     flags: Object.freeze(['HYP' as const]),
     note:
-      'Aucune donnée de relief pour ce site : un horizon plat à 0° est supposé. À compléter ' +
-      'à la main pour tenir compte du relief, des arbres et des bâtiments.',
+      'Horizon supposé plat. Complétez-le si arbres, collines ou bâtiments cachent le ciel.',
   })
 }
 
@@ -135,8 +134,7 @@ export function masqueDepuisPoints(points: readonly PointMasque[]): MasqueHorizo
     altitudesDeg: Object.freeze(altitudesDeg),
     estHypothese: false,
     note:
-      `Masque saisi à la main : ${releves.length} azimut${releves.length > 1 ? 's' : ''} relevé` +
-      `${releves.length > 1 ? 's' : ''}, interpolés sur les ${NB_AZIMUTS} azimuts.`,
+      `Relevé à la main : ${releves.length} direction${releves.length > 1 ? 's' : ''}.`,
   })
 }
 
@@ -190,9 +188,8 @@ export function masseAir(hauteurDeg: number | null): Traced<number | null> {
       flags: ['DONNEE_MANQUANTE'],
       note:
         hauteurDeg === null
-          ? 'Hauteur de la cible inconnue : aucune masse d’air n’est calculée, et aucune ' +
-            'n’est supposée.'
-          : 'Cible sous l’horizon : aucune masse d’air n’est définie.',
+          ? 'Hauteur de la cible inconnue.'
+          : 'Cible sous l’horizon.',
     })
   }
   const valeur = masseAirBrute(hauteurDeg)
@@ -205,8 +202,7 @@ export function masseAir(hauteurDeg: number | null): Traced<number | null> {
       ? {
           flags: ['HORS_DOMAINE' as const],
           note:
-            `Sous ${K('HAUTEUR_MIN_MASSE_AIR_DEG')}° de hauteur, l'approximation 1 / sin(alt) ` +
-            'sous-estime la masse d’air réelle.',
+            `Sous ${K('HAUTEUR_MIN_MASSE_AIR_DEG')}°, la valeur réelle est plus forte.`,
         }
       : {}),
   })

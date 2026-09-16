@@ -66,7 +66,7 @@ describe('couplage du curseur au zoom §3.2', () => {
   it('dit quand le mouvement ne montre rien plutôt que d’animer dans le vide', () => {
     const reel = reglageVitesse(1, VIEWPORT, 60)
     expect(reel.etat).toBe('IMPERCEPTIBLE')
-    expect(reel.message).toMatch(/imperceptible/)
+    expect(reel.message).toMatch(/invisible/)
   })
 
   it('conserve le sens de la marche arrière', () => {

@@ -58,7 +58,7 @@ describe('fenêtre nocturne §8.1', () => {
       midiUtc('2026-06-21'),
     )
     expect(nuit.etat).not.toBe('NUIT_ASTRONOMIQUE')
-    expect(nuit.cause).toMatch(/nuit astronomique|horizon/)
+    expect(nuit.cause).toMatch(/nuit/)
   })
 
   it('masque les corps du système solaire hors du domaine des séries', () => {

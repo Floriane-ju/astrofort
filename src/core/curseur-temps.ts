@@ -50,7 +50,7 @@ export function facteurMax(pxParDeg: number): Traced<number> {
     formula: 'FACTEUR_VITESSE_MAX',
     inputs: { px_par_degre: pxParDeg },
     constants: ['V_ECRAN_REPLIEMENT_PX_S', 'ROTATION_CIEL_DEG_H'],
-    note: 'Le plafond dépend du zoom : un champ plus serré abaisse le facteur admissible.',
+    note: 'Plus on zoome, plus la vitesse maximale baisse.',
   })
 }
 
@@ -104,10 +104,8 @@ export function reglageVitesse(
     return {
       ...base,
       message:
-        `Facteur ramené de ×${Math.abs(facteurDemande).toFixed(0)} à ` +
-        `×${borne.toFixed(0)} : à ${fovDeg.toFixed(1)}° de champ sur ${largeurPx} px, ` +
-        `soit ${pxDeg.toFixed(0)} px/°, au-delà le ciel défile à plus de ` +
-        `${K('V_ECRAN_REPLIEMENT_PX_S')} px/s et devient illisible. Le plafond suit le zoom.`,
+        `Vitesse ramenée de ×${Math.abs(facteurDemande).toFixed(0)} à ` +
+        `×${borne.toFixed(0)} : plus vite, le ciel deviendrait illisible à ce zoom.`,
     }
   }
 
@@ -117,8 +115,7 @@ export function reglageVitesse(
     return {
       ...base,
       message:
-        `À ×${Math.abs(facteur).toFixed(0)}, le ciel défile à ${vEcran.value.toFixed(2)} px/s : ` +
-        'le mouvement est imperceptible. Resserrer le champ le rend visible.',
+        `À ×${Math.abs(facteur).toFixed(0)}, le mouvement est invisible. Zoomez pour le voir.`,
     }
   }
 
@@ -126,8 +123,7 @@ export function reglageVitesse(
     return {
       ...base,
       message:
-        `${vEcran.value.toFixed(0)} px/s : encore suivable, mais au-delà de la plage ` +
-        `confortable de ${K('V_ECRAN_LISIBLE_MAX_PX_S')} px/s.`,
+        'Défilement rapide : encore lisible, mais peu confortable.',
     }
   }
 

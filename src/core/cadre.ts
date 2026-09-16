@@ -140,15 +140,12 @@ export function cellulesCadreJ2000(
 
 /** §3.5 — le refus de fabriquer un cadre en l'absence de profil déclaré. */
 export const REFUS_SANS_PROFIL =
-  'Aucun profil matériel n’est renseigné : l’application ne superpose pas de cadre par ' +
-  'défaut. Un rectangle arbitraire donnerait un cadrage faux, et le cadrage est justement ' +
-  'ce que cette couche sert à décider. Renseigner focale, ouverture et capteur (§5.1).'
+  'Pas de cadre : indiquez focale, ouverture et capteur dans Matériel.'
 
 export function refusAuDelaDuMaximum(nombreProfils: number): string | null {
   if (nombreProfils <= K('PROFILS_CADRE_MAX')) return null
   return (
-    `Au plus ${K('PROFILS_CADRE_MAX')} profils sont comparables simultanément : au-delà, la ` +
-    'superposition cesse d’être lisible et le cadre perd sa fonction.'
+    `${K('PROFILS_CADRE_MAX')} cadres au plus à la fois, sinon ils deviennent illisibles.`
   )
 }
 
@@ -274,18 +271,14 @@ export function rotationSuggeree(
     return {
       angleDeg: null,
       message:
-        `Le catalogue ne donne pas le petit axe de ${cible.objet.designation} : son ` +
-        'allongement est inconnu, donc aucun angle n’est suggéré. Le remplissage reste ' +
-        'mesuré contre la petite dimension du champ, le cas conservateur (§6.2).',
+        `Forme de ${cible.objet.designation} inconnue : pas d’orientation conseillée.`,
     }
   }
   if (rapport <= RAPPORT_AXES_ORIENTATION) {
     return {
       angleDeg: null,
       message:
-        `${cible.objet.designation} est assez ronde (rapport d’axes ${rapport.toFixed(1)}, ` +
-        `sous le seuil de ${RAPPORT_AXES_ORIENTATION}) pour que l’orientation du boîtier ne ` +
-        'change rien : aucun angle n’est suggéré.',
+        `${cible.objet.designation} est presque ronde : l’orientation du boîtier ne change rien.`,
     }
   }
   const posAng = cible.objet.posAngDeg
@@ -293,9 +286,8 @@ export function rotationSuggeree(
     return {
       angleDeg: null,
       message:
-        `${cible.objet.designation} est allongée (rapport d’axes ${rapport.toFixed(1)}), mais ` +
-        'le catalogue ne donne pas son angle de position : aucun angle n’est affiché faute ' +
-        'de donnée, et le boîtier garde son orientation courante (§6.2).',
+        `${cible.objet.designation} est allongée, mais son orientation est inconnue : pas ` +
+        'd’angle conseillé.',
     }
   }
 
@@ -310,9 +302,7 @@ export function rotationSuggeree(
   return {
     angleDeg,
     message:
-      `Rotation de ${angleDeg.toFixed(0)}° : le grand axe de ` +
-      `${cible.objet.designation} s’aligne sur la grande dimension du capteur, tenue ` +
-      `${paysage ? 'à l’horizontale' : 'à la verticale'} par ce profil. L’angle tient compte ` +
-      'de la rotation de champ à cet instant : il ne vaut pas pour toute la nuit.',
+      `Tournez de ${angleDeg.toFixed(0)}° pour aligner ${cible.objet.designation} sur la ` +
+      'longueur du capteur. Valable à cette heure seulement.',
   }
 }

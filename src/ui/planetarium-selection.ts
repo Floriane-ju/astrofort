@@ -9,7 +9,6 @@
  * ce module ne garde que ce qu'il est seul à savoir dire, les lignes de détail.
  */
 
-import { K } from '../registry/constants.ts'
 import { titreCible } from './libelles-cibles.ts'
 import type { SelectionScene } from './scene-etat.ts'
 import type { CibleEcran } from './dessine-ciel.ts'
@@ -34,7 +33,6 @@ export function decritCible(cible: CibleEcran): SelectionScene {
       lignes: [
         `ascension droite ${c.adH.toFixed(3)} h · déclinaison ${c.decDeg.toFixed(2)}°`,
         `azimut ${c.azimutDeg.toFixed(1)}° · hauteur ${c.hauteurDeg.toFixed(1)}°`,
-        'Position interpolée entre deux échantillons d’éphémérides.',
       ],
       objet: null,
     }
@@ -47,7 +45,7 @@ export function decritCible(cible: CibleEcran): SelectionScene {
         `magnitude ${nommee.magV.toFixed(2)} · constellation ${nommee.constellation}`,
         nommee.spectre === '' ? 'type spectral absent du catalogue' : `type spectral ${nommee.spectre}`,
         nommee.distancePc === null
-          ? 'distance non fiable : la parallaxe manque, aucune valeur n’est estimée'
+          ? 'distance inconnue'
           : `distance ${nommee.distancePc.toFixed(1)} pc`,
       ],
       objet: null,
@@ -60,8 +58,6 @@ export function decritCible(cible: CibleEcran): SelectionScene {
       etoile === undefined
         ? ''
         : `magnitude ${etoile.magV.toFixed(2)} · indice B−V ${etoile.bv.toFixed(2)}`,
-      'Le paquet des étoiles nommées ne porte que les désignations Bayer sous magnitude ' +
-        `${K('MAG_LABEL_BAYER_MAX')} et les noms propres. Aucune désignation n’est inventée.`,
     ].filter((l) => l !== ''),
     objet: null,
   }

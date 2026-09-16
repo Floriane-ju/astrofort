@@ -158,7 +158,7 @@ describe('chaîne de calcul §10.2', () => {
       contexte: { verdict: 'PHOTO_SEULE', typeObjet: 'GALAXIE', cibleImposee: true },
     })
     expect(complete.n2).toMatch(/Facteur dominant : sb_obj/)
-    expect(complete.n2).toMatch(/Levier de premier rang : se déplacer vers un site plus sombre/)
+    expect(complete.n2).toMatch(/Premier levier : se déplacer vers un site plus sombre/)
     expect(complete.leviers[0]?.cout).not.toBe('achat')
   })
 })

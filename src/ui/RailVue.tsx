@@ -84,33 +84,11 @@ const ETEINTES_EN_PANORAMA: readonly (keyof CouchesActives)[] = [
   'voieLactee',
 ]
 
-const NOTE_PANORAMA =
-  'L’aperçu est peint sur toute la scène : seuls le sol, l’horizon, le cadre matériel et le ' +
-  'trait du plan galactique s’y ajoutent. Cette couche reste éteinte tant qu’il est actif — ' +
-  'le survol nomme toujours ce qu’il désigne.'
+const NOTE_PANORAMA = 'masqué pendant l’aperçu photo'
 
 /* T-0097 — la bascule ne plafonne plus seulement la magnitude : elle peint le fond de ciel
    du site, son halo d'horizon et celui de la Lune. */
-const AIDE_REALISTE = 'fond de ciel et magnitude limite du site, modélisés'
-
-/**
- * T-0096 — les limites du fond peint se disent DANS l'application : une approximation tue est
- * une approximation que l'utilisateur prend pour une mesure.
- *
- * Elles ne tiennent PAS dans une bulle. `Bulle.tsx` pose qu'une infobulle est une phrase, pas
- * un paragraphe ; et une bulle ne s'ouvre ni au doigt ni avant le geste qu'elle devrait
- * éclairer — sur écran tactile, le tap qui la révélerait a déjà basculé le réglage. Cet aveu
- * est donc AFFICHÉ, et seulement quand il porte : pendant que le fond est peint.
- */
-const LIMITES_FOND_PEINT =
-  'Le fond peint additionne, en nanolamberts, la brillance du site, son halo d’horizon ' +
-  '(van Rhijn 1921), la lueur du crépuscule (Patat, Ugolnikov & Postylyakov 2006, mesurée ' +
-  'de 5° à 15° de dépression solaire) et celle de la Lune (Krisciunas & Schaefer 1991). ' +
-  'Hors périmètre, et dit plutôt que supposé : le sol ne s’éclaircit pas ; le halo du site ' +
-  'reste symétrique en azimut — le dôme lumineux d’une ' +
-  'ville est plus clair de son côté, mais l’atlas qui le donnerait exige le réseau ; et la ' +
-  'teinte du crépuscule ne vire pas vers l’azimut du Soleil, alors que le vrai ciel y est ' +
-  'plus clair et plus jaune.'
+const AIDE_REALISTE = 'le ciel tel qu’on le voit depuis ce site'
 
 /** Une phrase par bulle : le libellé du contrôle, puis ce qu'il faut savoir avant de cliquer. */
 function aide(libelle: string, ...notes: readonly (string | undefined)[]): string {
@@ -253,7 +231,6 @@ export function RailVue(props: RailVueProps) {
         </div>
       </div>
 
-      {vueRealiste && <p className="rail-note">{LIMITES_FOND_PEINT}</p>}
     </>
   )
 }

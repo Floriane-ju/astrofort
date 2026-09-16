@@ -31,7 +31,7 @@ describe('T-0195 — la portée « Photographiables » dit pourquoi elle est vid
   it('nomme le suivi, pas les filtres, quand le domaine est verrouillé', () => {
     majCatalogue({ portee: 'PHOTOGRAPHIABLES' })
     const panneau = panneauCibles()
-    expect(panneau).toContain('domaine ciel profond est fermé')
+    expect(panneau).toContain('trop courtes pour le ciel profond')
     expect(panneau).not.toContain('Aucun objet ne passe ces filtres')
   })
 })

@@ -84,10 +84,7 @@ export function ecartFrontieresDeg(anneeEpoque: number): Traced<number> {
     formula: 'PRECESSION',
     inputs: { n_annees: annees },
     constants: ['PRECESSION_ARCSEC_AN', 'EPOQUE_FRONTIERES_IAU'],
-    note:
-      'Écart entre les frontières telles que Delporte les a tracées en B1875 et leur position ' +
-      'à l’époque affichée. Sans cette correction, une étoile proche d’une limite tomberait ' +
-      'du mauvais côté.',
+    note: 'limites officielles des constellations, recalées sur la date affichée',
   })
 }
 
@@ -145,10 +142,6 @@ export function coucheAsterismes(asterismes: readonly Asterisme[]): readonly Cou
  * plutôt que dans un composant : c'est une règle métier, pas une décoration.
  */
 export const RAPPEL_ASTERISME =
-  'Un astérisme n’est pas une constellation : c’est un motif de repérage, sans existence ' +
-  'officielle, et il franchit librement les frontières IAU. La Grande Casserole n’est ainsi ' +
-  'qu’une partie de la Grande Ourse.'
+  'motifs de repérage — un astérisme n’est pas une constellation'
 
-export const RAPPEL_FIGURES =
-  'Les figures n’ont aucune existence officielle : ce sont des conventions culturelles. ' +
-  'Seules les frontières découpent le ciel, et elles délimitent des régions, pas des dessins.'
+export const RAPPEL_FIGURES = 'dessins traditionnels reliant les étoiles'

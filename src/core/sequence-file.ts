@@ -83,31 +83,25 @@ export function sequenceFile(entree: EntreeSequenceFile): SequenceFile {
   const trou = trouTraceDeg(entree.intervalleS, entree.decDeg)
   const intervalleRefuse =
     entree.intervalleS > intervalleMax
-      ? `Intervalle de ${entree.intervalleS} s refusé : au-delà de ${intervalleMax} s, chaque ` +
-        `trace porte un trou de ${trou.value.toFixed(3)}° — ` +
-        `${(trou.value * S_PAR_H).toFixed(0)}" — à chaque pose, et ce défaut est irréparable ` +
-        'en post-traitement.'
+      ? `Pause de ${entree.intervalleS} s trop longue (max ${intervalleMax} s) : les traînées ` +
+        `auront des trous de ${(trou.value * S_PAR_H).toFixed(0)}", irréparables.`
       : null
 
   const consignesBloquantes: readonly string[] = [
-    'Désactiver la réduction de bruit sur longue exposition du boîtier avant de partir : ' +
-      'activée, elle occupe un temps égal à la pose après chaque image, l’intervalle effectif ' +
-      'dépasse la pose et les traces sortent pointillées.',
+    'Désactivez la réduction de bruit sur longue exposition de l’appareil, sinon les ' +
+      'traînées seront pointillées.',
   ]
 
   const messages: string[] = []
   if (entree.tPoseS < K('T_POSE_FILE_MIN_S') || entree.tPoseS > K('T_POSE_FILE_MAX_S')) {
     messages.push(
-      `Pose de ${entree.tPoseS} s hors de la plage recommandée en filé ` +
-        `(${K('T_POSE_FILE_MIN_S')} à ${K('T_POSE_FILE_MAX_S')} s) : plus court multiplie les ` +
-        'fichiers sans rien gagner, plus long ramène le bruit thermique et le risque de ciel ' +
-        'cramé de la pose unique.',
+      `Pose de ${entree.tPoseS} s : visez ${K('T_POSE_FILE_MIN_S')} à ` +
+        `${K('T_POSE_FILE_MAX_S')} s pour un filé.`,
     )
   }
   messages.push(
     `${nPosesValeur} poses de ${entree.tPoseS} s empilées en mode éclaircir, ` +
-      `${volume.toFixed(1)} Go de fichiers, arc obtenu ${arcObtenuDeg.value.toFixed(2)}° à ` +
-      `δ = ${entree.decDeg.toFixed(0)}°.`,
+      `${volume.toFixed(1)} Go, traînées de ${arcObtenuDeg.value.toFixed(2)}°.`,
   )
   const rappel = rappelBatterie(entree.dureeTotaleMin)
   if (rappel !== null) messages.push(rappel)

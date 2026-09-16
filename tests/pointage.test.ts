@@ -46,7 +46,7 @@ describe('mode de pointage §8.4', () => {
     const carte = cartePointage({ ...COMMUN, fovHDeg: 11.38, fovLDeg: 17.02 })
     expect(carte.mode).toBe('CARTE_DIRECTE')
     expect(carte.ancrages.length).toBeGreaterThan(0)
-    expect(carte.message).toMatch(/une seule étape/)
+    expect(carte.message).toMatch(/Pointage direct/)
   })
 
   it('liste les ancrages sous la magnitude limite du site, avec leurs décalages', () => {
@@ -87,7 +87,7 @@ describe('ciel dégradé — Bortle 8, m_lim_oeil = 4,5 §8.4', () => {
       fovLDeg: 17.02,
     })
     expect(carte.ancrages).toStrictEqual([])
-    expect(carte.cause).toMatch(/plutôt que de proposer une étoile invisible/)
+    expect(carte.cause).toMatch(/Aucune étoile visible à l’œil/)
     expect(carte.contraintesARelacher?.length).toBeGreaterThan(0)
   })
 })
@@ -128,7 +128,7 @@ describe('orientation du champ §8.4', () => {
     )
     expect(Math.abs(tard.value - tot.value)).toBeGreaterThan(1)
     expect(tot.formula.section).toBe('8.4')
-    expect(tot.note).toMatch(/tourne au cours de la nuit/)
+    expect(tot.note).toMatch(/Le ciel tourne/)
   })
 })
 

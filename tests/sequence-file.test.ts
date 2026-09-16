@@ -80,7 +80,7 @@ describe('§9.4 — rappel batterie', () => {
 
 describe('§9.4 — pose unitaire', () => {
   it('signale une pose hors de la plage recommandée', () => {
-    expect(sequence({ tPoseS: 120 }).messages.join(' ')).toMatch(/hors de la plage recommandée/)
+    expect(sequence({ tPoseS: 120 }).messages.join(' ')).toMatch(/visez/)
     expect(sequence({ tPoseS: 25 }).messages.join(' ')).not.toMatch(/hors de la plage/)
   })
 })

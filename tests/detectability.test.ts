@@ -46,7 +46,7 @@ describe('brillance de surface §6.3', () => {
   it('mesure le signal de M33 à sept fois plus faible que le fond de ciel', () => {
     const m33 = detectabilite({ mInt: 5.7, aArcmin: 71, bArcmin: 42, typeObjet: 'GALAXIE', ...CIEL })
     expect(rapportAuFondDeCiel(m33.deltaSb.value!)).toBeCloseTo(6.7, 1)
-    expect(m33.explication).toMatch(/7 fois plus faible/)
+    expect(m33.explication).toMatch(/7 fois plus pâle/)
   })
 })
 
@@ -54,8 +54,8 @@ describe('les quatre verdicts §6.3', () => {
   it('rend M33 en photo seulement, avec l’explication de la magnitude trompeuse', () => {
     const m33 = detectabilite({ mInt: 5.7, aArcmin: 71, bArcmin: 42, typeObjet: 'GALAXIE', ...CIEL })
     expect(m33.verdict).toBe('PHOTO_SEULE')
-    expect(m33.explication).toMatch(/n’implique donc aucune visibilité/)
-    expect(m33.explication).toMatch(/Ce n’est pas un refus/)
+    expect(m33.explication).toMatch(/invisible à l’œil/)
+    expect(m33.explication).toMatch(/une longue pose le fera apparaître/)
   })
 
   it('garde M31 à l’œil nu et M57 aux jumelles', () => {
@@ -80,7 +80,7 @@ describe('les quatre verdicts §6.3', () => {
     expect(emission.toleranceLune).toBe('FORTE')
     expect(emission.conseilType).toMatch(/bi-bande/)
     expect(galaxie.toleranceLune).toBe('FAIBLE')
-    expect(galaxie.conseilType).toMatch(/large bande obligatoire/)
+    expect(galaxie.conseilType).toMatch(/aucun filtre n’aide/)
   })
 
   it('ne pénalise pas une cible pour une Lune sous l’horizon, et le dit', () => {
@@ -92,8 +92,7 @@ describe('les quatre verdicts §6.3', () => {
       ...CIEL,
       lune: { altitudeDeg: -12 },
     })
-    expect(galaxie.noteLune).toMatch(/sous l’horizon/)
-    expect(galaxie.noteLune).toMatch(/n’entre pas dans le calcul/)
+    expect(galaxie.noteLune).toMatch(/Lune couchée : aucune gêne/)
     const sansLune = detectabilite({ mInt: 6, aArcmin: 60, bArcmin: 40, typeObjet: 'GALAXIE', ...CIEL })
     expect(galaxie.deltaSb.value).toBe(sansLune.deltaSb.value)
   })
@@ -119,7 +118,7 @@ describe('les quatre verdicts §6.3', () => {
     })
     expect(horsTable.verdict).toBe('PHOTO_SEULE')
     expect(horsTable.mLimInstr.value).toBeNull()
-    expect(horsTable.mLimInstr.note).toMatch(/n’est pas extrapolée/)
+    expect(horsTable.mLimInstr.note).toMatch(/non évaluée/)
   })
 })
 

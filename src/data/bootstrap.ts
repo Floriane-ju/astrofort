@@ -76,8 +76,8 @@ export async function verifieCatalogues(): Promise<EtatCatalogues> {
       paquets: [],
       manifesteLu: false,
       cause:
-        'Le manifeste des paquets de données est introuvable. Exécuter `pnpm data:build` ' +
-        'pour générer les catalogues, ou recharger la page une fois le réseau revenu.',
+        'Catalogues introuvables : rechargez la page une fois connecté ' +
+        '(en développement : `pnpm data:build`).',
     }
   }
 
@@ -93,11 +93,10 @@ export async function verifieCatalogues(): Promise<EtatCatalogues> {
     paquets,
     manifesteLu: true,
     cause: horsLigne
-      ? `Catalogues absents ou corrompus (${noms}) et aucun réseau disponible. Les ` +
-        'fonctions qui en dépendent sont indisponibles ; elles seront rechargées dès le ' +
-        'retour du réseau. Les calculs de temps et de fond de ciel restent utilisables.'
-      : `Catalogues absents ou corrompus (${noms}). Le rechargement a échoué : réessayer, ` +
-        'ou régénérer les paquets avec `pnpm data:build`.',
+      ? `Catalogues indisponibles hors connexion (${noms}) : ils se rechargeront au retour ` +
+        'du réseau.'
+      : `Catalogues indisponibles (${noms}) : rechargez la page ` +
+        '(en développement : `pnpm data:build`).',
   }
 }
 

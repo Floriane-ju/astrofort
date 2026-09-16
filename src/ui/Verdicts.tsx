@@ -110,8 +110,7 @@ function CielSousLaLune({ r }: { readonly r: Resultat }) {
   return (
     <>
       <p className="etat">
-        Lune évaluée à {heure(r.lune.instant)}, l’instant affiché par le planétarium, avec la
-        cible prise à sa culmination — la convention du plan de séance.
+        Lune à {heure(r.lune.instant)}, cible à son point le plus haut.
       </p>
       <TracedValue terme="degradation_lunaire" trace={r.lune.ciel.delta} unite="mag/as²" />
     </>
@@ -210,7 +209,7 @@ function PoseUnitaire({
       {r.eObj !== null && <TracedValue terme="flux_objet" trace={r.eObj} decimales={3} unite="e⁻/s/px" />}
       {r.pose === null && (
         <Mention ton="cause">
-          Aucune pose n’est chiffrée : la donnée source manque pour cette cible.
+          Pose non calculable : données manquantes pour cette cible.
         </Mention>
       )}
       {r.pose !== null && (
@@ -218,7 +217,7 @@ function PoseUnitaire({
           <TracedValue terme="pose_unitaire" trace={r.pose.tOptS} decimales={1} unite="s" />
           <p className="etat">
             <Etiquette cle="plage_utile" /> : poser {r.pose.tAfficheeS} s — de{' '}
-            {r.pose.plageUtileS.value[0]} à {r.pose.plageUtileS.value[1]} s, c’est équivalent.
+            {r.pose.plageUtileS.value[0]} à {r.pose.plageUtileS.value[1]} s, même résultat.
           </p>
           <p className="etat">
             <Etiquette cle="regime_pose" /> : {r.pose.regime}
@@ -229,7 +228,7 @@ function PoseUnitaire({
           </p>
           {r.pose.readNoiseEstime && (
             <Mention ton="cause">
-              [ESTIMÉ] Bruit de lecture inconnu : {r.pose.readNoiseUtiliseE} e⁻ appliqué et affiché.
+              [ESTIMÉ] Bruit de lecture inconnu : {r.pose.readNoiseUtiliseE} e⁻ par défaut.
             </Mention>
           )}
           {/* §7.2 — le mode permissif se demande, et s'annonce avec son coût chiffré. */}
@@ -263,8 +262,8 @@ function Extinction({ r }: { readonly r: Resultat }) {
       <p className="etat">
         Hauteur d’évaluation :{' '}
         {r.hauteurEvaluationDeg === null
-          ? 'inconnue — cible sans coordonnées, aucune extinction appliquée'
-          : `culmination à ${r.hauteurEvaluationDeg.toFixed(1)}° depuis ce site`}
+          ? 'inconnue'
+          : `${r.hauteurEvaluationDeg.toFixed(1)}°, au plus haut`}
       </p>
       <TracedValue terme="masse_air" trace={extinction.masseAir} />
       <TracedValue terme="extinction_atmospherique" trace={extinction.attenuation} decimales={3} />

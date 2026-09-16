@@ -76,8 +76,7 @@ export function fovDeg(
       ...(lineaireDeg > plafondDeg
         ? {
             note:
-              `Le capteur déborde le cercle image : d / f donnerait ${lineaireDeg.toFixed(0)}°, ` +
-              `le champ couvert s’arrête à ${plafondDeg}°.`,
+              `Le capteur dépasse le cercle de l’image : champ limité à ${plafondDeg}°.`,
           }
         : {}),
     })
@@ -100,23 +99,22 @@ function diagnostique(echApx: number): Diagnostic {
     return {
       diagEch: 'SUR_ECHANTILLONNE',
       messageDiag:
-        'Sur-échantillonné : à cette finesse, chaque pixel collecte du bruit plutôt que du ' +
-        'signal. Une focale plus courte, ou un capteur au pitch plus large, ramènerait dans ' +
-        'le régime nominal.',
+        'Pixels trop petits pour cette focale : plus de bruit que de détail. Une focale plus ' +
+        'courte aide.',
       alerte: true,
     }
   }
   if (echApx <= K('ECHANTILLONNAGE_NOMINAL_MAX')) {
     return {
       diagEch: 'NOMINAL',
-      messageDiag: 'Échantillonnage nominal pour la longue pose, au seeing courant.',
+      messageDiag: 'Bon équilibre entre pixels et focale.',
       alerte: false,
     }
   }
   if (echApx <= K('ECHANTILLONNAGE_SOUS_MODERE_MAX')) {
     return {
       diagEch: 'SOUS_ECHANTILLONNE_MODERE',
-      messageDiag: 'Sous-échantillonnage modéré : acceptable, et courant en grand champ.',
+      messageDiag: 'Pixels un peu grands : normal en grand champ.',
       alerte: false,
     }
   }
@@ -154,9 +152,7 @@ export function profilOptique(entree: EntreeOptique): ProfilOptique {
       formula: 'ECHANTILLONNAGE',
       inputs: { pitch_um: pitchUm, focale_mm: focaleMm },
       constants: ['RADIAN_EN_ARCSEC'],
-      note:
-        'L’échantillonnage ne dépend que du pitch et de la focale : un recadrage de capteur ' +
-        'ne le change pas.',
+      note: 'Le recadrage du capteur ne le change pas.',
     }),
     dawesAs: trace({
       value: K('DAWES_NUMERATEUR') / dMm,

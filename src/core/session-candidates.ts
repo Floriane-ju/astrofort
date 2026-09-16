@@ -127,8 +127,7 @@ function evalue(
       designation: objet.designation,
       code: 'DONNEE_MANQUANTE',
       cause:
-        'Dimensions ou magnitude absentes du catalogue : aucun verdict n’est produit, donc ' +
-        'aucune place dans le plan. Une estimation inventée serait pire qu’une absence.',
+        'Taille ou magnitude inconnue : pas de verdict possible.',
     }
   }
 
@@ -147,8 +146,7 @@ function evalue(
       cause:
         (cadrage.cause ?? cadrage.message) +
         (cadrage.verdict === 'MOSAIQUE_REQUISE'
-          ? ' Une mosaïque demande autant de sessions partielles que de tuiles : elle ne tient ' +
-            'pas dans un créneau d’une nuit et n’entre donc pas au plan.'
+          ? ' Une mosaïque ne tient pas dans une nuit.'
           : ''),
     }
   }
@@ -207,7 +205,7 @@ function evalue(
     return {
       designation: objet.designation,
       code: 'HAUTEUR',
-      cause: extinction.eObjReel.note ?? 'Masse d’air hors du domaine de validité (§7.6).',
+      cause: extinction.eObjReel.note ?? 'Cible trop basse.',
     }
   }
   const pose = poseUnitaire({
@@ -327,9 +325,8 @@ export function preFiltre(
       ecarte(
         objet,
         'CADRAGE',
-        `Taille de ${taille.toFixed(0)}’ hors de ce que ce setup cadre : la fenêtre utile va ` +
-          `de ${tailleMin.toFixed(0)}’ à ${tailleMax.toFixed(0)}’. Recadrer au traitement ` +
-          'n’ajoute aucun pixel.',
+        `Taille de ${taille.toFixed(0)}’ : votre cadre convient de ${tailleMin.toFixed(0)}’ à ` +
+          `${tailleMax.toFixed(0)}’.`,
       )
       continue
     }
@@ -338,8 +335,7 @@ export function preFiltre(
       ecarte(
         objet,
         'HAUTEUR',
-        `La cible culmine à ${alt.toFixed(1)}° depuis ce site, sous le seuil de ${seuil}° : ` +
-          'elle est hors du domaine, quelle que soit l’heure et quelle que soit la date.',
+        `Ne monte pas au-delà de ${alt.toFixed(1)}° d’ici : trop basse, il faut au moins ${seuil}°.`,
       )
       continue
     }

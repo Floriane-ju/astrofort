@@ -138,7 +138,7 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
           actif={props.comparerRecadrage}
           surChangement={props.surComparerRecadrage}
         >
-          Superposer les deux cadres, plein format et recadrage APS-C
+          Comparer plein format et APS-C
         </Interrupteur>
         {lectures?.noteRecadrage !== undefined && (
           <Mention ton="cause">{lectures.noteRecadrage}</Mention>
@@ -199,7 +199,7 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
             `domaineCpFerme` (PanneauCibles) en a besoin pour justifier l'exclusion du ciel
             profond ; ce panneau n'affiche que le repère court. */}
         {lectures?.suivi.mode === 'AUCUN' && (
-          <Mention ton="etat">Sans suivi, la pose est plafonnée par la rotation du ciel.</Mention>
+          <Mention ton="etat">Sans suivi, les poses restent courtes.</Mention>
         )}
         {lectures?.suivi.cause !== null &&
           lectures?.suivi.cause !== undefined &&
