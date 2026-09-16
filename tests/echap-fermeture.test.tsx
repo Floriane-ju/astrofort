@@ -8,7 +8,7 @@
  * clavier du planétarium (T-0069).
  *
  * Le reste du contrat se lit dans la feuille de style : la bulle reste survolable et
- * persistante — congédier ne doit pas avoir retiré `:hover` / `:focus-within` à l'ancre.
+ * persistante — congédier ne doit pas avoir retiré `:hover` / `:focus-visible` à l'ancre.
  */
 
 import { readFileSync, readdirSync } from 'node:fs'
@@ -46,7 +46,7 @@ describe('T-0189 — ce qu’Échap ferme', () => {
 describe('T-0189 — la bulle reste survolable et persistante', () => {
   it('son ouverture tient toujours au survol et au focus de l’ancre, sans JavaScript', () => {
     expect(CSS).toContain('.bulle-ancre:hover > .bulle')
-    expect(CSS).toContain('.bulle-ancre:focus-within > .bulle')
+    expect(CSS).toContain('.bulle-ancre:has(:focus-visible) > .bulle')
   })
 
   it('le composant ne pose aucune écoute : l’écoute est unique, sur le document', () => {

@@ -143,8 +143,13 @@ describe('style de la bulle — charte T-0113 et §11.1', () => {
   })
 
   it('s’ouvre au clavier autant qu’à la souris (§11.2)', () => {
-    expect(CSS).toContain('.bulle-ancre:focus-within > .bulle')
+    expect(CSS).toContain('.bulle-ancre:has(:focus-visible) > .bulle')
     expect(CSS).toContain('.bulle-ancre:hover > .bulle')
+  })
+
+  it('se referme quand la souris quitte un bouton qu’elle vient de cliquer (T-0240)', () => {
+    // Un clic focalise le bouton : `:focus-within` tiendrait la bulle ouverte hors survol.
+    expect(CSS).not.toContain('.bulle-ancre:focus-within')
   })
 
   it('ne vole pas le survol qui la maintient ouverte', () => {

@@ -1716,9 +1716,11 @@ th {
   pointer-events: none;
 }
 
-/* Le focus autant que le survol : un contrôle atteint au clavier doit dire ce qu'il fait. */
+/* Le focus autant que le survol : un contrôle atteint au clavier doit dire ce qu'il fait.
+   T-0240 — `:focus-visible` et non `:focus-within` : un clic focalise le bouton, et la
+   bulle restait ouverte une fois la souris partie, jusqu'au clic suivant ailleurs. */
 .bulle-ancre:hover > .bulle,
-.bulle-ancre:focus-within > .bulle {
+.bulle-ancre:has(:focus-visible) > .bulle {
   visibility: visible;
 }
 

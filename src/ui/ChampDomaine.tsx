@@ -26,7 +26,7 @@ import { Mention } from './Mention.tsx'
  * concerne. §11.1 : le rouge ne porte jamais seul, la forme du glyphe le double.
  *
  * `nomme` plutôt que `describedby` : le glyphe n'a pas d'autre nom que la note. Il est
- * atteignable au clavier — la bulle s'ouvre sur `:focus-within`, et une note qui ne sort
+ * atteignable au clavier — la bulle s'ouvre sur `:focus-visible`, et une note qui ne sort
  * qu'au survol n'existe pas pour qui n'a pas de souris.
  */
 export function AlerteChamp({ note }: { readonly note: string }) {

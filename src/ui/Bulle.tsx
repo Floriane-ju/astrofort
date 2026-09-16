@@ -11,8 +11,9 @@
  * posée sur le document (`gere-echap.ts`) : au survol seul, aucun nœud de la bulle ne tient le
  * focus, une écoute portée par l'ancre ne verrait jamais la touche.
  *
- * L'ouverture est `:hover` / `:focus-within` sur l'ancre — le clavier
- * l'obtient sans code, et rien ne se recalcule au survol. Le débordement non plus n'est pas
+ * L'ouverture est `:hover` / `:has(:focus-visible)` sur l'ancre — le clavier
+ * l'obtient sans code, et rien ne se recalcule au survol. Pas `:focus-within` : le focus
+ * qu'un clic laisse au bouton tiendrait la bulle ouverte une fois la souris partie (T-0240). Le débordement non plus n'est pas
  * mesuré ici : `place` dit le côté PRÉFÉRÉ, et l'ancrage CSS (`position-try-fallbacks`,
  * `styles.css`) rabat la bulle lui-même quand ce côté ne tient pas à l'écran.
  *

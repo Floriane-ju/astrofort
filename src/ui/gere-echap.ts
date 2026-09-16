@@ -3,7 +3,7 @@
  *
  * WCAG 2.2, 1.4.13 « Contenu au survol ou au focus » exige d'un contenu révélé au survol
  * qu'il soit CONGÉDIABLE sans déplacer le pointeur ni le focus. La bulle (T-0147) n'a pas de
- * JavaScript : elle s'ouvre en `:hover` / `:focus-within`. Elle ne peut donc pas porter
+ * JavaScript : elle s'ouvre en `:hover` / `:focus-visible`. Elle ne peut donc pas porter
  * l'écoute elle-même — au survol seul, aucun de ses nœuds n'a le focus et la touche part
  * ailleurs. L'écoute est donc UNE, posée sur le document, et c'est aussi ce qui permet la
  * règle de priorité : une glose ouverte au-dessus d'un tiroir se congédie sans emporter le
@@ -33,7 +33,7 @@ export function cibleEchap(
 
 /** L'ancre survolée ou tenant le focus — celle dont la bulle est à l'écran, s'il y en a une. */
 function ancreOuverte(doc: Document): HTMLElement | null {
-  return doc.querySelector<HTMLElement>('.bulle-ancre:hover, .bulle-ancre:focus-within')
+  return doc.querySelector<HTMLElement>('.bulle-ancre:hover, .bulle-ancre:has(:focus-visible)')
 }
 
 function bulleDe(ancre: HTMLElement | null): HTMLElement | null {
@@ -50,7 +50,7 @@ function tiroirFocalise(doc: Document): HTMLDetailsElement | null {
 
 /**
  * La bulle se masque en place, sans toucher au focus ni au pointeur — et se rouvre d'elle-même
- * dès qu'on la quitte, pour que `:hover` et `:focus-within` reprennent la main au prochain
+ * dès qu'on la quitte, pour que `:hover` et `:focus-visible` reprennent la main au prochain
  * passage. Les deux écoutes de retour se retirent ensemble : congédier deux fois de suite ne
  * doit pas laisser la bulle éteinte pour de bon.
  */

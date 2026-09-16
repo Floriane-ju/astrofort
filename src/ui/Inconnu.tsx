@@ -6,7 +6,7 @@
  * l'utilisateur — « ? » dit qu'elle est à saisir, et la bulle dit quoi saisir. Une lecture
  * qui disparaît, elle, ne dit rien du tout : la ligne reste, seule sa valeur change.
  *
- * Le « ? » est focalisable : la bulle s'ouvre au `:focus-within`, donc au clavier aussi.
+ * Le « ? » est focalisable : la bulle s'ouvre au `:focus-visible`, donc au clavier aussi.
  */
 
 import type { TermeGlossaire } from '../registry/glossaire.ts'
