@@ -200,7 +200,8 @@ describe('T-0069 — la répétition de touche n’écrit que la vue', () => {
   })
 
   it('déplace la visée d’un pas par appui, trente appuis durant', () => {
-    let courant = vue()
+    // Champ épinglé : le pas suit le champ, et trente pas à 200° bouclent le tour d'horizon.
+    let courant = vue({ fovDeg: K('FOV_REFERENCE_RENDU_DEG') })
     const vus = new Set<number>([courant.azimutDeg])
     for (let i = 0; i < 30; i += 1) {
       courant = { ...courant, ...viseeApresCommande(courant, 'VISEE_DROITE', BORNES) }

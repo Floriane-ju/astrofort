@@ -1009,6 +1009,20 @@ const RENDU = {
     ordreDeGrandeur: false,
     sections: ['3.3'],
   }),
+  FOV_INITIAL_DEG: entree({
+    ref: 'C-26',
+    libelle: 'Champ de la scène à l’ouverture',
+    valeur: 200,
+    unite: '°',
+    source:
+      '§3.3 — convention produit (T-0239) : on arrive pour se repérer, pas pour viser. 200° ' +
+      'montre l’horizon sud et le ciel au-dessus d’un seul coup d’œil, sous le plafond ' +
+      'stéréographique. Distinct de FOV_REFERENCE_RENDU_DEG, qui ancre la profondeur de ' +
+      'catalogue et ne bouge pas.',
+    tolerance: 'convention produit — pilote le confort d’une vue, jamais un verdict.',
+    ordreDeGrandeur: false,
+    sections: ['3.3'],
+  }),
   MAG_LIMITE_OBJETS: entree({
     ref: 'C-26',
     libelle: 'Magnitude limite des objets du ciel profond, tous champs confondus',

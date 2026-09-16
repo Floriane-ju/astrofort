@@ -173,7 +173,7 @@ const ETAT_INITIAL: EtatScene = {
     azimutDeg: 180,
     hauteurDeg: K('SEUIL_HAUTEUR_IMAGERIE_DEG'),
     rotationCadreDeg: 0,
-    fovDeg: K('FOV_REFERENCE_RENDU_DEG'),
+    fovDeg: K('FOV_INITIAL_DEG'),
     mode: 'MODE_PLANETARIUM',
     largeurPx: LARGEUR_SCENE_PX,
     hauteurPx: HAUTEUR_SCENE_PX,

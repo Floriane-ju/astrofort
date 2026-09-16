@@ -11,6 +11,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { K } from '../src/registry/constants.ts'
 import type { Site } from '../src/core/ephem.ts'
+import { fovMaxSelonMode } from '../src/core/projection.ts'
 import { masquePlat } from '../src/core/site.ts'
 import { pointZeroSysteme } from '../src/data/equipment.ts'
 import { PanneauFile } from '../src/ui/PanneauFile.tsx'
@@ -74,6 +75,13 @@ describe('§3 — le magasin de scène', () => {
     expect(etatScene().vue.hauteurDeg).toBe(K('SEUIL_HAUTEUR_IMAGERIE_DEG'))
     expect(etatScene().vue.rotationCadreDeg).toBe(0)
     expect(etatScene().temps.modeTemps).toBe('MAINTENANT')
+  })
+
+  it('T-0239 — s’ouvre en grand champ, sous le plafond de sa projection', () => {
+    const { fovDeg, mode } = etatScene().vue
+    expect(fovDeg).toBe(K('FOV_INITIAL_DEG'))
+    // L'état initial ne passe pas par majVue : rien d'autre ne le borne.
+    expect(fovDeg).toBeLessThanOrEqual(fovMaxSelonMode(mode))
   })
 
   it('retouche sans muter : l’instantané précédent reste intact', () => {
