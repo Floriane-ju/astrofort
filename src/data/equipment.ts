@@ -96,8 +96,13 @@ export interface PointZeroSysteme {
 }
 
 /**
- * Point zéro système d'un boîtier. Boîtier absent de la base → générique C-14, affiché
- * [ESTIMÉ], la plage utile de pose absorbant l'incertitude.
+ * Point zéro système d'un boîtier. Aucun `zp_sys` connu → générique C-14, affiché [ESTIMÉ], la
+ * plage utile de pose absorbant l'incertitude.
+ *
+ * Le cas normal, y compris pour un boîtier choisi dans la base : la colonne `ZP sys` de
+ * `boitiers.md` est vide pour toutes les lignes, cette grandeur n'étant publiée nulle part.
+ * La note ne dit donc pas que le boîtier est inconnu — il ne l'est pas — mais que c'est sa
+ * sensibilité qui l'est.
  */
 export function pointZeroSysteme(boitier: Boitier | null): PointZeroSysteme {
   if (boitier?.zpSys !== undefined) {
@@ -109,7 +114,8 @@ export function pointZeroSysteme(boitier: Boitier | null): PointZeroSysteme {
     estime: true,
     constante: ref('ZP_SYS_GENERIQUE'),
     note:
-      'Boîtier inconnu : sensibilité type utilisée, la pose conseillée reste fiable.',
+      'Sensibilité type : le point zéro système n’est publié par aucun constructeur. ' +
+      'La pose conseillée reste fiable.',
   }
 }
 
