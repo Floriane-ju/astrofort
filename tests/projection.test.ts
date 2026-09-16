@@ -263,10 +263,11 @@ describe('profondeur asservie au zoom §3.3', () => {
   it('donne à chaque projection le plafond que sa fonction radiale supporte', () => {
     expect(fovMaxSelonMode('MODE_CADRE')).toBe(K('FOV_MAX_GNOMONIQUE_DEG'))
     expect(fovMaxSelonMode('MODE_PLANETARIUM')).toBe(K('FOV_MAX_STEREOGRAPHIQUE_DEG'))
-    expect(fovMaxSelonMode('MODE_FISHEYE')).toBe(K('FOV_MAX_DEG'))
-    // Le plafond stéréographique passe 180° : c'est ce que 2·tan(θ/2) autorise, et le seul
-    // mode qui le peut. La gnomonique reste dessous, l'équidistante au plafond du PRD.
+    expect(fovMaxSelonMode('MODE_FISHEYE')).toBe(K('FOV_MAX_EQUIDISTANTE_DEG'))
+    // Stéréographique et équidistante passent 180° : ni 2·tan(θ/2) ni θ ne divergent. La
+    // gnomonique, seule, reste dessous (T-0220).
     expect(fovMaxSelonMode('MODE_PLANETARIUM')).toBeGreaterThan(K('FOV_MAX_DEG'))
+    expect(fovMaxSelonMode('MODE_FISHEYE')).toBeGreaterThan(K('FOV_MAX_DEG'))
     expect(fovMaxSelonMode('MODE_CADRE')).toBeLessThan(K('FOV_MAX_DEG'))
     // Le plancher lié au catalogue et le plafond lié à la projection sont indépendants : le
     // paquet Gaia ne change pas ce que tan(θ) fait au bord du champ.
@@ -306,6 +307,29 @@ describe('profondeur asservie au zoom §3.3', () => {
         expect(rayon).toBeLessThan(K('FOV_MAX_DEG'))
       }
     }
+  })
+
+  it('borne l’équidistante à l’antipode, même quand le canevas le dépasse (T-0220)', () => {
+    // Canevas portrait : au plafond, le coin est à plus de 180° du centre en R = θ. Au-delà
+    // du cercle antipodal il n'y a plus de ciel — ni la calotte ni un clic ne le passent.
+    const portrait: Vue = {
+      ...vue('MODE_FISHEYE', K('FOV_MAX_EQUIDISTANTE_DEG')),
+      largeurPx: HAUTEUR,
+      hauteurPx: LARGEUR,
+    }
+    expect(rayonChampDeg(portrait)).toBe(K('FOV_MAX_DEG'))
+    const coin = projecteur(portrait, IDENTITE).inverse(0, 0)
+    const centre = projecteur(portrait, IDENTITE).inverse(HAUTEUR / 2, LARGEUR / 2)
+    expect(separationDeg(centre, coin)).toBeCloseTo(K('FOV_MAX_DEG'), 6)
+  })
+
+  it('refuse en équidistante un point voisin de l’antipode, pour ne pas tirer de corde (T-0220)', () => {
+    const p = projecteur(vueCentree('MODE_FISHEYE', K('FOV_MAX_EQUIDISTANTE_DEG')), IDENTITE)
+    const marge = K('MARGE_ANTIPODE_EQUIDISTANTE_DEG')
+    // Centre de visée en (1, 0, 0) : l'antipode est (−1, 0, 0), à la longitude 180°.
+    expect(p.projette(versVecteur(180 - 2 * marge, 0))).not.toBeNull()
+    expect(p.projette(versVecteur(180 - marge / 2, 0))).toBeNull()
+    expect(p.projette(versVecteur(180 + marge / 2, 0))).toBeNull()
   })
 
   it('voit au-delà de l’hémisphère au plafond stéréographique', () => {

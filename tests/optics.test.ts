@@ -10,6 +10,8 @@ import { profilOptique } from '../src/core/optics.ts'
 import { npf } from '../src/core/tracking.ts'
 import { SaisieRefuseeError } from '../src/registry/domains.ts'
 import { BOITIER_REFERENCE, capteurEffectif } from '../src/data/equipment.ts'
+import { DEG } from '../src/core/mat3.ts'
+import { K } from '../src/registry/constants.ts'
 
 /** Annexe A — configuration ciel profond : 120 mm f/2,8 sur le plein format de référence. */
 const REFERENCE = {
@@ -36,6 +38,35 @@ describe('champ §5.1', () => {
   it('cite la formule de champ et sa mise en garde', () => {
     expect(profilOptique(REFERENCE).fovLDeg.formula.id).toBe('FOV')
     expect(profilOptique(REFERENCE).fovLDeg.formula.note).toMatch(/arctangente/)
+  })
+})
+
+describe('champ d’un fisheye §5.1 (T-0218)', () => {
+  const FISHEYE = { ...REFERENCE, typeObjectif: 'FISHEYE' as const }
+
+  it('suit l’équidistante : le champ est linéaire en d / f', () => {
+    const quinze = profilOptique({ ...FISHEYE, focaleMm: 15 })
+    expect(quinze.fovLDeg.value).toBeCloseTo(REFERENCE.capteurLMm / 15 / DEG, 6)
+    expect(quinze.fovHDeg.value).toBeCloseTo(REFERENCE.capteurHMm / 15 / DEG, 6)
+    expect(quinze.fovLDeg.formula.id).toBe('FOV_FISHEYE')
+    // À la même focale, le rectilinéaire couvre moins : l'arctangente sature.
+    expect(quinze.fovLDeg.value).toBeGreaterThan(
+      profilOptique({ ...REFERENCE, focaleMm: 15 }).fovLDeg.value,
+    )
+  })
+
+  it('s’arrête au cercle image quand le capteur le déborde', () => {
+    const huit = profilOptique({ ...FISHEYE, focaleMm: 8 })
+    expect(REFERENCE.capteurLMm / 8 / DEG).toBeGreaterThan(K('CHAMP_MAX_FISHEYE_DEG'))
+    expect(huit.fovLDeg.value).toBe(K('CHAMP_MAX_FISHEYE_DEG'))
+    expect(huit.fovLDeg.note).toMatch(/cercle image/)
+  })
+
+  it('ne change ni l’échantillonnage ni la pupille', () => {
+    const fisheye = profilOptique({ ...FISHEYE, focaleMm: 8 })
+    const rectiligne = profilOptique({ ...REFERENCE, focaleMm: 8 })
+    expect(fisheye.echApx.value).toBe(rectiligne.echApx.value)
+    expect(fisheye.dMm.value).toBe(rectiligne.dMm.value)
   })
 })
 

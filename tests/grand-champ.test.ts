@@ -34,6 +34,7 @@ function carte(options: {
     centreAdDeg: 0,
     centreDecDeg: options.centreDecDeg,
     rotationDeg: 0,
+    modeObjectif: 'MODE_CADRE',
     ...(options.tMaxSuiviS === undefined ? {} : { tMaxSuiviS: options.tMaxSuiviS }),
   })
 }
@@ -112,5 +113,26 @@ describe('§9.1 — le format du capteur ne borne pas la pose', () => {
       fovHDeg: fovDeg(15.6, GRAND_ANGLE.focaleMm).value,
     })
     expect(recadre.tMaxCadreS.value).toBeCloseTo(pleinFormat.tMaxCadreS.value!, 6)
+  })
+})
+
+describe('§9.1 — carte de pose d’un fisheye (T-0219)', () => {
+  it('reste finie à 180° de champ et couvre la déclinaison que l’équidistante atteint', () => {
+    const FISHEYE_MM = 8
+    const fovL = fovDeg(CAPTEUR_L_MM, FISHEYE_MM, 'FISHEYE').value
+    const fovH = fovDeg(CAPTEUR_H_MM, FISHEYE_MM, 'FISHEYE').value
+    const resultat = cartePoseMax({
+      ...GRAND_ANGLE,
+      focaleMm: FISHEYE_MM,
+      fovLDeg: fovL,
+      fovHDeg: fovH,
+      centreAdDeg: 0,
+      centreDecDeg: 0,
+      rotationDeg: 0,
+      modeObjectif: 'MODE_FISHEYE',
+    })
+    for (const cellule of resultat.cellules) expect(Number.isFinite(cellule.decDeg)).toBe(true)
+    // Rotation nulle, visée sur l'équateur : le bord haut du cadre est à δ = fovH / 2.
+    expect(resultat.decMaxAbsDeg).toBeCloseTo(fovH / 2, 6)
   })
 })

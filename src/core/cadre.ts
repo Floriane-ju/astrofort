@@ -8,12 +8,16 @@
  *
  * Ses dimensions viennent de §5.1, donc de l'arctangente, jamais de l'approximation
  * linéaire. C'est la couture entre le planétarium et tous les moteurs.
+ *
+ * T-0219 — le cadre s'inverse par la projection de L'OBJECTIF : gnomonique pour un
+ * rectilinéaire, équidistante pour un fisheye. Un fisheye inversé en gnomonique dessinait le
+ * cadre d'un autre objectif, et divergeait à 180° de champ.
  */
 
 import { K } from '../registry/constants.ts'
 import { RAPPORT_AXES_ORIENTATION } from '../registry/verdicts.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
-import { matriceVue } from './projection.ts'
+import { directionDuPlan, matriceVue, rayonProjete, type ModeProjection } from './projection.ts'
 import {
   DEG,
   applique,
@@ -28,11 +32,21 @@ export interface ProfilCadre {
   /** Champ de la grande dimension du capteur (§5.1). */
   readonly fovLDeg: number
   readonly fovHDeg: number
+  /** Projection physique de l'objectif : `MODE_CADRE` (rectilinéaire) ou `MODE_FISHEYE`. */
+  readonly modeObjectif: ModeProjection
   readonly echApx: number
   /** Petite dimension du capteur : c'est elle qui donne la focale idéale d'une cible (§6.1). */
   readonly capteurHMm: number
   /** Pose affichée sur le cadre : optimale avec suivi, NPF sans (§7.2, §9.1). */
   readonly tPoseS: number | null
+}
+
+/** Demi-dimensions du cadre dans le plan de projection de son objectif, en unités de R. */
+function demiPlan(profil: ProfilCadre): { readonly uMax: number; readonly vMax: number } {
+  return {
+    uMax: rayonProjete(profil.modeObjectif, (profil.fovLDeg / 2) * DEG),
+    vMax: rayonProjete(profil.modeObjectif, (profil.fovHDeg / 2) * DEG),
+  }
 }
 
 export interface Cadre {
@@ -47,8 +61,7 @@ export interface Cadre {
  * polyligne : c'est ce qui rend la courbure visible en projection stéréographique.
  */
 export function contourCadreJ2000(cadre: Cadre, matriceCiel: Mat3): readonly Vec3[] {
-  const uMax = Math.tan((cadre.profil.fovLDeg / 2) * DEG)
-  const vMax = Math.tan((cadre.profil.fovHDeg / 2) * DEG)
+  const { uMax, vMax } = demiPlan(cadre.profil)
   const pas = Math.max(1, Math.round(K('SUBDIVISION_CADRE')))
 
   // Repère local du cadre, roulis compris ; puis retour au repère équatorial J2000.
@@ -72,9 +85,7 @@ export function contourCadreJ2000(cadre: Cadre, matriceCiel: Mat3): readonly Vec
       const f = i / pas
       const u = u0 + (u1 - u0) * f
       const v = v0 + (v1 - v0) * f
-      // Inverse gnomonique : le cadre est la projection physique d'un objectif rectilinéaire.
-      const norme = Math.hypot(u, v, 1)
-      const local: Vec3 = { x: u / norme, y: v / norme, z: 1 / norme }
+      const local = directionDuPlan(cadre.profil.modeObjectif, u, v)
       points.push(applique(versJ2000, applique(versHorizon, local)))
     }
   }
@@ -95,8 +106,8 @@ export interface CelluleCadre {
  *
  * `cartePoseMax` échantillonne la même grille dans le repère équatorial, à partir d'une visée
  * et d'un roulis. Ici la grille part du cadre de la scène — azimut, hauteur, roulis du
- * boîtier — pour que chaque valeur tombe sur le pixel qu'elle décrit. Même inverse gnomonique
- * que le contour ci-dessus : c'est le même objectif rectilinéaire, il n'y en a pas deux.
+ * boîtier — pour que chaque valeur tombe sur le pixel qu'elle décrit. Même inverse que le
+ * contour ci-dessus : c'est le même objectif, il n'y en a pas deux.
  *
  * Les points sont les CENTRES des cellules, non leurs bords : un nombre peint dans une case
  * vaut pour ce qu'elle couvre, pas pour le trait qui la borde.
@@ -106,8 +117,7 @@ export function cellulesCadreJ2000(
   matriceCiel: Mat3,
   cote: number,
 ): readonly CelluleCadre[] {
-  const uMax = Math.tan((cadre.profil.fovLDeg / 2) * DEG)
-  const vMax = Math.tan((cadre.profil.fovHDeg / 2) * DEG)
+  const { uMax, vMax } = demiPlan(cadre.profil)
   const versHorizon = transpose(
     matriceVue(cadre.azimutDeg, cadre.hauteurDeg, cadre.rotationDeg),
   )
@@ -121,8 +131,7 @@ export function cellulesCadreJ2000(
       const uFrac = (2 * colonne + 1) / cote - 1
       const u = uFrac * uMax
       const v = vFrac * vMax
-      const norme = Math.hypot(u, v, 1)
-      const local: Vec3 = { x: u / norme, y: v / norme, z: 1 / norme }
+      const local = directionDuPlan(cadre.profil.modeObjectif, u, v)
       cellules.push({ uFrac, vFrac, dir: applique(versJ2000, applique(versHorizon, local)) })
     }
   }
@@ -165,15 +174,17 @@ export function cibleDominante(
   matriceCiel: Mat3,
 ): CibleDansCadre | null {
   const versCadre = matriceVue(cadre.azimutDeg, cadre.hauteurDeg, cadre.rotationDeg)
-  const uMax = Math.tan((cadre.profil.fovLDeg / 2) * DEG)
-  const vMax = Math.tan((cadre.profil.fovHDeg / 2) * DEG)
+  const mode = cadre.profil.modeObjectif
+  const { uMax, vMax } = demiPlan(cadre.profil)
 
   let meilleure: CibleDansCadre | null = null
   for (const objet of objets) {
     if (objet.majAxArcmin === null) continue
     const local = applique(versCadre, applique(matriceCiel, versVecteur(objet.adDeg, objet.decDeg)))
-    if (local.z <= 0) continue
-    if (Math.abs(local.x / local.z) > uMax || Math.abs(local.y / local.z) > vMax) continue
+    if (mode === 'MODE_CADRE' && local.z <= 0) continue
+    const s = Math.hypot(local.x, local.y)
+    const facteur = s <= Number.EPSILON ? 0 : rayonProjete(mode, Math.atan2(s, local.z)) / s
+    if (Math.abs(local.x * facteur) > uMax || Math.abs(local.y * facteur) > vMax) continue
     const tailleDeg = objet.majAxArcmin / ARCMIN_PAR_DEG
     if (meilleure === null || tailleDeg > meilleure.tailleDeg) {
       meilleure = { objet, tailleDeg }

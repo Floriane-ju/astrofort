@@ -22,6 +22,12 @@ export const FORMULES = Object.freeze({
     section: '5.1',
     note: "L'arctangente est utilisée partout, sans condition de bascule : l'approximation linéaire donne 205,7° à 10 mm sur plein format.",
   },
+  FOV_FISHEYE: {
+    expression: 'FOV_deg = min( dimension_capteur_mm / focale_mm × 180/π , CHAMP_MAX_FISHEYE_DEG )',
+    unite: '°',
+    section: '5.1',
+    note: "Objectif fisheye, projection équidistante R = f·θ : le champ est linéaire en d / f. L'arctangente de §5.1 est la loi d'un rectilinéaire ; l'appliquer à un fisheye projetterait en équidistante un champ de rectilinéaire (T-0218).",
+  },
   DIAMETRE_PUPILLE: {
     expression: 'D_mm = focale_mm / ouverture_N',
     unite: 'mm',

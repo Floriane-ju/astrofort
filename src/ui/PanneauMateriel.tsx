@@ -24,11 +24,6 @@ import type {
   PointZeroSysteme,
   SaisieBoitier,
 } from '../data/equipment.ts'
-import { ligneBoitier } from '../data/boitiers.ts'
-import {
-  ligneFormatCapteur,
-  type FormatCapteur,
-} from '../registry/capteur-formats.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { PanneauBoitier } from './PanneauBoitier.tsx'
 import { ChampChoix } from './ChampChoix.tsx'
@@ -91,11 +86,6 @@ export interface PanneauMaterielProps {
 
 export function PanneauMateriel(props: PanneauMaterielProps) {
   const lectures = props.lectures
-  // Le format du capteur entier : celui du boîtier choisi quand il y en a un, sinon celui qui
-  // vient d'être saisi. Sans cela, l'option nommerait le format de l'autre mode.
-  const formatCapteur = (ligneBoitier(props.boitierId)?.saisie.formatCapteur ??
-    props.boitier.formatCapteur) as FormatCapteur
-
   return (
     <>
       <PanneauBoitier
@@ -131,7 +121,7 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
             surChangement={props.surCapteurMode}
           >
             <option value="FULL_FRAME">
-              Capteur entier — {ligneFormatCapteur(formatCapteur).libelle}
+              Plein format
             </option>
             <option value="APSC_CROP">Recadrage APS-C</option>
           </ChampChoix>

@@ -6,13 +6,14 @@
  * est une carte, et la valeur retenue est celle de la zone la plus contraignante, c'est-à-dire
  * de plus faible déclinaison absolue.
  *
- * La grille est celle du cadre matériel, projetée par la même inverse gnomonique que §3.5 :
- * la déclinaison d'une cellule n'est pas interpolée, elle est calculée.
+ * La grille est celle du cadre matériel, projetée par la même inverse que §3.5 — celle de
+ * l'objectif, gnomonique ou équidistante (T-0219) : la déclinaison d'une cellule n'est pas
+ * interpolée, elle est calculée.
  */
 
 import { K } from '../registry/constants.ts'
-import { DEG, applique, transpose, type Vec3 } from './mat3.ts'
-import { matriceVue } from './projection.ts'
+import { DEG, applique, transpose } from './mat3.ts'
+import { directionDuPlan, matriceVue, rayonProjete, type ModeProjection } from './projection.ts'
 import { npf, type ToleranceNpf } from './tracking.ts'
 import { trace, type Traced } from './traced.ts'
 
@@ -25,6 +26,8 @@ export interface EntreeCartePose {
   /** Champs du cadre matériel (§5.1), grande puis petite dimension. */
   readonly fovLDeg: number
   readonly fovHDeg: number
+  /** Projection physique de l'objectif : `MODE_CADRE` (rectilinéaire) ou `MODE_FISHEYE`. */
+  readonly modeObjectif: ModeProjection
   readonly centreAdDeg: number
   readonly centreDecDeg: number
   readonly rotationDeg: number
@@ -71,13 +74,12 @@ function nommeZone(uFrac: number, vFrac: number, decDeg: number): string {
 
 /**
  * Carte de pose maximale du cadre. Chaque cellule porte sa déclinaison réelle, obtenue par
- * l'inverse gnomonique du cadre — c'est la projection physique d'un objectif rectilinéaire,
- * la même qu'en §3.5.
+ * l'inverse du cadre dans la projection physique de l'objectif, la même qu'en §3.5.
  */
 export function cartePoseMax(entree: EntreeCartePose): CartePoseMax {
   const cote = Math.max(1, Math.round(K('CELLULES_CARTE_POSE')))
-  const uMax = Math.tan((entree.fovLDeg / 2) * DEG)
-  const vMax = Math.tan((entree.fovHDeg / 2) * DEG)
+  const uMax = rayonProjete(entree.modeObjectif, (entree.fovLDeg / 2) * DEG)
+  const vMax = rayonProjete(entree.modeObjectif, (entree.fovHDeg / 2) * DEG)
   const versEquatorial = transpose(
     matriceVue(entree.centreAdDeg, entree.centreDecDeg, entree.rotationDeg),
   )
@@ -95,8 +97,7 @@ export function cartePoseMax(entree: EntreeCartePose): CartePoseMax {
       const uFrac = cote === 1 ? 0 : (2 * colonne) / (cote - 1) - 1
       const u = uFrac * uMax
       const v = vFrac * vMax
-      const norme = Math.hypot(u, v, 1)
-      const local: Vec3 = { x: u / norme, y: v / norme, z: 1 / norme }
+      const local = directionDuPlan(entree.modeObjectif, u, v)
       const equatorial = applique(versEquatorial, local)
       const decDeg =
         Math.asin(Math.max(-1, Math.min(1, equatorial.z))) / DEG

@@ -37,6 +37,7 @@ function profil(mode: 'FULL_FRAME' | 'APSC_CROP'): ProfilCadre {
     fovHDeg: fovDeg(capteur.capteurHMm, FOCALE_REFERENCE_MM).value,
     echApx: (K('RADIAN_EN_ARCSEC') * capteur.pitchUm) / (FOCALE_REFERENCE_MM * 1000),
     capteurHMm: capteur.capteurHMm,
+    modeObjectif: 'MODE_CADRE',
     tPoseS: 120,
   }
 }
@@ -329,5 +330,61 @@ describe('garde-fous du cadre §3.5', () => {
   it('borne la comparaison à trois profils simultanés', () => {
     expect(refusAuDelaDuMaximum(K('PROFILS_CADRE_MAX'))).toBeNull()
     expect(refusAuDelaDuMaximum(K('PROFILS_CADRE_MAX') + 1)).toMatch(/lisible/)
+  })
+})
+
+describe('cadre d’un fisheye §3.5 (T-0219)', () => {
+  const CAPTEUR = capteurEffectif(BOITIER_REFERENCE, 'FULL_FRAME')
+  const FOCALE_FISHEYE_MM = 8
+  const fisheye: Cadre = {
+    profil: {
+      ...profil('FULL_FRAME'),
+      fovLDeg: fovDeg(CAPTEUR.capteurLMm, FOCALE_FISHEYE_MM, 'FISHEYE').value,
+      fovHDeg: fovDeg(CAPTEUR.capteurHMm, FOCALE_FISHEYE_MM, 'FISHEYE').value,
+      modeObjectif: 'MODE_FISHEYE',
+    },
+    // Visée en (1, 0, 0) : la séparation au centre se lit sans la machinerie testée.
+    azimutDeg: 0,
+    hauteurDeg: 0,
+    rotationDeg: 0,
+  }
+  const CENTRE = versVecteur(0, 0)
+
+  it('place le milieu des bords à la moitié du champ, en équidistante', () => {
+    const pas = Math.round(K('SUBDIVISION_CADRE'))
+    const contour = contourCadreJ2000(fisheye, IDENTITE)
+    // Arête 1 : de (uMax, −vMax) à (uMax, vMax) ; son milieu est sur l'axe horizontal.
+    const milieuDroit = contour[pas + pas / 2]!
+    const milieuHaut = contour[2 * pas + pas / 2]!
+    expect(separationDeg(CENTRE, milieuDroit)).toBeCloseTo(fisheye.profil.fovLDeg / 2, 6)
+    expect(separationDeg(CENTRE, milieuHaut)).toBeCloseTo(fisheye.profil.fovHDeg / 2, 6)
+  })
+
+  it('reste fini à 180° de champ, là où la gnomonique divergeait', () => {
+    expect(fisheye.profil.fovLDeg).toBe(K('CHAMP_MAX_FISHEYE_DEG'))
+    const contour = contourCadreJ2000(fisheye, IDENTITE)
+    for (const p of contour) {
+      expect(Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z)).toBe(true)
+    }
+  })
+
+  it('tient une cible dans le cadre jusqu’au bord de l’équidistante, pas au-delà', () => {
+    const cible = (designation: string, adDeg: number): ObjetCielProfond => ({
+      designation,
+      nomsCommuns: '',
+      adDeg,
+      decDeg: 0,
+      type: 'GALAXIE',
+      majAxArcmin: 60,
+      minAxArcmin: 20,
+      posAngDeg: 0,
+      vMag: 8,
+      bMag: null,
+      surfBr: null,
+    })
+    // Demi-largeur de 90° : à 85° dans la largeur la cible est cadrée, à 95° elle ne l'est pas.
+    const demi = fisheye.profil.fovLDeg / 2
+    expect(cibleDominante([cible('dedans', demi - 5)], fisheye, IDENTITE)).not.toBeNull()
+    expect(cibleDominante([cible('dehors', demi + 5)], fisheye, IDENTITE)).toBeNull()
   })
 })

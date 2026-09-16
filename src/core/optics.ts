@@ -3,8 +3,10 @@
  *
  * Deux pièges du PRD sont câblés ici plutôt que rappelés en commentaire ailleurs :
  *
- *   1. le champ est l'arctangente PARTOUT, sans condition de bascule — l'approximation
- *      linéaire 57,3 × d / f donne 205,7° à 10 mm sur plein format, valeur impossible ;
+ *   1. le champ d'un rectilinéaire est l'arctangente PARTOUT, sans condition de bascule —
+ *      l'approximation linéaire 57,3 × d / f donne 205,7° à 10 mm sur plein format, valeur
+ *      impossible. Un fisheye, lui, est équidistant (R = f·θ) : son champ EST linéaire en
+ *      d / f, borné au cercle image (T-0218) ;
  *   2. le recadrage APS-C change les dimensions du capteur, jamais le pitch : ni
  *      l'échantillonnage, ni la NPF, ni la pose max n'en dépendent. Le recadrage ne
  *      grossit rien, et l'application le dit (voir `capteurEffectif`, base matériel).
@@ -25,8 +27,13 @@ export type DiagnosticEchantillonnage =
   | 'SOUS_ECHANTILLONNE_MODERE'
   | 'GRAND_CHAMP_ASSUME'
 
+/** §5.1 — pilote la loi du champ et la projection de §3.3, §9.2, §9.3. */
+export type TypeObjectif = 'RECTILINEAIRE' | 'FISHEYE'
+
 export interface EntreeOptique {
   readonly focaleMm: number
+  /** Absent : rectilinéaire, la valeur par défaut de la saisie (§5.1). */
+  readonly typeObjectif?: TypeObjectif
   readonly ouvertureN: number
   /** Dimensions effectives, recadrage déjà appliqué (voir `capteurEffectif`). */
   readonly capteurLMm: number
@@ -49,8 +56,32 @@ export interface ProfilOptique {
   readonly alerte: boolean
 }
 
-/** Champ angulaire d'une dimension de capteur. Arctangente, sans exception (§5.1). */
-export function fovDeg(dimensionMm: number, focaleMm: number): Traced<number> {
+/**
+ * Champ angulaire d'une dimension de capteur. Arctangente pour un rectilinéaire, sans
+ * exception (§5.1) ; d / f pour un fisheye équidistant, plafonné à son cercle image.
+ */
+export function fovDeg(
+  dimensionMm: number,
+  focaleMm: number,
+  typeObjectif: TypeObjectif = 'RECTILINEAIRE',
+): Traced<number> {
+  if (typeObjectif === 'FISHEYE') {
+    const lineaireDeg = dimensionMm / focaleMm / DEG
+    const plafondDeg = K('CHAMP_MAX_FISHEYE_DEG')
+    return trace({
+      value: Math.min(lineaireDeg, plafondDeg),
+      formula: 'FOV_FISHEYE',
+      inputs: { dimension_capteur_mm: dimensionMm, focale_mm: focaleMm },
+      constants: ['CHAMP_MAX_FISHEYE_DEG'],
+      ...(lineaireDeg > plafondDeg
+        ? {
+            note:
+              `Le capteur déborde le cercle image : d / f donnerait ${lineaireDeg.toFixed(0)}°, ` +
+              `le champ couvert s’arrête à ${plafondDeg}°.`,
+          }
+        : {}),
+    })
+  }
   return trace({
     value: (2 * Math.atan(dimensionMm / (2 * focaleMm))) / DEG,
     formula: 'FOV',
@@ -111,8 +142,8 @@ export function profilOptique(entree: EntreeOptique): ProfilOptique {
   const dMm = focaleMm / ouvertureN
 
   return {
-    fovLDeg: fovDeg(capteurLMm, focaleMm),
-    fovHDeg: fovDeg(capteurHMm, focaleMm),
+    fovLDeg: fovDeg(capteurLMm, focaleMm, entree.typeObjectif),
+    fovHDeg: fovDeg(capteurHMm, focaleMm, entree.typeObjectif),
     dMm: trace({
       value: dMm,
       formula: 'DIAMETRE_PUPILLE',

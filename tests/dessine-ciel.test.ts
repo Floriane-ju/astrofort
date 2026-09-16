@@ -235,6 +235,7 @@ function rend(
           fovHDeg: 11.4,
           echApx: 8.8,
           capteurHMm: 24,
+          modeObjectif: 'MODE_CADRE',
           tPoseS: 120,
         },
         azimutDeg: 180,

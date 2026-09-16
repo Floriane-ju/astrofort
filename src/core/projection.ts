@@ -104,11 +104,29 @@ export function rayonProjete(mode: ModeProjection, thetaRad: number): number {
   return 2 * Math.tan(thetaRad / 2)
 }
 
-/** Réciproque de `rayonProjete`. Un clic la traverse une fois, jamais une étoile. */
+/**
+ * Réciproque de `rayonProjete`. Un clic la traverse une fois, jamais une étoile.
+ *
+ * T-0220 — l'équidistante est bornée à l'antipode : au-delà de R = π il n'y a plus de ciel,
+ * et un angle de 190° désignerait en douce la direction à 170° de l'autre côté.
+ */
 export function angleProjete(mode: ModeProjection, rayon: number): number {
   if (mode === 'MODE_CADRE') return Math.atan(rayon)
-  if (mode === 'MODE_FISHEYE') return rayon
+  if (mode === 'MODE_FISHEYE') return Math.min(rayon, Math.PI)
   return 2 * Math.atan(rayon / 2)
+}
+
+/**
+ * Direction, dans le repère de la vue, d'un point du plan de projection (u, v en unités de
+ * R). C'est l'inverse commune du clic (§3.3) et du cadre matériel (§3.5, §9.1) : le cadre
+ * d'un fisheye s'inverse en équidistante, pas en gnomonique (T-0219).
+ */
+export function directionDuPlan(mode: ModeProjection, u: number, v: number): Vec3 {
+  const rayon = Math.hypot(u, v)
+  if (rayon <= Number.EPSILON) return { x: 0, y: 0, z: 1 }
+  const theta = angleProjete(mode, rayon)
+  const sin = Math.sin(theta)
+  return { x: (sin * u) / rayon, y: (sin * v) / rayon, z: Math.cos(theta) }
 }
 
 /** Échelle pixel : le champ horizontal demandé remplit exactement la largeur du canevas. */
@@ -184,6 +202,9 @@ export function projecteur(vue: Vue, matriceCiel: Mat3): Projecteur {
   // Comparée au carré : une racine par étoile pour une borne, alors que la borne se compare
   // aussi bien au carré (T-0065).
   const porteeCarree = porteeUtilePx(vue) ** 2
+  // T-0220 — l'équidistante n'a pas de singularité à l'infini : l'antipode se projette sur
+  // tout le cercle R = π. La portée en pixels n'y arrête rien, la borne est donc angulaire.
+  const thetaMaxEquidistante = Math.PI - K('MARGE_ANTIPODE_EQUIDISTANTE_DEG') * DEG
 
   // Fermeture nommée plutôt que méthode : `projette` l'appelle sans passer par `this`, et
   // un projecteur déstructuré garde donc le même comportement.
@@ -212,7 +233,9 @@ export function projecteur(vue: Vue, matriceCiel: Mat3): Projecteur {
         out.yPx = centreY
         return true
       }
-      facteur = Math.atan2(s, z) / s
+      const theta = Math.atan2(s, z)
+      if (theta > thetaMaxEquidistante) return false
+      facteur = theta / s
     }
     const xPx = centreX + k * facteur * x
     const yPx = centreY - k * facteur * y
@@ -232,15 +255,7 @@ export function projecteur(vue: Vue, matriceCiel: Mat3): Projecteur {
       return projetteEn(v.x, v.y, v.z, out) ? out : null
     },
     inverse(xPx: number, yPx: number): Vec3 {
-      const u = (xPx - centreX) / k
-      const v = (centreY - yPx) / k
-      const rayon = Math.hypot(u, v)
-      const theta = angleProjete(mode, rayon)
-      const sin = Math.sin(theta)
-      const vueVec: Vec3 =
-        rayon <= Number.EPSILON
-          ? { x: 0, y: 0, z: 1 }
-          : { x: (sin * u) / rayon, y: (sin * v) / rayon, z: Math.cos(theta) }
+      const vueVec = directionDuPlan(mode, (xPx - centreX) / k, (centreY - yPx) / k)
       const [i11, i12, i13, i21, i22, i23, i31, i32, i33] = inverseMatrice
       return {
         x: i11 * vueVec.x + i12 * vueVec.y + i13 * vueVec.z,
@@ -333,13 +348,14 @@ export interface BornesZoom {
  *
  * La stéréographique, elle, ne diverge qu'à 360° : son plafond n'a jamais été celui de §3.3,
  * il était celui de la gnomonique appliqué aux trois modes. Elle va donc à 300°, où le ciel
- * entier moins une calotte de 60° tient à l'écran. L'équidistante garde 180° : au-delà, un
- * fisheye n'a plus de sens physique (§5.1).
+ * entier moins une calotte de 60° tient à l'écran. L'équidistante va aussi à 300° (T-0220) :
+ * le champ d'une VUE n'est pas celui de l'objectif, que §5.1 borne à part
+ * (`CHAMP_MAX_FISHEYE_DEG`), et dézoomer autour du cadre sert à se repérer.
  */
 export function fovMaxSelonMode(mode: ModeProjection): number {
   if (mode === 'MODE_CADRE') return K('FOV_MAX_GNOMONIQUE_DEG')
   if (mode === 'MODE_PLANETARIUM') return K('FOV_MAX_STEREOGRAPHIQUE_DEG')
-  return K('FOV_MAX_DEG')
+  return K('FOV_MAX_EQUIDISTANTE_DEG')
 }
 
 /** §3.3 — sans le paquet Gaia, l'application plafonne à 15° de champ et le déclare. */

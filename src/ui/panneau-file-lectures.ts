@@ -97,6 +97,7 @@ export function useLecturesFile(
         pitchUm: materiel.pitchUm,
         fovLDeg: materiel.fovLDeg,
         fovHDeg: materiel.fovHDeg,
+        modeObjectif: mode,
         centreAdDeg: visee.longitudeDeg,
         centreDecDeg: visee.latitudeDeg,
         rotationDeg,

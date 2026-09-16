@@ -1085,10 +1085,56 @@ const RENDU = {
       'reste lisible ; à 160° l’étirement passe à 33, à 179° à 13 000, et à 180° l’échelle ' +
       'tombe à zéro — tout le ciel s’effondre sur le pixel central.',
     tolerance:
-      'convention produit — pilote le confort d’une vue, jamais un verdict. La projection ' +
-      'stéréographique et l’équidistante gardent 180° : ni 2·tan(θ/2) ni θ ne divergent.',
+      'convention produit — pilote le confort d’une vue, jamais un verdict. Ni la ' +
+      'stéréographique ni l’équidistante ne divergent à 90° : elles ont leur propre plafond.',
     ordreDeGrandeur: false,
     sections: ['3.3'],
+  }),
+  FOV_MAX_EQUIDISTANTE_DEG: entree({
+    ref: 'C-26',
+    libelle: 'Champ maximal en projection équidistante',
+    valeur: 300,
+    unite: '°',
+    source:
+      '§3.3 — convention produit (T-0220) : R = θ ne diverge nulle part, le plafond de 180° ' +
+      'n’était pas celui de la projection. 300° aligne le dézoom fisheye sur la ' +
+      'stéréographique : basculer de l’une à l’autre ne rabote pas le champ. Au-delà de 180°, ' +
+      'le cercle antipodal entre dans le canevas et borne le ciel dessiné.',
+    tolerance:
+      'convention produit — pilote le confort d’une vue, jamais un verdict. Écart assumé au ' +
+      'plafond de 180° du PRD, comme FOV_MAX_STEREOGRAPHIQUE_DEG.',
+    ordreDeGrandeur: false,
+    sections: ['3.3'],
+  }),
+  MARGE_ANTIPODE_EQUIDISTANTE_DEG: entree({
+    ref: 'C-26',
+    libelle: 'Marge autour de l’antipode de la visée, en projection équidistante',
+    valeur: 5,
+    unite: '°',
+    source:
+      '§3.3 — convention produit (T-0220) : en équidistante, tout le voisinage de l’antipode ' +
+      'se projette sur le cercle R = π. Deux sommets voisins d’une polyligne de part et ' +
+      'd’autre de l’antipode y tombent aux deux bouts d’un diamètre, et la corde traverse ' +
+      'l’image. Cinq degrés couvrent les arêtes subdivisées (frontières à 2°, filé à 0,25°) ; ' +
+      'un segment non subdivisé de plus de dix degrés peut encore enjamber l’antipode.',
+    tolerance: 'convention produit — pilote l’aspect, jamais un verdict',
+    ordreDeGrandeur: true,
+    sections: ['3.3'],
+  }),
+  CHAMP_MAX_FISHEYE_DEG: entree({
+    ref: 'C-26',
+    libelle: 'Champ maximal couvert par un objectif fisheye',
+    valeur: 180,
+    unite: '°',
+    source:
+      '§5.1 — convention produit (T-0218) : le cercle image d’un fisheye courant couvre 180°. ' +
+      'En équidistante, d / f dépasse π dès que le capteur déborde ce cercle (8 mm sur plein ' +
+      'format : 258° en largeur) ; au-delà, le capteur ne reçoit plus de ciel.',
+    tolerance:
+      'convention produit — quelques fisheyes couvrent 190° à 220° ; le type d’objectif ne ' +
+      'porte pas cette information, le cas courant est retenu.',
+    ordreDeGrandeur: false,
+    sections: ['5.1'],
   }),
   FACTEUR_ZOOM_CRAN: entree({
     ref: 'C-26',

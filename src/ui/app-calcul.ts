@@ -454,7 +454,7 @@ export function evalueMateriel(materiel: SaisieMateriel): Calcul {
         : nombreSiRenseigne('iso_capture', materiel.iso)
     return {
       ok: true,
-      optique: profilOptique({ focaleMm, ouvertureN, ...capteur }),
+      optique: profilOptique({ focaleMm, ouvertureN, typeObjectif: materiel.typeObjectif, ...capteur }),
       suivi: profilSuivi({
         suiviActif: materiel.suiviActif,
         qualiteMes: materiel.qualiteMes,
@@ -509,13 +509,19 @@ function profilsDeCadre(calcul: Calcul, materiel: SaisieMateriel): readonly Prof
   const tPoseS = calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value
   return modes.map((m) => {
     const capteur = capteurEffectif(boitier, m)
-    const optique = profilOptique({ focaleMm, ouvertureN, ...capteur })
+    const optique = profilOptique({
+      focaleMm,
+      ouvertureN,
+      typeObjectif: materiel.typeObjectif,
+      ...capteur,
+    })
     return {
       libelle: `${focaleMm} mm f/${ouvertureN} — ${m === 'FULL_FRAME' ? 'plein format' : 'recadrage APS-C'}`,
       fovLDeg: optique.fovLDeg.value,
       fovHDeg: optique.fovHDeg.value,
       echApx: optique.echApx.value,
       capteurHMm: capteur.capteurHMm,
+      modeObjectif: modeObjectif(materiel.typeObjectif),
       tPoseS,
     }
   })
