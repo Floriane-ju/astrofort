@@ -338,6 +338,7 @@ export const GLOSSAIRE = Object.freeze({
   mise_en_station: terme({
     libelle: 'Mise en station',
     glose: 'alignement sur le pôle',
+    sansBulle: true,
     explication:
       'C’est l’alignement de l’axe de la monture sur le pôle céleste. Au viseur polaire, les ' +
       'poses tiennent bien plus longtemps qu’à la boussole.',
