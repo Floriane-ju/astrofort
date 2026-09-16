@@ -9,10 +9,13 @@
  *
  * La date reste dehors, dans la barre : elle date la nuit entière et se change en cours de
  * planification, contrairement aux coordonnées d'un site.
+ *
+ * T-0228 — la source de la table de Bortle, et la limite de validité qu'elle énonce, sont
+ * parties dans le tiroir « info ». Elles ne varient pas avec la saisie : les poser sous un
+ * champ qu'on règle une fois par sortie revenait à les faire relire à chaque ouverture.
  */
 
 import type { MasqueHorizon, PointMasque, SeuilsSite } from '../core/site.ts'
-import { SOURCE_TABLE_BORTLE } from '../registry/bortle.ts'
 import { MasqueHorizonSaisie } from './MasqueHorizon.tsx'
 import { ChampDomaine } from './ChampDomaine.tsx'
 import { TracedValue } from './TracedValue.tsx'
@@ -124,9 +127,6 @@ export function ChampsSite(props: ChampsSiteProps) {
         </>
       )}
 
-      {/* La table qui traduit le Bortle saisi en fond de ciel dit sa propre limite de
-          validité : elle se lit à côté du champ qui l'alimente. */}
-      <p className="tracee-source">Fond de ciel : {SOURCE_TABLE_BORTLE}</p>
     </section>
   )
 }

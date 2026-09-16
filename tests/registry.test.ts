@@ -102,32 +102,43 @@ describe('sources des tables du registre §2.1', () => {
   /**
    * Une source déclarée que personne n'affiche est une promesse écrite et non tenue :
    * elle dit la limite de validité d'une table sur laquelle l'utilisateur agit. Chaque
-   * SOURCE_TABLE_* doit donc arriver à l'écran, et toutes de la même façon — sinon la
+   * SOURCE_TABLE_* doit donc arriver à l'écran, et toutes par le même chemin — sinon la
    * traçabilité se lit de trois manières différentes (T-0062).
+   *
+   * T-0228 — ce chemin n'est plus une classe de style répétée dans trois panneaux, c'est la
+   * table `SOURCES`. Les trois phrases étaient posées sous les valeurs qu'elles sourcent, où
+   * elles se relisaient à chaque cible sans arbitrer quoi que ce soit ; elles sont maintenant
+   * dans le tiroir « info ». La discipline ne change pas de nature : une source déclarée que
+   * la table ne cite pas n'atteint aucun écran, et le test la nomme.
    */
+  const declare = (fichier: string): readonly string[] => [
+    ...readFileSync(join(DOSSIER_REGISTRE, fichier), 'utf8').matchAll(
+      /export const (SOURCE_TABLE_\w+)/g,
+    ),
+  ].map((m) => m[1]!)
+
   const sourcesDeclarees = readdirSync(DOSSIER_REGISTRE)
     .filter((f) => f.endsWith('.ts'))
-    .flatMap((f) => readFileSync(join(DOSSIER_REGISTRE, f), 'utf8').match(/SOURCE_TABLE_\w+/g) ?? [])
+    .flatMap(declare)
 
-  const ui = readdirSync(DOSSIER_UI)
-    .filter((f) => f.endsWith('.tsx'))
-    .map((f) => readFileSync(join(DOSSIER_UI, f), 'utf8'))
-    .join('\n')
-
-  const affichees = new Map(
-    [...ui.matchAll(/className="tracee-source">[^<]*\{(SOURCE_TABLE_\w+)\}/g)].map((m) => [
-      m[1]!,
-      true,
-    ]),
-  )
+  const table = readFileSync(join(DOSSIER_REGISTRE, 'sources.ts'), 'utf8')
+  const citees = new Set(table.match(/SOURCE_TABLE_\w+/g) ?? [])
 
   it('déclare au moins une source par table', () => {
     expect(sourcesDeclarees.length).toBeGreaterThan(0)
   })
 
-  it('affiche chaque source déclarée, toutes sous la même forme', () => {
-    const orphelines = [...new Set(sourcesDeclarees)].filter((nom) => !affichees.has(nom))
+  it('cite chaque source déclarée dans la table des sources', () => {
+    const orphelines = [...new Set(sourcesDeclarees)].filter((nom) => !citees.has(nom))
     expect(orphelines).toEqual([])
+  })
+
+  it('T-0228 — aucun panneau ne les réaffiche au contact des valeurs', () => {
+    const ui = readdirSync(DOSSIER_UI)
+      .filter((f) => f.endsWith('.tsx'))
+      .map((f) => readFileSync(join(DOSSIER_UI, f), 'utf8'))
+      .join('\n')
+    expect(ui.match(/SOURCE_TABLE_\w+/g)).toBeNull()
   })
 })
 

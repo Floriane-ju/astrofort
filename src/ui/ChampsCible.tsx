@@ -10,6 +10,9 @@
  * Les valeurs sont donc des lectures, empruntant la ligne des grandeurs non tracées
  * (§6.4) : elles viennent d'OpenNGC, pas d'une formule, et rien ne s'y déplie. T-0158 —
  * les trois dimensions apparentes se rangent sous leur propre sous-titre.
+ *
+ * T-0228 — la région ne dit plus d'où viennent ces valeurs. La provenance est la même à
+ * chaque cible et n'arbitre rien ; elle se lit dans le tiroir « info » de la barre haute.
  */
 
 import type { ObjetCielProfond } from '../data/deepsky.ts'
@@ -85,13 +88,10 @@ export function ChampsCible({ objet }: ChampsCibleProps) {
           {objet.vMag === null ? MANQUANTE : objet.vMag}
         </span>
       </p>
+      {/* T-0228 — plus de renvoi à OpenNGC sous les dimensions. Il ne changeait pas d'une
+          cible à l'autre, ne décidait rien, et se relisait à chaque fiche ouverte : il est
+          dans le tiroir « info », avec les autres provenances. */}
       <Dimensions objet={objet} />
-      {/* Le renvoi à la source accompagne des valeurs. Aucune dimension au catalogue : il
-          n'accompagne plus rien, et une provenance annoncée sous une absence donne à croire
-          qu'OpenNGC porte ces mesures. */}
-      {lignesDimensions(objet).length > 0 && (
-        <p className="etat">Valeurs du catalogue OpenNGC.</p>
-      )}
     </section>
   )
 }

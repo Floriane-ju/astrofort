@@ -19,6 +19,12 @@
  * persistance remonte sur le tiroir fermé et NOMME sa section — une information qui n'existe
  * que pour qui pense à ouvrir un menu n'existe pas (§11.3).
  *
+ * T-0228 — un tiroir « info » s'intercale avant celui des outils. Il ramasse la provenance des
+ * données, qui était semée au contact des valeurs qu'elle couvre : elle ne change jamais d'une
+ * cible à l'autre et n'arbitre rien, mais elle se relisait à chaque fiche ouverte. Avant les
+ * réglages et non après — on ouvre un tiroir de réglages pour AGIR, celui-ci pour lire, et le
+ * geste qui agit garde le bord droit que T-0184 lui a donné.
+ *
  * La profondeur affichée rejoint ici les autres lectures d'atelier : elle se lisait dans la
  * carte Vue, qu'il fallait déplier pour la voir. Le survol suffit à la comprendre (glossaire),
  * donc pas de `<details>` ici — la carte Vue reste repliable sans rien lui retirer.
@@ -35,6 +41,7 @@ import { ALERTE_VERIFICATION, Verification } from './Verification.tsx'
 import { ModeNuit, type EtatModeNuit } from './ModeNuit.tsx'
 import { Inconnu } from './Inconnu.tsx'
 import { Icone } from './Icone.tsx'
+import { Sources } from './Sources.tsx'
 import { Tiroir } from './Tiroir.tsx'
 import type { Persistance } from './app-donnees.ts'
 import { poseMode, useSeance, type ModeInterface } from './seance-etat.ts'
@@ -139,6 +146,23 @@ export function BarreHaut(props: BarreHautProps) {
           </button>
         ))}
       </div>
+
+      {/* T-0228 — la provenance des données, ramassée en un endroit. Elle était semée au
+          contact des valeurs qu'elle couvre, où elle se relisait à chaque cible sans jamais
+          servir une décision. Avant les réglages, pas après : on ouvre un tiroir de réglages
+          pour AGIR, celui-ci pour lire — et le geste qui agit reste le plus à droite, là où
+          T-0184 l'a mis. */}
+      <Tiroir
+        modificateur="info"
+        resume={
+          <>
+            <Icone nom="info" />
+            info
+          </>
+        }
+      >
+        <Sources />
+      </Tiroir>
 
       {/* T-0047 / T-0184 — ce qui sort du chemin principal : dernier élément de la barre,
           donc le plus à droite. */}

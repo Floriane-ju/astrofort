@@ -192,15 +192,11 @@ describe('T-0158 — « À propos », et des dimensions qui ne meublent pas', ()
     const rendu = ficheDe(
       objetForge('SANS_FORME', 85, { majAxArcmin: null, minAxArcmin: null, posAngDeg: null }),
     )
-    // Les verdicts en aval nomment aussi ce qui leur manque : on ne juge que la section. Elle
-    // se borne à sa fermeture, et non au renvoi à OpenNGC — qui disparaît avec les valeurs.
+    // Les verdicts en aval nomment aussi ce qui leur manque : on ne juge que la section.
     const aPropos = rendu.slice(0, rendu.indexOf('</section>'))
     expect(aPropos).not.toContain('Grand axe')
     expect(aPropos).not.toContain('Petit axe')
     expect(aPropos.match(/DONNÉE MANQUANTE/g) ?? []).toHaveLength(1)
-    // Le renvoi à la source ne survit pas aux valeurs qu'il source.
-    expect(aPropos).not.toContain('Valeurs du catalogue OpenNGC.')
-    expect(ficheDe(AU_DESSUS)).toContain('Valeurs du catalogue OpenNGC.')
   })
 
   it('retire la région « Cadrage de la cible » quand le catalogue ne donne pas les dimensions', () => {
@@ -289,10 +285,17 @@ describe('T-0156 — la cible ne se saisit plus du tout', () => {
     expect(rendu).not.toMatch(/disabled/i)
   })
 
-  it('affiche les valeurs du catalogue en lectures, avec leur origine', () => {
+  it('affiche les valeurs du catalogue en lectures', () => {
     expect(rendu).toContain('GLOB')
     expect(rendu).toContain('amas globulaire')
-    expect(rendu).toContain('Valeurs du catalogue OpenNGC.')
+  })
+
+  /**
+   * T-0228 — la provenance ne se relit plus à chaque cible : elle est la même pour toutes, et
+   * n'arbitre rien. Elle vit dans le tiroir « info », que `coque.test.tsx` vérifie.
+   */
+  it('T-0228 — ne renvoie plus à OpenNGC au contact des valeurs', () => {
+    expect(rendu).not.toContain('Valeurs du catalogue OpenNGC.')
   })
 
   it('nomme ce que le catalogue ne porte pas plutôt que de laisser un champ vide', () => {

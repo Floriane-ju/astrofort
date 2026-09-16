@@ -4,12 +4,15 @@
  *
  * Aucune de ces régions ne calcule quoi que ce soit : elles lisent le `Resultat` produit par
  * `fiche-cible-calcul.ts`, et chaque nombre reste dépliable jusqu'à sa formule.
+ *
+ * T-0228 — les deux renvois d'amont que ces régions portaient — seuils de contraste, familles
+ * de filtres — sont dans le tiroir « info ». Ils ne bougeaient pas d'une cible à l'autre et
+ * n'arbitraient rien, là où tout le reste de la fiche répond à la cible du moment. La source
+ * d'une CONSTANTE reste au contact, dépliée sous sa valeur : c'est §10.2, pas une bibliographie.
  */
 
 import { dureeLisible } from '../core/exposure.ts'
 import { PRESETS_SNR } from '../registry/verdicts.ts'
-import { SOURCE_TABLE_CONTRASTE } from '../registry/contrast.ts'
-import { SOURCE_TABLE_FILTRES } from '../registry/filters.ts'
 import { libelleZpSource, type PointZeroSysteme } from '../data/equipment.ts'
 import { MANQUANTE } from './ChampsCible.tsx'
 import { Interrupteur } from './Interrupteur.tsx'
@@ -180,7 +183,6 @@ function Detectabilite({
         <Etiquette cle="tolerance_lune" /> : {r.detect.toleranceLune} — {r.detect.conseilType}
       </p>
       {r.detect.noteLune !== undefined && <p className="etat">{r.detect.noteLune}</p>}
-      <p className="tracee-source">Seuils de contraste : {SOURCE_TABLE_CONTRASTE}</p>
     </section>
   )
 }
@@ -446,7 +448,6 @@ function ConseilsEtRecommandations({ conseils }: { readonly conseils: Conseils }
   return (
     <>
       <Mention ton={conseils.filtre.declenche ? 'cause' : 'etat'}>{conseils.filtre.message}</Mention>
-      <p className="tracee-source">Familles de filtres : {SOURCE_TABLE_FILTRES}</p>
       {/* §10.3 — recommandation d'équipement : catégorie et gain chiffré, rien d'autre. */}
       <p className="etat">{conseils.recommandations.message}</p>
       {conseils.recommandations.recommandations.length > 0 && (

@@ -28,6 +28,8 @@ import {
 import { MenuReglages } from '../src/ui/MenuReglages.tsx'
 import { BarreHaut, type BarreHautProps } from '../src/ui/BarreHaut.tsx'
 import { ALERTE_VERIFICATION } from '../src/ui/Verification.tsx'
+import { SOURCES } from '../src/registry/sources.ts'
+import { CREDIT_RELEVE } from '../src/registry/imagerie.ts'
 import { poidsParDefaut } from '../src/core/session.ts'
 import { DOMAINES } from '../src/registry/domains.ts'
 import {
@@ -847,6 +849,45 @@ describe('T-0184 — un seul tiroir pour la vérification et les réglages', () 
     expect(topbar).toContain('Registre de constantes')
     expect(topbar).toContain('Matrice de dégradation hors-ligne')
     expect(topbar).toContain('Exporter mes données (JSON)')
+  })
+})
+
+/**
+ * T-0228 — la provenance des données se lit en un endroit.
+ *
+ * Elle était semée au contact des valeurs qu'elle couvre — sous les dimensions de la fiche,
+ * sous le champ Bortle, sous le verdict de détectabilité, sous le conseil filtre. Ce qui se
+ * vérifie ici est le regroupement ET son prix : les deux mentions que le PRD impose au
+ * contact ne doivent pas être parties avec les autres.
+ */
+describe('T-0228 — un tiroir « info » porte les sources', () => {
+  it('monte un tiroir de plus dans la barre haute, avant celui des réglages', () => {
+    const topbar = barreHaute(ecran())
+    expect(topbar).toContain('tiroir tiroir-info')
+    expect(topbar.indexOf('tiroir-info')).toBeLessThan(topbar.indexOf('tiroir-outils'))
+  })
+
+  it('le tiroir des outils reste le dernier : rien ne se monte après lui', () => {
+    const topbar = barreHaute(ecran())
+    expect(topbar.slice(topbar.indexOf('tiroir-outils'))).not.toContain('<details')
+  })
+
+  it('nomme l’amont de chaque donnée affichée', () => {
+    const fenetre = barreHaute(ecran())
+    const info = fenetre.slice(fenetre.indexOf('tiroir-info'), fenetre.indexOf('tiroir-outils'))
+    for (const source of SOURCES) {
+      expect(info).toContain(source.donnee)
+    }
+    expect(info).toContain('OpenNGC')
+    expect(info).toContain('astronomy-engine')
+  })
+
+  it('n’a pas emporté les deux mentions que le PRD impose au contact', () => {
+    // §6.4 — l'attribution de l'image est une condition d'affichage, pas une bibliographie.
+    ouvreCible(M31)
+    expect(CREDIT_RELEVE.licence).toContain('CDS')
+    // §10.2 niveau 3 — la source d'une CONSTANTE reste dépliable sous la valeur qu'elle porte.
+    expect(ecran()).toContain('tracee-source')
   })
 })
 
