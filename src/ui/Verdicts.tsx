@@ -17,10 +17,13 @@ import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, Terme } from './Terme.tsx'
 import { heure } from './horaire.ts'
 import type { Conseils, Resultat } from './fiche-cible-calcul.ts'
+import type { CreneauFiche } from './fiche-cible-creneau.ts'
 import { Mention } from './Mention.tsx'
 
 export interface VerdictsProps {
   readonly r: Resultat
+  /** T-0222 — le créneau photo de la nuit, celui du plan de séance. */
+  readonly creneau: CreneauFiche
   readonly snrCible: number
   readonly surSnr: (valeur: number) => void
   readonly isoLibelle: string
@@ -40,7 +43,7 @@ export function Verdicts(props: VerdictsProps) {
   return (
     <>
       <CadrageDeLaCible r={r} />
-      <Detectabilite r={r} />
+      <Detectabilite r={r} creneau={props.creneau} />
       {/* Sans donnée de détectabilité, aucune pose n'est chiffrable : la région n'aurait plus
           que le point zéro du boîtier et le fond de ciel à montrer, deux grandeurs du setup
           qui ne disent rien de cette cible-là. */}
@@ -115,8 +118,41 @@ function CielSousLaLune({ r }: { readonly r: Resultat }) {
   )
 }
 
+/**
+ * §8.2, T-0222 — quand déclencher : début et fin du créneau photo de la nuit. Un créneau GEM
+ * s'affiche en deux lignes, parce que la séquence s'arrête vraiment au méridien. Le verdict
+ * dit si la cible se voit ; sans l'heure, on ne sait pas encore quand la photographier.
+ */
+function CreneauPhoto({ creneau }: { readonly creneau: CreneauFiche }) {
+  if (!creneau.chiffre) return <Mention ton="cause">{creneau.cause}</Mention>
+  const c = creneau.creneau
+  if (c.causeExclusion !== undefined || c.creneaux.length === 0) {
+    return <Mention ton="cause">{c.message}</Mention>
+  }
+  return (
+    <>
+      {c.creneaux.map((sous) => (
+        <p className="etat" key={sous.debut.getTime()}>
+          <Etiquette cle="creneau" /> : de {heure(sous.debut)} à {heure(sous.fin)}
+          {sous.apresRetournement ? ', après le retournement' : ''}
+        </p>
+      ))}
+      {c.heureCulmination !== null && (
+        <p className="etat">Culmination à {heure(c.heureCulmination)}, au plus haut de la nuit.</p>
+      )}
+      <Mention ton="etat">{c.message}</Mention>
+    </>
+  )
+}
+
 /** §6.3 — ce qui verra la cible : l'œil, des jumelles, un télescope, ou la photo seule. */
-function Detectabilite({ r }: { readonly r: Resultat }) {
+function Detectabilite({
+  r,
+  creneau,
+}: {
+  readonly r: Resultat
+  readonly creneau: CreneauFiche
+}) {
   // Verdict nul = magnitude ou dimensions absentes du catalogue. Tout ce que la région
   // porterait alors — brillance de surface, contraste, magnitude limite — vaut lui aussi
   // « donnée manquante », et quatre fois la même absence n'en apprend pas plus qu'une. La
@@ -126,6 +162,7 @@ function Detectabilite({ r }: { readonly r: Resultat }) {
       <section>
         <h2>Détectabilité</h2>
         <p className="etat">{MANQUANTE}</p>
+        <CreneauPhoto creneau={creneau} />
       </section>
     )
   }
@@ -134,6 +171,7 @@ function Detectabilite({ r }: { readonly r: Resultat }) {
     <section>
       <h2>Détectabilité</h2>
       <p className="etat">verdict : {r.detect.verdict}</p>
+      <CreneauPhoto creneau={creneau} />
       <CielSousLaLune r={r} />
       <TracedValue terme="brillance_surface" trace={r.detect.sbObj} unite="mag/as²" />
       <TracedValue terme="contraste_ciel" trace={r.detect.deltaSb} unite="mag/as²" />

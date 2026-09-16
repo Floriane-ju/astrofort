@@ -136,6 +136,7 @@ function ficheDe(objet: ObjetCielProfond): string {
     <FicheCible
       objet={objet}
       site={SITE}
+      contexteSession={null}
       optique={OPTIQUE}
       capteurHMm={CAPTEUR.capteurHMm}
       pitchUm={CAPTEUR.pitchUm}

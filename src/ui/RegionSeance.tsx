@@ -29,6 +29,7 @@ import { PanneauFile } from './PanneauFile.tsx'
 import { FicheCible } from './FicheCible.tsx'
 import { Pastilles } from './Pastilles.tsx'
 import { Bulle } from './Bulle.tsx'
+import { ViseeCible } from './BoutonVisee.tsx'
 import { PlanSessionVue } from './PlanSession.tsx'
 import { RegionNuit } from './RegionNuit.tsx'
 import { modeObjectif } from './PanneauMateriel.tsx'
@@ -233,7 +234,15 @@ export function LateralSeance(props: RegionSeanceProps) {
     <PanneauLateral
       titre={fiche && props.cibleDuCiel !== null ? props.cibleDuCiel.designation : TITRES_LATERAL[mode]}
       retour={fiche ? montreListeCibles : null}
-      rappel={fiche && facilite !== null ? <RappelFacilite etat={facilite} /> : null}
+      rappel={
+        fiche && props.cibleDuCiel !== null ? (
+          <span className="lateral-actions">
+            {facilite !== null && <RappelFacilite etat={facilite} />}
+            {/* T-0221 — viser depuis la fiche, sans repasser par la ligne de liste. */}
+            <ViseeCible objet={props.cibleDuCiel} site={chaine.site} />
+          </span>
+        ) : null
+      }
       titreRef={titreRef}
     >
       {fiche && props.cibleDuCiel !== null ? (
@@ -241,7 +250,12 @@ export function LateralSeance(props: RegionSeanceProps) {
         chaine.contexteFiche === null ? (
           <p className="etat">{AIDE_MATERIEL_INCOMPLET}</p>
         ) : (
-          <FicheCible {...chaine.contexteFiche} objet={props.cibleDuCiel} site={chaine.site} />
+          <FicheCible
+            {...chaine.contexteFiche}
+            objet={props.cibleDuCiel}
+            site={chaine.site}
+            contexteSession={chaine.contexteSession}
+          />
         )
       ) : mode === 'PANORAMA' ? (
         chaine.panneauFile === null ? (

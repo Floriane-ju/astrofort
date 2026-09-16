@@ -109,16 +109,16 @@ export function ajouteCoordonnees(
   lignes: readonly LigneCibleInvariante[],
   matriceCiel: Mat3,
 ): readonly LigneCible[] {
-  return lignes.map((ligne) => {
-    const horizon = versSpherique(
-      applique(matriceCiel, versVecteur(ligne.objet.adDeg, ligne.objet.decDeg)),
-    )
-    return {
-      ...ligne,
-      hauteurDeg: horizon.latitudeDeg,
-      azimutDeg: horizon.longitudeDeg,
-    }
-  })
+  return lignes.map((ligne) => ({ ...ligne, ...coordonneesHorizon(ligne.objet, matriceCiel) }))
+}
+
+/** T-0221 — la liste et la fiche visent avec la même transformation, jamais deux. */
+export function coordonneesHorizon(
+  objet: ObjetCielProfond,
+  matriceCiel: Mat3,
+): { readonly hauteurDeg: number; readonly azimutDeg: number } {
+  const horizon = versSpherique(applique(matriceCiel, versVecteur(objet.adDeg, objet.decDeg)))
+  return { hauteurDeg: horizon.latitudeDeg, azimutDeg: horizon.longitudeDeg }
 }
 
 /**

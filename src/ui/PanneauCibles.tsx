@@ -34,16 +34,15 @@ import { K } from '../registry/constants.ts'
 import { DOMAINES } from '../registry/domains.ts'
 import { I } from '../registry/imagerie.ts'
 import type { ObjetCielProfond, TypeObjet } from '../data/deepsky.ts'
-import { Bulle } from './Bulle.tsx'
+import { BoutonVisee } from './BoutonVisee.tsx'
 import { Curseur } from './Curseur.tsx'
-import { Icone } from './Icone.tsx'
 import { VignetteCible } from './ImageCible.tsx'
 import { prechargeVignettes } from './image-cible-memoire.ts'
 import { Pastilles } from './Pastilles.tsx'
 import { LIBELLE_TYPE_OBJET, nomCommun } from './libelles-objet.ts'
 import { ouvreCible } from './seance-etat.ts'
 import { majCatalogue, useCatalogue, type Portee } from './catalogue-etat.ts'
-import { majVue, minuteAffichee, useTrancheScene, MS_PAR_MINUTE } from './scene-etat.ts'
+import { minuteAffichee, useTrancheScene, MS_PAR_MINUTE } from './scene-etat.ts'
 
 const LIBELLE_PORTEE: Readonly<Record<Portee, string>> = Object.freeze({
   CATALOGUE: 'Tout le catalogue',
@@ -289,31 +288,13 @@ function LigneListe({ ligne, etat }: { readonly ligne: LigneCible; readonly etat
           ))}
         </span>
       </button>
-      {/* T-0046 — « Voir » centre, et rien d'autre : ni le champ, ni l'horloge ne bougent.
-          Sous l'horizon, la direction existe quand même — la vue descend jusqu'à −90° — et
-          c'est elle qu'on veut connaître pour savoir de quel côté attendre le lever. Le
-          bouton reste donc offert sur toute ligne ; la couche Sol continue de masquer ce
-          qu'elle recouvre, et la bulle dit pourquoi la cible n'apparaîtra pas. */}
-      <Bulle texte={libelleVisee(ligne)} place="gauche" nomme>
-        <button
-          type="button"
-          className="cible-voir"
-          onClick={() => majVue({ azimutDeg: ligne.azimutDeg, hauteurDeg: ligne.hauteurDeg })}
-        >
-          <Icone nom="my_location" />
-        </button>
-      </Bulle>
+      <BoutonVisee
+        designation={objet.designation}
+        azimutDeg={ligne.azimutDeg}
+        hauteurDeg={ligne.hauteurDeg}
+      />
     </li>
   )
-}
-
-/**
- * Viser sous l'horizon centre une direction sans objet à voir : le sol la recouvre. La bulle
- * l'annonce avant le clic, sinon le geste se lit comme un bouton cassé.
- */
-function libelleVisee(ligne: LigneCible): string {
-  const cible = `Centrer la scène sur ${ligne.objet.designation}`
-  return ligne.hauteurDeg > 0 ? cible : `${cible} — sous l’horizon, masquée par le sol`
 }
 
 /**

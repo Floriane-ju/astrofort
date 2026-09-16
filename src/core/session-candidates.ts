@@ -10,7 +10,12 @@ import { K } from '../registry/constants.ts'
 import { SaisieRefuseeError } from '../registry/domains.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import { REMPLISSAGE_MIN_PLANIFIABLE, VERDICTS_PLANIFIABLES } from '../registry/verdicts.ts'
-import { creneauCible, type CreneauCible, type Intervalle } from './creneaux.ts'
+import {
+  creneauCible,
+  type CreneauCible,
+  type EntreeCreneau,
+  type Intervalle,
+} from './creneaux.ts'
 import { detectabilite } from './detectability.ts'
 import { ficheCadrage } from './framing.ts'
 import { fluxCiel, fluxObjet, fluxObjetReel, planIntegration, poseUnitaire } from './exposure.ts'
@@ -49,6 +54,27 @@ export function instantLune(creneau: CreneauCible, repli: Date): Date {
   const dernier = creneau.creneaux[creneau.creneaux.length - 1]
   if (premier === undefined || dernier === undefined) return repli
   return new Date((premier.debut.getTime() + dernier.fin.getTime()) / 2)
+}
+
+/**
+ * §8.2 — l'entrée du créneau d'une cible, telle que le plan la construit. T-0222 : la fiche
+ * affiche ce créneau ; reconstruire l'entrée ailleurs, c'est risquer un seuil ou une monture
+ * qui diffère, donc deux créneaux pour la même cible.
+ */
+export function entreeCreneau(
+  contexte: ContexteSession,
+  objet: ObjetCielProfond,
+  fenetre: Intervalle,
+): EntreeCreneau {
+  return {
+    site: contexte.site,
+    adH: objet.adDeg / DEG_PAR_HEURE,
+    decDeg: objet.decDeg,
+    fenetre,
+    masque: contexte.masque,
+    typeMonture: contexte.typeMonture,
+    ...(contexte.seuilHauteurDeg === undefined ? {} : { seuilHauteurDeg: contexte.seuilHauteurDeg }),
+  }
 }
 
 /** Le code d'écart que porte un créneau refusé : la cause vient du moteur, pas d'ici. */
@@ -127,15 +153,7 @@ function evalue(
     }
   }
 
-  const creneau = creneauCible({
-    site: contexte.site,
-    adH: objet.adDeg / DEG_PAR_HEURE,
-    decDeg: objet.decDeg,
-    fenetre,
-    masque: contexte.masque,
-    typeMonture: contexte.typeMonture,
-    ...(contexte.seuilHauteurDeg === undefined ? {} : { seuilHauteurDeg: contexte.seuilHauteurDeg }),
-  })
+  const creneau = creneauCible(entreeCreneau(contexte, objet, fenetre))
   if (creneau.causeExclusion !== undefined || creneau.dureeTotaleMin.value <= 0) {
     return {
       designation: objet.designation,

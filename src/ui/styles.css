@@ -943,8 +943,15 @@ input.barretemps-instant {
 /* T-0182 — la note de facilité a quitté l'en-tête de la carte Cible pour celui du panneau, où
    elle n'est plus dans un bouton : elle y est ANNONCÉE, plus masquée. La glose aligne son
    contenu ; `Bulle` insère son ancre entre l'en-tête et elle, d'où deux niveaux. */
-.lateral-entete .carte-rappel-glose {
+/* T-0221 — la facilité et la visée se rangent ensemble à droite du titre. */
+.lateral-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pas-2);
   margin-inline-start: auto;
+}
+
+.lateral-entete .carte-rappel-glose {
   color: var(--attenue);
   font-size: var(--texte-micro);
   letter-spacing: var(--suivi-micro);

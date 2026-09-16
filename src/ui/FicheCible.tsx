@@ -19,10 +19,12 @@ import { SaisieRefuseeError } from '../registry/domains.ts'
 import { PRESETS_SNR } from '../registry/verdicts.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { Site } from '../core/ephem.ts'
+import type { ContexteSession } from '../core/session-types.ts'
 import { ChampsCible } from './ChampsCible.tsx'
 import { ImageCible } from './ImageCible.tsx'
 import { Verdicts } from './Verdicts.tsx'
 import { useLuneCible } from './fiche-cible-lune.ts'
+import { creneauFiche } from './fiche-cible-creneau.ts'
 import { conseilsCible, evalue, type ContexteFiche, type Resultat } from './fiche-cible-calcul.ts'
 import { Mention } from './Mention.tsx'
 
@@ -37,6 +39,8 @@ export interface FicheCibleProps extends ContexteFiche {
   readonly objet: ObjetCielProfond
   /** T-0045 — le lieu, sans lequel « au-dessus de l'horizon » ne veut rien dire. */
   readonly site: Site
+  /** T-0222 — la nuit du plan de séance, `null` tant qu'elle n'est pas chiffrable. */
+  readonly contexteSession: ContexteSession | null
 }
 
 export function FicheCible(props: FicheCibleProps) {
@@ -64,6 +68,11 @@ export function FicheCible(props: FicheCibleProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props, objet, snrCible, iso.iso, lune, permissif])
+
+  const creneau = useMemo(
+    () => creneauFiche(props.contexteSession, objet),
+    [props.contexteSession, objet],
+  )
 
   const conseils = useMemo(
     () =>
@@ -100,6 +109,7 @@ export function FicheCible(props: FicheCibleProps) {
       {calcul.ok && (
         <Verdicts
           r={calcul.r}
+          creneau={creneau}
           snrCible={snrCible}
           surSnr={setSnrCible}
           isoLibelle={iso.message}
