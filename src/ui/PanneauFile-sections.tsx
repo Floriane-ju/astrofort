@@ -62,12 +62,10 @@ export function CadrageDuFile({
         {modeApercu(file) === 'FILE' ? MENTION_PLAFOND_FILE : MENTION_PLAFOND_CHAMP}
       </p>
 
-      <div className="champs">
-        {/* Azimut, hauteur et rotation n'ont pas de curseur ici : le pointage se fait à la
-            scène, en faisant glisser le planétarium, et la rotation se règle au panneau Vue
-            ou avec Maj + glisser. Ce panneau les lit, il ne les commande pas — la visée
-            courante se lit au centre de la barre basse (§11.1). */}
-      </div>
+      {/* Azimut, hauteur et rotation n'ont pas de curseur ici : le pointage se fait à la
+          scène, en faisant glisser le planétarium, et la rotation se règle au panneau Vue
+          ou avec Maj + glisser. Ce panneau les lit, il ne les commande pas — la visée
+          courante se lit au centre de la barre basse (§11.1). */}
 
       {mode === 'PANORAMA' && (
         <>
@@ -107,14 +105,12 @@ export function PoseMaximale({
   const { carte } = lectures
   return (
     <section>
-      <div className="champs">
-        <Interrupteur
-          actif={file.poseDansCadre}
-          surChangement={(poseDansCadre) => majFile({ poseDansCadre })}
-        >
-          Afficher la pose maximale dans le cadre
-        </Interrupteur>
-      </div>
+      <Interrupteur
+        actif={file.poseDansCadre}
+        surChangement={(poseDansCadre) => majFile({ poseDansCadre })}
+      >
+        Afficher la pose maximale dans le cadre
+      </Interrupteur>
       {file.poseDansCadre && (
         <p className="etat">
           Le cadre du capteur porte la grille de pose : il est masqué le temps qu'elle s'y
@@ -159,21 +155,19 @@ export function ProfondeurDUnePose({
   return (
     <section>
       <h3>Prévisualisation de champ</h3>
-      <div className="champs">
-        <label>
-          <span className="libelle">Pose unitaire : {file.tPoseS.toFixed(0)} s</span>
-          <Curseur
-            libelle="Pose unitaire"
-            valeur={file.tPoseS}
-            min={1}
-            max={K('PLAFOND_POSE_SANS_AUTOGUIDAGE_S')}
-            pas={1}
-            texte={`${file.tPoseS.toFixed(0)} s`}
-            {...(accroche === null ? {} : { accroche })}
-            sur={(tPoseS) => majFile({ tPoseS })}
-          />
-        </label>
-      </div>
+      <label>
+        <span className="libelle">Pose unitaire : {file.tPoseS.toFixed(0)} s</span>
+        <Curseur
+          libelle="Pose unitaire"
+          valeur={file.tPoseS}
+          min={1}
+          max={K('PLAFOND_POSE_SANS_AUTOGUIDAGE_S')}
+          pas={1}
+          texte={`${file.tPoseS.toFixed(0)} s`}
+          {...(accroche === null ? {} : { accroche })}
+          sur={(tPoseS) => majFile({ tPoseS })}
+        />
+      </label>
       <TracedValue
         terme="profondeur_previsu"
         trace={lectures.profondeur}
@@ -231,25 +225,23 @@ export function ArcsDuFile({
   return (
     <section>
       <h3>Filé d’étoiles</h3>
-      <div className="champs">
-        <label>
-          <span className="libelle">
-            <Etiquette cle="duree_file" /> : {file.dureeTotaleMin.toFixed(0)} min
-          </span>
-          {/* La borne basse n'est pas celle de §9.3 : le domaine ouvre le filé à 5 min, mais
-              0 n'est pas un filé plus court — c'est l'aperçu de champ, l'autre bout de la même
-              commande. La borne haute, elle, est bien celle que le PRD déclare. */}
-          <Curseur
-            libelle="Durée du filé"
-            valeur={file.dureeTotaleMin}
-            min={DUREE_APERCU_CHAMP_MIN}
-            max={DOMAINES.duree_file_min.max}
-            pas={5}
-            texte={`${file.dureeTotaleMin.toFixed(0)} min`}
-            sur={(dureeTotaleMin) => majFile({ dureeTotaleMin })}
-          />
-        </label>
-      </div>
+      <label>
+        <span className="libelle">
+          <Etiquette cle="duree_file" /> : {file.dureeTotaleMin.toFixed(0)} min
+        </span>
+        {/* La borne basse n'est pas celle de §9.3 : le domaine ouvre le filé à 5 min, mais
+            0 n'est pas un filé plus court — c'est l'aperçu de champ, l'autre bout de la même
+            commande. La borne haute, elle, est bien celle que le PRD déclare. */}
+        <Curseur
+          libelle="Durée du filé"
+          valeur={file.dureeTotaleMin}
+          min={DUREE_APERCU_CHAMP_MIN}
+          max={DOMAINES.duree_file_min.max}
+          pas={5}
+          texte={`${file.dureeTotaleMin.toFixed(0)} min`}
+          sur={(dureeTotaleMin) => majFile({ dureeTotaleMin })}
+        />
+      </label>
       <p className="etat">
         durée dessinée dans le cadre :{' '}
         {modeApercu(file) === 'FILE'
@@ -297,26 +289,24 @@ export function SequenceDePrises({
   return (
     <section>
       <h3>Séquence de filé</h3>
-      <div className="champs">
-        <label>
-          <span className="libelle">
-            <Etiquette cle="intervalle_file" />
-          </span>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={file.intervalleS}
-            onChange={(e) => {
-              // T-0210 — un champ vidé donne `Number('') === 0`, mais un contenu que le
-              // navigateur n'a pas su lire donne `NaN`, qui se propagerait dans toute la
-              // séquence. Une valeur illisible garde la précédente.
-              const saisi = Number(e.target.value)
-              if (Number.isFinite(saisi)) majFile({ intervalleS: Math.max(0, saisi) })
-            }}
-          />
-        </label>
-      </div>
+      <label>
+        <span className="libelle">
+          <Etiquette cle="intervalle_file" />
+        </span>
+        <input
+          type="number"
+          min={0}
+          step={1}
+          value={file.intervalleS}
+          onChange={(e) => {
+            // T-0210 — un champ vidé donne `Number('') === 0`, mais un contenu que le
+            // navigateur n'a pas su lire donne `NaN`, qui se propagerait dans toute la
+            // séquence. Une valeur illisible garde la précédente.
+            const saisi = Number(e.target.value)
+            if (Number.isFinite(saisi)) majFile({ intervalleS: Math.max(0, saisi) })
+          }}
+        />
+      </label>
 
       {sequence.intervalleRefuse !== null && <Mention ton="erreur">{sequence.intervalleRefuse}</Mention>}
       <TracedValue terme="n_poses_file" trace={sequence.nPoses} decimales={0} />

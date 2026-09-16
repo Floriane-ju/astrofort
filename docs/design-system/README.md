@@ -24,8 +24,9 @@ casse normale.** Tout le reste en découle, y compris les erreurs que ce systèm
 
 ## Ce qui est garanti par un test, pas par une habitude
 
-Onze tests lisent le TEXTE de `src/ui/styles.css`. Une règle de style ne casse aucun rendu
-quand elle dérive — elle désaligne l'interface d'un pixel à la fois, et personne ne le voit.
+Douze disciplines lisent le TEXTE de `src/ui/styles.css` et des composants de `src/ui/`.
+Une règle de style ne casse aucun rendu quand elle dérive — elle désaligne l'interface d'un
+pixel à la fois, et personne ne le voit.
 C'est pourquoi chaque discipline ci-dessous a son test :
 
 | Discipline | Tenue par |
@@ -38,6 +39,7 @@ C'est pourquoi chaque discipline ci-dessous a son test :
 | Aucun suivi écrit en dur | `echelles.test.ts` |
 | Le micro-libellé ne perd ni son suivi ni sa couleur | `echelles.test.ts` |
 | `label` ne déclare que de la disposition, et tout `<label>` a son `.libelle` | `echelles.test.ts` |
+| Une grille `.champs` ne contient que des champs nommés, et jamais rien de vide | `echelles.test.ts` |
 | Aucun caractère Unicode-dessin dans `src/ui/`, ni en `content` dans la feuille | `icone.test.tsx` |
 | La police d'icônes n'est nommée que dans `.icone` | `icone.test.tsx` |
 | Aucune phrase d'alerte posée sans passer par `Mention` | `icone.test.tsx` |
@@ -83,6 +85,40 @@ individuellement, avec une valeur calculée — une primitive n'aurait aucun con
 existe et elle est commentée (`-1px` sur `.scene-description`).
 
 Trois écarts nommés s'appuient dessus : `--jour-carte`, `--jour-barre`, `--jour-ecran`.
+
+### Le rythme vertical est celui de la section
+
+Dans le corps d'une section ordinaire — `<section>` sans classe —, **deux blocs qui se suivent
+sont séparés de `--pas-2`**, et cet écart est posé une seule fois :
+
+```css
+section:not([class]) > * + *,
+.masque-horizon > * + * {
+  margin-block-start: var(--pas-2);
+}
+```
+
+`* + *` et non un `gap` de flex, pour deux raisons. Les marges **fusionnent** en disposition de
+bloc : un `.etat` ou un `.cause` garde sa marge propre sans l'ajouter à celle-ci, et le
+`margin-top` d'un `h2` continue de séparer deux sections. Et un `gap` s'applique à tous les
+frères sans exception, là où la liste des lectures tracées en réclame une — `.tracee` et
+`.tracee-vide` qui se suivent restent collées, leurs filets forment un tableau.
+
+Les quatre sections **nommées** posent leur propre disposition et sont hors de cette règle :
+`.scene`, `.cibles`, `.carte`, `.menu-reglages`.
+
+#### Ce qu'une grille `.champs` contient
+
+`<div className="champs">` est une **grille de champs nommés** : `ChampDomaine`, `ChampChoix`,
+ou un `<label>` portant son `.libelle`. Rien d'autre.
+
+Un interrupteur, un message (`Mention`, `.etat`), un bouton sont des **frères directs de la
+section**, où la règle ci-dessus leur donne exactement l'écart d'un champ. Posés dans la
+grille, ils dérivent : les marges ne fusionnent pas en disposition de grille, donc un message
+additionne la sienne au `gap` et devient la seule chose du panneau à un écart double ; un
+bouton devient une cellule à côté d'un champ.
+
+`echelles.test.ts` échoue si une grille contient l'un d'eux, ou si elle est vide.
 
 ### Typographie — six rangs
 
@@ -277,7 +313,7 @@ les plus proches, et demander.
 | Un jeton de point de rupture | Une seule valeur (1100px). |
 | Un composant `Bouton` | Le style est porté par le sélecteur d'élément `button`, appliqué à 23 boutons sans classe. Un composant n'ajouterait qu'une indirection. |
 | `Modale`, `Badge`, `Toast`, `Skeleton`, `Pagination` | Aucun n'existe dans le produit. |
-| Une feuille de style découpée | `styles.css` est une TABLE, comme `registry/constants.ts` : une région par bloc, aucune logique à suivre. Onze tests lisent son texte ; la découper ferait dépendre leurs garanties d'une liste de fichiers à tenir à jour. |
+| Une feuille de style découpée | `styles.css` est une TABLE, comme `registry/constants.ts` : une région par bloc, aucune logique à suivre. Douze disciplines lisent son texte ; la découper ferait dépendre leurs garanties d'une liste de fichiers à tenir à jour. |
 | ESLint, Prettier, Stylelint | Le dépôt n'en a pas. La vérification est `pnpm typecheck && pnpm test`. |
 
 ---

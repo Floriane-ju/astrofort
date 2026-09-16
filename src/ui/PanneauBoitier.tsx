@@ -235,16 +235,14 @@ function LigneIso({
           <Etiquette cle="iso_recommande" /> : {lecture === undefined ? '—' : lecture.iso}
         </p>
       ) : (
-        <div className="champs">
-          <ChampDomaine
-            domaine="iso_capture"
-            cle="iso_recommande"
-            valeur={iso}
-            surValeur={surIso}
-            inputMode="numeric"
-            placeholder={lecture === undefined ? 'recommandé' : `recommandé : ${lecture.iso}`}
-          />
-        </div>
+        <ChampDomaine
+          domaine="iso_capture"
+          cle="iso_recommande"
+          valeur={iso}
+          surValeur={surIso}
+          inputMode="numeric"
+          placeholder={lecture === undefined ? 'recommandé' : `recommandé : ${lecture.iso}`}
+        />
       )}
       {lecture !== undefined && (
         <Mention ton={lecture.readNoiseE === null ? 'cause' : 'etat'}>{lecture.message}</Mention>
@@ -282,8 +280,6 @@ export function PanneauBoitier(props: PanneauBoitierProps) {
       </h2>
       <div className="champs">
         <SelecteurBoitier boitierId={props.boitierId} surBoitierId={props.surBoitierId} />
-      </div>
-      <div className="champs">
         {ligne === null && (
           <>
             <ChampChoix

@@ -116,6 +116,9 @@ export function MasqueHorizonSaisie(props: MasqueHorizonProps) {
           surValeur={surAltitude}
           placeholder="crête, arbre, bâtiment"
         />
+      </div>
+
+      <div className="actions">
         <button type="button" onClick={ajoute}>
           Relever
         </button>

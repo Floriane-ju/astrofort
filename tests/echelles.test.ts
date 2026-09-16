@@ -260,3 +260,66 @@ describe('T-0215 — le libellé ne déborde pas sur son contrôle', () => {
     }
   })
 })
+
+/**
+ * T-0216 — le rythme vertical d'une section.
+ *
+ * L'écart entre deux champs ne vivait que sur `.champs`, dont le `gap` ne joue qu'entre les
+ * enfants de sa grille : tout ce que le balisage posait à côté d'elle retombait à zéro, tout
+ * ce qu'il y posait avec une marge propre montait à une fois et demie. La feuille porte
+ * maintenant l'écart sur les frères de la section ; ce qui reste à tenir est la CONVENTION qui
+ * va avec — une grille de champs ne contient que des champs.
+ *
+ * Elle ne se tient pas toute seule : deux sections du même fichier appliquaient deux règles
+ * opposées, et rien ne les départageait. C'est ce test qui départage.
+ */
+describe('T-0216 — le rythme vertical d’une section', () => {
+  /** Le corps de chaque grille `.champs`, délimité par l'indentation de sa balise ouvrante. */
+  function grilles(source: string): readonly string[] {
+    const blocs: string[] = []
+    for (const m of source.matchAll(/^([ ]*)<div className="champs">$/gm)) {
+      const debut = m.index + m[0].length + 1
+      const fin = source.indexOf(`\n${m[1]!}</div>`, debut)
+      blocs.push(source.slice(debut, fin))
+    }
+    return blocs
+  }
+
+  /** Les grilles de tout le dossier, avec le fichier d'où elles viennent. */
+  function toutesLesGrilles(): readonly (readonly [string, string])[] {
+    const racine = join(import.meta.dirname, '..', 'src', 'ui')
+    const paires: (readonly [string, string])[] = []
+    for (const fichier of readdirSync(racine)) {
+      if (!fichier.endsWith('.tsx')) continue
+      const source = readFileSync(join(racine, fichier), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+      for (const grille of grilles(source)) paires.push([fichier, grille] as const)
+    }
+    return paires
+  }
+
+  it('ne laisse dans la grille rien d’autre que des champs nommés', () => {
+    // Un message ajoute sa marge propre au `gap` — les marges ne fusionnent pas en grille —
+    // et devient la seule chose du panneau à un écart double. Un interrupteur et un bouton,
+    // eux, deviennent des cellules à côté d'un champ, alors qu'ils n'en sont pas un.
+    const INTRUS = ['<Mention', '<Interrupteur', '<button', 'className="etat"']
+    for (const [fichier, grille] of toutesLesGrilles()) {
+      for (const intrus of INTRUS) {
+        expect(grille, `${fichier} — ${intrus} dans une grille de champs`).not.toContain(intrus)
+      }
+    }
+  })
+
+  it('ne laisse aucune grille vide', () => {
+    // Une grille sans champ occupe quand même une place dans le rythme de la section.
+    for (const [fichier, grille] of toutesLesGrilles()) {
+      expect(/<Champ|<label/.test(grille), `${fichier} — une grille sans aucun champ`).toBe(true)
+    }
+  })
+
+  it('donne à la grille et aux frères le même pas', () => {
+    // Deux pas différents rendraient l'écart dépendant de ce qui est dans la grille — le
+    // défaut même que ce ticket ferme.
+    const pas = (motif: RegExp) => REGLES.slice(REGLES.search(motif)).match(/var\(--pas-\d\)/)![0]
+    expect(pas(/\.champs \{/)).toBe(pas(/section:not\(\[class\]\) > \* \+ \*/))
+  })
+})

@@ -104,30 +104,27 @@ export function ModeNuit({ etat, surChangement }: ModeNuitProps) {
   return (
     <section>
       <h2>Mode nuit</h2>
-      <div className="champs">
-        <Interrupteur
-          actif={etat.actif}
-          surChangement={(actif) => surChangement({ ...etat, actif })}
-        >
-          Activer le mode nuit
-        </Interrupteur>
-        <label>
-          <span className="libelle">
-            <Etiquette cle="luminance_mode_nuit" />
-          </span>
-          <Curseur
-            libelle="Luminance du mode nuit"
-            valeur={etat.luminance}
-            min={plancher}
-            max={LUMINANCE_NOMINALE}
-            pas={plancher}
-            texte={`${(etat.luminance * POURCENT).toFixed(0)} %`}
-            sur={(luminance) => surChangement({ ...etat, luminance })}
-          />
-          <span className="etat">{(etat.luminance * POURCENT).toFixed(0)} %</span>
-        </label>
-      </div>
-
+      <Interrupteur
+        actif={etat.actif}
+        surChangement={(actif) => surChangement({ ...etat, actif })}
+      >
+        Activer le mode nuit
+      </Interrupteur>
+      <label>
+        <span className="libelle">
+          <Etiquette cle="luminance_mode_nuit" />
+        </span>
+        <Curseur
+          libelle="Luminance du mode nuit"
+          valeur={etat.luminance}
+          min={plancher}
+          max={LUMINANCE_NOMINALE}
+          pas={plancher}
+          texte={`${(etat.luminance * POURCENT).toFixed(0)} %`}
+          sur={(luminance) => surChangement({ ...etat, luminance })}
+        />
+        <span className="etat">{(etat.luminance * POURCENT).toFixed(0)} %</span>
+      </label>
       <p className="etat">
         Si votre écran est une dalle LCD, l’extinction ne peut pas être totale : le
         rétroéclairage traverse toujours et une fuite de bleu subsiste. Le mode reste efficace,

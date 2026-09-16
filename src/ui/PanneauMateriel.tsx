@@ -170,10 +170,10 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
 
       <section>
         <h2>Suivi</h2>
+        <Interrupteur actif={props.suiviActif} surChangement={props.surSuiviActif}>
+          Ma monture suit les étoiles
+        </Interrupteur>
         <div className="champs">
-          <Interrupteur actif={props.suiviActif} surChangement={props.surSuiviActif}>
-            Ma monture suit les étoiles
-          </Interrupteur>
           {props.suiviActif && (
             <ChampChoix
               cle="mise_en_station"
@@ -195,21 +195,21 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
               <option value="GEM">Équatoriale allemande</option>
             </ChampChoix>
           )}
-          {/* T-0207 — l'altazimutale n'est pas un choix tant que la rotation de champ n'est pas
-              modélisée (§5.2) : la proposer ne menait qu'à un refus. `etat` et non `cause` :
-              rien n'est en défaut dans la saisie, c'est le périmètre de l'app qui se dit. */}
-          {props.suiviActif && (
-            <p className="etat">Les montures altazimutales ne sont pas encore gérées.</p>
-          )}
-          {/* §5.2 — fermer le ciel profond et le justifier sont un seul geste (core/tracking.ts) :
-              cette cause doit rester visible sans naviguer, qu'on suive ou non. */}
-          {lectures?.suivi.cause !== null && lectures?.suivi.cause !== undefined && (
-            <Mention ton="cause">{lectures.suivi.cause}</Mention>
-          )}
-          {lectures?.suivi.gainMiseEnStation !== undefined && (
-            <Mention ton="cause">{lectures.suivi.gainMiseEnStation}</Mention>
-          )}
         </div>
+        {/* T-0207 — l'altazimutale n'est pas un choix tant que la rotation de champ n'est pas
+            modélisée (§5.2) : la proposer ne menait qu'à un refus. `etat` et non `cause` :
+            rien n'est en défaut dans la saisie, c'est le périmètre de l'app qui se dit. */}
+        {props.suiviActif && (
+          <p className="etat">Les montures altazimutales ne sont pas encore gérées.</p>
+        )}
+        {/* §5.2 — fermer le ciel profond et le justifier sont un seul geste (core/tracking.ts) :
+            cette cause doit rester visible sans naviguer, qu'on suive ou non. */}
+        {lectures?.suivi.cause !== null && lectures?.suivi.cause !== undefined && (
+          <Mention ton="cause">{lectures.suivi.cause}</Mention>
+        )}
+        {lectures?.suivi.gainMiseEnStation !== undefined && (
+          <Mention ton="cause">{lectures.suivi.gainMiseEnStation}</Mention>
+        )}
       </section>
 
       {props.erreur !== undefined && <Mention ton="erreur">{props.erreur}</Mention>}

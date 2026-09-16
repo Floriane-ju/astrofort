@@ -1332,6 +1332,34 @@ h3 {
   gap: var(--pas-2);
 }
 
+/* T-0216 — LE RYTHME VERTICAL EST CELUI DE LA SECTION, PAS CELUI DE LA GRILLE.
+ *
+ * Il vivait sur `.champs`, dont le `gap` ne joue qu'entre les enfants de SA grille. Un
+ * interrupteur posé à côté d'elle, une seconde grille collée à la première, un champ sorti
+ * d'un dépliant : tous retombaient à zéro, et le panneau se lisait comme des blocs soudés.
+ * Porté par les frères de la section, l'écart ne dépend plus de qui est dans la grille.
+ *
+ * `* + *` plutôt qu'un `gap` de flex, pour deux raisons. Les marges FUSIONNENT en disposition
+ * de bloc : un `.etat` ou un `.cause` garde sa marge propre sans l'ajouter à celle-ci — le
+ * plus grand des deux l'emporte — et le `margin-top` d'un `h2` continue de séparer deux
+ * sections, sans qu'aucune marge existante soit à défaire. Et un `gap` s'applique à tous les
+ * frères sans exception, là où la liste tracée juste dessous en réclame une.
+ *
+ * `:not([class])` désigne la section ordinaire, celle qui empile des blocs. Les quatre
+ * sections nommées posent leur propre disposition et sont hors sujet : `.scene`, `.cibles`,
+ * `.carte`, `.menu-reglages`. `.masque-horizon` n'est pas une `<section>` mais empile de la
+ * même façon. */
+section:not([class]) > * + *,
+.masque-horizon > * + * {
+  margin-block-start: var(--pas-2);
+}
+
+/* Une lecture tracée est une LIGNE DE LISTE : son filet bas la sépare de la suivante, et de
+   l'air entre les deux romprait le tableau qu'elles forment ensemble. */
+:is(.tracee, .tracee-vide) + :is(.tracee, .tracee-vide) {
+  margin-block-start: 0;
+}
+
 /* Un libellé est une ÉTIQUETTE : petit, en capitales, espacé. Ce qui le sépare de la valeur
    n'est pas sa luminance — §11.1 n'en laisse pas assez — mais sa casse et son suivi.
 
