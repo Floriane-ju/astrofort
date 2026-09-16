@@ -11,8 +11,8 @@
  * côte à côte — focale et ouverture se règlent ensemble et se relisent ensemble (`f/`).
  *
  * T-0238 — ces deux cartes sont des `Carte` posées sur la scène, plus des rubriques d'une
- * colonne. Elles se rangent dans `.cartes-materiel`. T-0245 — côte à côte en haut à droite,
- * contre le panneau : pendues sous la barre haute, elles se déplient vers le bas sans se couvrir.
+ * colonne. Elles se rangent dans `.cartes-materiel`. T-0247 — l'une sous l'autre en haut à
+ * droite, contre le panneau : un conteneur en colonne les empêche de se couvrir en se dépliant.
  *
  * Le type d'objectif était perdu dans la vue grand champ. C'est pourtant une propriété du
  * matériel, et §5.1 lui donne une conséquence physique : rectilinéaire ou fisheye choisit la
