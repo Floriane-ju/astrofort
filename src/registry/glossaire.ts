@@ -348,7 +348,6 @@ export const GLOSSAIRE = Object.freeze({
   type_monture: terme({
     libelle: 'Monture',
     glose: 'ce qui suit les étoiles, et sa mise en station',
-    sansBulle: true,
     explication:
       'Une équatoriale allemande doit se retourner quand la cible passe le méridien. Une monture ' +
       'sur rotule, non. Le même choix déclare la mise en station : au viseur polaire, les poses ' +

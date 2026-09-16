@@ -151,7 +151,17 @@ function ChampsSuivi(props: PanneauMaterielProps) {
   return (
     <>
       <div className="champs">
-        <ChampChoix cle="type_monture" valeur={choixMonture(props)} surChangement={surMonture}>
+        {/* T-0207/T-0237 — l'altazimutale n'est pas un choix tant que la rotation de champ n'est
+            pas modélisée (§5.2) : la proposer ne menait qu'à un refus. La bulle porte ce
+            périmètre au lieu d'un paragraphe fixe — elle ne concerne que le suivi choisi. */}
+        <ChampChoix
+          cle="type_monture"
+          glose={
+            props.suiviActif ? 'Les montures altazimutales ne sont pas encore gérées.' : undefined
+          }
+          valeur={choixMonture(props)}
+          surChangement={surMonture}
+        >
           <option value="AUCUN">Pas de suivi</option>
           <option value="TRACKER_SOIGNE">
             Monture sur rotule (tracker) — viseur polaire réglé
@@ -165,12 +175,6 @@ function ChampsSuivi(props: PanneauMaterielProps) {
           </option>
         </ChampChoix>
       </div>
-      {/* T-0207 — l'altazimutale n'est pas un choix tant que la rotation de champ n'est pas
-          modélisée (§5.2) : la proposer ne menait qu'à un refus. `etat` et non `cause` :
-          rien n'est en défaut dans la saisie, c'est le périmètre de l'app qui se dit. */}
-      {props.suiviActif && (
-        <p className="etat">Les montures altazimutales ne sont pas encore gérées.</p>
-      )}
       {/* §5.2 — fermer le ciel profond et le justifier sont un seul geste (core/tracking.ts) :
           cette cause doit rester visible sans naviguer, qu'on suive ou non. Sans suivi, ce
           n'est pas un défaut de saisie mais le régime naturel du grand champ : `etat`, pas
