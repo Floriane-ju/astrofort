@@ -1314,6 +1314,17 @@ h3 {
   gap: var(--pas-2);
 }
 
+/* DEUX CHAMPS QUI SE LISENT ENSEMBLE TIENNENT SUR UNE LIGNE.
+ *
+ * `auto-fit` ne fait tenir qu'une colonne dans les 19 rem de la colonne matériel : la focale
+ * et l'ouverture s'y empilaient, alors qu'on les règle d'un même geste et qu'on les relit
+ * d'un seul mot — « 135 mm f/2 ». Baisser le `minmax` commun les aurait rapprochées au prix
+ * d'un sélecteur de boîtier serré à moitié ; le forçage est donc porté par la paire, pas par
+ * la grille. Deux colonnes, jamais trois : au-delà, c'est une grille ordinaire. */
+.champs.paire {
+  grid-template-columns: 1fr 1fr;
+}
+
 /* UNE SECTION ORDINAIRE EST UNE CARTE D'INSTRUMENT.
  *
  * Les rubriques d'un panneau — « À propos », « Cadrage de la cible » — ne se séparaient que

@@ -6,6 +6,10 @@
  * directe de ce que cet équipement produit. Le lieu et la date n'y sont pas : ils décrivent
  * la séance, pas le matériel, et vivent dans la colonne de droite.
  *
+ * T-0234 — deux cartes, plus trois. L'appareil et sa monture décrivent le même poste et
+ * tiennent dans la carte « Boîtier » ; ne reste ici que l'objectif, avec ses deux nombres
+ * côte à côte — focale et ouverture se règlent ensemble et se relisent ensemble (`f/`).
+ *
  * Le type d'objectif était perdu dans la vue grand champ. C'est pourtant une propriété du
  * matériel, et §5.1 lui donne une conséquence physique : rectilinéaire ou fisheye choisit la
  * projection de la scène, il n'ajuste pas un rendu.
@@ -69,8 +73,6 @@ export interface PanneauMaterielProps {
   readonly surOuverture: (v: string) => void
   readonly capteurMode: CapteurMode
   readonly surCapteurMode: (v: CapteurMode) => void
-  readonly comparerRecadrage: boolean
-  readonly surComparerRecadrage: (v: boolean) => void
   readonly typeObjectif: TypeObjectif
   readonly surTypeObjectif: (v: TypeObjectif) => void
   readonly suiviActif: boolean
@@ -84,6 +86,65 @@ export interface PanneauMaterielProps {
   readonly erreur?: string
 }
 
+/**
+ * §5.2 — le suivi : ce que la monture permet, et ce qu'elle interdit.
+ *
+ * T-0234 — il ferme la carte « Boîtier » au lieu d'en tenir une. Pas de titre : l'interrupteur
+ * qui l'ouvre nomme déjà le sujet, et un `h3` sous un `h2` de carte n'aurait annoncé que lui.
+ */
+function ChampsSuivi(props: PanneauMaterielProps) {
+  const lectures = props.lectures
+  return (
+    <>
+      <Interrupteur actif={props.suiviActif} surChangement={props.surSuiviActif}>
+        Ma monture suit les étoiles
+      </Interrupteur>
+      {props.suiviActif && (
+        <div className="champs">
+          <ChampChoix
+            cle="mise_en_station"
+            valeur={props.qualiteMes}
+            surChangement={props.surQualiteMes}
+          >
+            <option value="SOIGNEE">Oui — viseur polaire réglé</option>
+            <option value="APPROX">Non — mise en station à la boussole</option>
+            <option value="INCONNUE">Je ne sais pas</option>
+          </ChampChoix>
+          <ChampChoix
+            cle="type_monture"
+            valeur={props.typeMonture}
+            surChangement={props.surTypeMonture}
+          >
+            <option value="TRACKER">Monture sur rotule (tracker)</option>
+            <option value="GEM">Équatoriale allemande</option>
+          </ChampChoix>
+        </div>
+      )}
+      {/* T-0207 — l'altazimutale n'est pas un choix tant que la rotation de champ n'est pas
+          modélisée (§5.2) : la proposer ne menait qu'à un refus. `etat` et non `cause` :
+          rien n'est en défaut dans la saisie, c'est le périmètre de l'app qui se dit. */}
+      {props.suiviActif && (
+        <p className="etat">Les montures altazimutales ne sont pas encore gérées.</p>
+      )}
+      {/* §5.2 — fermer le ciel profond et le justifier sont un seul geste (core/tracking.ts) :
+          cette cause doit rester visible sans naviguer, qu'on suive ou non. Sans suivi, ce
+          n'est pas un défaut de saisie mais le régime naturel du grand champ : `etat`, pas
+          de signe d'alerte. La phrase longue (grand champ, NPF) reste dans `profilSuivi` —
+          `domaineCpFerme` (PanneauCibles) en a besoin pour justifier l'exclusion du ciel
+          profond ; ce panneau n'affiche que le repère court. */}
+      {lectures?.suivi.mode === 'AUCUN' && (
+        <Mention ton="etat">Sans suivi, les poses restent courtes.</Mention>
+      )}
+      {lectures?.suivi.cause !== null &&
+        lectures?.suivi.cause !== undefined &&
+        lectures.suivi.mode !== 'AUCUN' && <Mention ton="cause">{lectures.suivi.cause}</Mention>}
+      {lectures?.suivi.gainMiseEnStation !== undefined && (
+        <Mention ton="cause">{lectures.suivi.gainMiseEnStation}</Mention>
+      )}
+    </>
+  )
+}
+
 export function PanneauMateriel(props: PanneauMaterielProps) {
   const lectures = props.lectures
   return (
@@ -95,12 +156,18 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
         surBoitier={props.surBoitier}
         iso={props.iso}
         surIso={props.surIso}
+        capteurMode={props.capteurMode}
+        surCapteurMode={props.surCapteurMode}
+        noteRecadrage={lectures?.noteRecadrage}
         lectureIso={lectures?.iso}
+        suivi={<ChampsSuivi {...props} />}
       />
 
       <section>
         <h2>Optique</h2>
-        <div className="champs">
+        {/* T-0234 — `paire` force deux colonnes : `.champs` n'en fait tenir qu'une dans les
+            19 rem de cette colonne, et ces deux nombres-là se lisent ensemble. */}
+        <div className="champs paire">
           <ChampDomaine
             domaine="focale_mm"
             cle="focale"
@@ -115,16 +182,6 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
             surValeur={props.surOuverture}
             requis
           />
-          <ChampChoix
-            cle="recadrage_capteur"
-            valeur={props.capteurMode}
-            surChangement={props.surCapteurMode}
-          >
-            <option value="FULL_FRAME">
-              Plein format
-            </option>
-            <option value="APSC_CROP">Recadrage APS-C</option>
-          </ChampChoix>
         </div>
         <Interrupteur
           actif={props.typeObjectif === 'FISHEYE'}
@@ -134,15 +191,6 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
         >
           Objectif fisheye
         </Interrupteur>
-        <Interrupteur
-          actif={props.comparerRecadrage}
-          surChangement={props.surComparerRecadrage}
-        >
-          Comparer plein format et APS-C
-        </Interrupteur>
-        {lectures?.noteRecadrage !== undefined && (
-          <Mention ton="cause">{lectures.noteRecadrage}</Mention>
-        )}
         {lectures === undefined ? (
           <>
             <LectureInconnue terme="champ" suffixe="largeur" />
@@ -155,57 +203,6 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
             <TracedValue terme="champ" suffixe="hauteur" trace={lectures.optique.fovHDeg} unite="°" />
             <TracedValue terme="npf" trace={lectures.poseNpf} unite="s" />
           </>
-        )}
-      </section>
-
-      <section>
-        <h2>Suivi</h2>
-        <Interrupteur actif={props.suiviActif} surChangement={props.surSuiviActif}>
-          Ma monture suit les étoiles
-        </Interrupteur>
-        <div className="champs">
-          {props.suiviActif && (
-            <ChampChoix
-              cle="mise_en_station"
-              valeur={props.qualiteMes}
-              surChangement={props.surQualiteMes}
-            >
-              <option value="SOIGNEE">Oui — viseur polaire réglé</option>
-              <option value="APPROX">Non — mise en station à la boussole</option>
-              <option value="INCONNUE">Je ne sais pas</option>
-            </ChampChoix>
-          )}
-          {props.suiviActif && (
-            <ChampChoix
-              cle="type_monture"
-              valeur={props.typeMonture}
-              surChangement={props.surTypeMonture}
-            >
-              <option value="TRACKER">Monture sur rotule (tracker)</option>
-              <option value="GEM">Équatoriale allemande</option>
-            </ChampChoix>
-          )}
-        </div>
-        {/* T-0207 — l'altazimutale n'est pas un choix tant que la rotation de champ n'est pas
-            modélisée (§5.2) : la proposer ne menait qu'à un refus. `etat` et non `cause` :
-            rien n'est en défaut dans la saisie, c'est le périmètre de l'app qui se dit. */}
-        {props.suiviActif && (
-          <p className="etat">Les montures altazimutales ne sont pas encore gérées.</p>
-        )}
-        {/* §5.2 — fermer le ciel profond et le justifier sont un seul geste (core/tracking.ts) :
-            cette cause doit rester visible sans naviguer, qu'on suive ou non. Sans suivi, ce
-            n'est pas un défaut de saisie mais le régime naturel du grand champ : `etat`, pas
-            de signe d'alerte. La phrase longue (grand champ, NPF) reste dans `profilSuivi` —
-            `domaineCpFerme` (PanneauCibles) en a besoin pour justifier l'exclusion du ciel
-            profond ; ce panneau n'affiche que le repère court. */}
-        {lectures?.suivi.mode === 'AUCUN' && (
-          <Mention ton="etat">Sans suivi, les poses restent courtes.</Mention>
-        )}
-        {lectures?.suivi.cause !== null &&
-          lectures?.suivi.cause !== undefined &&
-          lectures.suivi.mode !== 'AUCUN' && <Mention ton="cause">{lectures.suivi.cause}</Mention>}
-        {lectures?.suivi.gainMiseEnStation !== undefined && (
-          <Mention ton="cause">{lectures.suivi.gainMiseEnStation}</Mention>
         )}
       </section>
 

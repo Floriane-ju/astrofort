@@ -73,8 +73,6 @@ function materiel(champs: Partial<Record<'focale' | 'ouverture' | 'iso', string>
     surOuverture: rien,
     capteurMode: 'FULL_FRAME',
     surCapteurMode: rien,
-    comparerRecadrage: false,
-    surComparerRecadrage: rien,
     typeObjectif: 'RECTILINEAIRE',
     surTypeObjectif: rien,
     suiviActif: false,

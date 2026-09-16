@@ -61,8 +61,6 @@ const MATERIEL: SaisieMateriel = {
   surOuverture: rien,
   capteurMode: 'FULL_FRAME',
   surCapteurMode: rien,
-  comparerRecadrage: false,
-  surComparerRecadrage: rien,
   typeObjectif: 'RECTILINEAIRE',
   surTypeObjectif: rien,
   suiviActif: false,

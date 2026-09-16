@@ -47,7 +47,6 @@ import {
   resoutBoitier,
   type Boitier,
   type CapteurEffectif,
-  type CapteurMode,
   type IsoRetenu,
   type PointZeroSysteme,
 } from '../data/equipment.ts'
@@ -238,14 +237,11 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
 
   const index = useMemo(() => construitIndex(etoiles), [etoiles])
 
-  /**
-   * §3.5 — profils de cadre superposés. Le second profil matérialise l'effet du recadrage
-   * de capteur, que §5.1 explique en mots : cadre plus serré, échantillonnage inchangé.
-   */
+  /** §3.5 — le cadre projeté sur la scène, tel que le matériel saisi le définit. */
   const profilsCadre = useMemo(
     () => profilsDeCadre(calcul, materiel),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [calcul, materiel.focale, materiel.ouverture, materiel.capteurMode, materiel.comparerRecadrage],
+    [calcul, materiel.focale, materiel.ouverture, materiel.capteurMode],
   )
 
   /**
@@ -502,29 +498,28 @@ function profilsDeCadre(calcul: Calcul, materiel: SaisieMateriel): readonly Prof
   const boitier = calcul.boitier
   const focaleMm = calcul.focaleMm
   const ouvertureN = calcul.ouvertureN
-  const autre: CapteurMode = materiel.capteurMode === 'FULL_FRAME' ? 'APSC_CROP' : 'FULL_FRAME'
-  const modes: readonly CapteurMode[] = materiel.comparerRecadrage
-    ? [materiel.capteurMode, autre]
-    : [materiel.capteurMode]
-  const tPoseS = calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value
-  return modes.map((m) => {
-    const capteur = capteurEffectif(boitier, m)
-    const optique = profilOptique({
-      focaleMm,
-      ouvertureN,
-      typeObjectif: materiel.typeObjectif,
-      ...capteur,
-    })
-    return {
-      libelle: `${focaleMm} mm f/${ouvertureN} — ${m === 'FULL_FRAME' ? 'plein format' : 'recadrage APS-C'}`,
+  // §3.5 — un seul profil, celui du matériel déclaré : la scène montre ce que CE matériel
+  // capturerait. Le tableau reste un tableau (T-0234, Annexe C n° 24) — comparer deux optiques
+  // suppose un stock de profils enregistrés, et rien ici n'empêche de l'allonger le jour venu.
+  const mode = materiel.capteurMode
+  const capteur = capteurEffectif(boitier, mode)
+  const optique = profilOptique({
+    focaleMm,
+    ouvertureN,
+    typeObjectif: materiel.typeObjectif,
+    ...capteur,
+  })
+  return [
+    {
+      libelle: `${focaleMm} mm f/${ouvertureN} — ${mode === 'FULL_FRAME' ? 'plein format' : 'recadrage APS-C'}`,
       fovLDeg: optique.fovLDeg.value,
       fovHDeg: optique.fovHDeg.value,
       echApx: optique.echApx.value,
       capteurHMm: capteur.capteurHMm,
       modeObjectif: modeObjectif(materiel.typeObjectif),
-      tPoseS,
-    }
-  })
+      tPoseS: calcul.suivi.tMaxSuiviS.value ?? calcul.poseNpf.value,
+    },
+  ]
 }
 
 function contexteFiche(

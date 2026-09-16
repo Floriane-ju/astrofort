@@ -798,9 +798,10 @@ CADRE PROJETÉ
   → le cadre est un objet de la scène, projeté par le moteur §3.3.
     À grand champ, ses bords ne sont PAS des droites dans le planétarium.
 
-MULTI-CADRES — jusqu'à trois profils comparés simultanément
-  ex. plein format contre recadrage APS-C à focale identique
-  → matérialise l'effet du recadrage, ce que §5.1 explique en mots.
+UN SEUL CADRE — celui du matériel déclaré, dans son mode de recadrage courant
+  → la scène montre ce que CE matériel capturerait, pas un éventail de possibles.
+    L'effet du recadrage se constate en changeant de mode : le cadre se resserre,
+    l'échantillonnage affiché ne bouge pas, et §5.1 le dit en mots au même endroit.
 
 DONNÉES AFFICHÉES EN CONTINU sur le cadre survolé
   taux de remplissage de la cible (§6.2), échantillonnage (§5.1),
@@ -816,7 +817,7 @@ ROTATION SUGGÉRÉE
 
 | Champ | Type | Unité | Plage valide | Note |
 |---|---|---|---|---|
-| `profils_actifs` | array | — | 1 à 3 | multi-cadres |
+| `profils_actifs` | array | — | 1 | le matériel déclaré, dans son mode de recadrage |
 | `angle_rotation_cadre` | float | ° | 0 – 360 | |
 | `cible_dans_cadre` | string | — | sortie | objet dominant |
 | `remplissage`, `verdict_cadrage` | — | — | §6.2 | sortie |
@@ -831,10 +832,11 @@ Quand j'active la superposition du cadre
 Alors un rectangle de 17,0° × 11,4° est projeté aux positions correctes du ciel
 Et il porte les valeurs d'échantillonnage et de pose
 
-Étant donné deux profils actifs, plein format et recadrage APS-C
-Quand les deux cadres sont affichés
-Alors le cadre APS-C est environ 1,5 fois plus petit sur chaque dimension
-Et l'app rappelle que l'échantillonnage est identique dans les deux cas
+Étant donné le profil de référence en plein format
+Quand je bascule le format du capteur en recadrage APS-C
+Alors le cadre projeté devient environ 1,5 fois plus petit sur chaque dimension
+Et l'échantillonnage affiché est inchangé
+Et l'app rappelle que recadrer n'est pas grossir
 
 Étant donné le cadre déplacé sur une cible allongée
 Quand l'angle suggéré est calculé
@@ -4630,6 +4632,7 @@ sensibilite  = | ∂ln(sortie) / ∂ln(variable) |                   facteur dom
 | 21 | La Voie lactée se montre, elle ne se déduit pas | §3.7 étendu à la bande modulée par le fond de ciel et au repère du centre galactique. La hauteur de culmination de 14,6° depuis le site de référence vivait dans un tableau du PRD ; sur la scène, elle se lit. |
 | 22 | Le budget batterie retiré, remplacé par un rappel | §9.4, §8.3, C-16. L'autonomie CIPA se mesure en rafale au flash et la température prévue se saisit à la main : leur produit portait trois incertitudes multiplicatives et s'affichait à côté du volume de fichiers, réellement calculé. Ce que l'application connaît d'elle-même, c'est la durée de prise de vue — au-delà du seuil, elle rappelle le risque et ne chiffre rien. |
 | 23 | La validation d'une bibliothèque de darks retirée | §7.4, C-10 supprimée. Personne n'alimentait `temp_capteur_c` ni `biblio_darks` : la validation ne s'exécutait jamais et son seul effet visible était un avertissement réclamant un champ qu'aucun écran n'offrait. La garder sans température aurait déclaré valide une bibliothèque prise vingt degrés plus haut — une erreur qui autorise à sauter les darks. Un lot par séance, en fin de séance capteur encore froid, est juste sans thermomètre. |
+| 24 | Le multi-cadres retiré : la scène porte un seul profil | §3.5. La seule comparaison qu'on savait produire — plein format contre APS-C — se commandait par un interrupteur d'affichage posé au milieu d'un panneau qui décrit le matériel, et elle répondait à une question que la bascule de format répond déjà : le cadre se resserre sous les yeux, l'échantillonnage ne bouge pas. Comparer deux optiques distinctes reste le cas utile, et il suppose d'abord un stock de profils enregistrés — post-MVP, avec §12.3. |
 
 ## Corrections apportées au socle initial en cours de rédaction
 

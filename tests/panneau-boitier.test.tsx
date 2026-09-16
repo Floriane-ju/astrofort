@@ -43,8 +43,6 @@ const MATERIEL_VIDE: SaisieMateriel = {
   surOuverture: rien,
   capteurMode: 'FULL_FRAME',
   surCapteurMode: rien,
-  comparerRecadrage: false,
-  surComparerRecadrage: rien,
   typeObjectif: 'RECTILINEAIRE',
   surTypeObjectif: rien,
   suiviActif: false,
@@ -77,6 +75,8 @@ function rendu(boitierId: string, iso = '') {
       surBoitier={rien}
       iso={iso}
       surIso={rien}
+      capteurMode="FULL_FRAME"
+      surCapteurMode={rien}
       lectureIso={isoRecommande(
         ligne === undefined ? null : boitierDeBase(ligne, saisie.tailleRawMo),
         // T-0206 — comme `evalueMateriel` : sous un boîtier de la base, l'ISO de la saisie ne

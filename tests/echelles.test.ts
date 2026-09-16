@@ -277,7 +277,9 @@ describe('T-0216 — le rythme vertical d’une section', () => {
   /** Le corps de chaque grille `.champs`, délimité par l'indentation de sa balise ouvrante. */
   function grilles(source: string): readonly string[] {
     const blocs: string[] = []
-    for (const m of source.matchAll(/^([ ]*)<div className="champs">$/gm)) {
+    // T-0234 — `[^"]*` : une grille modifiée (`champs paire`) reste une grille de champs, et
+    // un motif exact l'aurait laissée échapper à la convention sans que rien ne le dise.
+    for (const m of source.matchAll(/^([ ]*)<div className="champs[^"]*">$/gm)) {
       const debut = m.index + m[0].length + 1
       const fin = source.indexOf(`\n${m[1]!}</div>`, debut)
       blocs.push(source.slice(debut, fin))

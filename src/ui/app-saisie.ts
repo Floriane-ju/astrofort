@@ -125,8 +125,6 @@ export interface SaisieMateriel {
   readonly surOuverture: (v: string) => void
   readonly capteurMode: CapteurMode
   readonly surCapteurMode: (v: CapteurMode) => void
-  readonly comparerRecadrage: boolean
-  readonly surComparerRecadrage: (v: boolean) => void
   readonly typeObjectif: TypeObjectif
   readonly surTypeObjectif: (v: TypeObjectif) => void
   readonly suiviActif: boolean
@@ -137,12 +135,7 @@ export interface SaisieMateriel {
   readonly surTypeMonture: (v: TypeMonture) => void
 }
 
-/**
- * §12.3 — le matériel tel qu'il a été enregistré, relu au démarrage.
- *
- * La comparaison de recadrage n'en fait pas partie : c'est une superposition d'affichage,
- * pas une caractéristique du matériel (§3.5).
- */
+/** §12.3 — le matériel tel qu'il a été enregistré, relu au démarrage. */
 export interface DepartMateriel {
   /** Absent d'un enregistrement antérieur à T-0204 : le mode personnalisé s'applique. */
   readonly boitierId?: string
@@ -176,7 +169,6 @@ export function useSaisieMateriel(depart: DepartMateriel | null): SaisieMateriel
   const [focale, surFocale] = useState(depart?.focale ?? DEFAUT.focale)
   const [ouverture, surOuverture] = useState(depart?.ouverture ?? DEFAUT.ouverture)
   const [capteurMode, surCapteurMode] = useState<CapteurMode>(depart?.capteurMode ?? 'FULL_FRAME')
-  const [comparerRecadrage, surComparerRecadrage] = useState(false)
   const [typeObjectif, setTypeObjectif] = useState<TypeObjectif>(
     depart?.typeObjectif ?? 'RECTILINEAIRE',
   )
@@ -223,8 +215,6 @@ export function useSaisieMateriel(depart: DepartMateriel | null): SaisieMateriel
     surOuverture,
     capteurMode,
     surCapteurMode,
-    comparerRecadrage,
-    surComparerRecadrage,
     typeObjectif,
     surTypeObjectif,
     suiviActif,

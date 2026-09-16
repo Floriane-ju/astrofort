@@ -1,5 +1,11 @@
 /**
- * §5.1 + §7.2 — la section Boîtier : quel appareil, et l'ISO qu'il justifie.
+ * §5.1 + §7.2 — la section Boîtier : quel appareil, l'ISO qu'il justifie, et comment il suit.
+ *
+ * T-0234 — le format du capteur y a rejoint le reste : plein format ou recadrage APS-C décrit
+ * l'appareil, pas l'objectif posé devant, et le ranger sous « Optique » séparait deux moitiés
+ * de la même description. Le suivi ferme la section pour la raison inverse : seul dans sa
+ * carte, il n'occupait pas son cadre. Il arrive par `suivi` plutôt qu'en huit propriétés de
+ * plus — c'est `PanneauMateriel` qui tient l'état de la monture, cette section l'héberge.
  *
  * Deux modes, un seul sélecteur. Un boîtier de la base apporte ses grandeurs capteur : il n'y
  * a alors plus rien à régler, donc plus rien à afficher — les champs disparaissent au lieu de
@@ -16,8 +22,10 @@
  * absent de la base, pas un rattrapage — aucune base matériel n'est exhaustive.
  */
 
+import type { ReactNode } from 'react'
 import {
   notesEstimation,
+  type CapteurMode,
   type IsoRetenu,
   type SaisieBoitier,
 } from '../data/equipment.ts'
@@ -242,8 +250,15 @@ export interface PanneauBoitierProps {
   readonly surBoitier: (v: SaisieBoitier) => void
   readonly iso: string
   readonly surIso: (v: string) => void
+  /** §5.1 — plein format ou recadrage APS-C : une propriété du boîtier, pas de l'objectif. */
+  readonly capteurMode: CapteurMode
+  readonly surCapteurMode: (v: CapteurMode) => void
+  /** §5.1 — le message anti-confusion du recadrage, quand il s'applique. */
+  readonly noteRecadrage?: string | undefined
   /** §7.2 — l'ISO retenu et sa justification. Absent tant que la saisie est refusée. */
   readonly lectureIso?: IsoRetenu | undefined
+  /** §5.2 — le suivi, monté par `PanneauMateriel` qui en tient l'état. */
+  readonly suivi?: ReactNode
 }
 
 export function PanneauBoitier(props: PanneauBoitierProps) {
@@ -296,7 +311,18 @@ export function PanneauBoitier(props: PanneauBoitierProps) {
           surValeur={surChamp('tailleRawMo')}
           note={notes.tailleRawMo}
         />
+        {/* T-0234 — il survit au choix d'un boîtier de la base, comme le poids : le recadrage
+            est un MODE de prise de vue, pas une caractéristique de la ligne choisie. */}
+        <ChampChoix
+          cle="recadrage_capteur"
+          valeur={props.capteurMode}
+          surChangement={props.surCapteurMode}
+        >
+          <option value="FULL_FRAME">Plein format</option>
+          <option value="APSC_CROP">Recadrage APS-C</option>
+        </ChampChoix>
       </div>
+      {props.noteRecadrage !== undefined && <Mention ton="cause">{props.noteRecadrage}</Mention>}
       {ligne === null ? (
         <>
           <ApercuPitch
@@ -329,6 +355,7 @@ export function PanneauBoitier(props: PanneauBoitierProps) {
         lecture={props.lectureIso}
         fige={ligne !== null}
       />
+      {props.suivi}
     </section>
   )
 }
