@@ -98,6 +98,11 @@ La carte repliable de la scène (`.carte` — Boîtier, Optique, Plan de nuit), 
 cadre** : filet et équerres. Son corps (`.carte-corps`) suit le même rythme vertical qu'une
 section ordinaire, sans `h2` — l'en-tête de la carte la nomme déjà.
 
+Le panneau latéral (`.coque-lateral`) se pose sur la scène **comme une carte dépliée** —
+décollé des bords d'un `--jour-carte`, filet, en-tête teinté, équerres — mais ne se replie
+jamais. Il reste hors de `Carte` : son en-tête porte un retour et des commandes, qu'un
+en-tête-bouton ne peut contenir.
+
 Un aplat de surface ou une ombre n'auraient pas tenu : §11.1 confisque la luminance, et un
 trait se lit à n'importe laquelle. Les quatre sections **nommées** — `.scene`, `.cibles`,
 `.carte`, `.menu-reglages` — posent leur propre disposition et n'ont pas de cadre.

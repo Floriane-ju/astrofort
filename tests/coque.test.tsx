@@ -166,10 +166,26 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
 
   // T-0238 — un seul dessin pour tout ce qui se pose sur le ciel : filet et équerres. Les
   // équerres ne viennent qu'à la carte dépliée.
-  it('donne aux cartes dépliées le cadre d’instrument des rubriques', () => {
+  // T-0243 — le panneau latéral, qui ne se replie pas, les porte toujours.
+  it('donne aux cartes dépliées et au panneau le cadre d’instrument des rubriques', () => {
     expect(CSS_COQUE).toMatch(
-      /section:not\(\[class\]\)::before,\n\.carte\[data-ouverte='true'\]::before \{/,
+      /section:not\(\[class\]\)::before,\n\.carte\[data-ouverte='true'\]::before,\n\.coque-lateral::before \{/,
     )
+  })
+
+  it('décolle le panneau des bords comme une carte, filet complet', () => {
+    const debut = CSS_COQUE.indexOf('.coque-lateral {')
+    const panneau = CSS_COQUE.slice(debut, CSS_COQUE.indexOf('}', debut))
+    expect(panneau).toContain('right: var(--jour-carte)')
+    expect(panneau).toContain('top: calc(var(--barre-haut) + var(--jour-carte))')
+    expect(panneau).toContain('bottom: calc(var(--barre-bas) + var(--jour-carte))')
+    expect(panneau).toContain('border: var(--trait) solid var(--bordure)')
+    // Il ne se replie pas : aucun en-tête-bouton, aucun signe de repli.
+    const html = ecran()
+    const aside = html.slice(html.indexOf('<aside class="coque-lateral"'))
+    const entete = aside.slice(0, aside.indexOf('lateral-corps'))
+    expect(entete).not.toContain('aria-expanded')
+    expect(entete).not.toContain('carte-marque')
   })
 
   it('garde le lieu lisible et réglable dans les deux modes', () => {

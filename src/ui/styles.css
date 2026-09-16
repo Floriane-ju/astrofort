@@ -779,10 +779,11 @@ input.barretemps-instant {
 }
 
 /* Le plan s'ancre en bas à droite, calé sur le panneau : c'est le bord libre, et
-   celui d'où il ne recouvre ni le matériel ni le rail. */
+   celui d'où il ne recouvre ni le matériel ni le rail. Le panneau est lui-même décollé du
+   bord d'un jour de carte (T-0243), d'où les deux jours. */
 .carte-plan {
   width: var(--carte-plan);
-  right: calc(var(--lateral) + var(--jour-carte));
+  right: calc(var(--lateral) + 2 * var(--jour-carte));
   bottom: calc(var(--barre-bas) + var(--jour-carte));
 }
 
@@ -848,8 +849,8 @@ input.barretemps-instant {
   display: flex;
   flex-direction: column;
   flex: none;
-}
   gap: var(--pas-2);
+}
 
 .coque-rail .bascule {
   pointer-events: auto;
@@ -996,18 +997,23 @@ input.barretemps-instant {
 /* Le panneau latéral : ce qui se lit en longueur, à côté de la scène.
 
    Il ne se ferme plus : le mode décide de son contenu, jamais de sa présence. Sa largeur est
-   donc toujours réservée, à la scène comme au bornage des cartes. */
+   donc toujours réservée, à la scène comme au bornage des cartes.
+
+   T-0243 — il se pose sur le ciel comme une carte dépliée — filet, en-tête teinté, équerres —
+   et non plus comme une colonne collée au bord : quatre objets posés sur la scène, un seul
+   dessin. Il ne se replie pas, et c'est ce qui le garde hors de `Carte` : replié, le catalogue
+   ne laisserait rien à lire, et son en-tête porte des commandes qu'un bouton ne peut contenir. */
 .coque-lateral {
   position: absolute;
-  right: 0;
-  top: var(--barre-haut);
-  bottom: var(--barre-bas);
+  right: var(--jour-carte);
+  top: calc(var(--barre-haut) + var(--jour-carte));
+  bottom: calc(var(--barre-bas) + var(--jour-carte));
   z-index: 3;
   width: var(--lateral);
-  max-width: 100%;
+  max-width: calc(100% - 2 * var(--jour-carte));
   display: flex;
   flex-direction: column;
-  border-left: var(--trait) solid var(--bordure);
+  border: var(--trait) solid var(--bordure);
   background: var(--surface);
 }
 
@@ -1018,6 +1024,7 @@ input.barretemps-instant {
   display: flex;
   align-items: center;
   gap: var(--pas-2);
+  min-height: var(--cible-clic);
   padding: var(--pas-1) var(--pas-2);
   border-bottom: var(--trait) solid var(--bordure);
   background: var(--fond-accent);
@@ -1080,7 +1087,8 @@ input.barretemps-instant {
 
   /* Pleine largeur et bordées d'un seul filet haut, les cartes n'ont plus de cadre à
      marquer : des équerres qui débordent sortiraient de l'écran. */
-  .carte::before {
+  .carte::before,
+  .coque-lateral::before {
     display: none;
   }
 
@@ -1384,9 +1392,11 @@ section:not([class]) > h2:first-child {
    T-0238 — la carte posée sur la scène porte le même cadre. Boîtier et Optique l'avaient en
    rubriques de colonne ; devenues cartes, elles le gardent, et le plan de nuit le prend : trois
    objets posés sur le ciel, un seul dessin. Son filet, elle l'a déjà. Repliée, elle n'est
-   plus qu'un titre : des équerres autour d'une ligne la désigneraient comme un objet ouvert. */
+   plus qu'un titre : des équerres autour d'une ligne la désigneraient comme un objet ouvert.
+   T-0243 — le panneau latéral, qui ne se replie pas, les porte toujours. */
 section:not([class])::before,
-.carte[data-ouverte='true']::before {
+.carte[data-ouverte='true']::before,
+.coque-lateral::before {
   content: '';
   position: absolute;
   inset: calc(-1 * var(--pas-1));
