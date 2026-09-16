@@ -1316,6 +1316,58 @@ h3 {
   gap: var(--pas-2);
 }
 
+/* T-0231 — UNE SECTION ORDINAIRE EST UNE CARTE D'INSTRUMENT.
+ *
+ * Les rubriques d'un panneau — « À propos », « Cadrage de la cible » — ne se séparaient que
+ * par le filet bas de leur `h2` et l'air au-dessus. Empilées à cinq ou six dans une colonne
+ * qui défile, on ne voit plus où l'une finit : le regard suit les lignes de valeurs, pas les
+ * rubriques. Le cadre rend la rubrique à un OBJET, qu'on embrasse d'un coup d'œil.
+ *
+ * Le motif — filet complet, équerres aux quatre angles — est celui d'un cadran d'instrument,
+ * et c'est la raison de le prendre plutôt qu'un fond ou une ombre : §11.1 confisque la
+ * luminance, un aplat de surface ne se distinguerait pas du fond en mode nuit, tandis qu'un
+ * trait se lit à n'importe quelle luminance. Les équerres portent l'accent, le filet la
+ * bordure : deux rôles, deux jetons, et le mode nuit les repeint tous les deux.
+ *
+ * Porté par le sélecteur d'élément, comme le style de `button` : la carte n'est pas une chose
+ * qu'on applique à une rubrique, c'est ce QU'EST une rubrique. Les quatre sections nommées —
+ * `.scene`, `.cibles`, `.carte`, `.menu-reglages` — posent leur propre disposition et restent
+ * hors sujet, exactement comme pour le rythme vertical ci-dessous. */
+section:not([class]) {
+  position: relative;
+  margin-block-start: var(--pas-4);
+  padding: var(--jour-carte);
+  border: var(--trait) solid var(--bordure);
+}
+
+/* Le `h2` ouvre la carte. Sa marge haute séparait deux sections tant que rien n'arrêtait la
+   fusion des marges ; le filet l'arrête. Sans cette annulation elle deviendrait un second
+   rembourrage à l'intérieur du cadre, et le titre flotterait. */
+section:not([class]) > h2:first-child {
+  margin-block-start: 0;
+}
+
+/* Les équerres DÉBORDENT du filet — c'est ce qui les fait lire comme des repères de visée
+   posés sur le cadre, et non comme un second trait doublant le premier à un pixel près.
+   Huit dégradés plats, deux par angle : un bras horizontal, un bras vertical. Un dégradé ne
+   sait pas dessiner une équerre d'un seul tenant, et quatre pseudo-éléments n'existent pas. */
+section:not([class])::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--pas-1));
+  pointer-events: none;
+  background-image: linear-gradient(var(--accent) 0 0), linear-gradient(var(--accent) 0 0),
+    linear-gradient(var(--accent) 0 0), linear-gradient(var(--accent) 0 0),
+    linear-gradient(var(--accent) 0 0), linear-gradient(var(--accent) 0 0),
+    linear-gradient(var(--accent) 0 0), linear-gradient(var(--accent) 0 0);
+  background-repeat: no-repeat;
+  background-size: var(--pas-3) var(--trait), var(--trait) var(--pas-3),
+    var(--pas-3) var(--trait), var(--trait) var(--pas-3), var(--pas-3) var(--trait),
+    var(--trait) var(--pas-3), var(--pas-3) var(--trait), var(--trait) var(--pas-3);
+  background-position: left top, left top, right top, right top, left bottom, left bottom,
+    right bottom, right bottom;
+}
+
 /* T-0216 — LE RYTHME VERTICAL EST CELUI DE LA SECTION, PAS CELUI DE LA GRILLE.
  *
  * Il vivait sur `.champs`, dont le `gap` ne joue qu'entre les enfants de SA grille. Un

@@ -86,6 +86,18 @@ existe et elle est commentée (`-1px` sur `.scene-description`).
 
 Trois écarts nommés s'appuient dessus : `--jour-carte`, `--jour-barre`, `--jour-ecran`.
 
+### Une section ordinaire est une carte
+
+`<section>` sans classe porte un **cadre d'instrument** : filet complet en `--bordure`,
+équerres aux quatre angles en `--accent`, jour de `--jour-carte`. Le style est porté par le
+sélecteur d'élément, comme celui de `button` — il n'y a **pas de composant `Carte` à appeler**,
+et `Carte.tsx` reste la carte déplaçable de la scène. Poser une rubrique, c'est écrire
+`<section><h2>…</h2>…</section>`.
+
+Un aplat de surface ou une ombre n'auraient pas tenu : §11.1 confisque la luminance, et un
+trait se lit à n'importe laquelle. Les quatre sections **nommées** — `.scene`, `.cibles`,
+`.carte`, `.menu-reglages` — posent leur propre disposition et n'ont pas de cadre.
+
 ### Le rythme vertical est celui de la section
 
 Dans le corps d'une section ordinaire — `<section>` sans classe —, **deux blocs qui se suivent
