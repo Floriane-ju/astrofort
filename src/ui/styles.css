@@ -1320,9 +1320,14 @@ h3 {
  * et l'ouverture s'y empilaient, alors qu'on les règle d'un même geste et qu'on les relit
  * d'un seul mot — « 135 mm f/2 ». Baisser le `minmax` commun les aurait rapprochées au prix
  * d'un sélecteur de boîtier serré à moitié ; le forçage est donc porté par la paire, pas par
- * la grille. Deux colonnes, jamais trois : au-delà, c'est une grille ordinaire. */
+ * la grille. Deux colonnes, jamais trois : au-delà, c'est une grille ordinaire.
+ *
+ * `minmax(0, 1fr)` et non `1fr` seul : une piste `1fr` ne descend jamais sous le
+ * min-content de son contenu, et l'`<input>` en impose un (~170px, hérité du
+ * navigateur) plus large que la moitié des 19 rem — la colonne ouverture débordait
+ * du cadre au lieu de s'y tenir (T-0235). */
 .champs.paire {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 /* UNE SECTION ORDINAIRE EST UNE CARTE D'INSTRUMENT.
