@@ -93,6 +93,12 @@ function barreHaute(html: string): string {
   return html.slice(0, html.indexOf('coque-scene'))
 }
 
+/** La tête du panneau latéral : tout ce qui précède son corps. */
+function ongletsPanneau(html: string): string {
+  const aside = html.slice(html.indexOf('<aside class="coque-lateral"'))
+  return aside.slice(0, aside.indexOf('lateral-corps'))
+}
+
 describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
   it('monte les six régions : deux barres, la scène, le matériel, les cartes, le panneau', () => {
     const html = ecran()
@@ -299,12 +305,14 @@ describe('§11.3 — le panneau est toujours ouvert et son contenu suit le mode'
     expect(html).not.toContain('Fermer le panneau')
   })
 
-  it('change d’en-tête et de contenu avec le mode, sans autre geste', () => {
-    expect(ecran()).toContain('<h2 tabindex="-1">Toutes les cibles</h2>')
-    poseMode('PANORAMA')
-    const panorama = ecran()
-    expect(panorama).toContain('<h2 tabindex="-1">Panorama</h2>')
-    expect(panorama).not.toContain('<h2 tabindex="-1">Toutes les cibles</h2>')
+  // T-0246 — les onglets nomment déjà ce que le panneau porte : un titre le répéterait.
+  it('ne répète pas le mode dans un titre, sur la liste comme en Panorama', () => {
+    for (const mode of ['CIEL_PROFOND', 'PANORAMA'] as const) {
+      poseMode(mode)
+      const entete = ongletsPanneau(ecran())
+      expect(entete, mode).not.toContain('<h2')
+      expect(entete, mode).not.toContain('Toutes les cibles')
+    }
   })
 
   it('ne laisse plus aucun état fermé exister', () => {
@@ -321,18 +329,23 @@ describe('§11.3 — le panneau est toujours ouvert et son contenu suit le mode'
 })
 
 /**
- * T-0180 — la barre haute ne commande plus des panneaux, elle commande le MODE.
+ * T-0180 — la barre haute ne commandait plus des panneaux, elle commandait le MODE.
+ * T-0246 — la bascule est descendue sur le panneau, dont elle forme les onglets.
  *
- * Ce qui se vérifie ici est le remplacement et son annonce : un état de premier rang porté par
- * deux boutons pressés, au centre, et plus aucun bouton de panneau. Le contenu que le mode
- * décide, lui, est vérifié là où il se monte.
+ * Ce qui se vérifie ici est le déménagement et son annonce : un état de premier rang porté par
+ * deux boutons pressés en tête du panneau, et plus rien de tel dans la barre haute. Le contenu
+ * que le mode décide, lui, est vérifié là où il se monte.
  */
-describe('§11.3 — la bascule de mode occupe le centre de la barre haute', () => {
-  it('porte les deux positions et plus aucun bouton de panneau latéral', () => {
-    const topbar = barreHaute(ecran())
-    expect(topbar).toContain('barrehaut-mode')
-    expect(topbar).toContain('Ciel profond')
-    expect(topbar).toContain('Panorama')
+describe('§11.3 — la bascule de mode forme les onglets du panneau latéral', () => {
+  it('porte les deux positions en tête du panneau, et plus aucune dans la barre haute', () => {
+    const html = ecran()
+    const entete = ongletsPanneau(html)
+    expect(entete).toContain('class="onglets" role="group" aria-label="Mode d’interface"')
+    expect(entete).toContain('Ciel profond')
+    expect(entete).toContain('Panorama')
+    const topbar = barreHaute(html)
+    expect(topbar).not.toContain('Mode d’interface')
+    expect(topbar).not.toContain('class="onglet')
     // Les trois boutons de panneau sont partis avec le tiroir qu'ils ouvraient.
     expect(topbar).not.toContain('barrehaut-panneaux')
     expect(topbar).not.toContain('Toutes les cibles')
@@ -341,49 +354,40 @@ describe('§11.3 — la bascule de mode occupe le centre de la barre haute', () 
   })
 
   it('annonce la position active par aria-pressed, et elle seule', () => {
-    const profond = barreHaute(ecran())
+    const profond = ongletsPanneau(ecran())
     expect(profond).toMatch(/aria-pressed="true">Ciel profond/)
     expect(profond).toMatch(/aria-pressed="false">Panorama/)
     poseMode('PANORAMA')
-    const panorama = barreHaute(ecran())
+    const panorama = ongletsPanneau(ecran())
     expect(panorama).toMatch(/aria-pressed="false">Ciel profond/)
     expect(panorama).toMatch(/aria-pressed="true">Panorama/)
   })
 
   it('marque la position active autrement que par la seule couleur', () => {
     poseMode('PANORAMA')
-    // La classe porte le fond accentué et la graisse ; la position dans le segment, l'ordre.
-    expect(barreHaute(ecran())).toMatch(/class="onglet actif"[^>]*aria-pressed="true">Panorama/)
-    const debut = CSS_COQUE.indexOf('.coque-topbar .onglet.actif,')
-    expect(debut).toBeGreaterThan(-1)
-    expect(CSS_COQUE.slice(debut, CSS_COQUE.indexOf('}', debut))).toContain(
-      'background: var(--fond-accent)',
+    expect(ongletsPanneau(ecran())).toMatch(
+      /class="onglet actif"[^>]*aria-pressed="true">Panorama/,
     )
-  })
-
-  it('la centre sur la barre, pas sur ce que la lecture matériel laisse', () => {
-    const debut = CSS_COQUE.indexOf('.barrehaut-mode {')
+    // Le fond, mais aussi le trait et la graisse.
+    const debut = CSS_COQUE.indexOf('.onglet.actif {')
     expect(debut).toBeGreaterThan(-1)
-    const corps = CSS_COQUE.slice(debut, CSS_COQUE.indexOf('}', debut))
-    // Hors du flux : la focale peut passer de 8 à 300 mm, le centre ne bouge pas.
-    expect(corps).toContain('position: absolute')
-    expect(corps).toContain('left: 50%')
-    expect(corps).toContain('translateX(-50%)')
-    // Et la bande de commandes ne lui pose pas sa marge négative, qui la décentrerait.
-    expect(CSS_COQUE).toContain('~ * ~ *:not(.barrehaut-mode)')
+    const actif = CSS_COQUE.slice(debut, CSS_COQUE.indexOf('}', debut))
+    expect(actif).toContain('background: var(--fond-accent)')
+    expect(actif).toContain('border-bottom-color: var(--accent)')
+    expect(actif).toContain('font-weight: 700')
   })
 
-  it('ne peint la bascule qu’avec des jetons de palette, donc rouges en mode nuit', () => {
-    const debut = CSS_COQUE.indexOf('.barrehaut-mode {')
-    const corps = CSS_COQUE.slice(debut, CSS_COQUE.indexOf('.coque-topbar .onglet,', debut))
-    // §11.1 — aucune couleur littérale : le mode nuit repeint par la variable, sans quoi un
-    // canal vert ou bleu survivrait dans la barre.
-    expect(corps).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
-    expect(corps).not.toMatch(/\brgba?\(/)
+  it('garde les onglets au-dessus de la fiche : on en sort sans repasser par la liste', () => {
+    ouvreCible(M31)
+    const html = ecran()
+    const aside = html.slice(html.indexOf('<aside class="coque-lateral"'))
+    const onglets = aside.indexOf('class="onglets"')
+    expect(onglets).toBeGreaterThan(-1)
+    expect(onglets).toBeLessThan(aside.indexOf('<h2 tabindex="-1">M31</h2>'))
   })
 
   it('garde la cible de clic gantée sur les deux positions (§11.2)', () => {
-    const debut = CSS_COQUE.indexOf('.coque-topbar .onglet,')
+    const debut = CSS_COQUE.indexOf('.onglet {')
     expect(debut).toBeGreaterThan(-1)
     expect(CSS_COQUE.slice(debut, CSS_COQUE.indexOf('}', debut))).toContain(
       'min-height: var(--cible-clic)',

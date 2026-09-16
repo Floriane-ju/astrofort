@@ -1,17 +1,19 @@
 /**
- * La barre haute : la marque, la profondeur affichée, et le commutateur de mode.
+ * La barre haute : la marque, la profondeur affichée, et les tiroirs.
  *
  * T-0113 — elle ne porte plus de réglage, seulement des bascules. L'ordre est un contrat : le
- * mode nuit d'abord parce qu'il se cherche dans le noir, la bascule de mode ensuite, puis la
- * vérification et les réglages en dernier (§11.3, T-0047).
+ * mode nuit d'abord parce qu'il se cherche dans le noir, puis la vérification et les réglages
+ * en dernier (§11.3, T-0047).
  *
  * T-0153 — le tiroir des lectures est démonté. Il portait une phrase utile et quatre lectures
  * d'atelier ; la phrase est descendue au centre de la barre basse, où elle se lit sans un clic,
  * et la mention « az · h · champ » qui la répétait ici part avec elle.
  *
  * T-0180 — les trois boutons de panneau sont partis avec le tiroir qu'ils ouvraient : le mode
- * décide seul de ce que le panneau porte. Ne reste qu'une bascule à deux positions, et elle
- * tient le centre — c'est l'état le plus lourd de l'écran, il ne se cherche pas dans un coin.
+ * décide seul de ce que le panneau porte. Ne reste qu'une bascule à deux positions.
+ *
+ * T-0246 — cette bascule est descendue sur le panneau latéral, dont elle forme les onglets :
+ * elle décide de ce qu'il porte, et c'est là qu'on la cherche.
  *
  * T-0184 — Vérification et Réglages ne font plus qu'un tiroir. Ils répondaient au même geste,
  * « ce qui sort du chemin principal », et l'enveloppe est donc unique : deux sections dedans,
@@ -42,7 +44,6 @@ import { Icone } from './Icone.tsx'
 import { Sources } from './Sources.tsx'
 import { Tiroir } from './Tiroir.tsx'
 import type { Persistance } from './app-donnees.ts'
-import { poseMode, useSeance, type ModeInterface } from './seance-etat.ts'
 import { useTrancheScene, type EtatScene } from './scene-etat.ts'
 
 export interface BarreHautProps {
@@ -67,17 +68,7 @@ function vueRealisteScene(etat: EtatScene): boolean {
   return etat.rendu.vueRealiste
 }
 
-/**
- * Les deux positions de la bascule, dans l'ordre du segment. L'ordre est un contrat : le
- * défaut d'abord, à gauche — la position dit laquelle est active autant que le fond.
- */
-const MODES: readonly (readonly [ModeInterface, string])[] = [
-  ['CIEL_PROFOND', 'Ciel profond'],
-  ['PANORAMA', 'Panorama'],
-]
-
 export function BarreHaut(props: BarreHautProps) {
-  const { mode } = useSeance()
   const fovDeg = useTrancheScene(fovScene)
   const vueRealiste = useTrancheScene(vueRealisteScene)
   const profondeur = etatProfondeur(fovDeg, props.profondeurMag, props.sbCiel, vueRealiste)
@@ -122,23 +113,6 @@ export function BarreHaut(props: BarreHautProps) {
       >
         <ModeNuit etat={props.modeNuit} surChangement={props.surModeNuit} />
       </Tiroir>
-
-      {/* §11.3 — le commutateur de premier rang. `aria-pressed` plutôt qu'`aria-expanded` :
-          ces deux boutons ne déplient rien, ils choisissent lequel des deux états l'écran
-          tient — et l'un des deux est toujours vrai. */}
-      <div className="barrehaut-mode" role="group" aria-label="Mode d’interface">
-        {MODES.map(([cle, libelle]) => (
-          <button
-            key={cle}
-            type="button"
-            className={mode === cle ? 'onglet actif' : 'onglet'}
-            aria-pressed={mode === cle}
-            onClick={() => poseMode(cle)}
-          >
-            {libelle}
-          </button>
-        ))}
-      </div>
 
       {/* T-0228 — la provenance des données, ramassée en un endroit. Elle était semée au
           contact des valeurs qu'elle couvre, où elle se relisait à chaque cible sans jamais

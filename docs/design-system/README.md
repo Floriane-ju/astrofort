@@ -100,8 +100,8 @@ section ordinaire, sans `h2` — l'en-tête de la carte la nomme déjà.
 
 Le panneau latéral (`.coque-lateral`) se pose sur la scène **comme une carte dépliée** —
 décollé des bords d'un `--jour-carte`, filet, en-tête teinté, équerres — mais ne se replie
-jamais. Il reste hors de `Carte` : son en-tête porte un retour et des commandes, qu'un
-en-tête-bouton ne peut contenir.
+jamais. Il reste hors de `Carte` : son en-tête porte les onglets de mode (`.onglets`), et sur
+la fiche un retour et des commandes — ce qu'un en-tête-bouton ne peut contenir.
 
 Un aplat de surface ou une ombre n'auraient pas tenu : §11.1 confisque la luminance, et un
 trait se lit à n'importe laquelle. Les quatre sections **nommées** — `.scene`, `.cibles`,
@@ -322,7 +322,7 @@ les plus proches, et demander.
 4. L'élément est **unique** → le laisser en place. Pas d'abstraction « au cas où ».
 5. Deux éléments se **ressemblent** mais n'ont pas la même sémantique → les garder séparés.
    Se ressembler n'est pas être le même composant : ils divergeront à la première évolution.
-   *(C'est pourquoi la bascule de mode de la barre haute et le filtre de portée du panneau
+   *(C'est pourquoi les onglets de mode du panneau latéral et le filtre de portée de la liste
    partagent une apparence mais pas une règle.)*
 
 **Au-delà de ~5 props booléennes ou 3 axes de variantes : s'arrêter et proposer un découpage.**

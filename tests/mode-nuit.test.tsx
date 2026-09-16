@@ -373,9 +373,6 @@ describe('contraste des bordures de controle - WCAG 2.2 1.4.11', () => {
     const regleTiroir = regle('.tiroir > summary')
     expect(regleTiroir).toMatch(/border.*var\(--bordure-controle\)/)
 
-    const regleBarreMode = regle('.barrehaut-mode')
-    expect(regleBarreMode).toMatch(/border.*var\(--bordure-controle\)/)
-
     // Verifier que --bordure subsiste sur les cartes
     const regleCarte = regle('.carte')
     expect(regleCarte).toMatch(/border.*var\(--bordure\)/)

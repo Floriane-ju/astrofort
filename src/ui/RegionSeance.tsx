@@ -22,7 +22,7 @@ import type { Etoile } from '../data/catalog.ts'
 import { libelleZpSource } from '../data/equipment.ts'
 import { Carte } from './Carte.tsx'
 import { RailVue } from './RailVue.tsx'
-import { PanneauLateral, TITRES_LATERAL } from './PanneauLateral.tsx'
+import { PanneauLateral } from './PanneauLateral.tsx'
 import { PanneauCibles } from './PanneauCibles.tsx'
 import { PanneauFile } from './PanneauFile.tsx'
 import { FicheCible } from './FicheCible.tsx'
@@ -213,16 +213,20 @@ export function LateralSeance(props: RegionSeanceProps) {
 
   return (
     <PanneauLateral
-      titre={fiche && props.cibleDuCiel !== null ? props.cibleDuCiel.designation : TITRES_LATERAL[mode]}
-      retour={fiche ? montreListeCibles : null}
-      rappel={
-        fiche && props.cibleDuCiel !== null ? (
-          <span className="lateral-actions">
-            {facilite !== null && <RappelFacilite etat={facilite} />}
-            {/* T-0221 — viser depuis la fiche, sans repasser par la ligne de liste. */}
-            <ViseeCible objet={props.cibleDuCiel} site={chaine.site} />
-          </span>
-        ) : null
+      fiche={
+        fiche && props.cibleDuCiel !== null
+          ? {
+              titre: props.cibleDuCiel.designation,
+              retour: montreListeCibles,
+              rappel: (
+                <span className="lateral-actions">
+                  {facilite !== null && <RappelFacilite etat={facilite} />}
+                  {/* T-0221 — viser depuis la fiche, sans repasser par la ligne de liste. */}
+                  <ViseeCible objet={props.cibleDuCiel} site={chaine.site} />
+                </span>
+              ),
+            }
+          : null
       }
       titreRef={titreRef}
     >
