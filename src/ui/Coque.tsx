@@ -8,10 +8,10 @@
  *
  *   - la barre HAUTE nomme l'application, dit où pointe la vue et ouvre les panneaux ;
  *   - la barre BASSE porte le lieu et le temps — les deux entrées qui datent toute la nuit ;
- *   - la colonne MATÉRIEL tient le flanc gauche, à demeure : c'est la saisie qu'on relit le
- *     plus, et la seule dont chaque champ change tout le reste (T-0197) ;
  *   - le RAIL borde la scène à gauche et porte les bascules de la vue (T-0213) ;
- *   - les CARTES portent le plan de nuit, repliable et déplaçable ;
+ *   - les cartes du MATÉRIEL, Boîtier et Optique, se posent contre lui (T-0238) : c'est la
+ *     saisie qu'on relit le plus, dépliée au démarrage, mais repliable quand elle est réglée ;
+ *   - les CARTES portent le plan de nuit, repliable ;
  *   - le PANNEAU latéral porte ce qui se lit en longueur : le catalogue, le filé.
  *
  * La coque ne connaît aucun contenu : elle reçoit six régions et les place. C'est ce qui
@@ -35,7 +35,7 @@ export interface CoqueProps {
   readonly topbar: ReactNode
   /** La scène. Elle occupe toute la coque, les autres régions se posent dessus. */
   readonly scene: ReactNode
-  /** Colonne de gauche : le matériel, toujours là. */
+  /** Les cartes du matériel, posées sur la scène contre le rail. */
   readonly materiel: ReactNode
   /** Ce qui se pose sur la scène : le rail de la vue, puis la carte du plan de nuit. */
   readonly cartes: ReactNode

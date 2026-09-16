@@ -27,6 +27,7 @@ import {
 } from '../src/ui/scene-etat.ts'
 import { MenuReglages } from '../src/ui/MenuReglages.tsx'
 import { BarreHaut, type BarreHautProps } from '../src/ui/BarreHaut.tsx'
+import { LIBELLES_RECADRAGE } from '../src/ui/PanneauBoitier.tsx'
 import { ALERTE_VERIFICATION } from '../src/ui/Verification.tsx'
 import { SOURCES } from '../src/registry/sources.ts'
 import { CREDIT_RELEVE } from '../src/registry/imagerie.ts'
@@ -44,8 +45,6 @@ import {
 import { majCatalogue, reinitialiseCatalogue } from '../src/ui/catalogue-etat.ts'
 import {
   basculeCarte,
-  borne,
-  bornesDeplacement,
   etatCoque,
   ouvreCarte,
   reinitialiseCoque,
@@ -99,7 +98,7 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
     const html = ecran()
     expect(html).toContain('coque-topbar')
     expect(html).toContain('coque-scene')
-    expect(html).toContain('coque-materiel')
+    expect(html).toContain('cartes-materiel')
     expect(html).toContain('coque-cartes')
     expect(html).toContain('coque-lateral')
     expect(html).toContain('coque-barrebas')
@@ -127,16 +126,50 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
   })
 
   /**
-   * T-0197 — le matériel tient le flanc gauche à demeure : une colonne, pas une carte. Sa
-   * place dans le document est entre la scène et les cartes, pour que la tabulation le
-   * rencontre avant ce qui flotte dessus.
+   * T-0238 — le matériel n'est plus une colonne : Boîtier et Optique sont deux cartes posées
+   * sur la scène, dépliées au démarrage. Leur place dans le document reste entre la scène et
+   * les autres cartes, pour que la tabulation les rencontre d'abord.
    */
-  it('monte le matériel en colonne de gauche, plus en carte', () => {
+  it('pose Boîtier et Optique en cartes dépliées, sans colonne de matériel', () => {
     const html = ecran()
-    expect(html).toContain('<aside class="coque-materiel" id="panneau-materiel"')
-    expect(html).not.toContain('carte-materiel')
-    expect(html.indexOf('coque-materiel')).toBeGreaterThan(html.indexOf('coque-scene'))
-    expect(html.indexOf('coque-materiel')).toBeLessThan(html.indexOf('coque-cartes'))
+    expect(html).not.toContain('coque-materiel')
+    expect(html).toContain('class="carte carte-boitier" data-ouverte="true"')
+    expect(html).toContain('class="carte carte-optique" data-ouverte="true"')
+    expect(html.indexOf('carte-boitier')).toBeLessThan(html.indexOf('carte-optique'))
+    expect(html.indexOf('cartes-materiel')).toBeGreaterThan(html.indexOf('coque-scene'))
+    expect(html.indexOf('cartes-materiel')).toBeLessThan(html.indexOf('coque-cartes'))
+  })
+
+  it('replie une carte du matériel sans toucher à l’autre', () => {
+    basculeCarte('BOITIER')
+    const html = ecran()
+    expect(html).toContain('class="carte carte-boitier" data-ouverte="false"')
+    expect(html).toContain('class="carte carte-optique" data-ouverte="true"')
+  })
+
+  // Repliée, une carte du matériel garde sa réponse à droite du titre ; dépliée, elle la montre
+  // déjà dans ses champs et ne la répète pas.
+  it('résume le recadrage et l’objectif à droite du titre, carte repliée seulement', () => {
+    expect(ecran()).not.toContain('carte-resume')
+    basculeCarte('BOITIER')
+    basculeCarte('OPTIQUE')
+    const html = ecran()
+    const entete = (cle: string) => {
+      const debut = html.indexOf(`carte-${cle}"`)
+      return html.slice(debut, html.indexOf('</button>', debut))
+    }
+    expect(entete('boitier')).toContain(
+      `<span class="carte-resume">${LIBELLES_RECADRAGE.FULL_FRAME}</span>`,
+    )
+    expect(entete('optique')).toMatch(/<span class="carte-resume">[^<?]+ mm f\/[^<?]+<\/span>/)
+  })
+
+  // T-0238 — un seul dessin pour tout ce qui se pose sur le ciel : filet et équerres. Les
+  // équerres ne viennent qu'à la carte dépliée.
+  it('donne aux cartes dépliées le cadre d’instrument des rubriques', () => {
+    expect(CSS_COQUE).toMatch(
+      /section:not\(\[class\]\)::before,\n\.carte\[data-ouverte='true'\]::before \{/,
+    )
   })
 
   it('garde le lieu lisible et réglable dans les deux modes', () => {
@@ -264,16 +297,6 @@ describe('§11.3 — le panneau est toujours ouvert et son contenu suit le mode'
     expect(CSS_COQUE).not.toContain('.coque-lateral[hidden]')
   })
 
-  it('arrête une carte poussée à droite au bord du panneau, jamais dessous', () => {
-    // `bornesDeplacement` déduit la largeur du panneau : la borne haute en x s'en retranche.
-    const carte = { left: 100, top: 100, width: 300, height: 200 }
-    const hote = { left: 0, top: 0, width: 1440, height: 900 }
-    const marges = { haut: 40, bas: 40, gauche: 0, droite: 320 }
-    const bornes = bornesDeplacement(carte, hote, marges, 8)
-    // Décalage maximal : le bord droit de la carte s'arrête à la marge, panneau déduit.
-    expect(carte.left + carte.width + bornes.x.max).toBe(hote.width - 8 - marges.droite)
-  })
-
   it('ne porte plus le plan : il a sa carte', () => {
     const html = ecran()
     const panneau = html.slice(html.indexOf('coque-lateral'))
@@ -352,69 +375,26 @@ describe('§11.3 — la bascule de mode occupe le centre de la barre haute', () 
   })
 })
 
-/**
- * T-0113 — une carte se replie et se déplace.
- *
- * Le bornage est une fonction pure : il se vérifie sans pointeur ni DOM, sur des rectangles
- * mesurés. C'est tout ce qui doit l'être — le reste est le comportement natif du navigateur.
- */
+/** T-0113 — une carte se replie. T-0238 — elle ne se déplace plus. */
 describe('T-0113 — les cartes posées sur la scène', () => {
-  const HOTE = { left: 0, top: 0, width: 1400, height: 800 }
-  const MARGES = { haut: 44, bas: 48, gauche: 0, droite: 0 }
-
   it('replie et déplie une carte', () => {
     expect(etatCoque().cartes.PLAN.ouverte).toBe(false)
     basculeCarte('PLAN')
     expect(etatCoque().cartes.PLAN.ouverte).toBe(true)
   })
 
-  // T-0197 — le matériel n'est plus une carte. T-0213 — la vue non plus : ses bascules
-  // bordent la scène, et une commande toujours visible n'a pas d'état de repli à tenir.
-  it('ne connaît plus qu’une carte', () => {
-    expect(Object.keys(etatCoque().cartes)).toEqual(['PLAN'])
+  // T-0213 — la vue n'est plus une carte : ses bascules bordent la scène, et une commande
+  // toujours visible n'a pas d'état de repli à tenir. T-0238 — le matériel en redevient deux.
+  it('connaît les cartes Boîtier, Optique et Plan', () => {
+    expect(Object.keys(etatCoque().cartes)).toEqual(['BOITIER', 'OPTIQUE', 'PLAN'])
   })
 
-  /** Un geste plus ample que la coque : c'est le bornage qui doit l'arrêter, pas sa taille. */
-  const LOIN = 1e6
-
-  it('garde une carte entièrement dans la coque, barres déduites', () => {
-    const carte = { left: 12, top: 56, width: 300, height: 400 }
-    const bornes = bornesDeplacement(carte, HOTE, MARGES, 10)
-    // Vers la gauche : la carte s'arrête à la marge, elle ne sort pas.
-    expect(carte.left + borne(-LOIN, bornes.x)).toBe(10)
-    // Vers la droite : son bord droit s'arrête à la marge opposée.
-    expect(carte.left + carte.width + borne(LOIN, bornes.x)).toBe(HOTE.width - 10)
-    // Vers le haut : elle ne passe pas sous la barre haute.
-    expect(carte.top + borne(-LOIN, bornes.y)).toBe(MARGES.haut + 10)
-    // Vers le bas : ni sous la barre basse.
-    expect(carte.top + carte.height + borne(LOIN, bornes.y)).toBe(HOTE.height - MARGES.bas - 10)
-  })
-
-  it('déduit la largeur du panneau ouvert : une carte ne se cache pas dessous', () => {
-    const carte = { left: 12, top: 56, width: 300, height: 400 }
-    const avec = bornesDeplacement(carte, HOTE, { ...MARGES, droite: 350 }, 10)
-    expect(carte.left + carte.width + borne(LOIN, avec.x)).toBe(HOTE.width - 350 - 10)
-  })
-
-  // T-0197 — le flanc gauche est réservé de la même façon depuis que le matériel y tient.
-  it('déduit la largeur du panneau matériel : une carte ne glisse pas dessous à gauche', () => {
-    const carte = { left: 320, top: 56, width: 300, height: 400 }
-    const avec = bornesDeplacement(carte, HOTE, { ...MARGES, gauche: 300 }, 10)
-    expect(carte.left + borne(-LOIN, avec.x)).toBe(300 + 10)
-  })
-
-  it('laisse glisser une carte plus haute que la place, sans la projeter', () => {
-    // Bornes inversées : la carte déborde forcément d'une barre ou de l'autre. Elle doit
-    // pouvoir choisir laquelle — sans le garde de `borne`, tout mouvement la renverrait au
-    // même bord et elle deviendrait immobile.
-    const geante = { left: 12, top: 56, width: 300, height: 900 }
-    const bornes = bornesDeplacement(geante, HOTE, MARGES, 10)
-    expect(bornes.y.max).toBeLessThan(bornes.y.min)
-    // Vers le bas : elle s'aligne sous la barre haute. Vers le haut : au-dessus de la basse.
-    expect(geante.top + borne(LOIN, bornes.y)).toBe(MARGES.haut + 10)
-    expect(geante.top + geante.height + borne(-LOIN, bornes.y)).toBe(
-      HOTE.height - MARGES.bas - 10,
-    )
+  // T-0238 — une carte reste à sa place : son en-tête replie, il ne se traîne plus.
+  it('ne fait plus de l’en-tête une poignée', () => {
+    const debut = CSS_COQUE.indexOf('.carte-entete {')
+    expect(CSS_COQUE.slice(debut, CSS_COQUE.indexOf('}', debut))).not.toMatch(/grab|touch-action/)
+    expect(CSS_COQUE).not.toContain('.carte-entete:active')
+    expect(ecran()).not.toMatch(/class="carte [^"]*"[^>]*style=/)
   })
 })
 
@@ -798,9 +778,6 @@ describe('T-0184 — un seul tiroir pour la vérification et les réglages', () 
   /** La barre haute hors application : seul un échec de persistance fabriqué révèle l'alerte. */
   function barreSeule(echec: boolean): string {
     const props: BarreHautProps = {
-      focale: '120',
-      ouverture: '2.8',
-      capteurMode: 'FULL_FRAME',
       modeNuit: { actif: false, luminance: 1 },
       surModeNuit: () => undefined,
       etat: null,

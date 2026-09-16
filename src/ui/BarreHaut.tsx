@@ -1,5 +1,5 @@
 /**
- * La barre haute : la marque, le matériel en une ligne, et le commutateur de mode.
+ * La barre haute : la marque, la profondeur affichée, et le commutateur de mode.
  *
  * T-0113 — elle ne porte plus de réglage, seulement des bascules. L'ordre est un contrat : le
  * mode nuit d'abord parce qu'il se cherche dans le noir, la bascule de mode ensuite, puis la
@@ -31,7 +31,6 @@
  */
 
 import type { EtatDemarrage } from '../data/bootstrap.ts'
-import type { CapteurMode } from '../data/equipment.ts'
 import { etatProfondeur } from '../core/projection.ts'
 import { GLOSSAIRE } from '../registry/glossaire.ts'
 import { Bulle } from './Bulle.tsx'
@@ -39,7 +38,6 @@ import { MenuReglages } from './MenuReglages.tsx'
 import type { SaisiePoids } from './app-saisie.ts'
 import { ALERTE_VERIFICATION, Verification } from './Verification.tsx'
 import { ModeNuit, type EtatModeNuit } from './ModeNuit.tsx'
-import { Inconnu } from './Inconnu.tsx'
 import { Icone } from './Icone.tsx'
 import { Sources } from './Sources.tsx'
 import { Tiroir } from './Tiroir.tsx'
@@ -48,9 +46,6 @@ import { poseMode, useSeance, type ModeInterface } from './seance-etat.ts'
 import { useTrancheScene, type EtatScene } from './scene-etat.ts'
 
 export interface BarreHautProps {
-  readonly focale: string
-  readonly ouverture: string
-  readonly capteurMode: CapteurMode
   readonly modeNuit: EtatModeNuit
   readonly surModeNuit: (etat: EtatModeNuit) => void
   readonly etat: EtatDemarrage | null
@@ -101,10 +96,8 @@ export function BarreHaut(props: BarreHautProps) {
       {/* T-0145 / T-0153 — seule lecture de la barre : c'est elle qui cale le bloc de
           commandes à droite, et la bande se soude à partir d'elle. */}
       <p className="etat barrehaut-lectures-fin">
-        {/* T-0149 — un champ vidé pour être retapé n'efface pas la lecture : il la marque. */}
-        {props.focale.trim() === '' ? <Inconnu /> : props.focale} mm f/
-        {props.ouverture.trim() === '' ? <Inconnu /> : props.ouverture} ·{' '}
-        {props.capteurMode === 'FULL_FRAME' ? 'plein format' : 'APS-C'} ·{' '}
+        {/* T-0238 — l'objectif et le recadrage ne s'y lisent plus : les cartes Boîtier et
+            Optique les portent, repliées comprises, et la barre les répétait. */}
         <span className="terme">
           <Bulle texte={aideProfondeur} place="bas">
             <abbr>

@@ -1,14 +1,18 @@
 /**
  * §5.1 + §5.2 — le panneau matériel : ce qu'on a, et ce que ça donne.
  *
- * La colonne de gauche ne porte que des propriétés de l'équipement — boîtier, focale,
- * ouverture, recadrage de capteur, type d'objectif, suivi — et, sous elles, la lecture
- * directe de ce que cet équipement produit. Le lieu et la date n'y sont pas : ils décrivent
- * la séance, pas le matériel, et vivent dans la colonne de droite.
+ * Ces cartes ne portent que des propriétés de l'équipement — boîtier, focale, ouverture,
+ * recadrage de capteur, type d'objectif, suivi — et, sous elles, la lecture directe de ce que
+ * cet équipement produit. Le lieu et la date n'y sont pas : ils décrivent la séance, pas le
+ * matériel, et vivent dans la barre basse.
  *
  * T-0234 — deux cartes, plus trois. L'appareil et sa monture décrivent le même poste et
  * tiennent dans la carte « Boîtier » ; ne reste ici que l'objectif, avec ses deux nombres
  * côte à côte — focale et ouverture se règlent ensemble et se relisent ensemble (`f/`).
+ *
+ * T-0238 — ces deux cartes sont des `Carte` posées sur la scène, plus des rubriques d'une
+ * colonne. Elles s'empilent dans `.cartes-materiel`, contre le rail : deux cartes de hauteur
+ * variable ne s'ancrent pas l'une sous l'autre en absolu, un conteneur en colonne le fait.
  *
  * Le type d'objectif était perdu dans la vue grand champ. C'est pourtant une propriété du
  * matériel, et §5.1 lui donne une conséquence physique : rectilinéaire ou fisheye choisit la
@@ -29,7 +33,8 @@ import type {
   SaisieBoitier,
 } from '../data/equipment.ts'
 import { TracedValue } from './TracedValue.tsx'
-import { PanneauBoitier } from './PanneauBoitier.tsx'
+import { Carte } from './Carte.tsx'
+import { LIBELLES_RECADRAGE, PanneauBoitier } from './PanneauBoitier.tsx'
 import { ChampChoix } from './ChampChoix.tsx'
 import { ChampDomaine } from './ChampDomaine.tsx'
 import { Interrupteur } from './Interrupteur.tsx'
@@ -194,28 +199,43 @@ function ChampsSuivi(props: PanneauMaterielProps) {
   )
 }
 
+/**
+ * T-0238 — l'objectif en une ligne, pour la carte repliée : la notation du photographe, celle
+ * de l'en-tête du plan imprimé. Un champ vidé pour être retapé se marque « ? » plutôt que de
+ * laisser « mm f/ » orphelin — sans la bulle d'`Inconnu`, qui ne se pose pas dans un bouton.
+ */
+function resumeOptique(focale: string, ouverture: string): string {
+  const marque = (v: string) => (v.trim() === '' ? '?' : v)
+  return `${marque(focale)} mm f/${marque(ouverture)}`
+}
+
 export function PanneauMateriel(props: PanneauMaterielProps) {
   const lectures = props.lectures
   return (
-    <>
-      <PanneauBoitier
-        boitierId={props.boitierId}
-        surBoitierId={props.surBoitierId}
-        boitier={props.boitier}
-        surBoitier={props.surBoitier}
-        iso={props.iso}
-        surIso={props.surIso}
-        capteurMode={props.capteurMode}
-        surCapteurMode={props.surCapteurMode}
-        noteRecadrage={lectures?.noteRecadrage}
-        lectureIso={lectures?.iso}
-        suivi={<ChampsSuivi {...props} />}
-      />
+    <div className="cartes-materiel">
+      <Carte cle="BOITIER" titre="Boîtier" resume={LIBELLES_RECADRAGE[props.capteurMode]}>
+        <PanneauBoitier
+          boitierId={props.boitierId}
+          surBoitierId={props.surBoitierId}
+          boitier={props.boitier}
+          surBoitier={props.surBoitier}
+          iso={props.iso}
+          surIso={props.surIso}
+          capteurMode={props.capteurMode}
+          surCapteurMode={props.surCapteurMode}
+          noteRecadrage={lectures?.noteRecadrage}
+          lectureIso={lectures?.iso}
+          suivi={<ChampsSuivi {...props} />}
+        />
+      </Carte>
 
-      <section>
-        <h2>Optique</h2>
+      <Carte
+        cle="OPTIQUE"
+        titre="Optique"
+        resume={resumeOptique(props.focale, props.ouverture)}
+      >
         {/* T-0234 — `paire` force deux colonnes : `.champs` n'en fait tenir qu'une dans les
-            19 rem de cette colonne, et ces deux nombres-là se lisent ensemble. */}
+            19 rem de la carte, et ces deux nombres-là se lisent ensemble. */}
         <div className="champs paire">
           <ChampDomaine
             domaine="focale_mm"
@@ -253,9 +273,9 @@ export function PanneauMateriel(props: PanneauMaterielProps) {
             <TracedValue terme="npf" trace={lectures.poseNpf} unite="s" />
           </>
         )}
-      </section>
-
-      {props.erreur !== undefined && <Mention ton="erreur">{props.erreur}</Mention>}
-    </>
+        {/* T-0238 — le refus se dit sous les lectures qu'il efface, pas flottant sur le ciel. */}
+        {props.erreur !== undefined && <Mention ton="erreur">{props.erreur}</Mention>}
+      </Carte>
+    </div>
   )
 }

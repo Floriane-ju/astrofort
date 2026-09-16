@@ -216,15 +216,10 @@ body {
   --jour-trait: 0.2em;
   /* Les gabarits de la coque. Les deux barres et le panneau sont posés en absolu sur la
      scène : leur encombrement doit être connu d'ailleurs — le panneau part sous la barre
-     haute, les cartes s'ancrent entre les deux. Un seul endroit le déclare, et le bornage du
-     déplacement (`Carte.tsx`) le MESURE plutôt que de le recopier. */
+     haute, les cartes s'ancrent entre les deux. Un seul endroit le déclare. */
   --barre-haut: 2.75rem;
   --barre-bas: 3rem;
   --lateral: 22rem;
-  /* Le flanc gauche : le matériel n'est plus une carte, c'est une colonne à demeure. Plus
-     étroite que celle de droite — elle porte des champs courts, là où le catalogue porte
-     des lignes de texte. */
-  --materiel: 19rem;
   /* Le rail des bascules de vue : une cible de clic de large, plus son filet. Il est cité
      deux fois — par le rail lui-même et par la note qui se pose à sa droite. */
   --rail: calc(var(--cible-clic) + var(--trait));
@@ -389,12 +384,11 @@ body {
 
    Une disposition antérieure en trois colonnes tenait la promesse « la scène au centre »
    mais lui laissait la moitié de l'écran. Ici la scène est le fond, et chaque région se pose
-   en absolu par-dessus : deux barres sur toute la largeur, des cartes déplaçables, un
+   en absolu par-dessus : deux barres sur toute la largeur, des cartes repliables, un
    panneau qui s'ouvre à droite.
 
-   `overflow: hidden` sur la coque : une carte traînée jusqu'au bord ne doit pas faire
-   apparaître d'ascenseur de page — le bornage du déplacement l'en empêche déjà, ce filet ne
-   couvre que le premier rendu, avant que quoi que ce soit ait été mesuré. */
+   `overflow: hidden` sur la coque : ce qui se pose près d'un bord ne doit pas faire
+   apparaître d'ascenseur de page. */
 .coque {
   position: relative;
   height: 100dvh;
@@ -470,8 +464,8 @@ body {
   margin-left: calc(-1 * (var(--jour-barre) + var(--trait)));
 }
 
-/* Le centre de la BARRE, pas celui de ce que la lecture matériel laisse : hors du flux, la
-   bascule ne bouge donc pas quand la focale passe de 8 à 300 mm. Le segment porte le filet
+/* Le centre de la BARRE, pas celui de ce que la lecture laisse : hors du flux, la bascule ne
+   bouge donc pas quand la lecture change de longueur. Le segment porte le filet
    que ses positions n'ont pas — sans lui, deux boutons voisins ne se lisent pas comme les
    deux positions d'un même commutateur. */
 .barrehaut-mode {
@@ -792,6 +786,37 @@ input.barretemps-instant {
   bottom: calc(var(--barre-bas) + var(--jour-carte));
 }
 
+/* LES CARTES DU MATÉRIEL : Boîtier puis Optique, empilées contre le rail.
+
+   Deux cartes de hauteur variable ne s'ancrent pas l'une sous l'autre en absolu — la
+   première grandit dès qu'on déplie le mode avancé, et viendrait couvrir la seconde. Le
+   conteneur les met en colonne et tient la hauteur laissée par les deux barres ; quand elles
+   n'y tiennent plus ensemble, chacune rétrécit et son corps défile chez lui.
+
+   Le conteneur laisse passer le pointeur : l'air entre les cartes et sous elles reste du ciel
+   qu'on fait glisser. */
+.cartes-materiel {
+  position: absolute;
+  z-index: 2;
+  left: calc(var(--rail) + var(--jour-carte));
+  top: calc(var(--barre-haut) + var(--jour-carte));
+  bottom: calc(var(--barre-bas) + var(--jour-carte));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--jour-carte);
+  pointer-events: none;
+}
+
+.cartes-materiel > .carte {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-width: none;
+  pointer-events: auto;
+}
+
 
 /* LE RAIL DE LA VUE : les bascules de rendu, collées au flanc gauche de la scène.
 
@@ -799,13 +824,13 @@ input.barretemps-instant {
    ciel n'a pas à se déplier : le rail borde la scène sans jamais la couvrir, et chaque
    bascule reste à un clic.
 
-   Il prolonge la colonne du matériel plutôt que de flotter au-dessus du ciel : deux bords
-   verticaux au lieu de trois, et une largeur que `Carte.tsx` MESURE pour que rien ne vienne
-   se glisser dessous. Son fond est translucide — c'est le ciel qui passe derrière, pas du
-   vide —, avec un aplat plein en repli là où `color-mix` n'est pas connu. */
+   Il tient le bord de l'écran plutôt que de flotter au-dessus du ciel ; les cartes du
+   matériel s'ancrent contre sa largeur. Son fond est translucide —
+   c'est le ciel qui passe derrière, pas du vide —, avec un aplat plein en repli là où
+   `color-mix` n'est pas connu. */
 .coque-rail {
   position: absolute;
-  left: var(--materiel);
+  left: 0;
   top: var(--barre-haut);
   bottom: var(--barre-bas);
   z-index: 3;
@@ -872,8 +897,8 @@ input.barretemps-instant {
   color: var(--bordure-controle);
 }
 
-/* L'en-tête est à la fois la poignée et l'interrupteur : `grab` annonce la première,
-   `aria-expanded` annonce le second. */
+/* L'en-tête est l'interrupteur de la carte : `aria-expanded` l'annonce. T-0238 — il n'est
+   plus une poignée, la carte reste à sa place. */
 .carte-entete {
   display: flex;
   align-items: center;
@@ -885,22 +910,14 @@ input.barretemps-instant {
   border: 0;
   border-bottom: var(--trait) solid var(--bordure);
   background: var(--fond-accent);
-  cursor: grab;
-  touch-action: none;
 }
 
-/* L'en-tête est le seul bouton de la feuille qui n'annonçait rien au survol : il
-   changeait de curseur, et rien d'autre. Or il fait DEUX choses — il replie la carte, et il la
-   déplace — donc c'est le contrôle qu'il faut le plus désigner avant le clic. Le filet passe à
-   l'accent comme sur les autres commandes ; le fond monte d'un cran, l'en-tête étant déjà
-   teinté au repos. */
+/* L'en-tête n'a pas l'allure d'un bouton — c'est un bandeau de titre —, donc c'est le contrôle
+   qu'il faut le plus désigner avant le clic. Le filet passe à l'accent comme sur les autres
+   commandes ; le fond monte d'un cran, l'en-tête étant déjà teinté au repos. */
 .carte-entete:hover {
   background: var(--surface-haute);
   border-bottom-color: var(--accent);
-}
-
-.carte-entete:active {
-  cursor: grabbing;
 }
 
 .carte-titre {
@@ -910,6 +927,19 @@ input.barretemps-instant {
   letter-spacing: var(--suivi-titre);
   text-transform: uppercase;
   color: var(--accent);
+}
+
+/* T-0238 — le résumé d'une carte repliée est une VALEUR, pas une étiquette : il quitte la
+   casse et le suivi que le bouton impose, sans quoi « mm » se lirait « MM ». Atténué comme une
+   lecture (`.etat`) : le titre reste devant.
+   Sa marge droite le colle au titre et repousse le signe au bord. */
+.carte-resume {
+  margin-inline-end: auto;
+  color: var(--attenue);
+  font-size: var(--texte-legende);
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
 }
 
 .carte-marque {
@@ -979,24 +1009,6 @@ input.barretemps-instant {
   background: var(--surface);
 }
 
-/* Le flanc gauche : même colonne que celle de droite, même en-tête, même corps
-   défilant. Elle se distingue par son bord — un filet à droite, pas à gauche — et par sa
-   largeur. Ce qui la sépare vraiment de la droite est ailleurs : son contenu ne change jamais,
-   le mode ne la commande pas. */
-.coque-materiel {
-  position: absolute;
-  left: 0;
-  top: var(--barre-haut);
-  bottom: var(--barre-bas);
-  z-index: 3;
-  width: var(--materiel);
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
-  border-right: var(--trait) solid var(--bordure);
-  background: var(--surface);
-}
-
 /* L'en-tête se lit de gauche à droite : le retour, ce qu'on lit, puis ce que la
    cible vaut. Le rappel se serre à droite par sa marge, pas par une répartition — trois
    éléments répartis auraient poussé le titre au milieu, loin du bouton qui le précède. */
@@ -1034,9 +1046,7 @@ input.barretemps-instant {
 }
 
 /* Repli sous 1100 px : plus rien ne flotte. Les barres, les cartes et le panneau reprennent
-   le flux vertical sous la scène ; la scène redevient une image en 16/9. Un écran étroit n'a
-   pas la place d'une carte déplaçable — et le déplacement n'ouvre l'accès à aucune fonction,
-   il n'y a donc rien à remplacer. */
+   le flux vertical sous la scène ; la scène redevient une image en 16/9. */
 @media (max-width: 1100px) {
   .coque {
     display: flex;
@@ -1051,7 +1061,6 @@ input.barretemps-instant {
   .coque-scene,
   .carte,
   .coque-rail,
-  .coque-materiel,
   .coque-lateral {
     position: static;
     inset: auto;
@@ -1059,6 +1068,18 @@ input.barretemps-instant {
     max-width: none;
     height: auto;
     flex-wrap: wrap;
+  }
+
+  /* Les cartes du matériel rejoignent le flux comme les autres : leur colonne n'a plus rien
+     à tenir. */
+  .cartes-materiel {
+    display: contents;
+  }
+
+  /* Pleine largeur et bordées d'un seul filet haut, les cartes n'ont plus de cadre à
+     marquer : des équerres qui débordent sortiraient de l'écran. */
+  .carte::before {
+    display: none;
   }
 
   .coque-topbar,
@@ -1076,7 +1097,6 @@ input.barretemps-instant {
 
   .carte,
   .coque-rail,
-  .coque-materiel,
   .coque-lateral {
     border: 0;
     border-top: var(--trait) solid var(--bordure);
@@ -1344,9 +1364,9 @@ h3 {
  * bordure : deux rôles, deux jetons, et le mode nuit les repeint tous les deux.
  *
  * Porté par le sélecteur d'élément, comme le style de `button` : la carte n'est pas une chose
- * qu'on applique à une rubrique, c'est ce QU'EST une rubrique. Les quatre sections nommées —
- * `.scene`, `.cibles`, `.carte`, `.menu-reglages` — posent leur propre disposition et restent
- * hors sujet, exactement comme pour le rythme vertical ci-dessous. */
+ * qu'on applique à une rubrique, c'est ce QU'EST une rubrique. Les sections nommées —
+ * `.scene`, `.cibles`, `.menu-reglages` — posent leur propre disposition et restent hors
+ * sujet ; `.carte` pose la sienne mais reprend les équerres (voir plus bas). */
 section:not([class]) {
   position: relative;
   margin-block-start: var(--pas-4);
@@ -1364,8 +1384,14 @@ section:not([class]) > h2:first-child {
 /* Les équerres DÉBORDENT du filet — c'est ce qui les fait lire comme des repères de visée
    posés sur le cadre, et non comme un second trait doublant le premier à un pixel près.
    Huit dégradés plats, deux par angle : un bras horizontal, un bras vertical. Un dégradé ne
-   sait pas dessiner une équerre d'un seul tenant, et quatre pseudo-éléments n'existent pas. */
-section:not([class])::before {
+   sait pas dessiner une équerre d'un seul tenant, et quatre pseudo-éléments n'existent pas.
+
+   T-0238 — la carte posée sur la scène porte le même cadre. Boîtier et Optique l'avaient en
+   rubriques de colonne ; devenues cartes, elles le gardent, et le plan de nuit le prend : trois
+   objets posés sur le ciel, un seul dessin. Son filet, elle l'a déjà. Repliée, elle n'est
+   plus qu'un titre : des équerres autour d'une ligne la désigneraient comme un objet ouvert. */
+section:not([class])::before,
+.carte[data-ouverte='true']::before {
   content: '';
   position: absolute;
   inset: calc(-1 * var(--pas-1));
@@ -1398,9 +1424,11 @@ section:not([class])::before {
  * `:not([class])` désigne la section ordinaire, celle qui empile des blocs. Les quatre
  * sections nommées posent leur propre disposition et sont hors sujet : `.scene`, `.cibles`,
  * `.carte`, `.menu-reglages`. `.masque-horizon` n'est pas une `<section>` mais empile de la
- * même façon. */
+ * même façon, et le corps d'une carte aussi (T-0238) : Boîtier et Optique y posent leurs
+ * champs sans rubrique intermédiaire. */
 section:not([class]) > * + *,
-.masque-horizon > * + * {
+.masque-horizon > * + *,
+.carte-corps > * + * {
   margin-block-start: var(--pas-2);
 }
 
@@ -2102,7 +2130,7 @@ button:disabled {
   .coque-topbar,
   .coque-barrebas,
   .coque-scene,
-  .coque-materiel,
+  .cartes-materiel,
   .coque-lateral,
   .carte {
     display: none;
@@ -2122,7 +2150,11 @@ button:disabled {
     overflow: visible;
     border: 0;
     padding: 0;
-    transform: none;
+  }
+
+  /* Sans filet ni position, les équerres se poseraient sur la page entière. */
+  .carte-plan::before {
+    display: none;
   }
 
   /* De la carte ne sort que le plan : son en-tête est une poignée, et la fenêtre nocturne se

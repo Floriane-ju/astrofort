@@ -1,5 +1,7 @@
 /**
- * §5.1 + §7.2 — la section Boîtier : quel appareil, l'ISO qu'il justifie, et comment il suit.
+ * §5.1 + §7.2 — le corps de la carte Boîtier : quel appareil, l'ISO qu'il justifie, et comment
+ * il suit. T-0238 — sans `<section>` ni `h2` : la `Carte` qui l'héberge porte déjà le cadre et
+ * le nom.
  *
  * T-0234 — le format du capteur y a rejoint le reste : plein format ou recadrage APS-C décrit
  * l'appareil, pas l'objectif posé devant, et le ranger sous « Optique » séparait deux moitiés
@@ -72,7 +74,17 @@ const CHAMPS_AVANCES = Object.freeze([
   readonly cle: TermeGlossaire
 }[])
 
-type NotesEstimation = Readonly<Partial<Record<keyof SaisieBoitier, string>>>
+/**
+ * §5.1 — le recadrage tel qu'on le choisit. Une seule table : le sélecteur la lit, et la carte
+ * repliée aussi (T-0238) — deux libellés écrits séparément finiraient par ne plus nommer la
+ * même option.
+ */
+export const LIBELLES_RECADRAGE: Readonly<Record<CapteurMode, string>> = Object.freeze({
+  FULL_FRAME: 'Plein format',
+  APSC_CROP: 'Recadrage APS-C',
+})
+
+type NotesEstimation =Readonly<Partial<Record<keyof SaisieBoitier, string>>>
 
 /**
  * T-0199 — ce que le dépliant FERMÉ doit dire. Sans ce résumé, les alertes de champ ne se
@@ -271,8 +283,7 @@ export function PanneauBoitier(props: PanneauBoitierProps) {
     props.surBoitier({ ...props.boitier, [champ]: v })
 
   return (
-    <section>
-      <h2>Boîtier</h2>
+    <>
       <div className="champs">
         <SelecteurBoitier boitierId={props.boitierId} surBoitierId={props.surBoitierId} />
         {ligne === null && (
@@ -318,8 +329,8 @@ export function PanneauBoitier(props: PanneauBoitierProps) {
           valeur={props.capteurMode}
           surChangement={props.surCapteurMode}
         >
-          <option value="FULL_FRAME">Plein format</option>
-          <option value="APSC_CROP">Recadrage APS-C</option>
+          <option value="FULL_FRAME">{LIBELLES_RECADRAGE.FULL_FRAME}</option>
+          <option value="APSC_CROP">{LIBELLES_RECADRAGE.APSC_CROP}</option>
         </ChampChoix>
       </div>
       {props.noteRecadrage !== undefined && <Mention ton="cause">{props.noteRecadrage}</Mention>}
@@ -356,6 +367,6 @@ export function PanneauBoitier(props: PanneauBoitierProps) {
         fige={ligne !== null}
       />
       {props.suivi}
-    </section>
+    </>
   )
 }

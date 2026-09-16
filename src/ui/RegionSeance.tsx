@@ -4,19 +4,18 @@
  * T-0113 — le panneau droit à quatre onglets est démonté. Les quatre intentions n'avaient pas
  * la même nature : deux se règlent EN regardant le ciel — la vue et la cible — et deux se
  * lisent de haut en bas — le plan de nuit et le filé. Les premières sont devenues des cartes
- * posées sur la scène, repliables et déplaçables ; les secondes, un panneau latéral.
+ * posées sur la scène, repliables ; les secondes, un panneau latéral.
  *
  * Le partage n'est pas esthétique : une carte qu'on replie libère la scène sans perdre son
  * état, là où un onglet forçait à en abandonner un pour en lire un autre.
  *
  * T-0181 — le panneau ne s'ouvre plus : il est à demeure, et le mode décide de son contenu.
  *
- * T-0197 — le matériel quitte les cartes pour le flanc gauche. Le repli et le déplacement ne
- * lui rendaient rien : on ne le consulte pas entre deux gestes de visée, on le corrige tout au
- * long de la séance, et sa borne de demi-hauteur le faisait défiler dans une boîte de 20 rem.
+ * T-0238 — le matériel, passé en colonne par T-0197, est revenu en cartes : il vit dans
+ * `PanneauMateriel`, que l'application monte à côté de celles-ci.
  */
 
-import { useRef, useEffect, type ReactNode } from 'react'
+import { useRef, useEffect } from 'react'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { EtatCible } from '../core/cibles-liste.ts'
 import type { Etoile } from '../data/catalog.ts'
@@ -50,24 +49,6 @@ export interface RegionSeanceProps {
   readonly gaiaCharge: boolean
   readonly epoqueAnnee: number
   readonly modeNuitActif: boolean
-}
-
-/**
- * La colonne de gauche : le matériel, à demeure.
- *
- * Elle ne prend pas de props de séance — son contenu est assemblé par l'application, qui seule
- * tient la saisie et la chaîne de calcul. Ici il ne reste que la coquille : le même en-tête et
- * le même corps défilant que la colonne de droite, puisque c'est la même forme.
- */
-export function ColonneMateriel({ children }: { readonly children: ReactNode }) {
-  return (
-    <aside className="coque-materiel" id="panneau-materiel" aria-label="Matériel">
-      <div className="lateral-entete">
-        <h2>Matériel</h2>
-      </div>
-      <div className="lateral-corps">{children}</div>
-    </aside>
-  )
 }
 
 /**

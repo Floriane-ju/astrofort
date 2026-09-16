@@ -1,45 +1,23 @@
 /**
  * T-0113 — une carte posée sur la scène : un en-tête qui la nomme, un corps qui se replie.
  *
- * Trois raisons de poser les réglages SUR le ciel plutôt qu'à côté :
+ * Deux raisons de poser les réglages SUR le ciel plutôt qu'à côté :
  *
  *   1. la scène récupère toute la largeur — un cadre de 0,8° dans une colonne de 900 px se
  *      lisait mal, il se lit ici ;
  *   2. une carte se replie à son en-tête, donc ce qui ne sert pas à cet instant ne prend que
- *      la hauteur de son titre ;
- *   3. une carte se déplace, donc elle cesse de cacher ce qu'on regarde. C'est le seul geste
- *      qu'un panneau à position fixe ne peut pas offrir, et c'est exactement le geste dont on
- *      a besoin quand la cible tombe derrière le panneau.
+ *      la hauteur de son titre.
  *
  * L'en-tête est un vrai `<button aria-expanded>` : le repli reste au clavier et l'état reste
- * annoncé. Le déplacement, lui, est au pointeur seulement.
- * ponytail: pas de déplacement au clavier. Une carte a une place par défaut d'où tout se lit
- * et rien ne se cache ; bouger n'ouvre l'accès à aucune fonction. Si un jour une carte peut
- * masquer une commande qu'elle seule porte, il faudra des flèches.
- */
-
-import { useRef, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import {
-  basculeCarte,
-  borne,
-  bornesDeplacement,
-  deplaceCarte,
-  useCoque,
-  type CleCarte,
-  type Decalage,
-  type MargesCoque,
-} from './coque-etat.ts'
-
-/**
- * Au-delà, le geste est un déplacement et non un clic.
+ * annoncé.
  *
- * Sans ce seuil, replier une carte deviendrait impossible à la souris : le moindre tremblement
- * entre l'appui et le relâchement compterait comme un déplacement et mangerait le clic.
+ * T-0238 — la carte ne se déplace plus. Chacune a une place d'où rien ne se cache, et le
+ * repli suffit à dégager le ciel ; un geste de glisser sur l'en-tête faisait d'un bouton une
+ * poignée, et une carte lâchée ailleurs n'était plus là où l'œil la cherchait.
  */
-const SEUIL_GLISSE_PX = 3
 
-/** Le jour entre une carte et le bord de la coque, pour qu'elle ne colle jamais un filet. */
-const MARGE_COQUE_PX = 10
+import type { ReactNode } from 'react'
+import { basculeCarte, useCoque, type CleCarte } from './coque-etat.ts'
 
 /**
  * T-0183 — l'exception au démontage, nommée plutôt que subie.
@@ -55,111 +33,38 @@ const CARTES_MONTEES_REPLIEES: readonly CleCarte[] = ['PLAN']
 export interface CarteProps {
   readonly cle: CleCarte
   readonly titre: string
+  /**
+   * T-0238 — ce que la carte repliée dit encore, à droite de son titre. Du texte seul : il
+   * vit dans le bouton d'en-tête, où rien d'interactif ne peut se poser.
+   */
+  readonly resume?: string
   readonly children: ReactNode
-}
-
-/** Le rectangle d'un élément, ou `null` s'il n'est pas dans le document. */
-function rect(element: Element | null | undefined): DOMRect | null {
-  return element?.getBoundingClientRect() ?? null
-}
-
-/**
- * Ce que la coque réserve sur ses bords, MESURÉ plutôt que recopié.
- *
- * Les hauteurs des deux barres et les largeurs des deux colonnes sont écrites dans la feuille
- * de style. Les redéclarer ici en ferait une seconde source de vérité qui divergerait au
- * premier ajustement de gouttière ; les lire à l'instant du geste ne coûte que cinq mesures.
- *
- * T-0213 — le flanc gauche en compte deux : la colonne du matériel, puis le rail de la vue
- * collé contre elle. Sans le rail dans la marge, une carte poussée à gauche passerait sous
- * ses bascules et les rendrait inatteignables.
- */
-function margesCoque(coque: Element): MargesCoque {
-  const materiel = rect(coque.querySelector('.coque-materiel'))?.width ?? 0
-  const rail = rect(coque.querySelector('.coque-rail'))?.width ?? 0
-  return {
-    haut: rect(coque.querySelector('.coque-topbar'))?.height ?? 0,
-    bas: rect(coque.querySelector('.coque-barrebas'))?.height ?? 0,
-    gauche: materiel + rail,
-    droite: rect(coque.querySelector('.coque-lateral'))?.width ?? 0,
-  }
 }
 
 export function Carte(props: CarteProps) {
   const { cartes } = useCoque()
   const etat = cartes[props.cle]
-  const glisse = useRef(false)
-
-  function surPointerDown(evenement: ReactPointerEvent<HTMLElement>): void {
-    // Seul le bouton principal déplace : le menu contextuel et les gestes secondaires passent.
-    if (evenement.button !== 0) return
-    const entete = evenement.currentTarget
-    const carte = entete.closest('.carte')
-    const coque = carte?.closest('.coque') ?? null
-    const boiteCarte = rect(carte)
-    const boiteCoque = rect(coque)
-    if (coque === null || boiteCarte === null || boiteCoque === null) return
-
-    const bornes = bornesDeplacement(
-      boiteCarte,
-      boiteCoque,
-      margesCoque(coque),
-      MARGE_COQUE_PX,
-    )
-    const depart = { x: evenement.clientX, y: evenement.clientY }
-    const base: Decalage = etat.decalage
-    glisse.current = false
-    entete.setPointerCapture(evenement.pointerId)
-
-    const bouge = (e: PointerEvent): void => {
-      const dx = e.clientX - depart.x
-      const dy = e.clientY - depart.y
-      if (Math.abs(dx) > SEUIL_GLISSE_PX || Math.abs(dy) > SEUIL_GLISSE_PX) glisse.current = true
-      if (!glisse.current) return
-      deplaceCarte(props.cle, {
-        x: base.x + borne(dx, bornes.x),
-        y: base.y + borne(dy, bornes.y),
-      })
-    }
-    const relache = (): void => {
-      entete.removeEventListener('pointermove', bouge)
-      entete.removeEventListener('pointerup', relache)
-      entete.removeEventListener('pointercancel', relache)
-    }
-    entete.addEventListener('pointermove', bouge)
-    entete.addEventListener('pointerup', relache)
-    entete.addEventListener('pointercancel', relache)
-  }
-
-  function surClic(): void {
-    // Un déplacement se termine par un `click` que le navigateur envoie quand même : sans
-    // cette garde, relâcher une carte qu'on vient de traîner la replierait.
-    if (glisse.current) {
-      glisse.current = false
-      return
-    }
-    basculeCarte(props.cle)
-  }
-
-  const style =
-    etat.decalage.x === 0 && etat.decalage.y === 0
-      ? undefined
-      : { transform: `translate(${etat.decalage.x}px, ${etat.decalage.y}px)` }
 
   return (
     <section
       className={`carte carte-${props.cle.toLowerCase()}`}
       data-ouverte={etat.ouverte}
-      {...(style === undefined ? {} : { style })}
+      // T-0238 — la carte n'a pas de titre de section : son nom en fait une région, comme
+      // l'`aria-label` de la colonne matériel qu'elle remplace.
+      role="region"
+      aria-label={props.titre}
     >
       <button
         type="button"
         className="carte-entete"
         aria-expanded={etat.ouverte}
-        onPointerDown={surPointerDown}
-        onClick={surClic}
+        onClick={() => basculeCarte(props.cle)}
       >
         <span className="carte-titre">{props.titre}</span>
+        {/* Dépliée, la carte montre le détail : le résumé n'y répéterait que ses champs. */}
+        {!etat.ouverte && props.resume !== undefined && (
+          <span className="carte-resume">{props.resume}</span>
+        )}
         {/* Le signe dit l'action à venir, pas l'état courant : replier, ou déplier. */}
         <span className="carte-marque" aria-hidden="true">
           {etat.ouverte ? '—' : '+'}

@@ -3,8 +3,8 @@
  *
  * Ce fichier ne dessine plus rien et ne calcule plus rien. Il tient les magasins partagés,
  * appelle la chaîne de calcul (`app-calcul.ts`) et distribue ses sorties aux six régions de
- * la coque : la barre haute, la scène, la colonne matériel, les cartes posées dessus, le
- * panneau latéral et la barre basse.
+ * la coque : la barre haute, la scène, les cartes du matériel, les autres cartes posées dessus,
+ * le panneau latéral et la barre basse.
  *
  * Chaque nombre affiché reste dépliable jusqu'à sa formule, et chaque terme technique porte
  * sa définition au contact (§1.5.2, §10.1) — c'est le contrat, pas la mise en page.
@@ -21,7 +21,7 @@ import { useTrancheScene, type EtatScene } from './ui/scene-etat.ts'
 import { ouvreCible, useSeance } from './ui/seance-etat.ts'
 import { BarreHaut } from './ui/BarreHaut.tsx'
 import { BarreBas } from './ui/BarreBas.tsx'
-import { CartesSeance, ColonneMateriel, LateralSeance } from './ui/RegionSeance.tsx'
+import { CartesSeance, LateralSeance } from './ui/RegionSeance.tsx'
 import { useSaisieLieu, useSaisieMateriel, useSaisiePoids } from './ui/app-saisie.ts'
 import {
   useCatalogues,
@@ -123,9 +123,6 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
 
   const topbar = (
     <BarreHaut
-      focale={materiel.focale}
-      ouverture={materiel.ouverture}
-      capteurMode={materiel.capteurMode}
       modeNuit={modeNuit}
       surModeNuit={setModeNuit}
       etat={catalogues.etat}
@@ -138,25 +135,23 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
   )
 
   const panneauMateriel = (
-    <ColonneMateriel>
-      <PanneauMateriel
-        {...materiel}
-        {...(calcul.ok
-          ? {
-              lectures: {
-                optique: calcul.optique,
-                suivi: calcul.suivi,
-                poseNpf: calcul.poseNpf,
-                zeroSysteme: calcul.zeroSysteme,
-                iso: calcul.iso,
-                ...(calcul.noteRecadrage === undefined
-                  ? {}
-                  : { noteRecadrage: calcul.noteRecadrage }),
-              },
-            }
-          : { erreur: calcul.erreur })}
-      />
-    </ColonneMateriel>
+    <PanneauMateriel
+      {...materiel}
+      {...(calcul.ok
+        ? {
+            lectures: {
+              optique: calcul.optique,
+              suivi: calcul.suivi,
+              poseNpf: calcul.poseNpf,
+              zeroSysteme: calcul.zeroSysteme,
+              iso: calcul.iso,
+              ...(calcul.noteRecadrage === undefined
+                ? {}
+                : { noteRecadrage: calcul.noteRecadrage }),
+            },
+          }
+        : { erreur: calcul.erreur })}
+    />
   )
 
   /**

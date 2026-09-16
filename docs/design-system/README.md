@@ -91,8 +91,12 @@ Trois écarts nommés s'appuient dessus : `--jour-carte`, `--jour-barre`, `--jou
 `<section>` sans classe porte un **cadre d'instrument** : filet complet en `--bordure`,
 équerres aux quatre angles en `--accent`, jour de `--jour-carte`. Le style est porté par le
 sélecteur d'élément, comme celui de `button` — il n'y a **pas de composant `Carte` à appeler**,
-et `Carte.tsx` reste la carte déplaçable de la scène. Poser une rubrique, c'est écrire
+et `Carte.tsx` reste la carte repliable de la scène. Poser une rubrique, c'est écrire
 `<section><h2>…</h2>…</section>`.
+
+La carte repliable de la scène (`.carte` — Boîtier, Optique, Plan de nuit), dépliée, porte **le même
+cadre** : filet et équerres. Son corps (`.carte-corps`) suit le même rythme vertical qu'une
+section ordinaire, sans `h2` — l'en-tête de la carte la nomme déjà.
 
 Un aplat de surface ou une ombre n'auraient pas tenu : §11.1 confisque la luminance, et un
 trait se lit à n'importe laquelle. Les quatre sections **nommées** — `.scene`, `.cibles`,
@@ -105,7 +109,8 @@ sont séparés de `--pas-2`**, et cet écart est posé une seule fois :
 
 ```css
 section:not([class]) > * + *,
-.masque-horizon > * + * {
+.masque-horizon > * + *,
+.carte-corps > * + * {
   margin-block-start: var(--pas-2);
 }
 ```
@@ -167,7 +172,7 @@ vérifie qu'aucune famille nommée n'est sans fichier.
 
 ### Gabarits — hors échelle, délibérément
 
-`--barre-haut` 2,75rem · `--barre-bas` 3rem · `--lateral` 22rem · `--materiel` 19rem ·
+`--barre-haut` 2,75rem · `--barre-bas` 3rem · `--lateral` 22rem ·
 `--rail` · `--carte-large` 19rem · `--carte-plan` 29rem · `--bulle-large` 18rem ·
 `--cible-clic` 44px (usage ganté sur écran tactile, §11.2)
 
@@ -239,7 +244,7 @@ appartient à la phrase, pas au composant.
 |---|---|---|
 | `Icone` | 12 | **toute icône**, sans exception |
 | `Tiroir` | 3 | un tiroir de barre — `<details>` sans JavaScript |
-| `Carte` | 1 | une carte déplaçable sur la scène |
+| `Carte` | 2 | une carte repliable posée sur la scène, à place fixe |
 | `Pastilles` | 2 | une note sur une échelle, comptée d'un coup d'œil |
 
 ```tsx
