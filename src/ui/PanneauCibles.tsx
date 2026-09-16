@@ -170,11 +170,9 @@ export function PanneauCibles(props: PanneauCiblesProps) {
         ))}
       </div>
 
-      <p className="etat">
-        {portee === 'CATALOGUE'
-          ? `Tout le catalogue, ${catalogue.length.toLocaleString('fr-FR')} objets.`
-          : `Objets à plus de ${seuil}° cette nuit, qui tiennent dans votre cadre.`}
-      </p>
+      {portee === 'PHOTOGRAPHIABLES' && (
+        <p className="etat">Objets à plus de {seuil}° cette nuit, qui tiennent dans votre cadre.</p>
+      )}
 
       <div className="cibles-filtres">
         <label>
