@@ -29,7 +29,6 @@ export interface VerdictsProps {
   readonly creneau: CreneauFiche
   readonly snrCible: number
   readonly surSnr: (valeur: number) => void
-  readonly isoLibelle: string
   /** §7.1 — `zp_source` accompagne toute pose affichée. */
   readonly zeroSysteme: PointZeroSysteme
   readonly conseils: Conseils | null
@@ -53,7 +52,6 @@ export function Verdicts(props: VerdictsProps) {
       {r.detect.verdict !== null && (
         <PoseUnitaire
           r={r}
-          isoLibelle={props.isoLibelle}
           zeroSysteme={props.zeroSysteme}
           permissif={props.permissif}
           surPermissif={props.surPermissif}
@@ -190,13 +188,11 @@ function Detectabilite({
 /** §7.1 et §7.2 — combien de temps dure une photo, et pourquoi pas davantage. */
 function PoseUnitaire({
   r,
-  isoLibelle,
   zeroSysteme,
   permissif,
   surPermissif,
 }: {
   readonly r: Resultat
-  readonly isoLibelle: string
   readonly zeroSysteme: PointZeroSysteme
   readonly permissif: boolean
   readonly surPermissif: (valeur: boolean) => void
@@ -225,9 +221,6 @@ function PoseUnitaire({
             <Etiquette cle="regime_pose" /> : {r.pose.regime}
           </p>
           <Mention ton={r.pose.regime === 'NOMINAL' ? 'etat' : 'cause'}>{r.pose.message}</Mention>
-          <p className="etat">
-            <Etiquette cle="iso_recommande" /> : {isoLibelle}
-          </p>
           {r.pose.readNoiseEstime && (
             <Mention ton="cause">
               [ESTIMÉ] Bruit de lecture inconnu : {r.pose.readNoiseUtiliseE} e⁻ par défaut.

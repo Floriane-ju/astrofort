@@ -112,7 +112,6 @@ export function FicheCible(props: FicheCibleProps) {
           creneau={creneau}
           snrCible={snrCible}
           surSnr={setSnrCible}
-          isoLibelle={iso.message}
           zeroSysteme={props.zeroSysteme}
           conseils={conseils}
           permissif={permissif}
