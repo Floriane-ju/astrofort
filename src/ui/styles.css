@@ -220,9 +220,9 @@ body {
   --barre-haut: 2.75rem;
   --barre-bas: 3rem;
   --lateral: 22rem;
-  /* Le rail des bascules de vue : une cible de clic de large, plus son filet. Il est cité
-     deux fois — par le rail lui-même et par la note qui se pose à sa droite. */
-  --rail: calc(var(--cible-clic) + var(--trait));
+  /* Le rail des bascules de vue : une cible de clic de large, filet compris. Il est cité
+     deux fois — par le rail lui-même et par les cartes qui se posent à sa droite. */
+  --rail: var(--cible-clic);
   --carte-large: 19rem;
   /* Le plan porte une table de budget de nuit : à 19 rem elle défilerait horizontalement, et
      un tableau qu'on fait glisser ne se compare plus d'une ligne à l'autre. Sa carte a donc
@@ -798,7 +798,7 @@ input.barretemps-instant {
 .cartes-materiel {
   position: absolute;
   z-index: 2;
-  left: calc(var(--rail) + var(--jour-carte));
+  left: calc(var(--rail) + 2 * var(--jour-carte));
   top: calc(var(--barre-haut) + var(--jour-carte));
   bottom: calc(var(--barre-bas) + var(--jour-carte));
   display: flex;
@@ -818,47 +818,49 @@ input.barretemps-instant {
 }
 
 
-/* LE RAIL DE LA VUE : les bascules de rendu, collées au flanc gauche de la scène.
+/* LE RAIL DE LA VUE : les bascules de rendu, posées au flanc gauche de la scène.
 
    Elles vivaient dans une carte repliée par défaut. Un réglage qui se prend EN regardant le
-   ciel n'a pas à se déplier : le rail borde la scène sans jamais la couvrir, et chaque
-   bascule reste à un clic.
+   ciel n'a pas à se déplier : chaque bascule reste à un clic.
 
-   Il tient le bord de l'écran plutôt que de flotter au-dessus du ciel ; les cartes du
-   matériel s'ancrent contre sa largeur. Son fond est translucide —
-   c'est le ciel qui passe derrière, pas du vide —, avec un aplat plein en repli là où
-   `color-mix` n'est pas connu. */
+   T-0244 — le rail n'a ni fond ni filet : chaque bascule est un bouton encadré, posé seul sur
+   le ciel, décollé des bords d'un jour de carte comme le reste de ce qui flotte. Entre les
+   boutons c'est du ciel qu'on fait glisser — le rail laisse passer le pointeur, ses boutons le
+   reprennent. Pas de défilement : il rognerait l'anneau de focus, qui déborde du bouton. */
 .coque-rail {
   position: absolute;
-  left: 0;
-  top: var(--barre-haut);
-  bottom: var(--barre-bas);
+  left: var(--jour-carte);
+  top: calc(var(--barre-haut) + var(--jour-carte));
+  bottom: calc(var(--barre-bas) + var(--jour-carte));
   z-index: 3;
   width: var(--rail);
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  overflow-y: auto;
-  border-right: var(--trait) solid var(--bordure);
-  background: var(--surface);
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  gap: var(--pas-4);
+  pointer-events: none;
 }
 
-/* Trois groupes — projection, fond de ciel, couches — séparés d'un filet : sans lui, neuf
-   glyphes empilés se lisent comme une seule liste, et la projection passe pour une couche. */
+/* Trois groupes — projection, fond de ciel, couches — séparés d'un écart double de celui des
+   boutons : sans lui, neuf glyphes empilés se lisent comme une seule liste, et la projection
+   passe pour une couche. */
 .coque-rail > .rail-groupe {
   display: flex;
   flex-direction: column;
   flex: none;
 }
+  gap: var(--pas-2);
 
-.coque-rail > .rail-groupe + .rail-groupe {
-  border-top: var(--trait) solid var(--bordure);
+.coque-rail .bascule {
+  pointer-events: auto;
 }
 
 /* Une bascule porte un glyphe, pas un mot : elle perd le rembourrage et la casse d'un bouton
-   de formulaire, mais garde la cible de clic gantée de §11.2. Le filet reste `transparent`
-   plutôt qu'absent — la géométrie ne bouge pas entre le repos, le survol et l'état actif. */
+   de formulaire, mais garde la cible de clic gantée de §11.2.
+
+   T-0244 — posée seule sur le ciel, elle porte son propre cadre : un filet, et un fond
+   translucide — c'est le ciel qui passe derrière, pas du vide —, avec un aplat plein en repli
+   là où `color-mix` n'est pas connu. */
 .bascule {
   display: flex;
   align-items: center;
@@ -866,13 +868,13 @@ input.barretemps-instant {
   min-height: var(--cible-clic);
   min-width: var(--cible-clic);
   padding: 0;
-  background: transparent;
+  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
   color: var(--attenue);
-  border: var(--trait) solid transparent;
+  border: var(--trait) solid var(--bordure);
 }
 
 .bascule:not(:disabled):hover {
-  background: transparent;
   border-color: var(--accent);
   color: var(--texte);
 }
@@ -1096,29 +1098,22 @@ input.barretemps-instant {
   }
 
   .carte,
-  .coque-rail,
   .coque-lateral {
     border: 0;
     border-top: var(--trait) solid var(--bordure);
   }
 
-  /* Sous le repli le rail n'a plus de flanc à border : il devient une rangée de
-     bascules dans le flux, à la place qu'il tenait en flottant — juste après la scène. Les
-     filets de groupe basculent d'horizontaux à verticaux, sinon les trois groupes se lisent
-     comme trois rangées superposées. */
+  /* Sous le repli le rail devient une rangée de boutons dans le flux, à la place qu'il tenait
+     en flottant — juste après la scène. Les écarts passent d'une colonne à une ligne : les
+     groupes restent séparés du même double écart. */
   .coque-rail {
     flex-direction: row;
     flex-wrap: wrap;
-    overflow: visible;
+    padding: var(--pas-2) var(--pas-3);
   }
 
   .coque-rail > .rail-groupe {
     flex-direction: row;
-  }
-
-  .coque-rail > .rail-groupe + .rail-groupe {
-    border-top: 0;
-    border-left: var(--trait) solid var(--bordure);
   }
 
   .carte[data-ouverte='false'] {
