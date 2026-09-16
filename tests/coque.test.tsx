@@ -230,12 +230,12 @@ describe('§11.2 — un seul jeu de réglages à la fois', () => {
 
   // T-0213 — les bascules de la vue ne se déplient plus : elles sont là dès l'ouverture, et
   // c'est tout l'intérêt du rail. Une seule lecture du magasin, pas un abonnement complet.
-  it('monte les neuf bascules de la vue sans qu’on ait à déplier quoi que ce soit', () => {
+  it('monte les huit bascules de la vue sans qu’on ait à déplier quoi que ce soit', () => {
     const rail = ecran()
     const debut = rail.indexOf('coque-rail')
     const bloc = rail.slice(debut, rail.indexOf('carte-plan'))
     for (const libelle of [
-      'Planétarium — stéréographique',
+      'Vue comme l’appareil',
       'Vue réaliste',
       'Figures IAU',
       'Frontières IAU',
@@ -246,7 +246,7 @@ describe('§11.2 — un seul jeu de réglages à la fois', () => {
     ]) {
       expect(bloc, libelle).toContain(`aria-label="${libelle}"`)
     }
-    expect((bloc.match(/aria-pressed=/g) ?? []).length).toBe(9)
+    expect((bloc.match(/aria-pressed=/g) ?? []).length).toBe(8)
   })
 
   /**

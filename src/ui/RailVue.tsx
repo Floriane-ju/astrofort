@@ -137,10 +137,10 @@ export function RailVue(props: RailVueProps) {
      plancher une propriété du paquet chargé : la cause se lit donc sur les deux boutons qui
      choisissent la projection. §3.3 — un geste sans effet doit nommer ce qui l'arrête. */
   const bornes = bornesZoom(props.gaiaCharge, mode)
-  const projectionObjectif =
-    props.modeObjectif === 'MODE_FISHEYE'
-      ? 'Comme l’objectif — équidistante'
-      : 'Comme l’objectif — gnomonique'
+  const vueAppareil = mode !== 'MODE_PLANETARIUM'
+  const aideProjection = vueAppareil
+    ? `Vue comme l’appareil — ${props.modeObjectif === 'MODE_FISHEYE' ? 'équidistante' : 'gnomonique'}`
+    : 'Vue planétarium — stéréographique'
 
   /* §4.1 — le sol masque, il doit donc dire sur quoi il repose. L'hypothèse d'horizon plat
      reste au panneau Lieu : elle invite à éditer le relief, un geste que le rail ne propose
@@ -164,23 +164,18 @@ export function RailVue(props: RailVueProps) {
   return (
     <>
       <div className="coque-rail" role="group" aria-label="Vue de la scène">
-        {/* Deux choix seulement : la vue de planétarium, ou celle de l'objectif déclaré.
-            Offrir gnomonique ET équidistante ici laisserait choisir une projection que le
-            matériel ne produit pas — §5.1 en fait une propriété de l'objectif. */}
+        {/* Une bascule, pas deux choix : éteinte la vue de planétarium, allumée celle de
+            l'objectif déclaré. Offrir gnomonique ET équidistante ici laisserait choisir une
+            projection que le matériel ne produit pas — §5.1 en fait une propriété de
+            l'objectif. Le nom reste fixe, `aria-pressed` porte l'état ; la bulle dit la vue
+            affichée. */}
         <div className="rail-groupe" role="group" aria-label="Projection">
           <Bascule
-            nom="public"
-            libelle="Planétarium — stéréographique"
-            aide={aide('Planétarium — stéréographique', bornes.cause)}
-            actif={mode === 'MODE_PLANETARIUM'}
-            sur={() => majVue({ mode: 'MODE_PLANETARIUM' })}
-          />
-          <Bascule
-            nom="photo_camera"
-            libelle={projectionObjectif}
-            aide={aide(projectionObjectif, bornes.cause)}
-            actif={mode !== 'MODE_PLANETARIUM'}
-            sur={() => majVue({ mode: props.modeObjectif })}
+            nom="camera"
+            libelle="Vue comme l’appareil"
+            aide={aide(aideProjection, bornes.cause)}
+            actif={vueAppareil}
+            sur={() => majVue({ mode: vueAppareil ? 'MODE_PLANETARIUM' : props.modeObjectif })}
           />
         </div>
 

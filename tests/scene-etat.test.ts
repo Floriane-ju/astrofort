@@ -141,7 +141,8 @@ describe('§5.1 — le type d’objectif pilote la projection de la scène', () 
   it('n’offre à la scène que la projection de l’objectif déclaré', () => {
     // T-0213 — le choix de projection est porté par le rail de la vue avec le reste des
     // réglages de scène ; ce qu'il propose reste dicté par l'objectif déclaré au panneau
-    // matériel. Deux bascules, jamais trois.
+    // matériel. Une bascule : éteinte le planétarium, allumée la projection de l'objectif.
+    majVue({ mode: modeObjectif('FISHEYE') })
     const html = renderToStaticMarkup(
       createElement(RailVue, {
         modeObjectif: modeObjectif('FISHEYE'),
@@ -150,7 +151,7 @@ describe('§5.1 — le type d’objectif pilote la projection de la scène', () 
         masque: masquePlat(),
       }),
     )
-    expect(html).toContain('Comme l’objectif — équidistante')
+    expect(html).toContain('Vue comme l’appareil — équidistante')
     // Un objectif fisheye ne produit pas de projection gnomonique : elle n'est pas proposée.
     expect(html).not.toContain('gnomonique')
   })
