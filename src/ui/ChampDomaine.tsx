@@ -45,6 +45,8 @@ export interface ChampDomaineProps {
   readonly cle?: TermeGlossaire
   /** Le libellé en clair, pour un champ qui n'a pas d'entrée au glossaire. */
   readonly libelle?: string
+  /** Glose de remplacement pour `cle`, calculée au contact plutôt que générique. */
+  readonly glose?: string | undefined
   readonly valeur: string
   readonly surValeur: (v: string) => void
   /** Sans lui, la sortie n'existe pas : le placeholder annonce alors la plage attendue. */
@@ -70,7 +72,11 @@ export function ChampDomaine(props: ChampDomaineProps) {
     <label>
       <span className="libelle champ-titre">
         <span>
-          {props.cle === undefined ? props.libelle : <Etiquette cle={props.cle} />}
+          {props.cle === undefined ? (
+            props.libelle
+          ) : (
+            <Etiquette cle={props.cle} glose={props.glose} />
+          )}
           {props.unite === true && ` (${d.unite})`}
         </span>
         {props.note !== undefined && <AlerteChamp note={props.note} />}

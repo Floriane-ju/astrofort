@@ -60,7 +60,8 @@ describe('contrat d’entrée — écran par défaut, setup de l’Annexe A', ()
   })
 
   it('glose chaque terme technique au contact', () => {
-    for (const cle of ['champ', 'npf', 'masque_horizon'] as const) {
+    // "champ" n'en fait plus partie : sa bulle a été retirée (T-0225), le libellé seul suffit.
+    for (const cle of ['npf', 'masque_horizon'] as const) {
       expect(ecran, cle).toContain(GLOSSAIRE[cle].glose)
     }
   })

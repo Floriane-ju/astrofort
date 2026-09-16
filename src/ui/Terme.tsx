@@ -15,14 +15,22 @@ import { GLOSSAIRE } from '../registry/glossaire.ts'
 
 interface EtiquetteProps {
   readonly cle: TermeGlossaire
+  /**
+   * Glose de remplacement, calculée au contact plutôt que générique — ex. l'ISO retenu et sa
+   * justification. Absente, la glose du glossaire fait foi.
+   */
+  readonly glose?: string | undefined
 }
 
 /** Libellé d'un terme, glose au survol — le pointillé sous le mot annonce qu'il y a une aide. */
-export function Etiquette({ cle }: EtiquetteProps) {
+export function Etiquette({ cle, glose }: EtiquetteProps) {
   const entree = GLOSSAIRE[cle]
+  if (entree.sansBulle === true) {
+    return <span className="terme">{entree.libelle}</span>
+  }
   return (
     <span className="terme">
-      <Bulle texte={entree.glose} place="bas">
+      <Bulle texte={glose ?? entree.glose} place="bas">
         <abbr>{entree.libelle}</abbr>
       </Bulle>
     </span>

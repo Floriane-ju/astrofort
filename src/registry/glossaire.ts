@@ -18,6 +18,8 @@ export interface EntreeGlossaire {
   readonly libelle: string
   /** Glose courte, une phrase au plus, visible au survol. */
   readonly glose: string
+  /** Vrai si le libellé s'affiche sans bulle au survol : le nom seul suffit déjà. */
+  readonly sansBulle?: boolean
   /** Deux à quatre phrases, au clic. */
   readonly explication: string
   /** Ce que ça change pour l'utilisateur, en une phrase actionnable. */
@@ -34,6 +36,7 @@ export const GLOSSAIRE = Object.freeze({
   latitude: terme({
     libelle: 'Latitude',
     glose: 'position nord-sud du lieu',
+    sansBulle: true,
     explication:
       'Elle fixe la partie du ciel visible depuis chez vous. Plus on s’éloigne de l’équateur, ' +
       'plus le ciel de l’autre hémisphère reste bas.',
@@ -43,6 +46,7 @@ export const GLOSSAIRE = Object.freeze({
   longitude: terme({
     libelle: 'Longitude',
     glose: 'position est-ouest du lieu',
+    sansBulle: true,
     explication:
       'Elle ne change pas ce qui est visible, seulement à quelle heure. Elle décale le vrai ' +
       'milieu de la nuit.',
@@ -52,6 +56,7 @@ export const GLOSSAIRE = Object.freeze({
   altitude_site: terme({
     libelle: 'Altitude du site',
     glose: 'hauteur du lieu',
+    sansBulle: true,
     explication: 'Elle joue très peu sur les calculs. Une valeur approchée suffit.',
     consequence: 'Cent mètres d’écart ne changent rien.',
     sections: ['4.1'],
@@ -160,6 +165,7 @@ export const GLOSSAIRE = Object.freeze({
   focale: terme({
     libelle: 'Focale',
     glose: 'longueur focale de l’objectif',
+    sansBulle: true,
     explication:
       'Plus elle est longue, plus le champ est étroit et les objets grands. Elle entre dans ' +
       'presque tous les calculs.',
@@ -169,6 +175,7 @@ export const GLOSSAIRE = Object.freeze({
   ouverture: terme({
     libelle: 'Ouverture',
     glose: 'nombre f de l’objectif',
+    sansBulle: true,
     explication:
       'Plus le nombre f est petit, plus l’objectif collecte de lumière. C’est lui qui fixe le ' +
       'temps de pose.',
@@ -178,6 +185,7 @@ export const GLOSSAIRE = Object.freeze({
   champ: terme({
     libelle: 'Champ',
     glose: 'portion de ciel cadrée',
+    sansBulle: true,
     explication:
       'C’est l’angle de ciel couvert par la photo. Il dépend de la taille du capteur et de la ' +
       'focale.',
@@ -227,6 +235,7 @@ export const GLOSSAIRE = Object.freeze({
   recadrage_capteur: terme({
     libelle: 'Format du capteur',
     glose: 'plein format ou APS-C',
+    sansBulle: true,
     explication:
       'Le recadrage n’utilise que le centre du capteur. Il réduit le champ, sans grossir les ' +
       'détails.',
@@ -299,6 +308,7 @@ export const GLOSSAIRE = Object.freeze({
   poids_image: terme({
     libelle: 'Poids d’une image',
     glose: 'taille d’un fichier RAW',
+    sansBulle: true,
     explication:
       'Multipliée par le nombre de poses, elle donne la place à prévoir sur la carte. Regardez ' +
       'la taille d’un RAW déjà pris.',
@@ -337,6 +347,7 @@ export const GLOSSAIRE = Object.freeze({
   type_monture: terme({
     libelle: 'Type de monture',
     glose: 'équatoriale ou rotule',
+    sansBulle: true,
     explication:
       'Une équatoriale allemande doit se retourner quand la cible passe le méridien. Une monture ' +
       'sur rotule, non.',
@@ -405,6 +416,7 @@ export const GLOSSAIRE = Object.freeze({
   }),
   diametre_pixels: terme({
     libelle: 'Diamètre en pixels',
+    sansBulle: true,
     glose: 'taille de l’objet en pixels',
     explication:
       'C’est la taille de la cible sur la photo. Sous une cinquantaine de pixels, on ne ' +
@@ -528,6 +540,7 @@ export const GLOSSAIRE = Object.freeze({
   }),
   pose_unitaire: terme({
     libelle: 'Pose unitaire',
+    sansBulle: true,
     glose: 'durée d’une photo',
     explication:
       'C’est la durée conseillée pour chaque photo. Sous un ciel noir, elle est plus longue, pas ' +
@@ -562,6 +575,7 @@ export const GLOSSAIRE = Object.freeze({
   }),
   mon_boitier: terme({
     libelle: 'Mon boîtier',
+    sansBulle: true,
     glose: 'votre appareil photo',
     explication:
       'Choisir le modèle apporte les caractéristiques de son capteur. La pose et l’ISO ' +
@@ -580,6 +594,7 @@ export const GLOSSAIRE = Object.freeze({
   }),
   snr_cible: terme({
     libelle: 'Qualité visée',
+    sansBulle: true,
     glose: 'qualité de l’image finale',
     explication:
       'Plus elle est haute, plus l’image est lisse. Doubler la qualité demande quatre fois plus ' +
@@ -598,6 +613,7 @@ export const GLOSSAIRE = Object.freeze({
   }),
   nombre_poses: terme({
     libelle: 'Nombre de poses',
+    sansBulle: true,
     glose: 'combien de photos prendre',
     explication:
       'C’est le temps total divisé par la durée d’une pose. Il fixe aussi la place à prévoir sur ' +
@@ -607,6 +623,7 @@ export const GLOSSAIRE = Object.freeze({
   }),
   volume_stockage: terme({
     libelle: 'Volume de stockage',
+    sansBulle: true,
     glose: 'place sur la carte',
     explication:
       'C’est le nombre de photos multiplié par la taille d’un fichier. Une seule cible peut ' +
@@ -794,6 +811,7 @@ export const GLOSSAIRE = Object.freeze({
   }),
   luminance_mode_nuit: terme({
     libelle: 'Luminance du mode nuit',
+    sansBulle: true,
     glose: 'luminosité de l’écran',
     explication:
       'Baissez-la au minimum confortable pour garder la vision de nuit. Sur un écran LCD, un peu ' +
@@ -864,6 +882,7 @@ export const GLOSSAIRE = Object.freeze({
   // §9 — grand champ, prévisualisation et filé
   pose_max_cadre: terme({
     libelle: 'Pose max du cadre',
+    sansBulle: true,
     glose: 'pose max sur tout le cadre',
     explication:
       'Les étoiles bougent plus vite loin du pôle. La pose retenue est celle de la zone du cadre ' +
@@ -873,6 +892,7 @@ export const GLOSSAIRE = Object.freeze({
   }),
   trainee: terme({
     libelle: 'Traînée',
+    sansBulle: true,
     glose: 'étirement des étoiles',
     explication:
       'C’est la longueur en pixels du trait laissé par une étoile pendant la pose. Au-delà d’un ' +
@@ -918,6 +938,7 @@ export const GLOSSAIRE = Object.freeze({
   }),
   vignettage: terme({
     libelle: 'Vignettage',
+    sansBulle: true,
     glose: 'coins plus sombres',
     explication:
       'Objectif grand ouvert, les coins de l’image sont plus sombres que le centre. Fermer d’un ' +
@@ -927,6 +948,7 @@ export const GLOSSAIRE = Object.freeze({
   }),
   pole_celeste: terme({
     libelle: 'Centre de rotation',
+    sansBulle: true,
     glose: 'centre de rotation du ciel',
     explication:
       'Les étoiles tournent autour de ce point, à une hauteur égale à votre latitude. Il est ' +
@@ -936,6 +958,7 @@ export const GLOSSAIRE = Object.freeze({
   }),
   longueur_arc: terme({
     libelle: 'Longueur d’arc',
+    sansBulle: true,
     glose: 'longueur des traînées',
     explication:
       'Plus la séquence dure, plus les traînées sont longues. Près du pôle, elles restent ' +
@@ -945,6 +968,7 @@ export const GLOSSAIRE = Object.freeze({
   }),
   duree_file: terme({
     libelle: 'Durée d’accumulation',
+    sansBulle: true,
     glose: 'durée totale de la séquence',
     explication: 'C’est le temps couvert par toutes les poses. Il fixe la longueur des traînées.',
     consequence: 'Doubler la durée double la longueur des traînées.',
@@ -952,6 +976,7 @@ export const GLOSSAIRE = Object.freeze({
   }),
   intervalle_file: terme({
     libelle: 'Intervalle inter-pose',
+    sansBulle: true,
     glose: 'pause entre deux poses',
     explication:
       'Chaque seconde de pause laisse un trou dans les traînées. La réduction de bruit longue ' +
@@ -961,6 +986,7 @@ export const GLOSSAIRE = Object.freeze({
   }),
   n_poses_file: terme({
     libelle: 'Nombre de poses',
+    sansBulle: true,
     glose: 'photos de la séquence',
     explication:
       'C’est la durée totale divisée par la durée d’une pose et de sa pause. Les photos ' +

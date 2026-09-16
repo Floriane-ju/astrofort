@@ -39,13 +39,6 @@ import { Icone } from './Icone.tsx'
 import { Mention } from './Mention.tsx'
 
 /**
- * §5.1 — ce que la saisie exige, dit une fois au titre de la carte. Au survol plutôt qu'en
- * paragraphe : la règle se relit quand on hésite, elle n'occupe pas la place des champs.
- */
-const AIDE_BOITIER =
-  'Choisissez votre modèle. Absent de la liste : indiquez le type de capteur et la résolution.'
-
-/**
  * T-0199 — pourquoi remplir un dépliant qu'on peut laisser fermé. Chaque champ porte déjà la
  * conséquence de son absence ; le dépliant, lui, dit ce que remplir fait gagner — sans quoi
  * le mode avancé n'a l'air que d'un recoin technique qu'on referme.
@@ -224,20 +217,19 @@ function LigneIso({
     <>
       {fige ? (
         <p className="etat">
-          <Etiquette cle="iso_recommande" /> : {lecture === undefined ? '—' : lecture.iso}
+          <Etiquette cle="iso_recommande" glose={lecture?.message} /> :{' '}
+          {lecture === undefined ? '—' : lecture.iso}
         </p>
       ) : (
         <ChampDomaine
           domaine="iso_capture"
           cle="iso_recommande"
+          glose={lecture?.message}
           valeur={iso}
           surValeur={surIso}
           inputMode="numeric"
           placeholder={lecture === undefined ? 'recommandé' : `recommandé : ${lecture.iso}`}
         />
-      )}
-      {lecture !== undefined && (
-        <Mention ton={lecture.readNoiseE === null ? 'cause' : 'etat'}>{lecture.message}</Mention>
       )}
     </>
   )
@@ -265,11 +257,7 @@ export function PanneauBoitier(props: PanneauBoitierProps) {
 
   return (
     <section>
-      <h2>
-        <Bulle texte={AIDE_BOITIER} place="bas">
-          <span className="aide">Boîtier</span>
-        </Bulle>
-      </h2>
+      <h2>Boîtier</h2>
       <div className="champs">
         <SelecteurBoitier boitierId={props.boitierId} surBoitierId={props.surBoitierId} />
         {ligne === null && (
