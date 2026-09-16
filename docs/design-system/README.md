@@ -196,13 +196,14 @@ rupture (1100px) : un jeton pour une valeur unique serait une abstraction « au 
 ```tsx
 <ChampDomaine domaine="focale_mm" cle="focale" valeur={focale} surValeur={surFocale} requis />
 
-<ChampChoix cle="type_monture" valeur={typeMonture} surChangement={surTypeMonture}>
-  <option value="TRACKER">Monture sur rotule (tracker)</option>
-  <option value="GEM">Équatoriale allemande</option>
+<ChampChoix cle="type_monture" valeur={choixMonture(props)} surChangement={surMonture}>
+  <option value="AUCUN">Pas de suivi</option>
+  <option value="TRACKER_SOIGNE">Monture sur rotule (tracker) — viseur polaire réglé</option>
+  <option value="GEM_SOIGNE">Équatoriale allemande — viseur polaire réglé</option>
 </ChampChoix>
 
-<Interrupteur actif={suiviActif} surChangement={surSuiviActif}>
-  Ma monture suit les étoiles
+<Interrupteur actif={typeObjectif === 'FISHEYE'} surChangement={surFisheye}>
+  Objectif fisheye
 </Interrupteur>
 ```
 

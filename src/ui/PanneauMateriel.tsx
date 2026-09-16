@@ -44,6 +44,47 @@ export function modeObjectif(type: TypeObjectif): ModeProjection {
   return type === 'FISHEYE' ? 'MODE_FISHEYE' : 'MODE_CADRE'
 }
 
+/** §5.2 — ce que la saisie décrit d'une monture : ce qu'elle suit, et comment elle est posée. */
+export type ChoixMonture =
+  | 'AUCUN'
+  | 'TRACKER_SOIGNE'
+  | 'TRACKER_APPROX'
+  | 'GEM_SOIGNE'
+  | 'GEM_APPROX'
+
+interface ProfilMonture {
+  readonly suiviActif: boolean
+  readonly qualiteMes: QualiteMiseEnStation
+  readonly typeMonture: TypeMonture
+}
+
+/**
+ * T-0236 — sans suivi, le type de monture n'a plus de conséquence : celui retenu est celui qui
+ * n'impose rien, pas de retournement au méridien (§8.2), et la mise en station reste non
+ * renseignée. `APPROX` et `INCONNUE` ne sont plus deux réponses : `modeSuivi` (core/tracking.ts)
+ * les traite déjà comme une seule mise en station approximative, et `INCONNUE` ne survit que
+ * dans les profils déjà enregistrés.
+ */
+export const PROFILS_MONTURE: Readonly<Record<ChoixMonture, ProfilMonture>> = Object.freeze({
+  AUCUN: { suiviActif: false, qualiteMes: 'INCONNUE', typeMonture: 'TRACKER' },
+  TRACKER_SOIGNE: { suiviActif: true, qualiteMes: 'SOIGNEE', typeMonture: 'TRACKER' },
+  TRACKER_APPROX: { suiviActif: true, qualiteMes: 'APPROX', typeMonture: 'TRACKER' },
+  GEM_SOIGNE: { suiviActif: true, qualiteMes: 'SOIGNEE', typeMonture: 'GEM' },
+  GEM_APPROX: { suiviActif: true, qualiteMes: 'APPROX', typeMonture: 'GEM' },
+})
+
+/**
+ * Le choix qui décrit un profil. L'altazimutale retombe sur la rotule, comme au rechargement
+ * d'un profil qui la porte encore (T-0207) : le sélecteur ne la propose pas, et la reprendre
+ * telle quelle laisserait le champ sur une valeur sans option.
+ */
+export function choixMonture(profil: ProfilMonture): ChoixMonture {
+  if (!profil.suiviActif) return 'AUCUN'
+  const soignee = profil.qualiteMes === 'SOIGNEE'
+  if (profil.typeMonture === 'GEM') return soignee ? 'GEM_SOIGNE' : 'GEM_APPROX'
+  return soignee ? 'TRACKER_SOIGNE' : 'TRACKER_APPROX'
+}
+
 /** Ce que le matériel saisi produit. Absent tant que la saisie est refusée. */
 export interface LecturesMateriel {
   readonly optique: ProfilOptique
@@ -89,37 +130,41 @@ export interface PanneauMaterielProps {
 /**
  * §5.2 — le suivi : ce que la monture permet, et ce qu'elle interdit.
  *
- * T-0234 — il ferme la carte « Boîtier » au lieu d'en tenir une. Pas de titre : l'interrupteur
- * qui l'ouvre nomme déjà le sujet, et un `h3` sous un `h2` de carte n'aurait annoncé que lui.
+ * T-0234 — il ferme la carte « Boîtier » au lieu d'en tenir une. Pas de titre : le champ nomme
+ * déjà le sujet, et un `h3` sous un `h2` de carte n'aurait annoncé que lui.
+ *
+ * T-0236 — un champ, pas trois. L'interrupteur et les deux sélecteurs posaient trois questions
+ * dont deux sans objet tant que la première n'était pas cochée, pour cinq réponses réellement
+ * distinctes. Le moteur et le profil enregistré gardent leurs trois champs — c'est le contrat
+ * §5.2 et le format d'export §12.3 — mais la saisie n'en montre qu'un.
  */
 function ChampsSuivi(props: PanneauMaterielProps) {
   const lectures = props.lectures
+
+  function surMonture(choix: ChoixMonture) {
+    const profil = PROFILS_MONTURE[choix]
+    props.surSuiviActif(profil.suiviActif)
+    props.surQualiteMes(profil.qualiteMes)
+    props.surTypeMonture(profil.typeMonture)
+  }
+
   return (
     <>
-      <Interrupteur actif={props.suiviActif} surChangement={props.surSuiviActif}>
-        Ma monture suit les étoiles
-      </Interrupteur>
-      {props.suiviActif && (
-        <div className="champs">
-          <ChampChoix
-            cle="mise_en_station"
-            valeur={props.qualiteMes}
-            surChangement={props.surQualiteMes}
-          >
-            <option value="SOIGNEE">Oui — viseur polaire réglé</option>
-            <option value="APPROX">Non — mise en station à la boussole</option>
-            <option value="INCONNUE">Je ne sais pas</option>
-          </ChampChoix>
-          <ChampChoix
-            cle="type_monture"
-            valeur={props.typeMonture}
-            surChangement={props.surTypeMonture}
-          >
-            <option value="TRACKER">Monture sur rotule (tracker)</option>
-            <option value="GEM">Équatoriale allemande</option>
-          </ChampChoix>
-        </div>
-      )}
+      <div className="champs">
+        <ChampChoix cle="type_monture" valeur={choixMonture(props)} surChangement={surMonture}>
+          <option value="AUCUN">Pas de suivi</option>
+          <option value="TRACKER_SOIGNE">
+            Monture sur rotule (tracker) — viseur polaire réglé
+          </option>
+          <option value="TRACKER_APPROX">
+            Monture sur rotule (tracker) — mise en station à la boussole
+          </option>
+          <option value="GEM_SOIGNE">Équatoriale allemande — viseur polaire réglé</option>
+          <option value="GEM_APPROX">
+            Équatoriale allemande — mise en station à la boussole
+          </option>
+        </ChampChoix>
+      </div>
       {/* T-0207 — l'altazimutale n'est pas un choix tant que la rotation de champ n'est pas
           modélisée (§5.2) : la proposer ne menait qu'à un refus. `etat` et non `cause` :
           rien n'est en défaut dans la saisie, c'est le périmètre de l'app qui se dit. */}

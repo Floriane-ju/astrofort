@@ -346,13 +346,14 @@ export const GLOSSAIRE = Object.freeze({
     sections: ['5.2'],
   }),
   type_monture: terme({
-    libelle: 'Type de monture',
-    glose: 'équatoriale ou rotule',
+    libelle: 'Monture',
+    glose: 'ce qui suit les étoiles, et sa mise en station',
     sansBulle: true,
     explication:
       'Une équatoriale allemande doit se retourner quand la cible passe le méridien. Une monture ' +
-      'sur rotule, non.',
-    consequence: 'Avec une équatoriale, prévoyez une pause pour le retournement.',
+      'sur rotule, non. Le même choix déclare la mise en station : au viseur polaire, les poses ' +
+      'tiennent bien plus longtemps qu’à la boussole.',
+    consequence: 'Elle fixe la pose maximale, et le retournement au méridien s’il y en a un.',
     sections: ['5.2', '8.2'],
   }),
   pose_max_suivi: terme({
