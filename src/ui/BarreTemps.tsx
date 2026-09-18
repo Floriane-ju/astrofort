@@ -15,9 +15,9 @@
 
 import { useRef, useState } from 'react'
 import { facteurDefilement, reglageVitesse } from '../core/curseur-temps.ts'
+import { nuitDeLInstant } from '../core/nuit-datee.ts'
 import {
   dateAvec,
-  jourLocalIso,
   partiesHeure,
   partiesJour,
   pourChampDateHeure,
@@ -63,8 +63,12 @@ const CRANS: readonly Cran[] = Object.freeze([
 ] as const)
 
 export interface BarreTempsProps {
-  /** La nuit sur laquelle porte le plan suit l'instant choisi : une seule date à l'écran. */
-  readonly surDateIso: (v: string) => void
+  /**
+   * La nuit sur laquelle porte le plan suit l'instant choisi : une seule date à l'écran.
+   * T-0267 — celle du SOIR de la nuit, pas le jour civil : reculer l'horloge à 00:30 reste
+   * dans la nuit qu'on observe au lieu d'annoncer la suivante.
+   */
+  readonly surNuitIso: (v: string) => void
 }
 
 export function BarreTemps(props: BarreTempsProps) {
@@ -98,7 +102,7 @@ export function BarreTemps(props: BarreTempsProps) {
     <div className="barretemps">
       {reglage.ajuste && defile && <p className="cause barretemps-message">{reglage.message}</p>}
       {CRANS.filter((c) => c.sens < 0).map(chevron)}
-      <Horloge surDateIso={props.surDateIso} />
+      <Horloge surNuitIso={props.surNuitIso} />
       {CRANS.filter((c) => c.sens > 0).map(chevron)}
       {/* Le facteur RÉELLEMENT appliqué, pas celui demandé : sous 20° de champ, la vitesse
           rapide est écrêtée, et l'afficher est la moitié de la promesse — l'autre moitié est
@@ -182,7 +186,7 @@ function Horloge(props: BarreTempsProps) {
           const choisi = new Date(e.target.value)
           if (Number.isNaN(choisi.getTime())) return
           vaA(choisi.getTime())
-          props.surDateIso(jourLocalIso(choisi))
+          props.surNuitIso(nuitDeLInstant(choisi))
         }}
       />
     )
@@ -191,7 +195,7 @@ function Horloge(props: BarreTempsProps) {
   function va(champ: ChampInstant, valeur: number): void {
     const choisi = dateAvec(depart.current ?? date, champ, valeur)
     vaA(choisi.getTime())
-    props.surDateIso(jourLocalIso(choisi))
+    props.surNuitIso(nuitDeLInstant(choisi))
   }
 
   /** Les littéraux de la locale restent du texte : seuls les nombres deviennent des compteurs. */

@@ -77,7 +77,7 @@ export function CartesSeance(props: RegionSeanceProps) {
         mLimOeil={ciel.ciel.mLimOeil.value}
         etoiles={props.etoiles}
         enTete={{
-          dateIso: lieu.dateIso,
+          nuitIso: lieu.nuitIso,
           lieu: `${lieu.latitude}° / ${lieu.longitude}° — Bortle ${lieu.bortle}`,
           materiel:
             `${materiel.focale} mm f/${materiel.ouverture} — ${calcul.boitier.libelle} · ` +
@@ -109,6 +109,7 @@ export function CartesSeance(props: RegionSeanceProps) {
             nuit={ciel.nuit}
             ciel={ciel.ciel}
             offsetMidi={ciel.offsetMidi}
+            nuitIso={lieu.nuitIso}
             planIndisponible={chaine.plan === null && props.catalogue.length === 0}
           />
         )}

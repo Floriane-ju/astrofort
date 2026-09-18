@@ -10,6 +10,7 @@
  */
 
 import { dureeLisible } from './exposure.ts'
+import { nomDeLaNuit } from './nuit-datee.ts'
 import type { PlanSession } from './session.ts'
 
 const MINUTE_DEUX_CHIFFRES = 2
@@ -23,14 +24,16 @@ function heure(date: Date): string {
 }
 
 export interface EnTetePlan {
-  readonly dateIso: string
+  readonly nuitIso: string
   readonly lieu: string
   readonly materiel: string
 }
 
 export function planEnTexte(plan: PlanSession, enTete: EnTetePlan): string {
   const lignes: string[] = []
-  const titre = `PLAN DE SESSION — ${enTete.dateIso}`
+  // T-0267 — la nuit porte deux dates : un plan lu à 2 h du matin sous la frontale ne doit
+  // pas laisser deviner si « 17/09 » désigne le soir écoulé ou celui qui vient.
+  const titre = `PLAN DE SESSION — ${nomDeLaNuit(enTete.nuitIso)}`
   lignes.push(titre, '='.repeat(titre.length), '')
   lignes.push(`Lieu     : ${enTete.lieu}`)
   lignes.push(`Matériel : ${enTete.materiel}`)

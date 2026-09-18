@@ -7,6 +7,7 @@
  */
 
 import type { FenetreNocturne } from '../core/night.ts'
+import { nomDeLaNuit } from '../core/nuit-datee.ts'
 import type { FondDeCiel } from '../core/sky-background.ts'
 import type { Traced } from '../core/traced.ts'
 import { TracedValue } from './TracedValue.tsx'
@@ -21,6 +22,8 @@ export interface RegionNuitProps {
   readonly nuit: FenetreNocturne
   readonly ciel: FondDeCiel
   readonly offsetMidi: Traced<number>
+  /** T-0267 — le SOIR de la nuit planifiée, celui du coucher du Soleil. */
+  readonly nuitIso: string
   /** Vrai tant qu'aucun catalogue vérifié n'alimente le plan : la région le dit en clair. */
   readonly planIndisponible: boolean
 }
@@ -28,7 +31,11 @@ export interface RegionNuitProps {
 export function RegionNuit(props: RegionNuitProps) {
   return (
     <>
-      <FenetreNocturneVue nuit={props.nuit} offsetMidi={props.offsetMidi} />
+      <FenetreNocturneVue
+        nuit={props.nuit}
+        offsetMidi={props.offsetMidi}
+        nuitIso={props.nuitIso}
+      />
       <FondDeCielVue ciel={props.ciel} />
       {props.planIndisponible && (
         <section>
@@ -46,13 +53,18 @@ export function RegionNuit(props: RegionNuitProps) {
 function FenetreNocturneVue({
   nuit,
   offsetMidi,
+  nuitIso,
 }: {
   readonly nuit: FenetreNocturne
   readonly offsetMidi: Traced<number>
+  readonly nuitIso: string
 }) {
   return (
     <section>
       <h2>Fenêtre nocturne</h2>
+      {/* T-0267 — la nuit se nomme par ses deux dates : passé minuit, « 17/09 » seul laisse
+          le doute sur le soir désigné, et c'est à ce moment-là qu'on lit la carte. */}
+      <p className="etat">{nomDeLaNuit(nuitIso)}</p>
       <p className="etat">état : {nuit.etat}</p>
       <Terme
         cle={nuit.modeDegrade ? 'mode_degrade_nuit' : 'nuit_astronomique'}

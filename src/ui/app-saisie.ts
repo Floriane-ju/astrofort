@@ -12,7 +12,7 @@ import type { PointMasque } from '../core/site.ts'
 import type { CapteurMode, SaisieBoitier } from '../data/equipment.ts'
 import { ligneBoitier } from '../data/boitiers.ts'
 import type { QualiteMiseEnStation, TypeMonture } from '../core/tracking.ts'
-import { jourLocalIso } from './horaire.ts'
+import { nuitDeLInstant } from '../core/nuit-datee.ts'
 import { etatScene, majVue } from './scene-etat.ts'
 import { modeObjectif, type TypeObjectif } from './PanneauMateriel.tsx'
 
@@ -38,8 +38,8 @@ export interface SaisieLieu {
   readonly surLongitude: (v: string) => void
   readonly altitude: string
   readonly surAltitude: (v: string) => void
-  readonly dateIso: string
-  readonly surDateIso: (v: string) => void
+  readonly nuitIso: string
+  readonly surNuitIso: (v: string) => void
   readonly bortle: string
   readonly surBortle: (v: string) => void
   readonly sqm: string
@@ -71,9 +71,9 @@ export function useSaisieLieu(depart: DepartLieu | null): SaisieLieu {
   const [altitude, surAltitude] = useState(depart?.altitude ?? DEFAUT.altitude)
   const [bortle, surBortle] = useState(depart?.bortle ?? DEFAUT.bortle)
   const [sqm, surSqm] = useState(depart?.sqm ?? '')
-  // Le jour LOCAL : `toISOString()` donnerait le jour UTC, donc la nuit suivante après
-  // minuit UTC en été — celle qu'on ne prépare pas.
-  const [dateIso, surDateIso] = useState(() => jourLocalIso(new Date()))
+  // T-0267 — la nuit en cours, pas le jour civil : démarrer l'application à 2 h du matin sur
+  // le terrain doit ouvrir le plan qu'on est en train d'exécuter, pas celui du soir suivant.
+  const [nuitIso, surNuitIso] = useState(() => nuitDeLInstant(new Date()))
   const [pointsMasque, surPointsMasque] = useState<readonly PointMasque[]>(
     depart?.pointsMasque ?? [],
   )
@@ -85,8 +85,8 @@ export function useSaisieLieu(depart: DepartLieu | null): SaisieLieu {
     surLongitude,
     altitude,
     surAltitude,
-    dateIso,
-    surDateIso,
+    nuitIso,
+    surNuitIso,
     bortle,
     surBortle,
     sqm,

@@ -42,7 +42,7 @@ export function PlanSessionVue(props: PlanSessionProps) {
     const blob = new Blob([texte], { type: 'text/plain;charset=utf-8' })
     const lien = document.createElement('a')
     lien.href = URL.createObjectURL(blob)
-    lien.download = `astrofort-plan-${props.enTete.dateIso}.txt`
+    lien.download = `astrofort-plan-${props.enTete.nuitIso}.txt`
     lien.click()
     URL.revokeObjectURL(lien.href)
   }

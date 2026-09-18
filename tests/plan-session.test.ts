@@ -180,7 +180,7 @@ describe('plan de session §8.3', () => {
     expect(long.avertissementBatterie).toMatch(/batterie/)
     expect(long.avertissementBatterie).not.toMatch(/CIPA|°C/)
     expect(
-      planEnTexte(long, { dateIso: '2026-08-14', lieu: 'site', materiel: 'setup' }),
+      planEnTexte(long, { nuitIso: '2026-08-14', lieu: 'site', materiel: 'setup' }),
     ).toContain('BATTERIE')
   })
 
@@ -211,11 +211,13 @@ describe('export imprimable §11.2', () => {
   it('contient cibles, créneaux, poses, nombres d’images et calibration', () => {
     const plan = planSession(contexte(), CATALOGUE)
     const texte = planEnTexte(plan, {
-      dateIso: '2026-08-14',
+      nuitIso: '2026-08-14',
       lieu: '46,391° N / 6,697° E — Bortle 4,5',
       materiel: '120 mm f/2,8, plein format',
     })
     expect(texte).toContain('PLAN DE SESSION')
+    // T-0267 — le titre nomme la nuit par ses deux dates, pas par le seul jour du soir.
+    expect(texte).toContain('nuit du 14/08/2026 au 15/08/2026')
     expect(texte).toContain('CHRONOLOGIE')
     expect(texte).toContain('CALIBRATION')
     expect(texte).toMatch(/Pose unitaire\s+: \d+ s/)
@@ -226,7 +228,7 @@ describe('export imprimable §11.2', () => {
 
   it('porte une unité sur chaque valeur affichée', () => {
     const plan = planSession(contexte(), CATALOGUE)
-    const texte = planEnTexte(plan, { dateIso: '2026-08-14', lieu: 'site', materiel: 'setup' })
+    const texte = planEnTexte(plan, { nuitIso: '2026-08-14', lieu: 'site', materiel: 'setup' })
     // Aucune ligne « libellé : nombre » sans unité derrière le nombre.
     const sansUnite = texte
       .split('\n')

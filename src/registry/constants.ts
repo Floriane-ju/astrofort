@@ -220,6 +220,16 @@ const EXACTES = {
 
 /** Constantes conventionnelles — sourcées, avec tolérance. */
 const CONVENTIONNELLES = {
+  MIDI_JOUR_OBSERVATIONNEL_H: entree({
+    ref: 'C-49',
+    libelle: 'Heure locale séparant deux nuits d’observation',
+    valeur: 12,
+    unite: 'h',
+    source: 'convention — le jour d’observation court d’un midi au suivant',
+    tolerance: null,
+    ordreDeGrandeur: false,
+    sections: ['4.1', '8.1'],
+  }),
   SEUIL_HAUTEUR_IMAGERIE_DEG: entree({
     ref: 'C-01',
     libelle: 'Seuil de hauteur en imagerie (masse d’air 2)',

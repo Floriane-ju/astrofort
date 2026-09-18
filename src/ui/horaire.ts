@@ -11,6 +11,8 @@
  * réécrire — découper l'instant en compteurs ne doit pas en changer l'ordre ni la ponctuation.
  */
 
+import { jourLocalIso } from '../core/nuit-datee.ts'
+
 /** L'heure seule, sans la date : les deux bornes d'un créneau tombent dans la même nuit. */
 export function heure(date: Date): string {
   return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
@@ -52,14 +54,6 @@ export function partiesHeure(date: Date): readonly Intl.DateTimeFormatPart[] {
 }
 
 const deuxChiffres = (n: number): string => String(n).padStart(2, '0')
-
-/**
- * Le jour LOCAL au format ISO. `toISOString().slice(0, 10)` donnerait le jour UTC : après
- * minuit UTC en été, il désigne la nuit suivante — pas celle qu'on observe (piège A1).
- */
-export function jourLocalIso(date: Date): string {
-  return `${date.getFullYear()}-${deuxChiffres(date.getMonth() + 1)}-${deuxChiffres(date.getDate())}`
-}
 
 /** `YYYY-MM-DDTHH:mm:ss` en heure locale — la forme qu'attend `<input type="datetime-local">`. */
 export function pourChampDateHeure(date: Date): string {

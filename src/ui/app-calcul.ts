@@ -9,6 +9,7 @@
 
 import { useMemo, useRef } from 'react'
 import { fenetreNocturne, offsetMidiSolaireMin, type FenetreNocturne } from '../core/night.ts'
+import { midiDeLaNuit } from '../core/nuit-datee.ts'
 import { etatsCibles, type EtatCible } from '../core/cibles-liste.ts'
 import { fenetreUtile as calculeFenetreUtile, type FenetreUtile } from '../core/moon.ts'
 import {
@@ -194,7 +195,7 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
   const cielSaisi = useMemo(
     () => evalueCiel(site, lieu),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [site, lieu.bortle, lieu.sqm, lieu.dateIso],
+    [site, lieu.bortle, lieu.sqm, lieu.nuitIso],
   )
 
   /**
@@ -390,8 +391,7 @@ export function evalueCiel(site: Site, lieu: SaisieLieu): CalculCiel {
     if (!siteChiffrable(site)) {
       return { ok: false, erreur: 'Saisie refusée : le lieu doit être entièrement chiffré.' }
     }
-    // Départ à midi UTC : la recherche du coucher part de là.
-    const depart = new Date(`${lieu.dateIso}T12:00:00Z`)
+    const depart = midiDeLaNuit(lieu.nuitIso)
     const offsetFuseauH = -new Date().getTimezoneOffset() / 60
     const sqm = nombreSiRenseigne('sqm_mesure', lieu.sqm)
     const bortle = nombreSiRenseigne('bortle_declare', lieu.bortle)

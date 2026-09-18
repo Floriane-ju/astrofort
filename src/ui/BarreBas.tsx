@@ -43,7 +43,7 @@ import {
 
 export interface BarreBasProps extends ChampsSiteProps {
   /** La nuit du plan de séance suit l'instant choisi dans le transport. */
-  readonly surDateIso: (v: string) => void
+  readonly surNuitIso: (v: string) => void
   /** §3.3 — le site oriente le ciel : sans lui, la visée n'a pas de coordonnées J2000. */
   readonly site: Site
   /** §3.3 — le paquet Gaia décide jusqu'où le champ peut se refermer sans vider le ciel. */
@@ -126,7 +126,7 @@ function Visee(props: { readonly site: Site; readonly gaiaCharge: boolean }) {
 
 export function BarreBas(props: BarreBasProps) {
   // `gaiaCharge` sort du lot : il borne le champ de la visée, il n'est pas un champ du lieu.
-  const { surDateIso, site: siteCalcul, gaiaCharge, modeNuit, ...site } = props
+  const { surNuitIso, site: siteCalcul, gaiaCharge, modeNuit, ...site } = props
 
   return (
     <>
@@ -149,7 +149,7 @@ export function BarreBas(props: BarreBasProps) {
 
       <Visee site={siteCalcul} gaiaCharge={gaiaCharge} />
 
-      <BarreTemps surDateIso={surDateIso} />
+      <BarreTemps surNuitIso={surNuitIso} />
     </>
   )
 }

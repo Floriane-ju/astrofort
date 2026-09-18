@@ -205,7 +205,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       surBortle={lieu.surBortle}
       sqm={lieu.sqm}
       surSqm={lieu.surSqm}
-      surDateIso={lieu.surDateIso}
+      surNuitIso={lieu.surNuitIso}
       site={chaine.site}
       gaiaCharge={gaia}
       modeNuit={modeNuit.actif}

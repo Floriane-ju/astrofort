@@ -12,7 +12,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
 import { facteurDefilement } from '../src/core/curseur-temps.ts'
 import { K } from '../src/registry/constants.ts'
-import { jourLocalIso, pourChampDateHeure } from '../src/ui/horaire.ts'
+import { jourLocalIso } from '../src/core/nuit-datee.ts'
+import { pourChampDateHeure } from '../src/ui/horaire.ts'
 import { BarreTemps } from '../src/ui/BarreTemps.tsx'
 import {
   etatScene,
@@ -25,7 +26,7 @@ import {
 } from '../src/ui/scene-etat.ts'
 
 function barre(): string {
-  return renderToStaticMarkup(<BarreTemps surDateIso={() => undefined} />)
+  return renderToStaticMarkup(<BarreTemps surNuitIso={() => undefined} />)
 }
 
 /**
@@ -168,11 +169,10 @@ describe('T-0138 — la date-heure se choisit sans confondre les fuseaux', () =>
     expect(pourChampDateHeure(instant)).toBe('2026-08-21T22:41:07')
   })
 
-  it('date la nuit sur le calendrier LOCAL, pas sur la tranche UTC', () => {
-    // Piège A1 — après minuit local en été, `toISOString()` désigne encore la veille à l'ouest
-    // de Greenwich, la nuit suivante à l'est. C'est la nuit qu'on observe qui compte.
+  it('donne le jour du calendrier LOCAL, pas la tranche UTC', () => {
+    // Piège A1 — après minuit local en été, `toISOString()` désigne encore la veille à
+    // l'ouest de Greenwich, le lendemain à l'est.
     const apresMinuit = new Date(2026, 6, 15, 1, 30, 0)
-    expect(jourLocalIso(apresMinuit)).toBe('2026-07-15')
     expect(jourLocalIso(apresMinuit)).toBe(apresMinuit.toLocaleDateString('sv-SE'))
     if (apresMinuit.getTimezoneOffset() !== 0) {
       expect(apresMinuit.toISOString().slice(0, 10)).not.toBe(jourLocalIso(apresMinuit))
