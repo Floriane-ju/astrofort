@@ -2300,6 +2300,16 @@ button:disabled {
   gap: var(--pas-1);
 }
 
+/* T-0280 — les deux issues d'une liste vide, côte à côte sous la cause qui les motive. Une
+   rangée qui passe à la ligne : les deux libellés sont des phrases courtes, et la colonne de
+   22 rem ne garantit pas de les tenir sur un rang. */
+.cibles-issues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pas-1);
+  margin: var(--pas-2) 0;
+}
+
 .cibles-liste {
   margin: 0;
   padding: 0;

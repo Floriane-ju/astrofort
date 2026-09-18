@@ -5,9 +5,14 @@
  *
  * T-0234 — le format du capteur y a rejoint le reste : plein format ou recadrage APS-C décrit
  * l'appareil, pas l'objectif posé devant, et le ranger sous « Optique » séparait deux moitiés
- * de la même description. Le suivi ferme la section pour la raison inverse : seul dans sa
- * carte, il n'occupait pas son cadre. Il arrive par `suivi` plutôt qu'en huit propriétés de
- * plus — c'est `PanneauMateriel` qui tient l'état de la monture, cette section l'héberge.
+ * de la même description. Le suivi y est venu pour la raison inverse : seul dans sa carte, il
+ * n'occupait pas son cadre. Il arrive par `suivi` plutôt qu'en huit propriétés de plus —
+ * c'est `PanneauMateriel` qui tient l'état de la monture, cette section l'héberge.
+ *
+ * T-0280 — et il OUVRE la section, au lieu de la fermer. C'est ce champ qui décide si le ciel
+ * profond est ouvert (§5.2), donc celui qui lève la liste vide d'un profil neuf ; dernier d'un
+ * corps qui défile, il était hors de vue au moment précis où l'écran demandait de le régler.
+ * Le boîtier passe après sans rien perdre : son résumé se relit sur la carte repliée.
  *
  * Deux modes, un seul sélecteur. Un boîtier de la base apporte ses grandeurs capteur : il n'y
  * a alors plus rien à régler, donc plus rien à afficher — les champs disparaissent au lieu de
@@ -284,6 +289,7 @@ export function PanneauBoitier(props: PanneauBoitierProps) {
 
   return (
     <>
+      {props.suivi}
       <div className="champs">
         <SelecteurBoitier boitierId={props.boitierId} surBoitierId={props.surBoitierId} />
         {ligne === null && (
@@ -366,7 +372,6 @@ export function PanneauBoitier(props: PanneauBoitierProps) {
         lecture={props.lectureIso}
         fige={ligne !== null}
       />
-      {props.suivi}
     </>
   )
 }

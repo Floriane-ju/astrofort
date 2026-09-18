@@ -48,7 +48,8 @@ import { VignetteCible } from './ImageCible.tsx'
 import { prechargeVignettes } from './image-cible-memoire.ts'
 import { Pastilles } from './Pastilles.tsx'
 import { LIBELLE_TYPE_OBJET, nomCommun } from './libelles-objet.ts'
-import { ouvreCible } from './seance-etat.ts'
+import { ouvreCible, poseMode } from './seance-etat.ts'
+import { ouvreCarte } from './coque-etat.ts'
 import { majCatalogue, useCatalogue } from './catalogue-etat.ts'
 import { minuteAffichee, useTrancheScene, MS_PAR_MINUTE } from './scene-etat.ts'
 
@@ -231,6 +232,26 @@ export function PanneauCibles(props: PanneauCiblesProps) {
           </p>
         )}
       </div>
+
+      {/* T-0280 — §1.5.1 promet un plan en moins de deux minutes. Sur un profil neuf la liste
+          est vide par le SUIVI, et la cause du moteur ne désigne ni le champ qui la lève ni
+          l'autre issue : il fallait trois gestes que rien ne montrait. Les deux issues sont
+          donc ici, contre la phrase qui les motive — régler la monture, ou prendre le grand
+          champ que §5.2 laisse ouvert sans suivi.
+
+          Hors de la région vive de T-0187 : ces boutons ne changent pas quand le compte
+          change, et les réannoncer à chaque frappe de la recherche ne dirait rien de neuf. */}
+      {listees.length === 0 && domaineCpFerme !== null && (
+        <div className="cibles-issues">
+          {/* La carte Boîtier s'ouvre SUR ce champ : T-0280 l'a mis en tête de son corps. */}
+          <button type="button" onClick={() => ouvreCarte('BOITIER')}>
+            Choisir une monture
+          </button>
+          <button type="button" onClick={() => poseMode('PANORAMA')}>
+            Passer en Panorama
+          </button>
+        </div>
+      )}
 
       <ul className="cibles-liste">
         {listees.map((ligne) => (
