@@ -135,14 +135,15 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
 
   /**
    * T-0238 — le matériel n'est plus une colonne : Boîtier et Optique sont deux cartes posées
-   * sur la scène, dépliées au démarrage. Leur place dans le document reste entre la scène et
-   * les autres cartes, pour que la tabulation les rencontre d'abord.
+   * sur la scène, repliées au démarrage — leur résumé suffit à relire un matériel réglé une
+   * fois. Leur place dans le document reste entre la scène et les autres cartes, pour que la
+   * tabulation les rencontre d'abord.
    */
-  it('pose Boîtier et Optique en cartes dépliées, sans colonne de matériel', () => {
+  it('pose Boîtier et Optique en cartes repliées, sans colonne de matériel', () => {
     const html = ecran()
     expect(html).not.toContain('coque-materiel')
-    expect(html).toContain('class="carte carte-boitier" data-ouverte="true"')
-    expect(html).toContain('class="carte carte-optique" data-ouverte="true"')
+    expect(html).toContain('class="carte carte-boitier" data-ouverte="false"')
+    expect(html).toContain('class="carte carte-optique" data-ouverte="false"')
     expect(html.indexOf('carte-boitier')).toBeLessThan(html.indexOf('carte-optique'))
     expect(html.indexOf('cartes-materiel')).toBeGreaterThan(html.indexOf('coque-scene'))
     expect(html.indexOf('cartes-materiel')).toBeLessThan(html.indexOf('coque-cartes'))
@@ -179,19 +180,16 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
     expect(temps).not.toMatch(/\bwidth:/)
   })
 
-  it('replie une carte du matériel sans toucher à l’autre', () => {
+  it('déplie une carte du matériel sans toucher à l’autre', () => {
     basculeCarte('BOITIER')
     const html = ecran()
-    expect(html).toContain('class="carte carte-boitier" data-ouverte="false"')
-    expect(html).toContain('class="carte carte-optique" data-ouverte="true"')
+    expect(html).toContain('class="carte carte-boitier" data-ouverte="true"')
+    expect(html).toContain('class="carte carte-optique" data-ouverte="false"')
   })
 
   // Repliée, une carte du matériel garde sa réponse à droite du titre ; dépliée, elle la montre
   // déjà dans ses champs et ne la répète pas.
   it('résume le recadrage et l’objectif à droite du titre, carte repliée seulement', () => {
-    expect(ecran()).not.toContain('carte-resume')
-    basculeCarte('BOITIER')
-    basculeCarte('OPTIQUE')
     const html = ecran()
     const entete = (cle: string) => {
       const debut = html.indexOf(`carte-${cle}"`)
@@ -201,6 +199,11 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
       `<span class="carte-resume">${LIBELLES_RECADRAGE.FULL_FRAME}</span>`,
     )
     expect(entete('optique')).toMatch(/<span class="carte-resume">[^<?]+ mm f\/[^<?]+<\/span>/)
+
+    // Dépliée, la carte montre le détail dans ses champs : le résumé n'y répéterait qu'eux.
+    basculeCarte('BOITIER')
+    basculeCarte('OPTIQUE')
+    expect(ecran()).not.toContain('carte-resume')
   })
 
   // T-0238 — un seul dessin pour tout ce qui se pose sur le ciel : filet et équerres. Les

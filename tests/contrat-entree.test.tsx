@@ -14,6 +14,12 @@ import { GLOSSAIRE } from '../src/registry/glossaire.ts'
 import { TABLE_FORMATS_CAPTEUR } from '../src/registry/capteur-formats.ts'
 import { LIBELLE_ZP_SOURCE } from '../src/registry/libelles.ts'
 import { libelleFlag } from '../src/registry/libelles.ts'
+import { ouvreCarte } from '../src/ui/coque-etat.ts'
+
+// Les cartes du matériel démarrent repliées : le contrat d'entrée porte sur ce qu'elles
+// affichent, pas sur leur repli — on les déplie avant de lire l'écran.
+ouvreCarte('BOITIER')
+ouvreCarte('OPTIQUE')
 
 const ecran = renderToStaticMarkup(<App />)
 

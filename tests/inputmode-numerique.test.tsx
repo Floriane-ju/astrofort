@@ -16,8 +16,14 @@ import { describe, expect, it } from 'vitest'
 import { ChampsSite } from '../src/ui/ChampsSite.tsx'
 import { PanneauMateriel } from '../src/ui/PanneauMateriel.tsx'
 import { masquePlat } from '../src/core/site.ts'
+import { ouvreCarte } from '../src/ui/coque-etat.ts'
 
 const rien = () => undefined
+
+// Les cartes du matériel démarrent repliées, donc leur corps n'est pas monté : les champs
+// qu'on énumère ici n'existent qu'une fois la carte dépliée.
+ouvreCarte('BOITIER')
+ouvreCarte('OPTIQUE')
 
 const ECRAN_SITE = renderToStaticMarkup(
   <ChampsSite

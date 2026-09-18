@@ -36,14 +36,14 @@ export interface EtatCoque {
  * (`RailVue`), toujours visible, donc sans état de repli.
  *
  * T-0238 — la colonne du matériel (T-0197) redevient deux cartes, Boîtier et Optique. Elles
- * démarrent dépliées, comme la colonne qu'elles remplacent : c'est la saisie qu'on relit le
- * plus. Ce que la carte leur rend, c'est la scène — une colonne à demeure retirait 19 rem au
- * ciel même quand le matériel était réglé depuis longtemps.
+ * démarrent repliées : le matériel se règle une fois puis ne bouge plus, et leur résumé
+ * (recadrage, « 24 mm f/2.8 ») suffit à le relire sans déplier. Ce que la carte rend, c'est la
+ * scène — dépliées au démarrage, elles retiraient 19 rem au ciel avant qu'on ait rien demandé.
  */
 const ETAT_INITIAL: EtatCoque = Object.freeze({
   cartes: Object.freeze({
-    BOITIER: { ouverte: true },
-    OPTIQUE: { ouverte: true },
+    BOITIER: { ouverte: false },
+    OPTIQUE: { ouverte: false },
     PLAN: { ouverte: false },
   }),
 })

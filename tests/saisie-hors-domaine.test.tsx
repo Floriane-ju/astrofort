@@ -23,6 +23,7 @@ import { DEFAUT, type SaisieLieu, type SaisieMateriel } from '../src/ui/app-sais
 import { masquePlat } from '../src/core/site.ts'
 import { DOMAINES, borne, type DomaineId } from '../src/registry/domains.ts'
 import { nombreSaisi } from '../src/ui/saisie-bornee.ts'
+import { ouvreCarte } from '../src/ui/coque-etat.ts'
 
 const rien = () => undefined
 
@@ -196,6 +197,8 @@ describe('le champ qui a borné le dit à son pied', () => {
   })
 
   it('l’écran Matériel signale aussi le champ fautif', () => {
+    // Le champ fautif est dans le corps de la carte, qui démarre replié donc non monté.
+    ouvreCarte('OPTIQUE')
     const markup = renderToStaticMarkup(
       <PanneauMateriel {...materiel({ focale: horsPlage('focale_mm') })} />,
     )

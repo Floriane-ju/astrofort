@@ -18,6 +18,7 @@ import {
 import { profilSuivi, type QualiteMiseEnStation, type TypeMonture } from '../src/core/tracking.ts'
 import { DEFAUT, type SaisieMateriel } from '../src/ui/app-saisie.ts'
 import { evalueMateriel } from '../src/ui/app-calcul.ts'
+import { ouvreCarte } from '../src/ui/coque-etat.ts'
 
 const rien = () => undefined
 
@@ -58,6 +59,9 @@ function materiel(champs: Partial<SaisieMateriel> = {}): SaisieMateriel {
 }
 
 function rendu(champs: Partial<SaisieMateriel> = {}): string {
+  // Le champ Monture ferme la carte Boîtier, qui démarre repliée : sans la déplier, son corps
+  // n'est pas monté et il n'y a rien à lire.
+  ouvreCarte('BOITIER')
   const saisie = materiel(champs)
   const calcul = evalueMateriel(saisie)
   return renderToStaticMarkup(
