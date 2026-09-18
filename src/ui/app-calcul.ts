@@ -225,6 +225,9 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
       materiel.focale,
       materiel.ouverture,
       materiel.capteurMode,
+      // T-0270 — la projection de l'objectif entre dans le champ calculé : sans elle ici,
+      // cocher « fisheye » ne changeait rien tant qu'un autre champ n'était pas touché.
+      materiel.typeObjectif,
       materiel.suiviActif,
       materiel.qualiteMes,
       materiel.typeMonture,
@@ -242,7 +245,7 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
   const profilsCadre = useMemo(
     () => profilsDeCadre(calcul, materiel),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [calcul, materiel.focale, materiel.ouverture, materiel.capteurMode],
+    [calcul, materiel.focale, materiel.ouverture, materiel.capteurMode, materiel.typeObjectif],
   )
 
   /**
@@ -493,7 +496,7 @@ function refus(erreur: unknown): { readonly ok: false; readonly erreur: string }
   return { ok: false, erreur: `Calcul impossible : ${String(erreur)}` }
 }
 
-function profilsDeCadre(calcul: Calcul, materiel: SaisieMateriel): readonly ProfilCadre[] {
+export function profilsDeCadre(calcul: Calcul, materiel: SaisieMateriel): readonly ProfilCadre[] {
   if (!calcul.ok) return []
   const boitier = calcul.boitier
   const focaleMm = calcul.focaleMm
