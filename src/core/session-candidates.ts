@@ -259,6 +259,37 @@ function evalue(
   }
 }
 
+/**
+ * §6.4 — les deux bornes de taille que le pré-filtrage applique, exposées parce que la liste
+ * du catalogue doit les DIRE. « Qui tiennent dans votre cadre » laissait attendre l'inverse
+ * de ce qui se passe : c'est la borne BASSE qui coupe le plus, et réduire la focale vide la
+ * liste au lieu de la remplir.
+ */
+export interface BornesTailleCadre {
+  readonly minArcmin: number
+  readonly maxArcmin: number
+}
+
+export function bornesTailleCadre(fovHDeg: number): BornesTailleCadre {
+  return {
+    minArcmin: fovHDeg * REMPLISSAGE_MIN_PLANIFIABLE * ARCMIN_PAR_DEG,
+    maxArcmin: fovHDeg * ARCMIN_PAR_DEG,
+  }
+}
+
+/**
+ * Combien d'objets du catalogue la borne BASSE écarte. Compté sur le catalogue entier, pas
+ * sur les écartées nommées : celles-ci sont plafonnées par l'appelant, et un plafond ferait
+ * annoncer un nombre plus petit que le vrai.
+ */
+export function compteTropPetites(
+  catalogue: readonly ObjetCielProfond[],
+  fovHDeg: number,
+): number {
+  const { minArcmin } = bornesTailleCadre(fovHDeg)
+  return catalogue.filter((o) => o.majAxArcmin !== null && o.majAxArcmin < minArcmin).length
+}
+
 export interface PreFiltrage {
   readonly candidates: readonly ObjetCielProfond[]
   /** Écartées nommées, plafonnées : une liste de douze mille lignes n'aide personne. */
@@ -288,8 +319,7 @@ export function preFiltre(
   plafondEcartees = plafond,
 ): PreFiltrage {
   const seuil = contexte.seuilHauteurDeg ?? K('SEUIL_HAUTEUR_IMAGERIE_DEG')
-  const tailleMin = contexte.fovHDeg * REMPLISSAGE_MIN_PLANIFIABLE * ARCMIN_PAR_DEG
-  const tailleMax = contexte.fovHDeg * ARCMIN_PAR_DEG
+  const { minArcmin: tailleMin, maxArcmin: tailleMax } = bornesTailleCadre(contexte.fovHDeg)
   const cap = plafond
   const infini = Number.POSITIVE_INFINITY
 

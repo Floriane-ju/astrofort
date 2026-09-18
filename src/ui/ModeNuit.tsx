@@ -128,7 +128,6 @@ export function ModeNuit({ etat, surChangement }: ModeNuitProps) {
         <span className="etat">{(etat.luminance * POURCENT).toFixed(0)} %</span>
       </label>
       <p className="etat">Sur un écran LCD, un peu de lumière passe toujours.</p>
-      <p className="etat">Le défilement du ciel est en pause en mode nuit.</p>
     </section>
   )
 }

@@ -140,7 +140,8 @@ export function cellulesCadreJ2000(
 
 /** §3.5 — le refus de fabriquer un cadre en l'absence de profil déclaré. */
 export const REFUS_SANS_PROFIL =
-  'Pas de cadre : indiquez focale, ouverture et capteur dans Matériel.'
+  'Pas de cadre : renseignez le capteur dans la carte Boîtier, la focale et l’ouverture ' +
+  'dans la carte Optique.'
 
 export function refusAuDelaDuMaximum(nombreProfils: number): string | null {
   if (nombreProfils <= K('PROFILS_CADRE_MAX')) return null

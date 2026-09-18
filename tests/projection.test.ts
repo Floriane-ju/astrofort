@@ -247,14 +247,14 @@ describe('profondeur asservie au zoom §3.3', () => {
     expect(large.catalogueEpuise).toBe(false)
     const serre = etatProfondeur(5, profondeurHyg, null, false)
     expect(serre.catalogueEpuise).toBe(true)
-    expect(serre.cause).toMatch(/Gaia/)
+    expect(serre.cause).toMatch(/magnitude 9/)
     expect(serre.cause).toMatch(/plus pauvre qu’en vrai/)
   })
 
   it('plafonne le zoom à 15° sans le paquet Gaia, et le déclare', () => {
     const sans = bornesZoom(false, 'MODE_PLANETARIUM')
     expect(sans.fovMinDeg).toBe(K('FOV_MIN_SANS_GAIA_DEG'))
-    expect(sans.cause).toMatch(/Gaia/)
+    expect(sans.cause).toMatch(new RegExp(`${K('FOV_MIN_SANS_GAIA_DEG')}°`))
     const avec = bornesZoom(true, 'MODE_PLANETARIUM')
     expect(avec.fovMinDeg).toBe(K('FOV_MIN_AVEC_GAIA_DEG'))
     expect(avec.cause).toBeUndefined()

@@ -32,6 +32,7 @@ import {
   type LigneCible,
   type PoseCible,
 } from '../core/cibles-liste.ts'
+import { bornesTailleCadre, compteTropPetites } from '../core/session-candidates.ts'
 import { dureeLisible } from '../core/exposure.ts'
 import { cielInstantane } from '../core/horloges.ts'
 import type { Site } from '../core/ephem.ts'
@@ -135,6 +136,12 @@ export function PanneauCibles(props: PanneauCiblesProps) {
     ? (props.contexteSession?.domaineCpFerme ?? null)
     : null
 
+  // T-0278 — le filtre coupe par la TAILLE, dans les deux sens, et surtout par le bas :
+  // la phrase doit nommer ses deux bornes, et le compte de trop petites est ce qui explique
+  // qu'un objectif plus court raccourcisse la liste au lieu de l'allonger.
+  const taille = useMemo(() => bornesTailleCadre(fovHDeg), [fovHDeg])
+  const tropPetites = useMemo(() => compteTropPetites(catalogue, fovHDeg), [catalogue, fovHDeg])
+
   const plafond = K('CIBLES_LISTEES_MAX')
   const listees = retenues.slice(0, plafond)
   const seuil = props.contexteSession?.seuilHauteurDeg ?? K('SEUIL_HAUTEUR_IMAGERIE_DEG')
@@ -159,7 +166,14 @@ export function PanneauCibles(props: PanneauCiblesProps) {
       </Interrupteur>
 
       {photographiablesSeules && (
-        <p className="etat">Objets à plus de {seuil}° cette nuit, qui tiennent dans votre cadre.</p>
+        <p className="etat">
+          Objets à plus de {seuil}° cette nuit, dont le grand axe mesure de{' '}
+          {taille.minArcmin.toFixed(0)}’ à {taille.maxArcmin.toFixed(0)}’ — plus petit, l’objet
+          ne fait que quelques pixels ; plus grand, il déborde du cadre.{' '}
+          {tropPetites.toLocaleString('fr-FR')} objet{tropPetites > 1 ? 's' : ''} du catalogue
+          {tropPetites > 1 ? ' sont écartés' : ' est écarté'} comme trop petit
+          {tropPetites > 1 ? 's' : ''} pour ce cadre.
+        </p>
       )}
 
       <div className="cibles-filtres">
@@ -265,8 +279,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
 
       {props.contexteSession !== null && (
         <p className="etat cibles-note">
-          Temps de pose total pour un signal/bruit de {props.contexteSession.snrCible}. Un tiret :
-          cible non évaluée.
+          Temps de pose total pour un signal/bruit de {props.contexteSession.snrCible}.
         </p>
       )}
     </section>

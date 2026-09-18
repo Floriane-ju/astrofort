@@ -3698,9 +3698,10 @@ Quand je demande l'export
 Alors un document texte imprimable contient les cibles, créneaux, poses, nombres
     d'images et consignes de calibration
 
-Étant donné le mode nuit activé pendant une animation du curseur temporel
+Étant donné le mode nuit activé pendant une avance rapide du curseur temporel
 Quand la bascule s'opère
-Alors l'animation se met en pause et l'app le signale
+Alors seules les couleurs changent, le curseur temporel continue d'avancer
+    et aucune commande ne disparaît
 
 Étant donné une valeur de pose affichée n'importe où dans l'interface  # cas limite
 Quand je la lis

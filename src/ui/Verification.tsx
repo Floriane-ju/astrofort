@@ -133,7 +133,11 @@ export function Verification(props: VerificationProps) {
 
       <section>
         <h2>Registre de constantes</h2>
-        <table>
+        {/* T-0278 — surface d'audit : l'inventaire des constantes nomme des paquets que le MVP
+            ne livre pas (le paquet Gaia de §12.2), parce qu'il décrit le REGISTRE et sa
+            provenance, pas ce que l'application propose de faire. La classe porte l'exemption
+            de la liste noire des phrases fausses, comme `verbatim` porte celle de T-0275. */}
+        <table className="registre">
           <thead>
             <tr>
               <th>Réf</th>

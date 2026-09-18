@@ -399,8 +399,8 @@ export function bornesZoom(gaiaCharge: boolean, mode: ModeProjection): BornesZoo
     fovMinDeg: K('FOV_MIN_SANS_GAIA_DEG'),
     fovMaxDeg,
     cause:
-      `Zoom limité à ${K('FOV_MIN_SANS_GAIA_DEG')}° : chargez le catalogue Gaia pour ` +
-      `zoomer jusqu’à ${K('FOV_MIN_AVEC_GAIA_DEG')}°.`,
+      `Zoom limité à ${K('FOV_MIN_SANS_GAIA_DEG')}° de champ : sous cette borne, le ` +
+      'catalogue d’étoiles embarqué laisserait le ciel presque vide.',
   }
 }
 
@@ -433,7 +433,7 @@ export function etatProfondeur(
       ? {
           cause:
             `Le catalogue s’arrête à la magnitude ${profondeurCatalogue.toFixed(1)} : le ciel ` +
-            'paraît plus pauvre qu’en vrai. Chargez le catalogue Gaia pour le compléter.',
+            'paraît plus pauvre qu’en vrai, et rien n’est inventé pour le combler.',
         }
       : {}),
   }
