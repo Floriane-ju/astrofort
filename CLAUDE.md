@@ -1,4 +1,4 @@
-# Astrofort
+# Orion
 
 Application web (PWA) de planétarium orientée **observation et capture**. Elle prend un lieu, une
 date et un matériel, et produit un plan de session exécutable : quelles cibles, à quelle heure,

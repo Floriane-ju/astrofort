@@ -56,7 +56,7 @@ export const CSP_DEVELOPPEMENT = [
 
 export function politiqueDeSecurite(): Plugin {
   return {
-    name: 'astrofort-csp',
+    name: 'orion-csp',
     transformIndexHtml: {
       order: 'pre',
       handler: (_html, ctx) => [
@@ -96,8 +96,8 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 16 * 1024 * 1024,
       },
       manifest: {
-        name: 'Astrofort — planétarium et plan de session',
-        short_name: 'Astrofort',
+        name: 'Orion — planétarium et plan de session',
+        short_name: 'Orion',
         description:
           "Planétarium orienté observation et capture : lieu, date et matériel produisent un plan de session exécutable.",
         theme_color: '#000000',

@@ -33,7 +33,7 @@ export class GardeErreur extends Component<{ readonly children: ReactNode }, Eta
    * pas une phrase à lire (§12.4 : aucune télémétrie, rien n'est envoyé nulle part).
    */
   override componentDidCatch(erreur: unknown, info: ErrorInfo): void {
-    console.error('Astrofort — rendu interrompu', erreur, info.componentStack)
+    console.error('Orion — rendu interrompu', erreur, info.componentStack)
   }
 
   override render(): ReactNode {

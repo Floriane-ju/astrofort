@@ -1,4 +1,4 @@
-# Astrofort — règles permanentes
+# Orion — règles permanentes
 
 Valables à chaque session, sans exception. Le détail est dans `CLAUDE.md` ; ici, les
 non-négociables.

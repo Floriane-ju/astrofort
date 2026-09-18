@@ -28,7 +28,7 @@ export const LIBELLE_TYPE_OBJET: Readonly<Record<TypeObjet, string>> = {
 /**
  * Le premier nom commun, ou la chaîne vide : beaucoup d'entrées n'en portent aucun.
  *
- * Deux séparateurs, parce que la source en emploie deux : `|` sépare les noms qu'Astrofort
+ * Deux séparateurs, parce que la source en emploie deux : `|` sépare les noms qu'Orion
  * assemble à la construction du paquet, la virgule ceux qu'OpenNGC empile déjà dans son
  * champ « Common names ». Sans la seconde coupe, une ligne de liste annonce
  * « Large Magellanic Cloud,Nubecula Major » pour un seul objet.

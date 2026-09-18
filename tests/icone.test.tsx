@@ -92,7 +92,7 @@ describe('style des icônes §11.1', () => {
 /**
  * T-0215 — LA RÈGLE EXISTAIT, RIEN NE LA TENAIT.
  *
- * `.claude/rules/astrofort.md` interdit déjà « un caractère Unicode décoratif posé à la place
+ * `.claude/rules/orion.md` interdit déjà « un caractère Unicode décoratif posé à la place
  * d'un glyphe » ; `pastilles.test.tsx` le vérifiait pour un seul composant. Trois caractères
  * y échappaient dans le schéma de pointage de §8.4 — « ✛ », « ● » et « ★ » —, rendus dans la
  * police de TEXTE : ni la grille optique, ni la graisse, ni l'alignement du reste, et un

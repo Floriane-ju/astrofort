@@ -28,7 +28,9 @@ export interface EtatModeNuit {
   readonly luminance: number
 }
 
-const CLE_STOCKAGE = 'astrofort.mode-nuit'
+const CLE_STOCKAGE = 'orion.mode-nuit'
+/** Clé portée avant que le produit s'appelle Orion : relue une dernière fois, jamais réécrite. */
+const CLE_STOCKAGE_ANCIENNE = 'astrofort.mode-nuit'
 const LUMINANCE_NOMINALE = 1
 const POURCENT = 100
 
@@ -48,7 +50,7 @@ export const ETAT_INITIAL: EtatModeNuit = Object.freeze({
 export function litEtatPersiste(): EtatModeNuit {
   if (typeof localStorage === 'undefined') return ETAT_INITIAL
   try {
-    const brut = localStorage.getItem(CLE_STOCKAGE)
+    const brut = localStorage.getItem(CLE_STOCKAGE) ?? localStorage.getItem(CLE_STOCKAGE_ANCIENNE)
     if (brut === null) return ETAT_INITIAL
     const lu: unknown = JSON.parse(brut)
     if (typeof lu !== 'object' || lu === null) return ETAT_INITIAL

@@ -73,7 +73,7 @@ beforeEach(async () => {
 describe('export et réimport §12.3', () => {
   it('emporte toutes les données produites par l’utilisateur', async () => {
     const donnees = await exporteDonneesUtilisateur()
-    expect(donnees.format).toBe('astrofort-export')
+    expect(donnees.format).toBe('orion-export')
     expect(donnees.version).toBe(VERSION_EXPORT)
     expect(donnees.sites).toHaveLength(1)
     expect(donnees.profils).toHaveLength(1)
@@ -106,7 +106,7 @@ describe('export et réimport §12.3', () => {
   it('remplace l’entrée de même identifiant au lieu de la dupliquer', async () => {
     const renomme = { ...SITE, nom: 'Site renommé' }
     await importeDonneesUtilisateur({
-      format: 'astrofort-export',
+      format: 'orion-export',
       version: VERSION_EXPORT,
       exporteLe: new Date().toISOString(),
       sites: [renomme],
@@ -118,12 +118,31 @@ describe('export et réimport §12.3', () => {
     expect(apres.sites[0]?.nom).toBe('Site renommé')
   })
 
+  // Le produit s'appelait Astrofort : un fichier sauvé sous ce nom reste la seule copie de
+  // données que rien ne retélécharge. Le renommage ne doit pas la rendre illisible.
+  it('relit un export écrit sous l’ancien nom du produit', async () => {
+    const ancien = { ...SITE, id: 'site-ancien-format', nom: 'Site d’avant' }
+    await importeDonneesUtilisateur({
+      format: 'astrofort-export',
+      version: VERSION_EXPORT,
+      exporteLe: new Date().toISOString(),
+      sites: [ancien],
+      profils: [],
+      plans: [],
+    })
+    const apres = await exporteDonneesUtilisateur()
+    expect(apres.sites.map((site) => site.id)).toContain('site-ancien-format')
+    // `beforeEach` réécrit le jeu de départ sans vider la base : ce site en plus fausserait
+    // les tests suivants, qui comptent les leurs.
+    await (await db()).delete('sites', ancien.id)
+  })
+
   it('refuse un fichier étranger sans écraser les données en place', async () => {
     await expect(importeDonneesUtilisateur({ format: 'autre-appli' })).rejects.toThrow(
       ExportInvalideError,
     )
     await expect(
-      importeDonneesUtilisateur({ format: 'astrofort-export', version: 99 }),
+      importeDonneesUtilisateur({ format: 'orion-export', version: 99 }),
     ).rejects.toThrow(/version 99/)
     await expect(importeDonneesUtilisateur('pas un objet')).rejects.toThrow(ExportInvalideError)
     expect((await exporteDonneesUtilisateur()).sites[0]).toEqual(SITE)
@@ -133,7 +152,7 @@ describe('export et réimport §12.3', () => {
 /** Un export bien formé autour de la section que le test veut abîmer. */
 function exportAvec(sections: Partial<Record<'sites' | 'profils' | 'plans', readonly unknown[]>>) {
   return {
-    format: 'astrofort-export',
+    format: 'orion-export',
     version: VERSION_EXPORT,
     exporteLe: new Date().toISOString(),
     sites: [],
@@ -279,7 +298,7 @@ describe('masque d’horizon relevé à la main §4.1 → §12.3', () => {
   it('refuse un relevé hors domaine plutôt que de l’importer', async () => {
     await expect(
       importeDonneesUtilisateur({
-        format: 'astrofort-export',
+        format: 'orion-export',
         version: VERSION_EXPORT,
         exporteLe: new Date().toISOString(),
         sites: [{ ...SITE, masquePoints: [{ azimutDeg: 12, altitudeDeg: 95 }] }],

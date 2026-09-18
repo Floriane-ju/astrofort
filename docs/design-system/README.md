@@ -1,4 +1,4 @@
-# Design system — Astrofort
+# Design system — Orion
 
 > Ce que l'interface a le droit d'utiliser, et ce qu'il faut faire pour ajouter un écran
 > sans le contourner.

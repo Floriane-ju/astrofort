@@ -66,8 +66,12 @@ export async function demandePersistance(): Promise<boolean> {
   return navigator.storage.persist()
 }
 
+export const FORMAT_EXPORT = 'orion-export'
+/** Format écrit quand le produit s'appelait Astrofort : relu, jamais réécrit. */
+const FORMAT_EXPORT_ANCIEN = 'astrofort-export'
+
 export interface ExportUtilisateur {
-  readonly format: 'astrofort-export'
+  readonly format: typeof FORMAT_EXPORT | typeof FORMAT_EXPORT_ANCIEN
   readonly version: number
   readonly exporteLe: string
   readonly sites: readonly SiteEnregistre[]
@@ -98,7 +102,7 @@ export async function exporteDonneesUtilisateur(
     base.getAll('plans'),
   ])
   return {
-    format: 'astrofort-export',
+    format: FORMAT_EXPORT,
     version: VERSION_EXPORT,
     exporteLe: new Date().toISOString(),
     sites,
@@ -274,8 +278,8 @@ function valide(donnees: unknown): asserts donnees is ExportUtilisateur {
     throw new ExportInvalideError('le contenu n’est pas un objet JSON')
   }
   const candidat = donnees as Partial<ExportUtilisateur>
-  if (candidat.format !== 'astrofort-export') {
-    throw new ExportInvalideError('ce n’est pas un export Astrofort')
+  if (candidat.format !== FORMAT_EXPORT && candidat.format !== FORMAT_EXPORT_ANCIEN) {
+    throw new ExportInvalideError('ce n’est pas un export Orion')
   }
   if (candidat.version !== VERSION_EXPORT) {
     throw new ExportInvalideError(

@@ -1,4 +1,4 @@
-# Suivi de migration — design system Astrofort
+# Suivi de migration — design system Orion
 
 > **Terminé.** Périmètre initial (lots A → D + F), puis extension « résous toute la dette » :
 > D4, lot E, lot G, et le test flaky.

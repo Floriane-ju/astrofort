@@ -84,7 +84,7 @@ export function BarreHaut(props: BarreHautProps) {
 
   return (
     <>
-      <h1>Astrofort</h1>
+      <h1>Orion</h1>
       {/* T-0145 / T-0153 — seule lecture de la barre : c'est elle qui cale le bloc de
           commandes à droite, et la bande se soude à partir d'elle. */}
       <p className="etat barrehaut-lectures-fin">

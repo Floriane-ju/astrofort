@@ -7,14 +7,19 @@
  * C'est cette seconde catégorie que l'export JSON de `persistence.ts` doit protéger.
  */
 
-import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
+import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from 'idb'
 
-export const NOM_BASE = 'astrofort'
+export const NOM_BASE = 'orion'
 /**
  * 2 — ajout du magasin `images` (§6.4). Une montée de version ne détruit rien : les magasins
  * existants traversent la mise à niveau, seul le nouveau est créé.
  */
 export const VERSION_BASE = 2
+
+/** Nom porté avant que le produit s'appelle Orion. Voir `reprendAncienneBase`. */
+const NOM_BASE_ANCIEN = 'astrofort'
+/** Drapeau de reprise, rangé dans `reglages` de la base d'arrivée. */
+const CLE_REPRISE = 'reprise-ancienne-base'
 
 export interface SiteEnregistre {
   readonly id: string
@@ -117,7 +122,7 @@ export interface CreditImage {
   readonly lien: string
 }
 
-interface AstrofortDB extends DBSchema {
+interface OrionDB extends DBSchema {
   sites: { key: string; value: SiteEnregistre }
   profils: { key: string; value: ProfilMateriel }
   plans: { key: string; value: PlanEnregistre }
@@ -126,10 +131,15 @@ interface AstrofortDB extends DBSchema {
   reglages: { key: string; value: unknown }
 }
 
-let instance: Promise<IDBPDatabase<AstrofortDB>> | null = null
+let instance: Promise<IDBPDatabase<OrionDB>> | null = null
 
-export function db(): Promise<IDBPDatabase<AstrofortDB>> {
-  instance ??= openDB<AstrofortDB>(NOM_BASE, VERSION_BASE, {
+export function db(): Promise<IDBPDatabase<OrionDB>> {
+  instance ??= ouvre()
+  return instance
+}
+
+async function ouvre(): Promise<IDBPDatabase<OrionDB>> {
+  const base = await openDB<OrionDB>(NOM_BASE, VERSION_BASE, {
     upgrade(base) {
       // Chaque magasin est créé s'il manque : la mise à niveau depuis une base en version 1
       // doit ajouter `images` sans toucher aux profils, sites et plans déjà rangés (§12.3).
@@ -145,7 +155,50 @@ export function db(): Promise<IDBPDatabase<AstrofortDB>> {
       if (!base.objectStoreNames.contains('reglages')) base.createObjectStore('reglages')
     },
   })
-  return instance
+  await reprendAncienneBase(base)
+  return base
+}
+
+type MagasinCle = 'sites' | 'profils' | 'plans' | 'paquets' | 'images'
+
+/** Les magasins à clé en ligne se recopient valeur par valeur : la clé voyage avec elle. */
+async function copie<N extends MagasinCle>(
+  source: IDBPDatabase<OrionDB>,
+  cible: IDBPDatabase<OrionDB>,
+  nom: N,
+): Promise<void> {
+  if (!source.objectStoreNames.contains(nom)) return
+  for (const valeur of await source.getAll(nom)) await cible.put(nom, valeur)
+}
+
+/**
+ * Le produit s'appelait Astrofort, la base portait son nom. IndexedDB n'a pas d'opération de
+ * renommage : la seule reprise possible est une copie, puis la suppression de la source. Ce
+ * qu'elle sauve — sites, profils, plans, masques d'horizon édités — ne se retélécharge pas
+ * (§12.3), donc la perdre au renommage aurait été la perdre tout court.
+ *
+ * Le drapeau vit dans la base d'arrivée : une fois posé, plus aucun démarrage n'ouvre l'ancienne.
+ */
+async function reprendAncienneBase(base: IDBPDatabase<OrionDB>): Promise<void> {
+  if ((await base.get('reglages', CLE_REPRISE)) === true) return
+
+  // Sans version : on prend la base telle qu'elle est. Absente, elle naît vide — sans magasin,
+  // donc sans rien à copier — et la suppression qui suit la fait disparaître aussitôt.
+  const ancienne = await openDB<OrionDB>(NOM_BASE_ANCIEN)
+  await copie(ancienne, base, 'sites')
+  await copie(ancienne, base, 'profils')
+  await copie(ancienne, base, 'plans')
+  await copie(ancienne, base, 'paquets')
+  await copie(ancienne, base, 'images')
+  // `reglages` est à clé hors ligne : elle ne se déduit pas de la valeur, il faut la porter.
+  if (ancienne.objectStoreNames.contains('reglages')) {
+    for (const cle of await ancienne.getAllKeys('reglages')) {
+      await base.put('reglages', await ancienne.get('reglages', cle), cle)
+    }
+  }
+  ancienne.close()
+  await deleteDB(NOM_BASE_ANCIEN)
+  await base.put('reglages', true, CLE_REPRISE)
 }
 
 export async function litPaquet(nom: string): Promise<ArrayBuffer | null> {

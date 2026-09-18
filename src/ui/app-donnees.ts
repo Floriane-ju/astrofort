@@ -230,7 +230,7 @@ export function usePersistance(entree: EntreePersistance): Persistance {
     const blob = new Blob([JSON.stringify(donnees, null, 2)], { type: 'application/json' })
     const lien = document.createElement('a')
     lien.href = URL.createObjectURL(blob)
-    lien.download = `astrofort-${donnees.exporteLe.slice(0, 10)}.json`
+    lien.download = `orion-${donnees.exporteLe.slice(0, 10)}.json`
     lien.click()
     URL.revokeObjectURL(lien.href)
     setAvis({ texte: `Export écrit dans ${lien.download}.`, echec: false })

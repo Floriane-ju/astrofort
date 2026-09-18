@@ -1,4 +1,4 @@
-# Audit du design system — Astrofort
+# Audit du design system — Orion
 
 > Phase 0. Lecture seule, aucun code modifié. Relevé du 15 septembre 2026, sur `main` à
 > `0a31935`.
@@ -360,7 +360,7 @@ Police livrée dans le dépôt (`src/fonts/MaterialSymbolsSharp-VariableFont_FIL
 
 ### 5.3 ⚠ Les trois dettes — `PlanSession.tsx`, schéma de pointage §8.4
 
-Elles violent la règle déjà écrite dans `.claude/rules/astrofort.md` (« pas de caractère
+Elles violent la règle déjà écrite dans `.claude/rules/orion.md` (« pas de caractère
 Unicode décoratif posé à la place d'un glyphe »).
 
 | Ligne | Caractère | Rôle | Équivalents Material proposés |

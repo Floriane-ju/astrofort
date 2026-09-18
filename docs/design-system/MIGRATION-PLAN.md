@@ -1,4 +1,4 @@
-# Plan de migration — design system Astrofort
+# Plan de migration — design system Orion
 
 > Phase 0, livrable 2. Ordre de traitement trié par (fréquence d'usage × faible risque)
 > décroissant. Établi sur `AUDIT.md` du 15 septembre 2026.
@@ -191,7 +191,7 @@ Aucun alias à retirer : la phase 1 n'en crée pas.
 | # | Chantier |
 |---|---|
 | **G1** | `docs/design-system/README.md` : les jetons, le catalogue des composants avec variantes et exemple d'usage, les règles pour un nouvel écran |
-| **G2** | Renvoi vers ce README depuis `CLAUDE.md` (section Architecture) et depuis `.claude/rules/astrofort.md` |
+| **G2** | Renvoi vers ce README depuis `CLAUDE.md` (section Architecture) et depuis `.claude/rules/orion.md` |
 
 ---
 
