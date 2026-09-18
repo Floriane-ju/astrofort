@@ -1030,9 +1030,8 @@ describe('libellés d’un même astre T-0109', () => {
  * T-0116 — le filé couvre tout le planétarium, et il REMPLACE la couche d'étoiles ponctuelles.
  * Sinon chaque trace porterait un point net à une extrémité, ce qu'aucune pose ne produit.
  *
- * T-0171 — les étoiles continuent d'alimenter les CIBLES, mais plus les noms peints : sous
- * l'aperçu, la scène ne porte plus d'annotation. Le clic et le survol, eux, gardent tout ce
- * qu'ils désignaient (T-0085, T-0107 à T-0109).
+ * T-0316 — elles sortent aussi des CIBLES : une étoile qui file n'est plus au pixel où elle se
+ * projette, et l'y survoler nommait un endroit vide. Sous l'aperçu, rien n'est désignable.
  */
 describe('T-0116 — la passe de filé remplace les étoiles ponctuelles', () => {
   /** Les disques d'étoiles sont les seuls remplissages qui portent un `Path2D`. */
@@ -1050,11 +1049,12 @@ describe('T-0116 — la passe de filé remplace les étoiles ponctuelles', () =>
     expect(disques(avec.ctx)).toHaveLength(0)
   })
 
-  it('garde les cibles cliquables, sans plus peindre de nom', () => {
+  it('retire les étoiles des cibles, sans plus peindre de nom', () => {
     const sans = rend()
     const avec = rend({ passeFile: () => undefined })
-    expect(avec.sortie.cibles.length).toBe(sans.sortie.cibles.length)
-    expect(avec.sortie.cibles.filter((c) => c.type === 'ETOILE').length).toBeGreaterThan(0)
+    expect(sans.sortie.cibles.filter((c) => c.type === 'ETOILE').length).toBeGreaterThan(0)
+    expect(avec.sortie.cibles).toHaveLength(0)
+    // Le comptage, lui, ne change pas : ce sont les mêmes étoiles qui alimentent le filé.
     expect(avec.sortie.etoilesDessinees).toBe(sans.sortie.etoilesDessinees)
     // T-0171 — la scène ne porte plus aucun nom : le survol reste la seule façon d'en lire un.
     expect(sans.sortie.labels.length).toBeGreaterThan(0)
@@ -1070,8 +1070,8 @@ describe('T-0116 — la passe de filé remplace les étoiles ponctuelles', () =>
  * corps mobiles, et tous les noms. Rien de tout cela ne se trouve sur une photographie, et
  * c'est ce que l'aperçu montre.
  *
- * La sélection continue de tourner sous l'aperçu : les cibles restent cliquables, et le survol
- * reste la façon de lire un nom.
+ * T-0316 — la sélection s'arrête avec la peinture. Ce que l'aperçu n'a pas peint, le curseur ne
+ * le trouve pas : plus aucune cible, et le survol ne révèle plus de nom.
  */
 describe('T-0171 — l’aperçu efface les repères, garde ce qui cadre', () => {
   const CORPS: PositionCorps = {
@@ -1126,7 +1126,7 @@ describe('T-0171 — l’aperçu efface les repères, garde ce qui cadre', () =>
     expect(avec().ctx.appels.filter((a) => a.nom === 'arc')).toHaveLength(0)
   })
 
-  it('n’écrit aucun nom hors les points cardinaux, et garde le survol', () => {
+  it('n’écrit aucun nom hors les points cardinaux, survol compris', () => {
     const nu = avec()
     // Les quatre cardinaux appartiennent à l'horizon, la seule couche de repérage qui reste :
     // ce sont eux, et rien d'autre, qui survivent à l'aperçu.
@@ -1135,14 +1135,17 @@ describe('T-0171 — l’aperçu efface les repères, garde ce qui cadre', () =>
     expect(ecrits(sans()).length).toBeGreaterThan(4)
     expect(ecrits(nu).sort()).toEqual(['E', 'N', 'O', 'S'])
     expect(nu.sortie.labels).toHaveLength(0)
-    // Les cibles, elles, sont les mêmes qu'à repères allumés : le clic ne perd rien.
-    expect(nu.sortie.cibles.length).toBe(sans().sortie.cibles.length)
+    // T-0316 — plus rien à désigner : ni étoile, ni marqueur d'objet, ni corps mobile.
+    expect(sans().sortie.cibles.length).toBeGreaterThan(0)
+    expect(nu.sortie.cibles).toHaveLength(0)
 
-    const cible = nu.sortie.cibles.find((c) => c.type === 'OBJET')
+    // Un survol hérité du mode précédent ne peint rien non plus : `survol` survit au
+    // basculement, et seul le mouvement de souris suivant l'efface.
+    const cible = sans().sortie.cibles.find((c) => c.type === 'OBJET')
     expect(cible).toBeDefined()
     const survole = scene({ passeFile: () => undefined, survol: { cible: cible! } })
-    expect(survole.sortie.revele).not.toBeNull()
-    expect(ecrits(survole)).toHaveLength(5)
+    expect(survole.sortie.revele).toBeNull()
+    expect(ecrits(survole).sort()).toEqual(['E', 'N', 'O', 'S'])
   })
 })
 

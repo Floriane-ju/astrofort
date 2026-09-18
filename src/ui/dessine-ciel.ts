@@ -152,8 +152,9 @@ export interface EntreeDessin {
    * entoure, et rien ne se peint sous le relief (§4.1).
    *
    * Sa présence REMPLACE la couche d'étoiles ponctuelles : une trace surmontée d'un point net
-   * à une extrémité n'existe sur aucune pose. Les étoiles continuent d'alimenter `cibles` et
-   * les noms — sans quoi le survol et le clic les perdraient (T-0085, T-0107 à T-0109).
+   * à une extrémité n'existe sur aucune pose. Elle vide aussi `cibles` (T-0316) : sous
+   * l'aperçu, rien n'est peint, donc rien ne se désigne — une étoile n'est plus au pixel où
+   * elle se projette, et les marqueurs d'objets et de corps ne sont plus là du tout.
    */
   readonly passeFile?:
     | ((ctx: CanvasRenderingContext2D, projecteur: Projecteur) => void)
@@ -569,7 +570,7 @@ function passeLabels(passe: Passe): {
   labels: readonly CandidatLabel[]
   revele: BoiteLabel | null
 } {
-  const { entree, teintes, candidats } = passe
+  const { entree, teintes, candidats, peintReperes } = passe
   const { ctx, projecteur } = passe.entree
   // --- Labels --------------------------------------------------------------
   const labels = composeLabels(candidats, projecteur.vue.fovDeg)
@@ -586,8 +587,12 @@ function passeLabels(passe: Passe): {
   // le survol révèle est exactement ce que l'élément aurait porté peint. Faute de libellé —
   // une étoile brillante que le paquet nommé ne porte pas — il retombe sur le titre de fiche,
   // seul nom que cet astre possède.
+  //
+  // T-0316 — sauf sous l'aperçu, où la scène ne nomme plus rien : le survol y désignait ce
+  // qu'aucune couche n'a peint. La garde est ici ET dans les cibles, parce que `survol` survit
+  // au basculement de mode — il ne s'efface qu'au mouvement de souris suivant.
   const revele =
-    entree.survol === undefined
+    entree.survol === undefined || !peintReperes
       ? null
       : labelSurvol(
           labels,
@@ -661,9 +666,8 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
   const { projecteur } = entree
   // T-0171 — l'aperçu peint sur toute la scène tient lieu de prise de vue : ce qui la
   // commente s'efface. Ne restent que le sol, l'horizon et le cadre matériel — ce qui CADRE le
-  // champ, pas ce qui l'annote. La sélection continue de tourner : les cibles restent
-  // cliquables et le survol nomme ce qu'il désigne ; seule la peinture des repères est
-  // suspendue, comme celle des disques d'étoiles l'était déjà depuis T-0116.
+  // champ, pas ce qui l'annote. T-0316 — la sélection s'arrête avec la peinture : sous
+  // l'aperçu, ni survol ni clic ne désignent quoi que ce soit (voir la sortie, plus bas).
   const peintReperes = entree.passeFile === undefined
   const couches: CouchesActives = peintReperes
     ? entree.couches
@@ -711,6 +715,13 @@ export function dessineCiel(entreeBrute: EntreeDessin): SortieDessin {
       c.etoileNommee !== undefined ||
       !pixelDejaNomme(pixelsNommes, c.xPx, c.yPx),
   )
+
+  // T-0316 — sous l'aperçu, RIEN n'est désignable, parce que rien n'est peint. Une étoile y
+  // est un arc long de dizaines de pixels : le point où elle se projette ne porte plus rien, et
+  // l'y survoler nommait du vide. Un marqueur d'objet ou un corps n'y est pas peint du tout —
+  // le survoler nommait un repère que l'image ne montre pas. La règle est la même pour les
+  // trois : ce que l'aperçu n'a pas peint, le curseur ne le trouve pas.
+  if (!peintReperes) return { stats, etoilesDessinees, cibles: [], labels, revele }
 
   return { stats, etoilesDessinees, cibles: ciblesUniques, labels, revele }
 }
