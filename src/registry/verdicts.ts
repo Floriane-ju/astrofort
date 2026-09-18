@@ -190,6 +190,20 @@ export const PRESETS_SNR: readonly PresetSnr[] = Object.freeze(
   ].map(Object.freeze) as PresetSnr[],
 )
 
+/**
+ * L'objectif de qualité par défaut — celui sur lequel la fiche s'ouvre ET celui que le plan de
+ * séance alloue. T-0268 : les deux écrans le choisissaient chacun de leur côté, l'un par
+ * indice, l'autre par un 10 recopié. Une seule valeur les rend incapables de diverger.
+ */
+const PRESET_CORRECT = PRESETS_SNR.find((p) => p.cle === 'CORRECT')
+// Renommer la clé casse ici, nommément, au chargement du module — pas trois écrans plus loin
+// sur une valeur `undefined` qui aurait traversé toute la chaîne de pose.
+if (PRESET_CORRECT === undefined) {
+  throw new Error('Préréglage de qualité « CORRECT » absent du registre.')
+}
+
+export const PRESET_SNR_DEFAUT: number = PRESET_CORRECT.valeur
+
 // ---------------------------------------------------------------------------
 // §7.4 — prescriptions de calibration
 // ---------------------------------------------------------------------------

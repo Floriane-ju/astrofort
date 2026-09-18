@@ -1,24 +1,20 @@
 /**
  * §8.1 côté fiche — l'état du ciel sous la Lune pour la cible ouverte (T-0089).
  *
- * La fiche n'a pas de créneau : l'instant d'évaluation doit donc être choisi, et nommé à
- * l'écran. Celui retenu est l'instant affiché par le planétarium — la seule horloge de
- * l'application, celle qui garnit déjà la liste des visibles. Un second instant implicite,
- * milieu de nuit ou « maintenant », donnerait deux ciels sur un même écran.
+ * T-0268 — l'instant d'évaluation n'est plus un choix propre à la fiche : c'est le milieu du
+ * créneau de la cible, celui du plan de séance (`instantLune`, §8.1). La fiche prenait
+ * l'instant affiché par le planétarium, si bien que la même nuit préparée à midi et consultée
+ * à 23 h 30 donnait deux gênes lunaires — et deux poses. Une gêne lunaire évaluée à midi ne
+ * décrit d'ailleurs aucune observation : la cible y est sous l'horizon.
  *
- * La hauteur de cible passée au modèle est la culmination, exactement comme le plan de
- * séance (`instantLune` + `altCulminationDeg`) : c'est ce qui garantit que les deux écrans
- * annoncent la même pose pour la même cible au même instant.
- * ponytail: Lune à l'instant affiché, cible à sa culmination — les deux instants diffèrent,
- * et l'écart ne joue que sur l'extinction du trajet de la cible, un terme du second ordre.
- * Le jour où le plan évaluera la cible à l'instant de la Lune, cette fonction suivra.
+ * La hauteur de cible passée au modèle est la culmination, exactement comme le plan
+ * (`altCulminationDeg`) : c'est ce qui garantit que les deux écrans dégradent le même ciel.
  */
 
 import { cielSousLaLune } from '../core/moon.ts'
 import { HorsDomaineSeriesError, type Site } from '../core/ephem.ts'
 import { altitudeCulmination } from '../core/site.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
-import { minuteAffichee, MS_PAR_MINUTE, useTrancheScene } from './scene-etat.ts'
 import type { LuneFiche } from './fiche-cible-calcul.ts'
 
 const HEURES_PAR_TOUR = 24
@@ -55,23 +51,4 @@ export function lunePourCible(entree: EntreeLuneCible): LuneFiche {
     }
     throw erreur
   }
-}
-
-/**
- * La Lune de la cible ouverte, recalculée à la minute affichée. La minute suffit : une
- * seconde de plus ne déplace ni la hauteur de la Lune ni sa séparation de façon lisible, et
- * la scène republie son horloge deux fois par seconde.
- */
-export function useLuneCible(
-  site: Site,
-  sbCielNoirMag: number,
-  objet: ObjetCielProfond,
-): LuneFiche {
-  const minute = useTrancheScene(minuteAffichee)
-  return lunePourCible({
-    site,
-    instant: new Date(minute * MS_PAR_MINUTE),
-    objet,
-    sbCielNoirMag,
-  })
 }

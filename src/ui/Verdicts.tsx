@@ -102,16 +102,27 @@ function CadrageDeLaCible({ r }: { readonly r: Resultat }) {
 }
 
 /**
- * §8.1 — sous quel ciel la cible est évaluée. T-0089 : la fiche n'a pas de créneau, donc
- * l'instant de la Lune est un choix, et un choix s'annonce. Sans cette ligne, deux écrans
- * annonceraient deux poses sans que rien ne dise laquelle porte quelle nuit.
+ * §8.1 — sous quel ciel la cible est évaluée, et à quel instant. T-0089 posait la question,
+ * T-0268 la ferme : l'instant est celui du plan de séance — le milieu du créneau — et il est
+ * nommé. La phrase datait auparavant un état que la scène contredisait, « Lune à 12:47 »
+ * pendant qu'on préparait une nuit d'août.
  */
-function CielSousLaLune({ r }: { readonly r: Resultat }) {
+function CielSousLaLune({
+  r,
+  creneau,
+}: {
+  readonly r: Resultat
+  readonly creneau: CreneauFiche
+}) {
   if (!r.lune.evaluee) return <Mention ton="cause">{r.lune.cause}</Mention>
+  // Cible écartée du créneau : `instantLune` retombe sur le début de la fenêtre nocturne. La
+  // phrase le dit plutôt que d'annoncer le milieu d'un créneau qui n'existe pas.
+  const dansLeCreneau = creneau.chiffre && creneau.creneau.creneaux.length > 0
   return (
     <>
       <p className="etat">
-        Lune à {heure(r.lune.instant)}, cible à son point le plus haut.
+        Lune évaluée à {heure(r.lune.instant)},{' '}
+        {dansLeCreneau ? 'au milieu du créneau' : 'au début de la nuit'}.
       </p>
       <TracedValue terme="degradation_lunaire" trace={r.lune.ciel.delta} unite="mag/as²" />
     </>
@@ -172,7 +183,7 @@ function Detectabilite({
       <h2>Détectabilité</h2>
       <p className="etat">verdict : {r.detect.verdict}</p>
       <CreneauPhoto creneau={creneau} />
-      <CielSousLaLune r={r} />
+      <CielSousLaLune r={r} creneau={creneau} />
       <TracedValue terme="brillance_surface" trace={r.detect.sbObj} unite="mag/as²" />
       <TracedValue terme="contraste_ciel" trace={r.detect.deltaSb} unite="mag/as²" />
       <TracedValue terme="magnitude_limite_instrument" trace={r.detect.mLimInstr} unite="mag" />
@@ -240,14 +251,19 @@ function PoseUnitaire({
 }
 
 /**
- * §7.6 — l'atténuation atmosphérique du flux de l'objet, avec la hauteur qui la produit.
+ * §7.6 — l'atténuation atmosphérique du flux de l'objet, avec la convention qui la produit.
  *
  * Rendue avec l'intégration et non avec la pose : c'est la durée totale que ce terme dose,
  * et la pose unitaire n'en dépend pas — elle ne tient qu'au fond de ciel.
  *
- * La hauteur d'évaluation est écrite en clair : sans elle, la masse d'air est un nombre
- * orphelin, et l'utilisateur ne peut pas savoir que c'est le meilleur instant de la nuit qui
- * est chiffré. La précision reste au centième, celle du modèle (§12.4).
+ * T-0268 — la convention est écrite en clair. La fiche chiffrait la culmination et annonçait
+ * « au plus haut » : le meilleur instant de la nuit présenté comme la prévision, donc toujours
+ * moins de temps que la capture n'en demande. C'est la moyenne du créneau qui dose désormais,
+ * et le meilleur instant reste affiché sous elle, comme plancher.
+ *
+ * Deux états seulement, et ils viennent du MÊME champ que le calcul : un créneau, donc une
+ * moyenne ; pas de créneau chiffrable, donc pas de hauteur. Une cible écartée ne passe pas
+ * par ici — `CombienDePhotos` affiche sa cause à la place.
  */
 function Extinction({ r }: { readonly r: Resultat }) {
   const extinction = r.extinction
@@ -255,10 +271,9 @@ function Extinction({ r }: { readonly r: Resultat }) {
   return (
     <>
       <p className="etat">
-        Hauteur d’évaluation :{' '}
-        {r.hauteurEvaluationDeg === null
-          ? 'inconnue'
-          : `${r.hauteurEvaluationDeg.toFixed(1)}°, au plus haut`}
+        {r.plusHaut === null
+          ? 'Hauteur de la cible inconnue : le temps annoncé est un minimum.'
+          : 'Masse d’air moyennée sur tout le créneau : c’est ce que la capture paiera.'}
       </p>
       <TracedValue terme="masse_air" trace={extinction.masseAir} />
       <TracedValue terme="extinction_atmospherique" trace={extinction.attenuation} decimales={3} />
@@ -270,6 +285,26 @@ function Extinction({ r }: { readonly r: Resultat }) {
         unite="e⁻/s/px"
       />
     </>
+  )
+}
+
+/**
+ * §7.6, T-0268 — la même cible au seul meilleur instant du créneau : le plancher.
+ *
+ * Affiché SOUS la prévision, jamais à sa place. L'écart entre les deux chiffre ce que coûte
+ * le fait de poser toute la fenêtre plutôt que l'heure du méridien — c'est un levier, et
+ * l'utilisateur en fait quelque chose : raccourcir la séance autour de la culmination.
+ */
+function Plancher({ plancher }: { readonly plancher: Resultat['plancher'] }) {
+  if (plancher === null) return null
+  const { plusHaut, integration } = plancher
+  return (
+    <p className="etat">
+      Au plus haut du créneau — {plusHaut.altitudeDeg.toFixed(1)}°
+      {plusHaut.instant === null ? '' : `, vers ${heure(plusHaut.instant)}`} :{' '}
+      {dureeLisible(integration.tRequisS.value)} et {integration.nPoses.value} poses. Un
+      plancher, atteint en ne posant qu’autour de la culmination.
+    </p>
   )
 }
 
@@ -285,7 +320,10 @@ function CombienDePhotos({
 }) {
   const integration = r.integration
   if (integration === null) {
-    const refus = r.extinction?.attenuation.note
+    // T-0268 — cible écartée du créneau : sa cause passe AVANT tout refus d'extinction. Le
+    // repli sur la culmination faisait afficher ici un plan complet pour une cible que le
+    // plan de séance venait d'écarter, et que la section « Créneau photo » disait cachée.
+    const refus = r.exclusionCreneau ?? r.extinction?.attenuation.note
     // §7.6 — un refus se lit. Faire disparaître la section laisserait croire que le calcul
     // n'a pas été demandé, alors qu'il a été refusé, et pour une raison nommable.
     return refus === undefined ? null : (
@@ -314,6 +352,7 @@ function CombienDePhotos({
       <TracedValue terme="integration_totale" trace={integration.tRequisS} decimales={0} unite="s" />
       <p className="etat">soit {dureeLisible(integration.tRequisS.value)}</p>
       <TracedValue terme="nombre_poses" trace={integration.nPoses} decimales={0} unite="poses" />
+      <Plancher plancher={r.plancher} />
       <TracedValue terme="volume_stockage" trace={integration.volumeGo} decimales={1} unite="Go" />
       {integration.nNuits !== undefined && (
         <TracedValue terme="nombre_nuits" trace={integration.nNuits} decimales={0} unite="nuits" />

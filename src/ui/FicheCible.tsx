@@ -16,15 +16,14 @@
 
 import { useMemo, useState } from 'react'
 import { SaisieRefuseeError } from '../registry/domains.ts'
-import { PRESETS_SNR } from '../registry/verdicts.ts'
+import { PRESET_SNR_DEFAUT } from '../registry/verdicts.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { Site } from '../core/ephem.ts'
 import type { ContexteSession } from '../core/session-types.ts'
 import { ChampsCible } from './ChampsCible.tsx'
 import { ImageCible } from './ImageCible.tsx'
 import { Verdicts } from './Verdicts.tsx'
-import { useLuneCible } from './fiche-cible-lune.ts'
-import { creneauFiche } from './fiche-cible-creneau.ts'
+import { nuitFiche } from './fiche-cible-creneau.ts'
 import { conseilsCible, evalue, type ContexteFiche, type Resultat } from './fiche-cible-calcul.ts'
 import { Mention } from './Mention.tsx'
 
@@ -48,31 +47,30 @@ export function FicheCible(props: FicheCibleProps) {
   /** §7.2 — mode permissif C-03 = 3, désactivé par défaut : il se choisit, il ne se subit pas. */
   const [permissif, setPermissif] = useState(false)
   const [explicationDepliee, setExplicationDepliee] = useState(false)
-  const [snrCible, setSnrCible] = useState(PRESETS_SNR[1]!.valeur)
+  const [snrCible, setSnrCible] = useState(PRESET_SNR_DEFAUT)
 
   const objet = props.objet
   const iso = props.iso
   /**
-   * T-0089 — la Lune de cette cible, à l'instant affiché par le planétarium. Elle entre dans
-   * la chaîne comme dans le plan de séance : c'est le fond de ciel qui change, donc la pose,
-   * le nombre d'images et l'intégration.
+   * T-0268 — la nuit du plan de séance : créneau, Lune au milieu de ce créneau, masse d'air
+   * moyenne. Mémoïsée sur la NUIT et la cible seules — pas sur l'horloge de la scène : c'est
+   * ce qui rend la fiche incapable d'annoncer une pose différente selon l'heure de
+   * consultation, et d'annoncer autre chose que la liste et le plan.
    */
-  const lune = useLuneCible(props.site, props.sbCiel, objet)
+  const nuit = useMemo(
+    () => nuitFiche(props.contexteSession, objet),
+    [props.contexteSession, objet],
+  )
 
   const calcul = useMemo<{ ok: true; r: Resultat } | { ok: false; erreur: string }>(() => {
     try {
-      return { ok: true, r: evalue(props, objet, snrCible, iso, lune, permissif) }
+      return { ok: true, r: evalue(props, objet, snrCible, iso, nuit.lune, nuit.capture, permissif) }
     } catch (erreur) {
       if (erreur instanceof SaisieRefuseeError) return { ok: false, erreur: erreur.message }
       throw erreur
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props, objet, snrCible, iso.iso, lune, permissif])
-
-  const creneau = useMemo(
-    () => creneauFiche(props.contexteSession, objet),
-    [props.contexteSession, objet],
-  )
+  }, [props, objet, snrCible, iso.iso, nuit, permissif])
 
   const conseils = useMemo(
     () =>
@@ -109,7 +107,7 @@ export function FicheCible(props: FicheCibleProps) {
       {calcul.ok && (
         <Verdicts
           r={calcul.r}
-          creneau={creneau}
+          creneau={nuit.creneau}
           snrCible={snrCible}
           surSnr={setSnrCible}
           zeroSysteme={props.zeroSysteme}

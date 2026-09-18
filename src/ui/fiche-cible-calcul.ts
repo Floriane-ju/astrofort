@@ -23,6 +23,7 @@ import {
   type PoseUnitaire,
 } from '../core/exposure.ts'
 import { planCalibration, type PlanCalibration } from '../core/calibration.ts'
+import type { PlusHautDuCreneau } from '../core/creneaux.ts'
 import type { CielSousLaLune } from '../core/moon.ts'
 import { explication, type Explication } from '../core/explain.ts'
 import {
@@ -68,6 +69,38 @@ export type LuneFiche =
   | { readonly evaluee: true; readonly instant: Date; readonly ciel: CielSousLaLune }
   | { readonly evaluee: false; readonly cause: string }
 
+/**
+ * T-0268 — ce que le créneau de la nuit impose à la fiche, et rien d'autre.
+ *
+ * La masse d'air qui DOSE est celle du plan de séance : la moyenne du créneau (§7.6). La fiche
+ * chiffrait la culmination, donc le meilleur instant de la nuit, et annonçait systématiquement
+ * moins de temps que la capture n'en demande — 22 min là où le plan en alloue 23.
+ *
+ * `plusHaut` porte la variante affichée à côté : le plancher qu'on atteint en ne shootant
+ * qu'autour du méridien. C'est un levier chiffré, pas la prévision.
+ */
+export interface CaptureNuit {
+  readonly masseAir: Traced<number | null>
+  /** §7.3 — la durée du créneau, qui décide du nombre de nuits. `null` sans créneau. */
+  readonly dureeCreneauS: number | null
+  /** §7.6 — le meilleur instant du créneau, ou `null` quand la nuit n'en offre aucun. */
+  readonly plusHaut: PlusHautDuCreneau | null
+  /**
+   * La cause du moteur quand la nuit n'offre AUCUN créneau : relief, fenêtre, hauteur, cible
+   * jamais levée. Le plan et la liste écartent alors la cible ; la fiche chiffrait quand même
+   * une intégration, en repliant sur la culmination — 24 h et 1 108 poses affichées sous une
+   * section « Créneau photo » qui venait de dire « cachée par le relief ». `null` sinon.
+   */
+  readonly exclusion: string | null
+}
+
+/** §7.6 — l'intégration au meilleur instant du créneau : un plancher, jamais la prévision. */
+export interface Plancher {
+  readonly plusHaut: PlusHautDuCreneau
+  readonly extinction: FluxObjetReel
+  readonly integration: PlanIntegration
+}
+
 export interface Resultat {
   /** §8.1 — le ciel sous la Lune tel qu'il a été retenu, ou la raison de son absence. */
   readonly lune: LuneFiche
@@ -83,10 +116,18 @@ export interface Resultat {
    * la hauteur qui la produisent. Toujours présente : un refus se lit, il ne disparaît pas.
    */
   readonly extinction: FluxObjetReel | null
-  /** Hauteur à laquelle la cible a été évaluée. `null` quand elle n'est pas connue. */
-  readonly hauteurEvaluationDeg: number | null
+  /** T-0268 — le meilleur instant du créneau, celui que la variante « plancher » chiffre. */
+  readonly plusHaut: PlusHautDuCreneau | null
   readonly pose: PoseUnitaire | null
+  /** La cause de l'écart quand la nuit n'offre aucun créneau : rien n'est alors chiffré. */
+  readonly exclusionCreneau: string | null
   readonly integration: PlanIntegration | null
+  /**
+   * T-0268 — la même cible au seul meilleur instant du créneau. `null` quand la nuit n'a pas
+   * de créneau : il n'y a alors qu'une convention, et annoncer un plancher égal à la
+   * prévision ferait croire à un arbitrage là où il n'y en a pas.
+   */
+  readonly plancher: Plancher | null
   readonly calibration: PlanCalibration | null
   readonly explique: Explication | null
 }
@@ -106,6 +147,7 @@ export function evalue(
   snrCible: number,
   iso: IsoRetenu,
   lune: LuneFiche,
+  capture: CaptureNuit,
   permissif = false,
 ): Resultat {
   const fovHDeg = contexte.optique.fovHDeg.value
@@ -162,13 +204,7 @@ export function evalue(
     zpEstime,
   })
 
-  /**
-   * §7.6 — la hauteur à laquelle la cible est éteinte : sa CULMINATION, la même convention
-   * que celle du modèle lunaire de cette fiche et du plan de séance. Lune non évaluée — hors
-   * du domaine des séries — vaut hauteur inconnue : l'extinction n'est alors pas supposée, et
-   * la durée annoncée se présente comme un plancher.
-   */
-  const hauteurEvaluationDeg = lune.evaluee ? lune.ciel.altitudeCibleDeg : null
+  const plusHaut = capture.plusHaut
 
   const sbObj = detect.sbObj.value
   if (sbObj === null) {
@@ -180,9 +216,11 @@ export function evalue(
       eCiel,
       eObj: null,
       extinction: null,
-      hauteurEvaluationDeg,
+      plusHaut,
       pose: null,
+      exclusionCreneau: capture.exclusion,
       integration: null,
+      plancher: null,
       calibration: null,
       explique: null,
     }
@@ -195,7 +233,9 @@ export function evalue(
     ouvertureN: contexte.ouvertureN,
     zpEstime,
   })
-  const extinction = fluxObjetReel(eObj, masseAir(hauteurEvaluationDeg))
+  // T-0268 — la masse d'air vient du créneau, comme dans `evalueCandidate` : c'est ce qui rend
+  // la fiche incapable d'annoncer une autre intégration que la liste et le plan.
+  const extinction = fluxObjetReel(eObj, capture.masseAir)
   const eObjReel = extinction.eObjReel.value
 
   // Extinction refusée hors du domaine de l'approximation plane : la chaîne s'arrête là,
@@ -209,9 +249,11 @@ export function evalue(
       eCiel,
       eObj,
       extinction,
-      hauteurEvaluationDeg,
+      plusHaut,
       pose: null,
+      exclusionCreneau: capture.exclusion,
       integration: null,
+      plancher: null,
       calibration: null,
       explique: null,
     }
@@ -225,15 +267,50 @@ export function evalue(
     permissif,
   })
 
-  const integration = planIntegration({
-    eObj: eObjReel,
+  /**
+   * T-0268 — la nuit n'offre aucun créneau : le plan et la liste écartent la cible, la fiche
+   * n'a donc rien à chiffrer non plus. Elle repliait sur la culmination et affichait « 24 h,
+   * 1 108 poses » deux blocs sous « cachée par le relief » — sa propre section « Créneau »
+   * la contredisait. La POSE reste, elle : elle ne tient qu'au fond de ciel et au boîtier,
+   * et vaut cette nuit-là quelle que soit la cible.
+   */
+  if (capture.exclusion !== null) {
+    return {
+      lune,
+      sbCielEffectif: sbCiel,
+      cadrage,
+      detect,
+      eCiel,
+      eObj,
+      extinction: null,
+      plusHaut,
+      pose,
+      exclusionCreneau: capture.exclusion,
+      integration: null,
+      plancher: null,
+      calibration: null,
+      explique: null,
+    }
+  }
+
+  // §7.3 — la durée du créneau décide du nombre de nuits. Sans elle, la fiche restait muette
+  // sur une intégration qui ne tient pas dans une nuit, là où le plan le disait.
+  const integrationCommune = {
     eCiel: eCiel.value,
     tPoseS: pose.tRecommandeS.value,
     readNoiseE: pose.readNoiseUtiliseE,
     snrCible,
     tailleRawMo: contexte.boitier.tailleRawMo,
+    ...(capture.dureeCreneauS === null ? {} : { dureeCreneauS: capture.dureeCreneauS }),
+  }
+
+  const integration = planIntegration({
+    ...integrationCommune,
+    eObj: eObjReel,
     eObjPlage: extinction.plageEObj,
   })
+
+  const plancher = plancherAuMeilleurInstant(plusHaut, eObj, integrationCommune)
 
   const calibration = planCalibration({
     tPoseS: pose.tAfficheeS,
@@ -250,9 +327,11 @@ export function evalue(
     eCiel,
     eObj,
     extinction,
-    hauteurEvaluationDeg,
+    plusHaut,
     pose,
+    exclusionCreneau: null,
     integration,
+    plancher,
     calibration,
     explique: expliqueVerdict(contexte, objet, snrCible, {
       cadrage,
@@ -260,11 +339,41 @@ export function evalue(
       eCiel,
       eObj,
       extinction,
-      hauteurEvaluationDeg,
+      hauteurEvaluationDeg: plusHaut?.altitudeDeg ?? null,
       pose,
       integration,
       sbObj,
       sbCiel,
+    }),
+  }
+}
+
+/**
+ * T-0268, §7.6 — la même cible, éteinte au seul meilleur instant du créneau.
+ *
+ * Ce n'est pas un second verdict : la pose, le fond de ciel et la cible sont ceux de la
+ * prévision, seule la masse d'air change. L'écart entre les deux durées est ce que coûte le
+ * fait de shooter toute la fenêtre plutôt que l'heure du méridien — donc un levier chiffré.
+ *
+ * `null` sans créneau : le plancher vaudrait alors la prévision, et deux fois le même nombre
+ * sous deux libellés différents fait croire à un arbitrage qui n'existe pas.
+ */
+function plancherAuMeilleurInstant(
+  plusHaut: PlusHautDuCreneau | null,
+  eObj: Traced<number>,
+  commun: Omit<Parameters<typeof planIntegration>[0], 'eObj' | 'eObjPlage'>,
+): Plancher | null {
+  if (plusHaut === null) return null
+  const extinction = fluxObjetReel(eObj, masseAir(plusHaut.altitudeDeg))
+  const eObjReel = extinction.eObjReel.value
+  if (eObjReel === null) return null
+  return {
+    plusHaut,
+    extinction,
+    integration: planIntegration({
+      ...commun,
+      eObj: eObjReel,
+      eObjPlage: extinction.plageEObj,
     }),
   }
 }

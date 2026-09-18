@@ -58,12 +58,30 @@ export interface EntreeCreneau {
   readonly typeMonture: TypeMonture
 }
 
+/**
+ * T-0268 — la hauteur de `masseAirMin` et l'instant qui la porte, dans le MÊME objet.
+ *
+ * Les deux se lisaient séparément — `masseAirMin` d'un côté, `heureCulmination` de l'autre —
+ * et ne décrivent pas le même événement : l'heure sort de la fenêtre entière, la hauteur des
+ * seuls échantillons que le seuil et le relief laissent passer. Un écran qui les assemblait
+ * annonçait une hauteur à une heure où la cible ne l'atteint pas.
+ *
+ * `instant` est `null` quand aucun échantillon ne passe : la hauteur vaut alors la culmination
+ * géométrique, que cette nuit-là ne voit pas. Il n'y a pas d'heure à nommer, et c'est dit ainsi.
+ */
+export interface PlusHautDuCreneau {
+  readonly altitudeDeg: number
+  readonly instant: Date | null
+}
+
 export interface CreneauCible {
   readonly altCulminationDeg: Traced<number>
   readonly heureCulmination: Date | null
   readonly creneaux: readonly SousCreneau[]
   readonly dureeTotaleMin: Traced<number>
   readonly masseAirMin: Traced<number | null>
+  /** T-0268 — la hauteur que `masseAirMin` chiffre, avec l'instant auquel elle est atteinte. */
+  readonly plusHaut: PlusHautDuCreneau
   /**
    * §7.6 — la masse d'air moyenne sur le créneau, celle qui dose l'extinction du flux. La
    * masse d'air minimale ci-dessus est le meilleur instant de la nuit ; c'est la moyenne
@@ -227,7 +245,16 @@ export function creneauCible(entree: EntreeCreneau): CreneauCible {
   )
   const creneaux = assembleCreneaux(visibles, heureCulmination, retournementMeridien)
   const dureeTotale = creneaux.reduce((somme, c) => somme + c.dureeMin, 0)
-  const altitudeMax = visibles.reduce((max, e) => Math.max(max, e.altitudeDeg), 0)
+  // T-0268 — l'échantillon le plus haut du créneau est gardé ENTIER, hauteur et instant
+  // ensemble : les dissocier laissait un appelant apparier cette hauteur à une autre heure.
+  const culminantVisible = visibles.reduce<Echantillon | null>(
+    (meilleur, e) => (meilleur === null || e.altitudeDeg > meilleur.altitudeDeg ? e : meilleur),
+    null,
+  )
+  const plusHaut: PlusHautDuCreneau = {
+    altitudeDeg: culminantVisible?.altitudeDeg ?? altCulmination.value,
+    instant: culminantVisible?.instant ?? null,
+  }
 
   const commun = {
     altCulminationDeg: altCulmination,
@@ -239,7 +266,8 @@ export function creneauCible(entree: EntreeCreneau): CreneauCible {
       inputs: { seuil_hauteur_deg: seuil, alt_culmination_deg: altCulmination.value },
       constants: entree.seuilHauteurDeg === undefined ? ['SEUIL_HAUTEUR_IMAGERIE_DEG'] : [],
     }),
-    masseAirMin: masseAir(altitudeMax > 0 ? altitudeMax : altCulmination.value),
+    masseAirMin: masseAir(plusHaut.altitudeDeg),
+    plusHaut,
     masseAirMoyenne: masseAirMoyenneCreneau(visibles),
     circumpolaire,
     retournementMeridien: retournementMeridien && creneaux.some((c) => c.apresRetournement),

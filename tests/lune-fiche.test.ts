@@ -11,10 +11,11 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { integrationRequiseS } from '../src/core/exposure.ts'
 import { fenetreNocturne } from '../src/core/night.ts'
 import { etatLune, fenetreUtile } from '../src/core/moon.ts'
-import { masquePlat } from '../src/core/site.ts'
+import { masquePlat, masseAir } from '../src/core/site.ts'
+import { PRESET_SNR_DEFAUT } from '../src/registry/verdicts.ts'
+import { etatsCibles, prepareEvaluation } from '../src/core/cibles-liste.ts'
 import { instantLune } from '../src/core/session-candidates.ts'
 import { planSession, type ContexteSession, type EtapePlan } from '../src/core/session.ts'
 import { profilOptique } from '../src/core/optics.ts'
@@ -29,10 +30,23 @@ import type { Site } from '../src/core/ephem.ts'
 import {
   conseilsCible,
   evalue,
+  type CaptureNuit,
   type ContexteFiche,
   type LuneFiche,
 } from '../src/ui/fiche-cible-calcul.ts'
+import { nuitFiche } from '../src/ui/fiche-cible-creneau.ts'
 import { lunePourCible } from '../src/ui/fiche-cible-lune.ts'
+
+/**
+ * Pas de nuit chiffrable : la fiche n'a alors ni créneau ni masse d'air, et `fluxObjetReel`
+ * annonce un minimum plutôt que de supposer le zénith (§7.6, §12.5).
+ */
+const SANS_CRENEAU: CaptureNuit = {
+  masseAir: masseAir(null),
+  dureeCreneauS: null,
+  plusHaut: null,
+  exclusion: null,
+}
 
 /** Annexe A : site de référence, et le setup grand champ 120 mm f/2,8 sur plein format. */
 const SITE: Site = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
@@ -44,7 +58,7 @@ const SB_CIEL_NOIR = 20.95
 const M_LIM_OEIL = 6.05
 const T_MAX_S = 200
 /** L'objectif de qualité du plan de la nuit : la fiche doit être interrogée sur le même. */
-const SNR_PLAN = 10
+const SNR_PLAN = PRESET_SNR_DEFAUT
 
 const NGC7000: ObjetCielProfond = {
   designation: 'NGC7000',
@@ -132,72 +146,107 @@ function nuitAvecLune(): { readonly contexte: ContexteSession; readonly etape: E
   throw new Error('Aucune nuit de Lune trouvée sur le mois : le moteur lunaire ne répond plus.')
 }
 
-describe('T-0089 — la fiche et le plan dosent la même nuit', () => {
+/**
+ * T-0268 — les TROIS chemins sur la même entrée : le plan de séance, la liste du catalogue et
+ * la fiche. Reprise du test de T-0089, qui ne comparait que deux d'entre eux et tolérait
+ * explicitement un écart de masse d'air — c'est par là que la régression est revenue.
+ *
+ * Ce que ce fichier interdit désormais : que la fiche annonce une autre intégration, un autre
+ * nombre de poses ou une autre gêne lunaire que le plan pour la même cible la même nuit.
+ */
+describe('T-0268 — la liste, la fiche et le plan annoncent le même dosage', () => {
   const { contexte, etape } = nuitAvecLune()
-  const instant = instantLune(etape.creneau, etape.creneauAlloue.debut)
   const sbBase = sbCielBase(contexte)
-  const lune = lunePourCible({ site: SITE, instant, objet: etape.objet, sbCielNoirMag: sbBase })
-  const fiche = evalue(contexteFiche(sbBase), etape.objet, SNR_PLAN, ISO, lune)
+  const nuit = nuitFiche(contexte, etape.objet)
+  const fiche = evalue(
+    contexteFiche(sbBase),
+    etape.objet,
+    SNR_PLAN,
+    ISO,
+    nuit.lune,
+    nuit.capture,
+  )
+  const liste = etatsCibles(contexte, CATALOGUE).get(etape.objet.designation)
 
-  it('emploie le même deltaSbLune que le plan, au même instant et sur la même cible', () => {
-    expect(lune.evaluee).toBe(true)
-    expect(lune.evaluee && lune.ciel.delta.value).toBeCloseTo(etape.deltaSbLuneMag.value, 12)
-    expect(fiche.sbCielEffectif).toBeCloseTo(etape.sbCielEffectif, 12)
+  it('la fiche annonce l’intégration et le nombre de poses du plan', () => {
+    expect(fiche.integration?.tRequisS.value).toBe(etape.integration.tRequisS.value)
+    expect(fiche.integration?.nPoses.value).toBe(etape.integration.nPoses.value)
   })
 
-  it('annonce la même pose unitaire que le plan : le fond de ciel est le même', () => {
-    // La pose ne dépend que du flux de fond de ciel : c'est la garantie de T-0089, et §7.6
-    // ne la touche pas — l'extinction porte sur l'objet, jamais sur le ciel.
+  it('la liste annonce les mêmes : un seul moteur pour les trois écrans', () => {
+    expect(liste?.pose?.tRequisS).toBe(etape.integration.tRequisS.value)
+    expect(liste?.pose?.nPoses).toBe(etape.integration.nPoses.value)
+    expect(liste?.pose?.tPoseS).toBe(fiche.pose?.tAfficheeS)
+  })
+
+  it('éteint la cible à la MÊME masse d’air : celle du créneau, pas la culmination', () => {
+    expect(fiche.extinction?.masseAir.value).toBe(etape.extinction.masseAir.value)
+    expect(fiche.extinction?.masseAir.value).toBe(etape.creneau.masseAirMoyenne.value)
+  })
+
+  it('dégrade le même ciel sous la même Lune, au même instant', () => {
+    const attendu = instantLune(etape.creneau, prepareEvaluation(contexte)!.fenetre.debut)
+    expect(nuit.lune.evaluee && nuit.lune.instant.getTime()).toBe(attendu.getTime())
+    expect(nuit.lune.evaluee && nuit.lune.ciel.delta.value).toBeCloseTo(
+      etape.deltaSbLuneMag.value,
+      12,
+    )
+    expect(fiche.sbCielEffectif).toBeCloseTo(etape.sbCielEffectif, 12)
     expect(fiche.pose?.tRecommandeS.value).toBeCloseTo(etape.pose.tRecommandeS.value, 12)
   })
 
   /**
-   * T-0090 — les deux écrans n'éteignent PAS la cible à la même hauteur, et c'est voulu : la
-   * fiche n'a pas de créneau, elle chiffre la culmination ; le plan en a un, et chiffre la
-   * masse d'air moyenne de la capture. La fiche annonce donc un plancher.
-   *
-   * Ce test garde fermé le défaut réel : que les deux divergent pour une AUTRE raison que la
-   * masse d'air. Il rejoue l'intégration du plan avec la masse d'air de la fiche et exige
-   * l'égalité exacte.
+   * L'instant lunaire de la fiche est tiré du CRÉNEAU, donc de la nuit seule. Aucune horloge
+   * n'y entre : préparer à midi et consulter à 23 h 30 lisent le même instant, donc la même
+   * gêne. C'est la clause que la fiche violait en datant sa Lune de l'instant affiché.
    */
-  it('ne diverge du plan que par la masse d’air, et jamais dans le mauvais sens', () => {
-    const extinctionPlan = etape.extinction
-    const extinctionFiche = fiche.extinction
-    expect(extinctionFiche).not.toBeNull()
+  it('date sa Lune d’un instant du créneau, jamais de l’heure de consultation', () => {
+    const creneaux = nuit.creneau.chiffre ? nuit.creneau.creneau.creneaux : []
+    expect(creneaux.length).toBeGreaterThan(0)
+    const instant = (nuit.lune.evaluee ? nuit.lune.instant : new Date(0)).getTime()
+    expect(instant).toBeGreaterThanOrEqual(creneaux[0]!.debut.getTime())
+    expect(instant).toBeLessThanOrEqual(creneaux[creneaux.length - 1]!.fin.getTime())
+  })
 
-    const masseAirPlan = extinctionPlan.masseAir.value!
-    const masseAirFiche = extinctionFiche!.masseAir.value!
-    // La moyenne du créneau n'est jamais sous la masse d'air de la culmination.
-    expect(masseAirPlan).toBeGreaterThanOrEqual(masseAirFiche)
-    expect(fiche.integration!.tRequisS.value).toBeLessThanOrEqual(etape.integration.tRequisS.value)
-
-    const inputsPlan = etape.integration.tRequisS.inputs
-    const eObjSansExtinction = extinctionPlan.eObjReel.value! / extinctionPlan.attenuation.value!
-    const rejoue = integrationRequiseS(
-      {
-        eObj: eObjSansExtinction * extinctionFiche!.attenuation.value!,
-        eCiel: inputsPlan.e_ciel!,
-        tPoseS: inputsPlan.t_pose_s!,
-        readNoiseE: inputsPlan.read_noise_e!,
-        snrCible: SNR_PLAN,
-        tailleRawMo: BOITIER_REFERENCE.tailleRawMo,
-      },
-      SNR_PLAN,
+  /**
+   * §7.6 — le plancher est la variante nommée : la même cible au seul meilleur instant. Il
+   * est plus court que la prévision, et c'est tout son intérêt — l'écart chiffre ce que coûte
+   * le fait de poser toute la fenêtre plutôt que l'heure de la culmination.
+   */
+  it('affiche un plancher plus court que la prévision, jamais à sa place', () => {
+    expect(fiche.plancher).not.toBeNull()
+    expect(fiche.plancher!.integration.tRequisS.value).toBeLessThanOrEqual(
+      fiche.integration!.tRequisS.value,
     )
-    expect(fiche.integration!.tRequisS.value).toBeCloseTo(rejoue, 9)
+    expect(fiche.plancher!.extinction.masseAir.value).toBe(etape.creneau.masseAirMin.value)
+  })
+
+  /**
+   * Le critère que la phrase « Lune à 12:47, cible à son point le plus haut » violait : la
+   * hauteur annoncée et l'instant nommé doivent décrire le MÊME événement. Ils viennent du
+   * même échantillon du créneau, ce qui les rend incapables de diverger.
+   */
+  it('nomme un instant auquel la cible est effectivement à la hauteur annoncée', () => {
+    const plusHaut = fiche.plancher!.plusHaut
+    expect(plusHaut.instant).not.toBeNull()
+    expect(plusHaut.altitudeDeg).toBe(etape.creneau.plusHaut.altitudeDeg)
+    expect(plusHaut.instant!.getTime()).toBe(etape.creneau.plusHaut.instant!.getTime())
   })
 
   it('divergerait si la fiche ignorait la Lune — c’est le défaut que ce test garde fermé', () => {
     const ignoree: LuneFiche = { evaluee: false, cause: 'Lune ignorée, comme avant T-0089.' }
-    const sansLune = evalue(contexteFiche(sbBase), etape.objet, SNR_PLAN, ISO, ignoree)
+    const sansLune = evalue(
+      contexteFiche(sbBase),
+      etape.objet,
+      SNR_PLAN,
+      ISO,
+      ignoree,
+      nuit.capture,
+    )
     expect(sansLune.integration?.tRequisS.value).not.toBeCloseTo(
       etape.integration.tRequisS.value,
       6,
     )
-  })
-
-  it('nomme l’instant auquel la Lune a été évaluée : la fiche n’a pas de créneau', () => {
-    expect(lune.evaluee && lune.instant.getTime()).toBe(instant.getTime())
   })
 })
 
@@ -220,7 +269,7 @@ describe('§6.3 — une Lune sous l’horizon ne dégrade rien, et la fiche le d
     objet: NGC7000,
     sbCielNoirMag: SB_CIEL_NOIR,
   })
-  const fiche = evalue(contexteFiche(SB_CIEL_NOIR), NGC7000, SNR_PLAN, ISO, lune)
+  const fiche = evalue(contexteFiche(SB_CIEL_NOIR), NGC7000, SNR_PLAN, ISO, lune, SANS_CRENEAU)
 
   it('laisse le fond de ciel intact, quelle que soit la phase', () => {
     expect(lune.evaluee && lune.ciel.delta.value).toBe(0)
@@ -245,7 +294,7 @@ describe('§6.3 et §7.5 — la même Lune ne pénalise pas tous les types de la
   function conseilPour(typeObjet: TypeObjet) {
     const ctx = contexteFiche(sbBase)
     // Le type de l'objet décide du conseil : il est imposé ici, la cible restant la même.
-    const r = evalue(ctx, { ...etape.objet, type: typeObjet }, SNR_PLAN, ISO, lune)
+    const r = evalue(ctx, { ...etape.objet, type: typeObjet }, SNR_PLAN, ISO, lune, SANS_CRENEAU)
     return {
       r,
       conseils: conseilsCible(ctx, r, {
@@ -288,11 +337,14 @@ describe('T-0089 — une Lune non évaluée ne se voit pas inventer un fond de c
     evaluee: false,
     cause: 'Instant hors du domaine des séries : la Lune n’est pas chiffrée.',
   }
-  const fiche = evalue(contexteFiche(SB_CIEL_NOIR), NGC7000, SNR_PLAN, ISO, lune)
+  const fiche = evalue(contexteFiche(SB_CIEL_NOIR), NGC7000, SNR_PLAN, ISO, lune, SANS_CRENEAU)
 
   it('garde le fond de ciel du site plutôt que de deviner la dégradation', () => {
     expect(fiche.sbCielEffectif).toBe(SB_CIEL_NOIR)
-    expect(fiche.hauteurEvaluationDeg).toBeNull()
+    // Sans créneau, aucune hauteur n'est supposée : ni plancher affiché, ni masse d'air.
+    expect(fiche.plusHaut).toBeNull()
+    expect(fiche.plancher).toBeNull()
+    expect(fiche.extinction?.masseAir.value).toBeNull()
   })
 
   it('ne produit alors aucune note lunaire : rien n’a été évalué', () => {

@@ -58,11 +58,17 @@ import { modeObjectif } from './PanneauMateriel.tsx'
 import type { SaisieLieu, SaisieMateriel } from './app-saisie.ts'
 import { nombreSaisi, nombreSiRenseigne } from './saisie-bornee.ts'
 import type { MaterielFile } from './planetarium-materiel.ts'
+import { PRESET_SNR_DEFAUT } from '../registry/verdicts.ts'
 import type { ContexteFiche } from './fiche-cible-calcul.ts'
 import type { PanneauFileProps } from './PanneauFile.tsx'
 
-/** Objectif de qualité retenu pour le plan de la nuit : « correct » au sens de §7.3. */
-const PRESET_SNR_PLAN = 10
+/**
+ * Objectif de qualité retenu pour le plan de la nuit : « correct » au sens de §7.3.
+ *
+ * T-0268 — lu dans le registre, pas recopié : la fiche ouvre sur ce même préréglage, et deux
+ * 10 écrits à deux endroits finissent par ne plus valoir la même chose.
+ */
+const PRESET_SNR_PLAN = PRESET_SNR_DEFAUT
 
 /**
  * T-0149 — ce que le LIEU et la DATE donnent, sans rien savoir du matériel.
