@@ -12,6 +12,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
 import { majCatalogue, reinitialiseCatalogue } from '../src/ui/catalogue-etat.ts'
+import { RIEN_SOUS_CE_NOM } from '../src/ui/PanneauCibles.tsx'
 import { reinitialiseScene } from '../src/ui/scene-etat.ts'
 import { reinitialiseSeance } from '../src/ui/seance-etat.ts'
 import { reinitialiseCoque } from '../src/ui/coque-etat.ts'
@@ -90,7 +91,7 @@ describe('T-0187 — Le catalogue annonce ses changements sans geste', () => {
     const contenuLive = panneau.slice(debutLive, panneau.indexOf('</div>', debutLive))
 
     // La région vive doit contenir le message de liste vide
-    expect(contenuLive).toContain('Aucun objet de ce nom')
+    expect(contenuLive).toContain(RIEN_SOUS_CE_NOM)
   })
 
   it("n'affiche que le message de liste vide si la recherche ne trouve rien", () => {
@@ -106,7 +107,7 @@ describe('T-0187 — Le catalogue annonce ses changements sans geste', () => {
     const contenuLive = panneau.slice(debutLive, finDiv > -1 ? finDiv : panneau.length)
 
     // Le message de liste vide doit être présent
-    expect(contenuLive).toContain('Aucun objet de ce nom')
+    expect(contenuLive).toContain(RIEN_SOUS_CE_NOM)
     // Il ne doit y avoir qu'une seule région aria-live
     expect(contenuLive).toContain('aria-live="polite"')
   })

@@ -51,6 +51,11 @@ const INTERDITS: readonly Interdit[] = [
     pourquoi:
       'Le filtre écarte surtout les objets TROP PETITS : la phrase annonçait l’inverse de son effet.',
   },
+  {
+    motif: /aucun objet de ce nom/i,
+    pourquoi:
+      'T-0281 — la recherche vide n’établit pas l’absence de l’objet : « NGC 224 » ne trouvait rien alors que M31 porte ce numéro. Le message dit sur quoi la recherche porte.',
+  },
 ]
 
 /**
@@ -111,6 +116,15 @@ describe('T-0278 — les surfaces rendues ne promettent rien de faux', () => {
   it('les causes de la projection, affichées en bulle et en survol', () => {
     verifie(bornesZoom(false, 'MODE_PLANETARIUM').cause ?? '', 'plancher de zoom')
     verifie(etatProfondeur(5, 9, null, false).cause ?? '', 'catalogue épuisé')
+  })
+})
+
+describe('T-0281 — la recherche sans résultat ne conclut pas sur le ciel', () => {
+  it('ne dit pas qu’aucun objet ne porte ce nom, elle dit ce qu’elle a cherché', () => {
+    majCatalogue({ recherche: 'zzzzzz', photographiablesSeules: false })
+    const texte = ecran()
+    verifie(texte, 'catalogue, recherche sans résultat')
+    expect(texte).toContain('noms d’usage')
   })
 })
 

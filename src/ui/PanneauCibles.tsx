@@ -58,6 +58,16 @@ const DOMAINE_MAG = DOMAINES.m_int
 const PAS_MAG = 0.5
 const POURCENT = 100
 
+/**
+ * T-0281 — « Aucun objet de ce nom » affirmait l'inexistence d'objets bel et bien au
+ * catalogue : « NGC 224 » n'y échouait pas faute d'objet, mais faute d'espace toléré. Le
+ * message ne conclut donc plus sur le ciel, il dit sur QUOI la recherche a porté — c'est la
+ * seule information qui permet de reformuler la demande.
+ */
+export const RIEN_SOUS_CE_NOM =
+  'Aucune désignation ni aucun nom d’usage ne correspond. La recherche porte sur les ' +
+  'désignations (M42, NGC 7000) et sur les noms d’usage, français comme anglais.'
+
 export interface PanneauCiblesProps {
   readonly catalogue: readonly ObjetCielProfond[]
   readonly site: Site
@@ -154,7 +164,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
         type="search"
         aria-label="Rechercher un objet du catalogue"
         value={recherche}
-        placeholder="M45, pléiades, NGC0224…"
+        placeholder="M42, dentelles du Cygne, NGC 7000…"
         onChange={(e) => majCatalogue({ recherche: e.target.value })}
       />
 
@@ -242,7 +252,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
               ? domaineCpFerme
               : recherche.trim() === ''
                 ? 'Aucun objet ne passe ces filtres.'
-                : 'Aucun objet de ce nom.'}
+                : RIEN_SOUS_CE_NOM}
           </p>
         )}
       </div>

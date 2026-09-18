@@ -5,20 +5,49 @@
  * premières entrées ne montre que des IC et met M45 hors d'atteinte. Ce module répond à la
  * question ; T-0053 lui donne son champ.
  *
- * Ce qui se cherche est ce que `libelleObjet` affiche déjà : la désignation et chacun des
- * noms communs. Ni horizon ni verdict n'entrent ici — c'est la question de `lignesCatalogue`,
- * qui les porte colonne par colonne dans l'onglet Cibles. Chercher dans le catalogue, c'est
- * chercher dans le catalogue entier, y compris sous l'horizon.
+ * Ce qui se cherche est ce que `libelleObjet` affiche — la désignation et chacun des noms
+ * communs — plus le nom français d'usage quand il en existe un (`registry/noms-fr.ts`,
+ * T-0281) : le catalogue est anglais, l'utilisateur ne l'est pas. Ni horizon ni verdict
+ * n'entrent ici — c'est la question de `lignesCatalogue`, qui les porte colonne par colonne
+ * dans l'onglet Cibles. Chercher dans le catalogue, c'est chercher dans le catalogue entier,
+ * y compris sous l'horizon.
  *
  * La portée n'est jamais plafonnée : `maxRendus` borne le nombre de résultats rendus, pas
  * l'étendue de la recherche. Aucun objet du catalogue n'est hors d'atteinte.
  */
 
 import type { ObjetCielProfond } from '../data/deepsky.ts'
+import { NOMS_FR } from '../registry/noms-fr.ts'
 
-/** Casse et accents ignorés : « pleiades » trouve « Pléiades ». Aucune dépendance. */
+/**
+ * T-0281 — ce qui est réduit ici est ce qui varie d'une main à l'autre sans changer d'objet :
+ * la casse, les accents, les séparateurs et les zéros de cadrage. « NGC 224 », « ngc0224 » et
+ * « NGC-224 » sont la même demande que le catalogue écrit « NGC0224 » ; « M 42 » est « M42 ».
+ *
+ * Les zéros ne tombent qu'en TÊTE d'un groupe de chiffres : « M100 » reste « M100 », sinon la
+ * recherche d'un objet le confondrait avec un autre. Aucune dépendance.
+ */
 function normalise(texte: string): string {
-  return texte.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+  return texte
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '')
+    .replace(/(^|\D)0+(\d)/g, '$1$2')
+}
+
+/**
+ * Tout ce sous quoi un objet peut être demandé : sa désignation, ses noms communs et, quand
+ * l'usage francophone en a un, son nom français (§6.4). Les amonts séparent les noms tantôt
+ * par « | », tantôt par « , » — les deux comptent, sans quoi « Orion Nebula » ne serait
+ * qu'une occurrence interne de « Great Orion Nebula,Orion Nebula ».
+ */
+function nomsDe(objet: ObjetCielProfond): readonly string[] {
+  return [
+    objet.designation,
+    ...objet.nomsCommuns.split(/[|,]/),
+    ...(NOMS_FR[objet.designation] ?? '').split('|'),
+  ]
 }
 
 /** Un préfixe passe devant une occurrence interne ; rien du tout ne passe pas. */
@@ -28,7 +57,7 @@ const ABSENT = -1
 
 function rangDe(objet: ObjetCielProfond, recherche: string): number {
   let rang = ABSENT
-  for (const nom of [objet.designation, ...objet.nomsCommuns.split('|')]) {
+  for (const nom of nomsDe(objet)) {
     if (nom === '') continue
     const position = normalise(nom).indexOf(recherche)
     if (position === 0) return RANG_PREFIXE
