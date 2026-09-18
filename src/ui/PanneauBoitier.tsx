@@ -38,7 +38,7 @@ import {
   pitchDepuisFormat,
   type FormatCapteur,
 } from '../registry/capteur-formats.ts'
-import { type DomaineId } from '../registry/domains.ts'
+import { nombreDeTexte, type DomaineId } from '../registry/domains.ts'
 import { K } from '../registry/constants.ts'
 import { GLOSSAIRE, type TermeGlossaire } from '../registry/glossaire.ts'
 import { Etiquette } from './Terme.tsx'
@@ -141,8 +141,8 @@ function ApercuPitch({
   readonly formatCapteur: string
   readonly resolutionMpx: string
 }) {
-  const mpx = Number(resolutionMpx)
-  if (resolutionMpx.trim() === '' || !Number.isFinite(mpx) || mpx <= 0) return null
+  const mpx = nombreDeTexte(resolutionMpx)
+  if (!Number.isFinite(mpx) || mpx <= 0) return null
   const pitch = pitchDepuisFormat(ligneFormatCapteur(formatCapteur as FormatCapteur), mpx)
   return <p className="etat">Pitch calculé : {pitch.toFixed(2)} µm</p>
 }

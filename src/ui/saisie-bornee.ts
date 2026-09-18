@@ -11,11 +11,11 @@
  * frappe empêcherait de taper « 45.6 », dont « 456 » est un état transitoire légitime.
  */
 
-import { borne, type Bornage, type DomaineId } from '../registry/domains.ts'
+import { borne, nombreDeTexte, type Bornage, type DomaineId } from '../registry/domains.ts'
 
-/** Un champ vide n'est pas un zéro : `Number('')` vaut 0, et 0° est un lieu, pas un vide. */
+/** La lecture du texte — champ vide, virgule décimale — appartient au registre (T-0274). */
 export function nombreSaisi(champ: DomaineId, texte: string): Bornage {
-  return borne(champ, texte.trim() === '' ? Number.NaN : Number(texte))
+  return borne(champ, nombreDeTexte(texte))
 }
 
 /**

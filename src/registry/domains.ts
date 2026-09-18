@@ -149,14 +149,29 @@ export class SaisieRefuseeError extends Error {
   }
 }
 
+/**
+ * T-0274 — le TEXTE tapé devient le NOMBRE que le domaine confronte.
+ *
+ * La virgule est l'écriture décimale française, et la seule que propose le clavier numérique
+ * d'une tablette réglée en français : la refuser bloquait la pose maximale et la liste des
+ * cibles sur une saisie correcte. Le texte affiché n'est pas réécrit, seule la valeur lue.
+ */
+export function nombreDeTexte(texte: string): number {
+  // Un champ vide n'est pas un zéro : `Number('')` vaut 0, et 0° est un lieu, pas un vide.
+  const nettoye = texte.trim()
+  return nettoye === '' ? Number.NaN : Number(nettoye.replaceAll(',', '.'))
+}
+
+/** Le format attendu est NOMMÉ : un refus muet laisse retaper la même chose (T-0274). */
+function refusIllisible(d: DomaineSaisie): string {
+  return `Saisie refusée : ${d.champ} doit être un nombre — chiffres, point ou virgule décimale.`
+}
+
 /** Retourne la valeur si elle est dans le domaine, lève en la nommant sinon. */
 export function valide(champ: DomaineId, valeur: number): number {
   const d = DOMAINES[champ]
   if (!Number.isFinite(valeur)) {
-    throw new SaisieRefuseeError(
-      champ,
-      `Saisie refusée : ${d.champ} doit être un nombre.`,
-    )
+    throw new SaisieRefuseeError(champ, refusIllisible(d))
   }
   if (valeur < d.min || valeur > d.max) {
     throw new SaisieRefuseeError(
@@ -192,7 +207,7 @@ export interface Bornage {
 export function borne(champ: DomaineId, valeur: number): Bornage {
   const d = DOMAINES[champ]
   if (!Number.isFinite(valeur)) {
-    return { valeur, refus: `Saisie refusée : ${d.champ} doit être un nombre.` }
+    return { valeur, refus: refusIllisible(d) }
   }
   if (valeur < d.min || valeur > d.max) {
     const retenue = valeur < d.min ? d.min : d.max

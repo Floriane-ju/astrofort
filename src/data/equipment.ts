@@ -17,7 +17,7 @@
  */
 
 import { K, ref, type ConstantRef } from '../registry/constants.ts'
-import { valide, type DomaineId } from '../registry/domains.ts'
+import { nombreDeTexte, valide, type DomaineId } from '../registry/domains.ts'
 import { ligneFormatCapteur, pitchDepuisFormat, type FormatCapteur } from '../registry/capteur-formats.ts'
 import { LIBELLE_ZP_SOURCE } from '../registry/libelles.ts'
 
@@ -286,12 +286,12 @@ export function notesEstimation(
 /** Vide = inconnu ; renseigné = validé par le domaine du registre, refus nommant le champ. */
 function champ(texte: string, domaine: DomaineId): number | null {
   if (texte.trim() === '') return null
-  return valide(domaine, Number(texte))
+  return valide(domaine, nombreDeTexte(texte))
 }
 
 /** Une grandeur sans laquelle rien ne se calcule : le refus nomme le champ (§5.1). */
 function champRequis(texte: string, domaine: DomaineId): number {
-  return texte.trim() === '' ? valide(domaine, Number.NaN) : valide(domaine, Number(texte))
+  return valide(domaine, nombreDeTexte(texte))
 }
 
 /**
