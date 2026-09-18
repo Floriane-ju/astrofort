@@ -80,10 +80,13 @@ export const GLOSSAIRE = Object.freeze({
     sections: ['4.1', '8.1'],
   }),
   hypothese: terme({
-    libelle: 'Hypothèse [HYP]',
+    // T-0275 — le badge s'écrit en toutes lettres : « [HYP] » était une abréviation interne
+    // que cette entrée devait justement expliquer, ce qui la rendait circulaire.
+    libelle: 'Hypothèse',
     glose: 'valeur supposée, non mesurée',
     explication:
-      'Une valeur marquée [HYP] comble une donnée absente par une hypothèse par défaut. Elle ' +
+      'Une valeur marquée [HYPOTHÈSE] comble une donnée absente par une hypothèse par ' +
+      'défaut. Elle ' +
       'est affichée comme telle pour qu’aucune sortie qui en dépend ne passe pour une mesure.',
     consequence: 'Remplacer une hypothèse par une donnée réelle affine tout ce qui en découle.',
     sections: ['4.1', '2.3'],

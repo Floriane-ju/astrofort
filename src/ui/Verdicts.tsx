@@ -22,6 +22,14 @@ import { heure } from './horaire.ts'
 import type { Conseils, Resultat } from './fiche-cible-calcul.ts'
 import type { CreneauFiche } from './fiche-cible-creneau.ts'
 import { Mention } from './Mention.tsx'
+import {
+  LIBELLE_LOT_CALIBRATION,
+  LIBELLE_REGIME_POSE,
+  LIBELLE_TOLERANCE_LUNE,
+  LIBELLE_VERDICT_CADRAGE,
+  LIBELLE_VERDICT_DETECTABILITE,
+  libelleEntree,
+} from '../registry/libelles.ts'
 
 export interface VerdictsProps {
   readonly r: Resultat
@@ -81,7 +89,7 @@ function CadrageDeLaCible({ r }: { readonly r: Resultat }) {
   return (
     <section>
       <h2>Cadrage de la cible</h2>
-      <p className="etat">verdict : {cadrage.verdict}</p>
+      <p className="etat">verdict : {LIBELLE_VERDICT_CADRAGE[cadrage.verdict]}</p>
       <TracedValue terme="remplissage" trace={cadrage.remplissage} decimales={3} />
       <TracedValue terme="diametre_pixels" trace={cadrage.diamPx} decimales={0} unite="px" />
       {cadrage.nTuiles !== undefined && (
@@ -181,7 +189,7 @@ function Detectabilite({
   return (
     <section>
       <h2>Détectabilité</h2>
-      <p className="etat">verdict : {r.detect.verdict}</p>
+      <p className="etat">verdict : {LIBELLE_VERDICT_DETECTABILITE[r.detect.verdict]}</p>
       <CreneauPhoto creneau={creneau} />
       <CielSousLaLune r={r} creneau={creneau} />
       <TracedValue terme="brillance_surface" trace={r.detect.sbObj} unite="mag/as²" />
@@ -189,7 +197,7 @@ function Detectabilite({
       <TracedValue terme="magnitude_limite_instrument" trace={r.detect.mLimInstr} unite="mag" />
       <p>{r.detect.explication}</p>
       <p className="etat">
-        <Etiquette cle="tolerance_lune" /> : {r.detect.toleranceLune} — {r.detect.conseilType}
+        <Etiquette cle="tolerance_lune" /> : {LIBELLE_TOLERANCE_LUNE[r.detect.toleranceLune]} — {r.detect.conseilType}
       </p>
       {r.detect.noteLune !== undefined && <p className="etat">{r.detect.noteLune}</p>}
     </section>
@@ -229,7 +237,7 @@ function PoseUnitaire({
             {r.pose.plageUtileS.value[0]} à {r.pose.plageUtileS.value[1]} s, même résultat.
           </p>
           <p className="etat">
-            <Etiquette cle="regime_pose" /> : {r.pose.regime}
+            <Etiquette cle="regime_pose" /> : {LIBELLE_REGIME_POSE[r.pose.regime]}
           </p>
           <Mention ton={r.pose.regime === 'NOMINAL' ? 'etat' : 'cause'}>{r.pose.message}</Mention>
           {r.pose.readNoiseEstime && (
@@ -387,7 +395,7 @@ function PlanDeCalibration({ r }: { readonly r: Resultat }) {
         <tbody>
           {calibration.lots.map((lot) => (
             <tr key={lot.type}>
-              <td>{lot.type}</td>
+              <td>{LIBELLE_LOT_CALIBRATION[lot.type]}</td>
               <td>{lot.nombre}</td>
               <td>
                 {lot.plage[0]} à {lot.plage[1]}
@@ -447,14 +455,22 @@ function PourquoiCeVerdict({
           <span>
             <Etiquette cle="facteur_dominant" />
           </span>
-          <span className="tracee-valeur">{explique.facteurs.join(' et ')}</span>
+          <span className="tracee-valeur">
+            {explique.facteurs.map(libelleEntree).join(' et ')}
+          </span>
         </summary>
         <div className="tracee-detail">
           <p>{explique.n2}</p>
+          {/* T-0275 — le nombre seul ne dit rien : une sensibilité est |∂ln(sortie)/∂ln(entrée)|,
+              une pente sans dimension. On ne peut pas la lire comme « doubler cette valeur
+              double le temps » — sur une magnitude, doubler n'a aucun sens, et la valeur
+              absolue a déjà perdu le signe. Ce qu'elle dit vraiment, et tout ce qu'elle dit,
+              c'est QUI décide. La phrase l'énonce une fois, au-dessus de la liste. */}
+          <p className="etat">Plus le nombre est grand, plus cette grandeur décide du résultat.</p>
           <dl className="tracee-entrees">
             {Object.entries(explique.sensibilites).map(([nom, valeur]) => (
               <div key={nom}>
-                <dt>{nom}</dt>
+                <dt>{libelleEntree(nom)}</dt>
                 <dd>{valeur.toFixed(2)}</dd>
               </div>
             ))}

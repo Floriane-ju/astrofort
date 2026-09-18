@@ -22,6 +22,7 @@ import { ligneFormatCapteur, pitchDepuisFormat } from '../src/registry/capteur-f
 import { fluxCiel, poseUnitaire } from '../src/core/exposure.ts'
 import { DOMAINES, SaisieRefuseeError } from '../src/registry/domains.ts'
 import { K } from '../src/registry/constants.ts'
+import { LIBELLE_ZP_SOURCE } from '../src/registry/libelles.ts'
 
 /** Un boîtier saisi dont seuls le format de capteur et la résolution sont renseignés. */
 function saisie(partiel: Partial<SaisieBoitier> = {}): SaisieBoitier {
@@ -100,15 +101,18 @@ describe('§5.1 cas limite — profil sans bruit de lecture renseigné', () => {
     expect(notes.readNoiseE).toContain(String(K('READ_NOISE_DEFAUT_E')))
   })
 
-  it('applique le point zéro générique et le dit dans zp_source (§7.1)', () => {
+  // T-0275 — §7.1 exige que la SOURCE du point zéro soit affichée, pas que le nom du champ
+  // le soit : la phrase dit désormais « source : valeur générique », et l'exigence tient.
+  it('applique le point zéro générique et le dit dans la source affichée (§7.1)', () => {
     expect(zeroSysteme.source).toBe('GENERIQUE')
     expect(zeroSysteme.estime).toBe(true)
     expect(zeroSysteme.valeur).toBe(K('ZP_SYS_GENERIQUE'))
-    expect(libelleZpSource(zeroSysteme)).toContain('GENERIQUE')
+    expect(libelleZpSource(zeroSysteme)).toContain(LIBELLE_ZP_SOURCE.GENERIQUE)
     expect(libelleZpSource(zeroSysteme)).toContain('[ESTIMÉ]')
     // Le point zéro saisi, lui, n'est plus le générique : la mention [ESTIMÉ] disparaît.
     const declare = pointZeroSysteme(resoutBoitier(saisie({ zpSys: '20.5' })))
     expect(declare.source).toBe('BASE_MATERIEL')
+    expect(libelleZpSource(declare)).toContain(LIBELLE_ZP_SOURCE.BASE_MATERIEL)
     expect(libelleZpSource(declare)).not.toContain('[ESTIMÉ]')
   })
 

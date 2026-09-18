@@ -16,6 +16,7 @@ import {
 } from '../src/core/explain.ts'
 import { detectabilite } from '../src/core/detectability.ts'
 import { fluxCiel, fluxE, fluxObjet, integrationRequiseS, poseUnitaire } from '../src/core/exposure.ts'
+import { libelleEntree } from '../src/registry/libelles.ts'
 
 const ZP = 20.2
 const PITCH = 5.12
@@ -157,7 +158,7 @@ describe('chaîne de calcul §10.2', () => {
       point: POINT,
       contexte: { verdict: 'PHOTO_SEULE', typeObjet: 'GALAXIE', cibleImposee: true },
     })
-    expect(complete.n2).toMatch(/Facteur dominant : sb_obj/)
+    expect(complete.n2).toContain(`Facteur dominant : ${libelleEntree('sb_obj')}`)
     expect(complete.n2).toMatch(/Premier levier : se déplacer vers un site plus sombre/)
     expect(complete.leviers[0]?.cout).not.toBe('achat')
   })

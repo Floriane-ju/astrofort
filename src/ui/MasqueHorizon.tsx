@@ -16,6 +16,7 @@ import { nombreSaisi, refusDe } from './saisie-bornee.ts'
 import { ChampDomaine } from './ChampDomaine.tsx'
 import { Terme } from './Terme.tsx'
 import { Mention } from './Mention.tsx'
+import { libelleFlag } from '../registry/libelles.ts'
 
 export interface MasqueHorizonProps {
   readonly points: readonly PointMasque[]
@@ -68,14 +69,14 @@ export function MasqueHorizonSaisie(props: MasqueHorizonProps) {
         cle="masque_horizon"
         contexte={
           props.masque.estHypothese
-            ? 'horizon plat supposé [HYP]'
+            ? `horizon plat supposé ${libelleFlag('HYP')}`
             : `${props.points.length} relevé${props.points.length > 1 ? 's' : ''}`
         }
       />
       {/* L'hypothèse plate est une alerte — le relevé saisi, lui, n'est qu'une lecture. */}
       {props.masque.note !== undefined && (
         <Mention ton={props.masque.estHypothese ? 'cause' : 'tracee-source'}>
-          {props.masque.flags?.map((f) => `[${f}] `).join('')}
+          {props.masque.flags?.map((f) => `${libelleFlag(f)} `).join('')}
           {props.masque.note}
         </Mention>
       )}

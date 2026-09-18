@@ -39,6 +39,7 @@ import { masseAir } from '../core/site.ts'
 import type { Traced } from '../core/traced.ts'
 import type { TypeObjet, ObjetCielProfond } from '../data/deepsky.ts'
 import type { Boitier, IsoRetenu, PointZeroSysteme } from '../data/equipment.ts'
+import { LIBELLE_VERDICT_DETECTABILITE } from '../registry/libelles.ts'
 
 /** Le matériel et le ciel sous lesquels une cible est évaluée. */
 export interface ContexteFiche {
@@ -448,7 +449,9 @@ function expliqueVerdict(
     )
 
   return explication({
-    verdictN1: `${r.detect.verdict} — environ ${dureeLisible(r.integration.tRequisS.value)} de pose au total.`,
+    verdictN1:
+      `Visible ${r.detect.verdict === null ? '—' : LIBELLE_VERDICT_DETECTABILITE[r.detect.verdict]}` +
+      ` — environ ${dureeLisible(r.integration.tRequisS.value)} de pose au total.`,
     phraseFacteur: r.detect.explication,
     etapes: [
       { libelle: 'Brillance de surface de l’objet', trace: r.detect.sbObj },

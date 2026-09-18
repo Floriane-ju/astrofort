@@ -67,7 +67,7 @@ export const MATRICE_DEGRADATION: readonly LigneDegradation[] = Object.freeze([
     fonction: 'Masque d’horizon',
     sections: '§4, §8.1',
     horsReseau: 'COMPLET_SI_EN_CACHE',
-    degradation: 'site inconnu → masque plat marqué [HYP]',
+    degradation: 'site inconnu → masque plat marqué [HYPOTHÈSE]',
   },
   {
     fonction: 'Météo, couverture nuageuse, seeing, température',

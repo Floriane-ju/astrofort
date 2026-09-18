@@ -12,6 +12,8 @@ import { describe, expect, it } from 'vitest'
 import { App } from '../src/App.tsx'
 import { GLOSSAIRE } from '../src/registry/glossaire.ts'
 import { TABLE_FORMATS_CAPTEUR } from '../src/registry/capteur-formats.ts'
+import { LIBELLE_ZP_SOURCE } from '../src/registry/libelles.ts'
+import { libelleFlag } from '../src/registry/libelles.ts'
 
 const ecran = renderToStaticMarkup(<App />)
 
@@ -38,7 +40,7 @@ describe('contrat d’entrée — écran par défaut, setup de l’Annexe A', ()
   })
 
   it('affiche le masque plat comme une hypothèse, pas comme une mesure', () => {
-    expect(ecran).toContain('[HYP]')
+    expect(ecran).toContain(libelleFlag('HYP'))
     expect(ecran).toContain('horizon plat')
   })
 
@@ -53,8 +55,9 @@ describe('contrat d’entrée — écran par défaut, setup de l’Annexe A', ()
     }
   })
 
-  it('affiche zp_source et l’ISO retenu là où une pose est affichée (§7.1, §7.2)', () => {
-    expect(ecran).toContain('zp_source')
+  // T-0275 — c'est la VALEUR de zp_source que §7.1 veut à l'écran, et elle s'y lit en clair.
+  it('affiche la source du point zéro et l’ISO retenu là où une pose est affichée (§7.1, §7.2)', () => {
+    expect(ecran).toContain(LIBELLE_ZP_SOURCE.GENERIQUE)
     expect(ecran).toContain(GLOSSAIRE.iso_recommande.libelle)
     expect(ecran).toMatch(/ISO \d+/)
   })

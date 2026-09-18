@@ -9,6 +9,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { MasqueHorizonSaisie, repereCardinal } from '../src/ui/MasqueHorizon.tsx'
 import { masqueDepuisPoints, masquePlat, type PointMasque } from '../src/core/site.ts'
+import { libelleFlag } from '../src/registry/libelles.ts'
 
 const RELEVES: readonly PointMasque[] = [
   { azimutDeg: 150, altitudeDeg: 22 },
@@ -28,7 +29,7 @@ function ecran(points: readonly PointMasque[]): string {
 describe('saisie du masque d’horizon §4.1', () => {
   it('affiche le masque plat comme une hypothèse tant que rien n’est relevé', () => {
     const rendu = ecran([])
-    expect(rendu).toContain('[HYP]')
+    expect(rendu).toContain(libelleFlag('HYP'))
     expect(rendu).toContain('horizon plat')
     // Rien à effacer : la liste des relevés n'existe pas encore.
     expect(rendu).not.toContain('Effacer le relevé')
@@ -36,7 +37,7 @@ describe('saisie du masque d’horizon §4.1', () => {
 
   it('remplace l’hypothèse par les relevés saisis, chacun effaçable', () => {
     const rendu = ecran(RELEVES)
-    expect(rendu).not.toContain('[HYP]')
+    expect(rendu).not.toContain(libelleFlag('HYP'))
     expect(rendu).toContain('150°')
     expect(rendu).toContain('22°')
     expect(rendu).toContain('Effacer le relevé de l’azimut 150')

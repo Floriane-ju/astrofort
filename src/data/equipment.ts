@@ -19,6 +19,7 @@
 import { K, ref, type ConstantRef } from '../registry/constants.ts'
 import { valide, type DomaineId } from '../registry/domains.ts'
 import { ligneFormatCapteur, pitchDepuisFormat, type FormatCapteur } from '../registry/capteur-formats.ts'
+import { LIBELLE_ZP_SOURCE } from '../registry/libelles.ts'
 
 /**
  * Les champs optionnels sont ceux que le PRD marque `[À VÉRIFIER]` en Annexe A. Ils restent
@@ -263,7 +264,8 @@ export function notesEstimation(
   ...(vide(saisie.zpSys)
     ? {
         zpSys:
-          `Vide : ${K('ZP_SYS_GENERIQUE')} mag par défaut, zp_source GENERIQUE [ESTIMÉ].`,
+          `Vide : ${K('ZP_SYS_GENERIQUE')} mag par défaut, ` +
+          `source ${LIBELLE_ZP_SOURCE.GENERIQUE} [ESTIMÉ].`,
       }
     : {}),
   ...(vide(saisie.tailleRawMo)
@@ -368,10 +370,15 @@ function recadrageApsc(capteurLMm: number, capteurHMm: number): ModeRecadrage {
   }
 }
 
-/** §7.1 — `zp_source` doit être affiché partout où une pose l'est. */
+/**
+ * §7.1 — `zp_source` doit être affiché partout où une pose l'est. C'est sa VALEUR que le PRD
+ * exige à l'écran, pas le nom du champ : T-0275 rend « source : base matériel » là où la
+ * phrase portait « zp_source BASE_MATERIEL ».
+ */
 export function libelleZpSource(zeroSysteme: PointZeroSysteme): string {
   return (
-    `point zéro système ${zeroSysteme.valeur} mag · zp_source ${zeroSysteme.source}` +
+    `point zéro système ${zeroSysteme.valeur} mag · source : ` +
+    LIBELLE_ZP_SOURCE[zeroSysteme.source] +
     (zeroSysteme.estime ? ' [ESTIMÉ]' : '')
   )
 }

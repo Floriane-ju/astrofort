@@ -12,7 +12,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { epoqueAnnee } from './core/horloges.ts'
-import { abonneModeReseau, modeReseauCourant } from './data/degradation.ts'
+import { abonneModeReseau, modeReseauCourant, type ModeReseau } from './data/degradation.ts'
 import { gaiaCharge } from './data/bootstrap.ts'
 import { Coque } from './ui/Coque.tsx'
 import { Planetarium } from './ui/Planetarium.tsx'
@@ -84,7 +84,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
   const poids = useSaisiePoids()
   const catalogues = useCatalogues()
   // §12.5 — l'état affiché suit les bascules, il n'est pas figé au démarrage.
-  const modeReseau = useSyncExternalStore(abonneModeReseau, modeReseauCourant, () => 'EN_LIGNE')
+  const modeReseau = useSyncExternalStore<ModeReseau>(abonneModeReseau, modeReseauCourant, () => 'EN_LIGNE')
 
   // T-0189 — une seule écoute d'Échap pour toute l'application : les bulles s'ouvrent sans
   // JavaScript et ne peuvent pas porter la leur (§1.4.13, voir `gere-echap.ts`).

@@ -12,6 +12,16 @@
 import { dureeLisible } from './exposure.ts'
 import { nomDeLaNuit } from './nuit-datee.ts'
 import type { PlanSession } from './session.ts'
+import type { CauseEcart } from './session-types.ts'
+import {
+  LIBELLE_CAUSE_ECART,
+  LIBELLE_LOT_CALIBRATION,
+  LIBELLE_VERDICT_CADRAGE,
+  LIBELLE_VERDICT_DETECTABILITE,
+} from '../registry/libelles.ts'
+
+/** Colonne des lots de calibration : le plus long libellé, pour que les deux-points s'alignent. */
+const LARGEUR_LOT = Math.max(...Object.values(LIBELLE_LOT_CALIBRATION).map((l) => l.length))
 
 const MINUTE_DEUX_CHIFFRES = 2
 const S_PAR_MINUTE = 60
@@ -77,8 +87,8 @@ export function planEnTexte(plan: PlanSession, enTete: EnTetePlan): string {
         `     Intégration      : ${dureeLisible(etape.integration.tRequisS.value)} requises` +
           (etape.integrationComplete ? '' : ` — à répartir sur ${etape.nNuits} nuits`),
       )
-      lignes.push(`     Verdict          : ${etape.verdict ?? '[DONNÉE MANQUANTE]'}`)
-      lignes.push(`     Cadrage          : ${etape.verdictCadrage}`)
+      lignes.push(`     Verdict          : ${etape.verdict === null ? 'donnée manquante' : LIBELLE_VERDICT_DETECTABILITE[etape.verdict]}`)
+      lignes.push(`     Cadrage          : ${LIBELLE_VERDICT_CADRAGE[etape.verdictCadrage]}`)
       lignes.push(
         `     Fond de ciel     : ${etape.sbCielEffectif.toFixed(2)} mag/arcsec²` +
           ` (Lune : +${etape.deltaSbLuneMag.value.toFixed(2)} mag/arcsec²)`,
@@ -99,7 +109,7 @@ export function planEnTexte(plan: PlanSession, enTete: EnTetePlan): string {
     lignes.push('', 'CALIBRATION')
     for (const lot of plan.calibration.lots) {
       lignes.push(
-        `  ${lot.type.padEnd('OFFSETS'.length)} : ${lot.nombre} images ` +
+        `  ${LIBELLE_LOT_CALIBRATION[lot.type].padEnd(LARGEUR_LOT)} : ${lot.nombre} images ` +
           `(${lot.plage[0]} à ${lot.plage[1]}) — ${lot.consigne}`,
       )
     }
@@ -115,11 +125,13 @@ export function planEnTexte(plan: PlanSession, enTete: EnTetePlan): string {
   if (plan.ciblesEcartees.length > 0) {
     lignes.push('', 'CIBLES ÉCARTÉES — avec leur cause')
     for (const ecartee of plan.ciblesEcartees) {
-      lignes.push(`  ${ecartee.designation} [${ecartee.code}] : ${ecartee.cause}`)
+      lignes.push(`  ${ecartee.designation} — ${LIBELLE_CAUSE_ECART[ecartee.code]} : ${ecartee.cause}`)
     }
     lignes.push(
       `  Décompte par cause : ${Object.entries(plan.comptesEcartees)
-        .map(([code, nombre]) => `${code} ${nombre} objets`)
+        // `Object.entries` élargit toujours la clé en `string` ; le cast est sûr depuis que
+        // `comptesEcartees` est typé par `CauseEcart` — c'est le type qui garantit la clé.
+        .map(([code, nombre]) => `${LIBELLE_CAUSE_ECART[code as CauseEcart]} ${nombre} objets`)
         .join(', ')}`,
     )
   }

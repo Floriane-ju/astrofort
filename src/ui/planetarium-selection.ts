@@ -12,6 +12,7 @@
 import { titreCible } from './libelles-cibles.ts'
 import type { SelectionScene } from './scene-etat.ts'
 import type { CibleEcran } from './dessine-ciel.ts'
+import { LIBELLE_TYPE_OBJET } from './libelles-objet.ts'
 
 export function decritCible(cible: CibleEcran): SelectionScene {
   if (cible.type === 'OBJET' && cible.objet !== undefined) {
@@ -19,7 +20,7 @@ export function decritCible(cible: CibleEcran): SelectionScene {
     return {
       titre: titreCible(cible),
       lignes: [
-        `type ${o.type}`,
+        LIBELLE_TYPE_OBJET[o.type],
         o.vMag === null ? 'magnitude intégrée absente du catalogue' : `magnitude ${o.vMag}`,
         o.majAxArcmin === null ? 'dimensions absentes' : `grand axe ${o.majAxArcmin}’`,
       ],

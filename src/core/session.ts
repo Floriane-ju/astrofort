@@ -19,6 +19,7 @@
  */
 
 import { K } from '../registry/constants.ts'
+import { LIBELLE_CAUSE_ECART } from '../registry/libelles.ts'
 import type { ObjetCielProfond } from '../data/deepsky.ts'
 import type { Intervalle } from './creneaux.ts'
 import { dureeLisible } from './exposure.ts'
@@ -318,5 +319,5 @@ function contrainteDominante(
 ): string | undefined {
   if (comptes.size === 0) return undefined
   const [code, nombre] = [...comptes.entries()].sort((a, b) => b[1] - a[1])[0]!
-  return `Cause principale : ${code} (${nombre} cible${nombre > 1 ? 's' : ''}).`
+  return `Cause principale : ${LIBELLE_CAUSE_ECART[code]} (${nombre} cible${nombre > 1 ? 's' : ''}).`
 }

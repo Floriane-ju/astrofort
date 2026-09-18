@@ -11,6 +11,7 @@ import { dependDUnOrdreDeGrandeur } from '../core/traced.ts'
 import type { TermeGlossaire } from '../registry/glossaire.ts'
 import { sansSection } from './sans-section.ts'
 import { Etiquette, Glose } from './Terme.tsx'
+import { libelleEntree, libelleFlag } from '../registry/libelles.ts'
 
 interface TracedValueProps {
   /** Clé de glossaire : un libellé sans définition ne compile pas (§10.1). */
@@ -65,7 +66,7 @@ export function TracedValue({ terme, trace, decimales = 2, unite, suffixe }: Tra
           <dl className="tracee-entrees">
             {Object.entries(trace.inputs).map(([nom, valeurEntree]) => (
               <div key={nom}>
-                <dt>{nom}</dt>
+                <dt>{libelleEntree(nom)}</dt>
                 <dd>{valeurEntree ?? DONNEE_MANQUANTE}</dd>
               </div>
             ))}
@@ -88,7 +89,7 @@ export function TracedValue({ terme, trace, decimales = 2, unite, suffixe }: Tra
           </ul>
         )}
         {trace.flags !== undefined && (
-          <p className="tracee-flags">{trace.flags.map((f) => `[${f}]`).join(' ')}</p>
+          <p className="tracee-flags">{trace.flags.map(libelleFlag).join(' ')}</p>
         )}
         {trace.note !== undefined && <p className="tracee-note">{sansSection(trace.note)}</p>}
       </div>

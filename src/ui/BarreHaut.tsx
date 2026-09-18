@@ -45,12 +45,13 @@ import { Sources } from './Sources.tsx'
 import { Tiroir } from './Tiroir.tsx'
 import type { Persistance } from './app-donnees.ts'
 import { useTrancheScene, type EtatScene } from './scene-etat.ts'
+import type { ModeReseau } from '../data/degradation.ts'
 
 export interface BarreHautProps {
   readonly modeNuit: EtatModeNuit
   readonly surModeNuit: (etat: EtatModeNuit) => void
   readonly etat: EtatDemarrage | null
-  readonly modeReseau: string
+  readonly modeReseau: ModeReseau
   readonly persistance: Persistance
   /** §8.3 — les poids de scoring, réglés depuis le tiroir des réglages. */
   readonly poids: SaisiePoids

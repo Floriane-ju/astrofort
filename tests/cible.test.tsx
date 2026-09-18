@@ -29,6 +29,12 @@ import { etatScene, majVue, reinitialiseScene, vaA } from '../src/ui/scene-etat.
 import { ouvreCible, reinitialiseSeance } from '../src/ui/seance-etat.ts'
 import type { Site } from '../src/core/ephem.ts'
 import { TYPES_OBJET, type ObjetCielProfond } from '../src/data/deepsky.ts'
+import {
+  LIBELLE_LOT_CALIBRATION,
+  LIBELLE_REGIME_POSE,
+  LIBELLE_VERDICT_DETECTABILITE,
+  libelleEntree,
+} from '../src/registry/libelles.ts'
 
 /**
  * La chaîne de référence de §6.3 : magnitude intégrée 5,7, grand axe 71’, petit axe 42’,
@@ -57,7 +63,7 @@ describe('fiche de cible — écran par défaut, M33 depuis le site de l’Annex
     // le facteur 8,63 plutôt qu’avec π/4 × 3600 calculé.
     expect(ecran).toContain('23.01')
     expect(ecran).toContain('-2.06')
-    expect(ecran).toContain('PHOTO_SEULE')
+    expect(ecran).toContain(LIBELLE_VERDICT_DETECTABILITE.PHOTO_SEULE)
   })
 
   it('ne présente jamais photo seulement comme un refus, mais comme une durée', () => {
@@ -69,7 +75,7 @@ describe('fiche de cible — écran par défaut, M33 depuis le site de l’Annex
     // Le profil par défaut est sans suivi : c'est la NPF, 2,10 s, qui plafonne la pose, et
     // le régime bascule en LIMITE_SUIVI avec sa cause. La plage reste [t/2 ; t×2].
     expect(ecran).toMatch(/poser 2 s — de 1 à 4 s, même résultat/)
-    expect(ecran).toContain('LIMITE_SUIVI')
+    expect(ecran).toContain(LIBELLE_REGIME_POSE.LIMITE_SUIVI)
     expect(ecran).toMatch(/La monture limite la pose/)
   })
 
@@ -81,14 +87,14 @@ describe('fiche de cible — écran par défaut, M33 depuis le site de l’Annex
   })
 
   it('nomme le facteur dominant et propose un levier gratuit avant tout achat', () => {
-    expect(ecran).toContain('sb_obj')
+    expect(ecran).toContain(libelleEntree('sb_obj'))
     expect(ecran).toMatch(/Premier levier : se déplacer vers un site plus sombre/)
   })
 
   it('prescrit un plan de calibration, sans jamais offrir d’écran de calibration', () => {
-    expect(ecran).toContain('FLATS')
-    expect(ecran).toContain('DARKS')
-    expect(ecran).toContain('OFFSETS')
+    expect(ecran).toContain(LIBELLE_LOT_CALIBRATION.FLATS)
+    expect(ecran).toContain(LIBELLE_LOT_CALIBRATION.DARKS)
+    expect(ecran).toContain(LIBELLE_LOT_CALIBRATION.OFFSETS)
     expect(ecran).toMatch(/bague de mise au point/)
     // Le point zéro système reste une lecture : aucun champ de saisie ne le vise.
     expect(ecran).not.toMatch(/<input[^>]*(zp|calibr)/i)

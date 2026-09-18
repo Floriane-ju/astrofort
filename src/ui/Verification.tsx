@@ -16,6 +16,12 @@ import { MATRICE_DEGRADATION } from '../data/degradation.ts'
 import type { EtatDemarrage } from '../data/bootstrap.ts'
 import { REGISTRE } from '../registry/constants.ts'
 import { Mention } from './Mention.tsx'
+import type { ModeReseau } from '../data/degradation.ts'
+import {
+  LIBELLE_DISPONIBILITE_HORS_LIGNE,
+  LIBELLE_INTEGRITE_PAQUET,
+  LIBELLE_MODE_RESEAU,
+} from '../registry/libelles.ts'
 
 const OCTETS_PAR_MO = 1024 * 1024
 
@@ -24,7 +30,8 @@ export const ALERTE_VERIFICATION = 'Vérification : données non enregistrées'
 
 export interface VerificationProps {
   readonly etat: EtatDemarrage | null
-  readonly modeReseau: string
+  /** T-0275 — typé, pas `string` : c'est ce qui rend son libellé vérifiable par le compilateur. */
+  readonly modeReseau: ModeReseau
   readonly messagePersistance: string | null
   /** §12.3 — une écriture perdue ne doit pas rester cachée dans un tiroir fermé. */
   readonly echecPersistance: boolean
@@ -46,7 +53,7 @@ export function Verification(props: VerificationProps) {
           {etat === null && <p>Vérification en cours…</p>}
           {etat !== null && (
             <>
-              <p className="etat">réseau : {props.modeReseau}</p>
+              <p className="etat">réseau : {LIBELLE_MODE_RESEAU[props.modeReseau]}</p>
               <p className="etat">
                 stockage persistant : {etat.stockage.persistant ? 'accordé' : 'non accordé'}
                 {etat.stockage.usageMo !== null &&
@@ -61,7 +68,7 @@ export function Verification(props: VerificationProps) {
               <ul>
                 {etat.catalogues.paquets.map((p) => (
                   <li key={p.manifeste.nom}>
-                    {p.manifeste.nom} v{p.manifeste.version} — {p.integrite} (
+                    {p.manifeste.nom} v{p.manifeste.version} — {LIBELLE_INTEGRITE_PAQUET[p.integrite]} (
                     {(p.manifeste.octets / OCTETS_PAR_MO).toFixed(2)} Mo)
                   </li>
                 ))}
@@ -116,7 +123,7 @@ export function Verification(props: VerificationProps) {
             {MATRICE_DEGRADATION.map((ligne) => (
               <tr key={ligne.fonction}>
                 <td>{ligne.fonction}</td>
-                <td>{ligne.horsReseau}</td>
+                <td>{LIBELLE_DISPONIBILITE_HORS_LIGNE[ligne.horsReseau]}</td>
                 <td>{ligne.degradation}</td>
               </tr>
             ))}
@@ -144,8 +151,11 @@ export function Verification(props: VerificationProps) {
                 <td>
                   {c.valeur} {c.unite}
                 </td>
-                <td>{c.source}</td>
-                <td>{c.deprecie ?? c.tolerance ?? 'valeur exacte'}</td>
+                {/* T-0275 — surfaces d'audit : ces deux colonnes SEULES citent le PRD mot pour
+                    mot, formules et noms de constantes compris. L'exemption tient sur elles,
+                    pas sur la ligne : une colonne ajoutée demain resterait surveillée. */}
+                <td className="verbatim">{c.source}</td>
+                <td className="verbatim">{c.deprecie ?? c.tolerance ?? 'valeur exacte'}</td>
               </tr>
             ))}
           </tbody>

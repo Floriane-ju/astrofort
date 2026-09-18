@@ -13,6 +13,7 @@ import type { Traced } from '../core/traced.ts'
 import { TracedValue } from './TracedValue.tsx'
 import { Terme } from './Terme.tsx'
 import { Mention } from './Mention.tsx'
+import { LIBELLE_ETAT_NUIT, LIBELLE_SOURCE_SB } from '../registry/libelles.ts'
 
 function heure(date: Date | null): string {
   return date === null ? '—' : date.toLocaleString('fr-FR')
@@ -65,7 +66,7 @@ function FenetreNocturneVue({
       {/* T-0267 — la nuit se nomme par ses deux dates : passé minuit, « 17/09 » seul laisse
           le doute sur le soir désigné, et c'est à ce moment-là qu'on lit la carte. */}
       <p className="etat">{nomDeLaNuit(nuitIso)}</p>
-      <p className="etat">état : {nuit.etat}</p>
+      <p className="etat">état : {LIBELLE_ETAT_NUIT[nuit.etat]}</p>
       <Terme
         cle={nuit.modeDegrade ? 'mode_degrade_nuit' : 'nuit_astronomique'}
         contexte={`${nuit.dureeReferenceH.toFixed(2)} h exploitables`}
@@ -109,7 +110,7 @@ function FondDeCielVue({ ciel }: { readonly ciel: FondDeCiel }) {
   return (
     <section>
       <h2>Fond de ciel</h2>
-      <p className="etat">source : {ciel.sourceSb}</p>
+      <p className="etat">source : {LIBELLE_SOURCE_SB[ciel.sourceSb]}</p>
       {ciel.confirmationRequise !== undefined && (
         <Mention ton="cause">{ciel.confirmationRequise}</Mention>
       )}

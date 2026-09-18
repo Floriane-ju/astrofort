@@ -169,7 +169,9 @@ export interface PlanSession {
    * maigre s'explique : sans ce décompte, l'utilisateur croit le ciel vide alors que c'est
    * le catalogue qui ne porte pas la donnée.
    */
-  readonly comptesEcartees: Readonly<Record<string, number>>
+  // T-0275 — typé par la cause, pas par `string` : c'est ce qui permet d'indexer la table
+  // des libellés sans cast, donc de voir à la compilation une cause qui n'en aurait pas.
+  readonly comptesEcartees: Readonly<Partial<Record<CauseEcart, number>>>
   readonly budget: BudgetNuit
   readonly poids: PoidsScoring
   readonly calibration: PlanCalibration | null

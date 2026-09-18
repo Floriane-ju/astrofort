@@ -20,6 +20,7 @@ import {
 import type { TypeObjet } from '../data/deepsky.ts'
 import type { VerdictDetectabilite } from './detectability.ts'
 import type { Traced } from './traced.ts'
+import { libelleEntree } from '../registry/libelles.ts'
 
 /** Pas relatif de la dérivée numérique : assez petit pour la pente, assez grand pour le bruit. */
 const PAS_RELATIF = 1 / 1000
@@ -210,7 +211,7 @@ export function explication<P extends Readonly<Record<string, number>>>(entree: 
     n2:
       `${entree.phraseFacteur} Facteur${facteurs.length > 1 ? 's' : ''} dominant` +
       `${facteurs.length > 1 ? 's' : ''} : ` +
-      `${facteurs.join(' et ')}.` +
+      `${facteurs.map(libelleEntree).join(' et ')}.` +
       (premier === undefined
         ? ''
         : ` Premier levier : ${premier.libelle.toLowerCase()} — gain ${premier.gain}, coût ${premier.cout}.`),

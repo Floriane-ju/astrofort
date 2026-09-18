@@ -17,6 +17,7 @@ import { planEnTexte } from '../src/core/plan-texte.ts'
 import { profilSuivi } from '../src/core/tracking.ts'
 import { decodeObjets, type ObjetCielProfond } from '../src/data/deepsky.ts'
 import { K } from '../src/registry/constants.ts'
+import { LIBELLE_CAUSE_ECART, LIBELLE_LOT_CALIBRATION } from '../src/registry/libelles.ts'
 
 const SITE_REFERENCE = { latitudeDeg: 46.391, longitudeDeg: 6.697, altitudeM: 500 }
 const NUIT = fenetreNocturne(SITE_REFERENCE, new Date('2026-08-14T12:00:00Z'))
@@ -198,7 +199,7 @@ describe('cas limite : aucune cible compatible §8.3', () => {
 
   it('annonce l’absence de cible et nomme la contrainte dominante', () => {
     expect(plan.etapes).toStrictEqual([])
-    expect(plan.contrainteDominante).toMatch(/HAUTEUR/)
+    expect(plan.contrainteDominante).toContain(LIBELLE_CAUSE_ECART.HAUTEUR)
   })
 
   it('propose une alternative sans remplir la liste avec les cibles écartées', () => {
@@ -222,7 +223,7 @@ describe('export imprimable §11.2', () => {
     expect(texte).toContain('CALIBRATION')
     expect(texte).toMatch(/Pose unitaire\s+: \d+ s/)
     expect(texte).toMatch(/Nombre de poses\s+: \d+ poses/)
-    expect(texte).toMatch(/FLATS/)
+    expect(texte).toContain(LIBELLE_LOT_CALIBRATION.FLATS)
     expect(texte).toMatch(/météo|nuages/i)
   })
 

@@ -18,6 +18,13 @@ import { TracedValue } from './TracedValue.tsx'
 import { Etiquette, Terme } from './Terme.tsx'
 import { heure } from './horaire.ts'
 import { Mention } from './Mention.tsx'
+import type { CauseEcart } from '../core/session-types.ts'
+import {
+  LIBELLE_CAUSE_ECART,
+  LIBELLE_MODE_POINTAGE,
+  LIBELLE_VERDICT_CADRAGE,
+  LIBELLE_VERDICT_DETECTABILITE,
+} from '../registry/libelles.ts'
 
 const DEG_PAR_HEURE = 15
 const POURCENT = 100
@@ -127,7 +134,9 @@ export function PlanSessionVue(props: PlanSessionProps) {
           <p className="etat">
             Décompte complet par cause :{' '}
             {Object.entries(plan.comptesEcartees)
-              .map(([code, nombre]) => `${code} ${nombre}`)
+              // `Object.entries` élargit toujours la clé en `string` ; le cast est sûr depuis que
+        // `comptesEcartees` est typé par `CauseEcart` — c'est le type qui garantit la clé.
+        .map(([code, nombre]) => `${LIBELLE_CAUSE_ECART[code as CauseEcart]} ${nombre}`)
               .join(' · ')}
           </p>
           <table>
@@ -142,7 +151,7 @@ export function PlanSessionVue(props: PlanSessionProps) {
               {plan.ciblesEcartees.map((ecartee) => (
                 <tr key={`${ecartee.designation}-${ecartee.code}`}>
                   <td>{ecartee.designation}</td>
-                  <td>{ecartee.code}</td>
+                  <td>{LIBELLE_CAUSE_ECART[ecartee.code]}</td>
                   <td>{ecartee.cause}</td>
                 </tr>
               ))}
@@ -201,7 +210,11 @@ function Etape({ etape, rang, ...props }: EtapeProps) {
           )} selon le ciel)`}
       </p>
       <p className="etat">
-        Verdict {etape.verdict ?? '[DONNÉE MANQUANTE]'} · cadrage {etape.verdictCadrage} · fond
+        Verdict{' '}
+        {etape.verdict === null
+          ? 'donnée manquante'
+          : LIBELLE_VERDICT_DETECTABILITE[etape.verdict]}{' '}
+        · cadrage {LIBELLE_VERDICT_CADRAGE[etape.verdictCadrage]} · fond
         de ciel {etape.sbCielEffectif.toFixed(2)} mag/as²
       </p>
       {!etape.integrationComplete && (
@@ -262,7 +275,7 @@ function Pointage({ etape, ...props }: EtapeProps) {
   return (
     <>
       <h3>
-        <Etiquette cle="mode_pointage" /> : {carte.mode}
+        <Etiquette cle="mode_pointage" /> : {LIBELLE_MODE_POINTAGE[carte.mode]}
       </h3>
       <p className="etat">{carte.message}</p>
       {carte.cause !== undefined && <Mention ton="cause">{carte.cause}</Mention>}

@@ -801,7 +801,7 @@ describe('T-0184 — un seul tiroir pour la vérification et les réglages', () 
       modeNuit: { actif: false, luminance: 1 },
       surModeNuit: () => undefined,
       etat: null,
-      modeReseau: 'hors ligne',
+      modeReseau: 'HORS_LIGNE',
       persistance: {
         message: echec ? 'écriture perdue' : null,
         echec,

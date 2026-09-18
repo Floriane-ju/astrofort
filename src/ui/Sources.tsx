@@ -31,7 +31,9 @@ export function Sources() {
           {SOURCES.map((s) => (
             <tr key={s.donnee}>
               <td>{s.donnee}</td>
-              <td>
+              {/* T-0275 — surface d'audit : la provenance cite des noms de fichiers et de
+                  versions (« hygdata_v41.csv »). Les traduire la rendrait invérifiable. */}
+              <td className="verbatim">
                 {s.provenance}
                 {s.lien !== undefined && (
                   <>
