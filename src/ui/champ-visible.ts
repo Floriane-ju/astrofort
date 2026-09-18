@@ -21,9 +21,8 @@ export interface ChampVisible {
  * segments de la bande — un seul calcul, sinon deux définitions du même champ.
  */
 export function champVisible(projecteur: Projecteur): ChampVisible {
-  const { largeurPx, hauteurPx } = projecteur.vue
   return {
-    centre: projecteur.inverse(largeurPx / 2, hauteurPx / 2),
+    centre: projecteur.inverse(projecteur.centreXPx, projecteur.centreYPx),
     rayonDeg: rayonChampDeg(projecteur.vue),
   }
 }

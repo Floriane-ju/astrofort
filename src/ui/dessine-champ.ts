@@ -270,10 +270,8 @@ interface Scene {
 
 function sceneCourante(entree: EntreeDessinChamp): Scene {
   const { projecteur } = entree
-  const largeur = projecteur.vue.largeurPx
-  const hauteur = projecteur.vue.hauteurPx
   const dureeMin = entree.suiviActif ? 0 : entree.dureeS / S_PAR_MIN
-  const centreJ2000 = projecteur.inverse(largeur / 2, hauteur / 2)
+  const centreJ2000 = projecteur.inverse(projecteur.centreXPx, projecteur.centreYPx)
   // T-0116 — la sélection couvre tout le champ de la scène : les traces s'y voient partout, le
   // cadre ne les borne plus, il dit seulement lesquelles le capteur enregistrerait. Le budget
   // d'étoiles du filé se convertit sur CE rayon : même champ, même image, même coût.
@@ -282,7 +280,10 @@ function sceneCourante(entree: EntreeDessinChamp): Scene {
   // peint encore. L'échelle du centre de visée est la plus grossière de la scène — en
   // stéréographique le facteur radial croît vers le bord — donc c'est elle qui rend la marge
   // conservatrice partout.
-  const degParPx = separationDeg(centreJ2000, projecteur.inverse(largeur / 2 + 1, hauteur / 2))
+  const degParPx = separationDeg(
+    centreJ2000,
+    projecteur.inverse(projecteur.centreXPx + 1, projecteur.centreYPx),
+  )
   // Demi-largeur du trait le plus large que la passe peut tracer : celui de l'étoile la plus
   // brillante du paquet chargé.
   const margePx = rayonEtoilePx(entree.indexReel.magMin) + K('MARGE_ANTIALIASING_PX')

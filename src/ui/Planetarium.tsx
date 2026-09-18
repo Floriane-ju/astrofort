@@ -33,6 +33,8 @@ import type { LuneEcran } from './dessine-fond-ciel.ts'
 import { etatProfondeur, type ModeProjection } from '../core/projection.ts'
 import {
   ACTIONS_SCENE,
+  BORDURES_SCENE,
+  decalageCentreScene,
   instant,
   majVue,
   minuteAffichee,
@@ -115,17 +117,35 @@ export interface PlanetariumProps {
  * T-0040 — la définition de rendu suit la boîte, sinon l'image s'y loge en laissant des
  * bandes. C'est la taille CSS qui est observée, jamais les attributs du canevas : les
  * réécrire ne change pas la boîte, donc l'observation ne se rappelle pas elle-même.
+ *
+ * T-0258 — la même mesure donne le centre de visée. Les deux vont ensemble : le décalage
+ * s'exprime en pixels de rendu, donc dans la définition que cette passe vient de calculer.
  */
 function useResolutionSuitLaBoite(canevas: React.RefObject<HTMLCanvasElement | null>): void {
   useEffect(() => {
     const cible = canevas.current
     if (cible === null || typeof ResizeObserver === 'undefined') return
-    const observateur = new ResizeObserver((entrees) => {
-      const boite = entrees[0]?.contentRect
-      if (boite === undefined || boite.width === 0 || boite.height === 0) return
-      majVue(resolutionRendu(boite.width, boite.height, window.devicePixelRatio || 1))
-    })
+    const bordures = [...document.querySelectorAll(BORDURES_SCENE.join(', '))]
+    const mesure = (): void => {
+      // `getBoundingClientRect` et non le `contentRect` de l'entrée : le décalage compare des
+      // boîtes entre elles, il lui faut le même repère pour les trois.
+      const boite = cible.getBoundingClientRect()
+      if (boite.width === 0 || boite.height === 0) return
+      const resolution = resolutionRendu(boite.width, boite.height, window.devicePixelRatio || 1)
+      majVue({
+        ...resolution,
+        decalageCentreXPx: decalageCentreScene(
+          boite,
+          bordures.map((bordure) => bordure.getBoundingClientRect()),
+          resolution.largeurPx,
+        ),
+      })
+    }
+    const observateur = new ResizeObserver(mesure)
     observateur.observe(cible)
+    // Les bordures sont observées aussi : sous le repli elles quittent le flanc de la scène,
+    // et c'est leur taille qui change alors, pas celle du canevas.
+    for (const bordure of bordures) observateur.observe(bordure)
     return () => {
       observateur.disconnect()
     }
@@ -305,6 +325,7 @@ export function Planetarium(props: PlanetariumProps) {
   const clavier = usePilotageClavier({
     largeurPx,
     hauteurPx,
+    decalageCentreXPx: pointage.decalageCentreXPx,
     gaiaCharge: props.gaiaCharge,
     cibles,
     surSelectionObjet: props.surSelectionObjet,

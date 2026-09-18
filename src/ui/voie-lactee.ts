@@ -160,7 +160,9 @@ export function ancreVoieLactee(
   for (const point of PLAN_GALACTIQUE) {
     if (!projecteur.projetteEn(point.x, point.y, point.z, p)) continue
     if (p.xPx < 0 || p.yPx < 0 || p.xPx > largeur || p.yPx > hauteur) continue
-    const distance = Math.hypot(p.xPx - largeur / 2, p.yPx - hauteur / 2)
+    // T-0258 — l'ancre se rapproche du centre de VISÉE : posée au milieu du canevas, l'étiquette
+    // se serait rangée sous le panneau de séance, illisible là où elle nomme la bande.
+    const distance = Math.hypot(p.xPx - projecteur.centreXPx, p.yPx - projecteur.centreYPx)
     if (distance < meilleureDistance) {
       meilleureDistance = distance
       meilleurX = p.xPx

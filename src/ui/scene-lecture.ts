@@ -23,9 +23,10 @@ export function viseeJ2000(
   vue: VueScene,
   matriceCiel: Mat3,
 ): { readonly longitudeDeg: number; readonly latitudeDeg: number } {
-  return versSpherique(
-    projecteur(vuePlanetarium(vue), matriceCiel).inverse(vue.largeurPx / 2, vue.hauteurPx / 2),
-  )
+  // T-0258 — le centre de visée, pas le milieu du canevas : la phrase doit nommer le point que
+  // l'image met sous les yeux, sinon elle date une direction qui se trouve ailleurs à l'écran.
+  const p = projecteur(vuePlanetarium(vue), matriceCiel)
+  return versSpherique(p.inverse(p.centreXPx, p.centreYPx))
 }
 
 /**

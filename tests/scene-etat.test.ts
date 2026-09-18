@@ -23,6 +23,8 @@ import {
   instant,
   majTemps,
   majVue,
+  decalageCentreScene,
+  BORDURES_SCENE,
   reinitialiseScene,
   vaA,
   type EtatScene,
@@ -231,5 +233,55 @@ describe('T-0056 — s’abonner à une tranche, pas au magasin entier', () => {
     const avant = epoqueAffichee(etatScene())
     afficheInstant(depart + 2 * 86_400_000)
     expect(epoqueAffichee(etatScene())).toBeGreaterThan(avant)
+  })
+})
+
+/**
+ * T-0258 — le centre de la scène se calcule sur le ciel resté libre.
+ *
+ * Les mesures reproduisent la coque à 1440 × 900 : le rail de la vue à gauche, le panneau de
+ * séance à droite, tous deux décollés du bord d'un jour de carte. Ce sont les deux seules
+ * surfaces toujours ouvertes ; les cartes du matériel et le plan de nuit se replient et ne
+ * comptent donc pas — une visée qui saute au repli d'une carte se juge plus mal qu'une visée
+ * décalée une fois pour toutes.
+ */
+describe('T-0258 — le centre de la scène', () => {
+  const SCENE = { left: 0, right: 1440, top: 0, bottom: 900 }
+  const RAIL = { left: 12, right: 56, top: 56, bottom: 852 }
+  const PANNEAU = { left: 1076, right: 1428, top: 56, bottom: 852 }
+  /** Le milieu du ciel laissé libre, en pixels CSS, mesuré sans passer par la fonction testée. */
+  const MILIEU_LIBRE = (RAIL.right + PANNEAU.left) / 2
+
+  it('pose la visée au milieu de ce que le rail et le panneau laissent voir', () => {
+    const decalage = decalageCentreScene(SCENE, [RAIL, PANNEAU], SCENE.right)
+    expect(SCENE.right / 2 + decalage).toBeCloseTo(MILIEU_LIBRE, 9)
+    // Le panneau est le plus large : la visée part vers le rail.
+    expect(decalage).toBeLessThan(0)
+  })
+
+  it('s’exprime dans la définition de rendu, pas en pixels CSS', () => {
+    // Le décalage sert une projection : il se compte dans les pixels que le canevas peint,
+    // qui ne sont ceux de la feuille de style qu'à l'échelle 1.
+    const enCss = decalageCentreScene(SCENE, [RAIL, PANNEAU], SCENE.right)
+    expect(decalageCentreScene(SCENE, [RAIL, PANNEAU], SCENE.right / 2)).toBeCloseTo(enCss / 2, 9)
+  })
+
+  it('ne borne la scène que par les surfaces toujours ouvertes', () => {
+    // C'est le sélecteur qui porte la décision, pas le calcul : les cartes repliables —
+    // Boîtier, Optique, Plan de nuit — n'y sont pas, sinon la visée sauterait à chaque repli.
+    expect([...BORDURES_SCENE]).toEqual(['.coque-rail', '.coque-lateral'])
+  })
+
+  it('ne décale rien sous le repli, où les mêmes surfaces passent dans le flux', () => {
+    // Le rail devient une rangée au-dessus de la scène, le panneau une section en dessous :
+    // ils ne recouvrent plus rien, et la feuille de style suffit à le dire.
+    const dessus = { left: 0, right: 1440, top: -60, bottom: 0 }
+    const dessous = { left: 0, right: 1440, top: 900, bottom: 1600 }
+    expect(decalageCentreScene(SCENE, [dessus, dessous], SCENE.right)).toBe(0)
+  })
+
+  it('reste au milieu quand deux surfaces ne laissent aucun ciel', () => {
+    const tout = { left: 0, right: 1440, top: 0, bottom: 900 }
+    expect(decalageCentreScene(SCENE, [tout], SCENE.right)).toBe(0)
   })
 })

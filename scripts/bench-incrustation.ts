@@ -212,9 +212,7 @@ function contexteMuet(): CanvasRenderingContext2D {
 function projecteurCompte(base: Projecteur): { proj: Projecteur; projections: () => number } {
   let n = 0
   const proj: Projecteur = {
-    vue: base.vue,
-    matrice: base.matrice,
-    echelle: base.echelle,
+    ...base,
     projette: (v): PointEcran | null => {
       n++
       return base.projette(v)

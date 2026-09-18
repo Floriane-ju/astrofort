@@ -74,6 +74,67 @@ export interface VueScene {
   /** Définition de rendu, mesurée sur la boîte du canevas. */
   readonly largeurPx: number
   readonly hauteurPx: number
+  /** T-0258 — écart entre la visée et le milieu du canevas, en pixels de rendu. */
+  readonly decalageCentreXPx: number
+}
+
+/**
+ * T-0258 — les surfaces qui bordent le ciel EN PERMANENCE : le rail de la vue à gauche, le
+ * panneau de séance à droite. Ce sont elles, et elles seules, qui déplacent le centre de visée.
+ *
+ * Les cartes du matériel et le plan de nuit n'y sont pas : elles se replient, et une visée qui
+ * se déplace au repli d'une carte se juge plus mal qu'une visée décalée une fois pour toutes —
+ * le cadre sauterait à l'instant même où l'on ouvre la carte pour saisir la focale.
+ */
+export const BORDURES_SCENE = Object.freeze(['.coque-rail', '.coque-lateral'] as const)
+
+/** Une boîte mesurée à l'écran, en pixels CSS. Un `DOMRect` en est une. */
+export interface BoiteEcran {
+  readonly left: number
+  readonly right: number
+  readonly top: number
+  readonly bottom: number
+}
+
+/**
+ * T-0258 — l'écart, en pixels de rendu, entre le milieu du canevas et le milieu du ciel resté
+ * libre.
+ *
+ * Le canevas couvre toute la coque, et deux surfaces TOUJOURS ouvertes se posent dessus : le
+ * rail de la vue à gauche, le panneau de séance à droite. Viser au milieu du canevas plaçait
+ * la visée sous le panneau, là où l'on ne peut ni juger un cadre ni lire une cible.
+ *
+ * Seules les surfaces permanentes comptent. Une carte qu'on replie — Boîtier, Optique, Plan de
+ * nuit — déplacerait la visée à chaque geste : un cadre qui saute au moment où l'on ouvre la
+ * carte où l'on saisit la focale se juge plus mal qu'un cadre décalé une fois pour toutes.
+ *
+ * Les boîtes sont MESURÉES, jamais déduites des largeurs de la feuille de style : sous le repli
+ * les mêmes surfaces passent dans le flux, au-dessus et au-dessous de la scène, ne recouvrent
+ * plus rien, et l'écart retombe à zéro sans qu'aucune media query ait à être redite ici.
+ */
+export function decalageCentreScene(
+  scene: BoiteEcran,
+  obstacles: readonly BoiteEcran[],
+  largeurPx: number,
+): number {
+  const largeurCss = scene.right - scene.left
+  if (largeurCss <= 0) return 0
+  let gauche = 0
+  let droite = 0
+  for (const obstacle of obstacles) {
+    if (obstacle.bottom <= scene.top || obstacle.top >= scene.bottom) continue
+    // De quel bord la surface mord : son milieu tranche. Le rail et le panneau sont décollés
+    // du bord d'un jour de carte, aucun ne l'atteint — un test d'affleurement les manquerait.
+    if (obstacle.left + obstacle.right < scene.left + scene.right)
+      gauche = Math.max(gauche, obstacle.right - scene.left)
+    else droite = Math.max(droite, scene.right - obstacle.left)
+  }
+  gauche = Math.max(0, Math.min(gauche, largeurCss))
+  droite = Math.max(0, Math.min(droite, largeurCss))
+  // Deux surfaces qui se rejoignent ne laissent pas de ciel : le milieu du canevas vaut mieux
+  // qu'un centre posé au hasard de leur recouvrement.
+  if (gauche + droite >= largeurCss) return 0
+  return (((gauche - droite) / 2) * largeurPx) / largeurCss
 }
 
 /**
@@ -90,6 +151,7 @@ export function vuePlanetarium(vue: VueScene): Vue {
     azimutDeg: vue.azimutDeg,
     hauteurDeg: vue.hauteurDeg,
     rotationDeg: 0,
+    decalageCentreXPx: vue.decalageCentreXPx,
   }
 }
 
@@ -171,6 +233,9 @@ const ETAT_INITIAL: EtatScene = {
     mode: 'MODE_PLANETARIUM',
     largeurPx: LARGEUR_SCENE_PX,
     hauteurPx: HAUTEUR_SCENE_PX,
+    // Rien n'est encore mesuré : la visée part du milieu et s'y tient tant que rien ne la
+    // recouvre — c'est aussi ce que rend un rendu serveur, qui n'a pas de boîtes à mesurer.
+    decalageCentreXPx: 0,
   },
   temps: { modeTemps: 'MAINTENANT', facteur: K('FACTEUR_DEFILEMENT_NORMAL'), decalageMs: 0 },
   rendu: {

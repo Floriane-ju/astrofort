@@ -376,3 +376,68 @@ describe('profondeur asservie au zoom §3.3', () => {
     expect(rayonEtoilePx(6)).toBeLessThan(rayonEtoilePx(1))
   })
 })
+
+/**
+ * T-0258 — le centre de visée sort de sous les cartes.
+ *
+ * Le canevas couvre toute la coque, mais le rail de la vue et le panneau de séance s'y posent en
+ * permanence. Le pointage doit tomber au milieu de ce qui RESTE visible, sinon on change la
+ * focale sans jamais voir le cadre qu'elle produit (§11.3).
+ */
+describe('T-0258 — le centre de visée décalé', () => {
+  const DECALAGE_PX = -154
+
+  function vueDecalee(): Vue {
+    return { ...vueCentree('MODE_PLANETARIUM', 60), decalageCentreXPx: DECALAGE_PX }
+  }
+
+  it('pose la direction visée au centre décalé, pas au milieu du canevas', () => {
+    const proj = projecteur(vueDecalee(), IDENTITE)
+    // `vueCentree` vise l'axe x : c'est la direction que le pointage nomme, écrite sans passer
+    // par la projection testée.
+    const visee = proj.projette({ x: 1, y: 0, z: 0 })
+    expect(visee).not.toBeNull()
+    expect(visee!.xPx).toBeCloseTo(LARGEUR / 2 + DECALAGE_PX, 9)
+    expect(visee!.yPx).toBeCloseTo(HAUTEUR / 2, 9)
+    expect(proj.centreXPx).toBeCloseTo(LARGEUR / 2 + DECALAGE_PX, 9)
+  })
+
+  it('rend la direction visée quand on inverse son propre centre', () => {
+    const proj = projecteur(vueDecalee(), IDENTITE)
+    expect(corde(proj.inverse(proj.centreXPx, proj.centreYPx), { x: 1, y: 0, z: 0 })).toBeLessThan(
+      1e-12,
+    )
+  })
+
+  it('garde la même échelle : seul le centre bouge, pas le champ par pixel', () => {
+    expect(echelleProjection(vueDecalee())).toBe(
+      echelleProjection(vueCentree('MODE_PLANETARIUM', 60)),
+    )
+  })
+
+  it('élargit la calotte de sélection jusqu’au bord devenu le plus lointain', () => {
+    // Le centre décalé n'est plus à égale distance des deux bords : garder la demi-largeur
+    // rejetterait sur une calotte trop petite et effacerait la géométrie du bord opposé (T-0110).
+    const droit = vueCentree('MODE_PLANETARIUM', 60)
+    const decale = vueDecalee()
+    expect(rayonChampDeg(decale)).toBeGreaterThan(rayonChampDeg(droit))
+
+    const proj = projecteur(decale, IDENTITE)
+    // Le coin le plus éloigné du centre décalé : à droite, puisque le centre est parti à gauche.
+    // La calotte lui est TANGENTE — c'est sa définition : elle couvre le canevas sans le
+    // déborder, et le coin opposé y tient donc aussi.
+    const centre = proj.inverse(proj.centreXPx, proj.centreYPx)
+    expect(separationDeg(proj.inverse(LARGEUR, 0), centre)).toBeCloseTo(rayonChampDeg(decale), 9)
+    expect(separationDeg(proj.inverse(0, HAUTEUR), centre)).toBeLessThan(rayonChampDeg(decale))
+  })
+
+  it('sans décalage, projette exactement comme avant', () => {
+    const sansChamp = projecteur(vueCentree('MODE_PLANETARIUM', 60), IDENTITE)
+    const aZero = projecteur(
+      { ...vueCentree('MODE_PLANETARIUM', 60), decalageCentreXPx: 0 },
+      IDENTITE,
+    )
+    expect(aZero.centreXPx).toBe(sansChamp.centreXPx)
+    expect(rayonChampDeg(aZero.vue)).toBe(rayonChampDeg(sansChamp.vue))
+  })
+})

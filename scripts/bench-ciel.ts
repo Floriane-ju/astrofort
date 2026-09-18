@@ -434,9 +434,7 @@ function projecteurCompte(base: Projecteur): { proj: Projecteur; comptes: Compte
   let nProjette = 0
   let nProjetteEn = 0
   const proj: Projecteur = {
-    vue: base.vue,
-    matrice: base.matrice,
-    echelle: base.echelle,
+    ...base,
     projette: (v) => {
       nProjette++
       return base.projette(v)

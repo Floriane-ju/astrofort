@@ -34,6 +34,16 @@ export interface Vue {
   readonly hauteurDeg: number
   /** Roulis de la vue, en degrés. */
   readonly rotationDeg: number
+  /**
+   * T-0258 — écart, en pixels de rendu, entre le centre de visée et le milieu du canevas.
+   *
+   * Le canevas couvre toute la coque, mais deux surfaces toujours ouvertes se posent dessus :
+   * le rail de la vue à gauche, le panneau de séance à droite. Viser au milieu du canevas
+   * plaçait donc la visée sous le panneau — on changeait la focale sans voir le cadre qu'elle
+   * produit, ce que §11.3 interdit. Absent, la visée reste au milieu : c'est ce que veut une
+   * vue hors écran (§9.2, §9.3), qui n'a rien au-dessus d'elle.
+   */
+  readonly decalageCentreXPx?: number
 }
 
 export interface PointEcran {
@@ -135,6 +145,18 @@ export function echelleProjection(vue: Vue): number {
 }
 
 /**
+ * T-0258 — le point du canevas où tombe la direction visée : le milieu, décalé vers le ciel
+ * resté libre. Un seul endroit le dit ; tout ce qui lit « le centre » passe par lui ou par le
+ * projecteur qui le republie, sinon la phrase de visée désigne un point et l'image un autre.
+ */
+export function centreViseePx(vue: Vue): PointEcran {
+  return {
+    xPx: vue.largeurPx / 2 + (vue.decalageCentreXPx ?? 0),
+    yPx: vue.hauteurPx / 2,
+  }
+}
+
+/**
  * Rayon, en degrés au centre de visée, de la calotte céleste que le canevas montre — coin
  * compris. C'est le domaine que partagent la sélection d'étoiles (§3.3), l'écart des segments
  * de la Voie lactée (§3.7) et le budget du filé (§9.3) : un seul calcul, sinon trois
@@ -148,8 +170,15 @@ export function echelleProjection(vue: Vue): number {
  * fonctions radiales ne dépasse 180° dans son domaine.
  */
 export function rayonChampDeg(vue: Vue): number {
+  // T-0258 — le centre décalé n'est plus à égale distance des deux bords : c'est le plus
+  // éloigné qui fixe le champ. Garder la demi-largeur effacerait la géométrie du bord opposé,
+  // exactement le défaut que T-0110 a corrigé sur l'approximation petit-angle.
+  const centreX = centreViseePx(vue).xPx
+  const demiLargeurPx = Math.max(centreX, vue.largeurPx - centreX)
   const rayonCoin =
-    rayonProjete(vue.mode, (vue.fovDeg / 2) * DEG) * Math.hypot(1, vue.hauteurPx / vue.largeurPx)
+    (rayonProjete(vue.mode, (vue.fovDeg / 2) * DEG) *
+      Math.hypot(demiLargeurPx, vue.hauteurPx / 2)) /
+    (vue.largeurPx / 2)
   return angleProjete(vue.mode, rayonCoin) / DEG
 }
 
@@ -174,6 +203,12 @@ export interface Projecteur {
   /** J2000 équatorial → repère de la vue. Une seule matrice pour toute l'image (§3.1). */
   readonly matrice: Mat3
   readonly echelle: number
+  /**
+   * T-0258 — le point du canevas où tombe la direction visée. Republié ici pour que rien
+   * n'ait à le recalculer : `largeurPx / 2` écrit ailleurs redeviendrait un second centre.
+   */
+  readonly centreXPx: number
+  readonly centreYPx: number
   /** `null` quand la direction n'est pas projetable : jamais un point à l'infini. */
   projette(v: Vec3): PointEcran | null
   /**
@@ -196,8 +231,7 @@ export function projecteur(vue: Vue, matriceCiel: Mat3): Projecteur {
   const [m11, m12, m13, m21, m22, m23, m31, m32, m33] = matrice
   const inverseMatrice = transpose(matrice)
   const k = echelleProjection(vue)
-  const centreX = vue.largeurPx / 2
-  const centreY = vue.hauteurPx / 2
+  const { xPx: centreX, yPx: centreY } = centreViseePx(vue)
   const mode = vue.mode
   // Comparée au carré : une racine par étoile pour une borne, alors que la borne se compare
   // aussi bien au carré (T-0065).
@@ -249,6 +283,8 @@ export function projecteur(vue: Vue, matriceCiel: Mat3): Projecteur {
     vue,
     matrice,
     echelle: k,
+    centreXPx: centreX,
+    centreYPx: centreY,
     projetteEn,
     projette(v: Vec3): PointEcran | null {
       const out = pointEcran()

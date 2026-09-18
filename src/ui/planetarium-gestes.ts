@@ -436,11 +436,13 @@ export const RACCOURCIS_CLAVIER =
 export function usePilotageClavier(entree: {
   readonly largeurPx: number
   readonly hauteurPx: number
+  /** T-0258 — « l'objet au centre » est celui qu'on voit au centre, pas celui du milieu du canevas. */
+  readonly decalageCentreXPx: number
   readonly gaiaCharge: boolean
   readonly cibles: RefObject<readonly CibleEcran[]>
   readonly surSelectionObjet: (objet: ObjetCielProfond) => void
 }): { readonly onKeyDown: (e: React.KeyboardEvent<HTMLCanvasElement>) => void } {
-  const { largeurPx, hauteurPx, gaiaCharge, cibles, surSelectionObjet } = entree
+  const { largeurPx, hauteurPx, decalageCentreXPx, gaiaCharge, cibles, surSelectionObjet } = entree
 
   return {
     onKeyDown(e: React.KeyboardEvent<HTMLCanvasElement>): void {
@@ -452,7 +454,7 @@ export function usePilotageClavier(entree: {
       if (commande === 'CHOISIR') {
         choisitCible(
           cibles.current,
-          largeurPx / 2,
+          largeurPx / 2 + decalageCentreXPx,
           hauteurPx / 2,
           surSelectionObjet,
           largeurPx * PAS_VISEE_FRACTION,

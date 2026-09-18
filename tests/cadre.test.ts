@@ -268,6 +268,7 @@ describe('le cadre tourne, la vue non — T-0084', () => {
       mode: 'MODE_PLANETARIUM',
       largeurPx: 1920,
       hauteurPx: 1080,
+      decalageCentreXPx: 0,
     })
     expect(sansRoulis.rotationDeg).toBe(0)
   })
