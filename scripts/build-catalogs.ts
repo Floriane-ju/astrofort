@@ -325,6 +325,15 @@ const COL_SHARPLESS = 21
  * Stellarium écrit 99 pour « magnitude inconnue ». Encodée telle quelle, elle donnerait
  * une nébuleuse obscure « de magnitude 99 » plutôt qu'une magnitude absente (§6.3), et un
  * verdict de détectabilité serait rendu sur une valeur qui n'en est pas une.
+ *
+ * T-0266 — pour les nébuleuses obscures, le 99 n'est que sur la colonne B : la colonne V
+ * porte un ENTIER de 1 à 6 sur les 343 entrées Barnard du catalogue, soit la classe
+ * d'opacité de Barnard, pas une magnitude. Une nébuleuse obscure n'émet pas, elle absorbe :
+ * elle n'a aucune magnitude intégrée, dans aucune bande. Lue comme telle, la classe 1 de
+ * B144 devenait « magnitude 1 », donc SB = m + 2,5 log(aire) sur une grandeur qui n'est pas
+ * un flux, donc verdict ŒIL_NU et facilité 5/5 en tête du plan de nuit — exactement le
+ * piège que §6.3 existe pour éviter. B33, qui vient d'OpenNGC, n'a jamais porté de
+ * magnitude : les deux moitiés du catalogue disent enfin la même chose.
  */
 const MAG_INCONNUE_DSO = 99
 
@@ -447,18 +456,20 @@ function construitCataloguesComplementaires(
     // Sharpless, que Barnard n'a relevée que par sa partie obscure.
     const cle = sharpless > 0 ? `SH2 ${sharpless}` : `B ${barnard}`
     const designation = sharpless > 0 ? `Sh2-${sharpless}` : `B${barnard}`
+    const type = typeDso((champs[COL_TYPE] ?? '').trim(), sharpless)
+    const obscure = type === 'NEB_OBSCURE'
 
     objets.push({
       designation,
       nomsCommuns: (noms.get(cle) ?? []).join('|'),
       adDeg,
       decDeg,
-      type: typeDso((champs[COL_TYPE] ?? '').trim(), sharpless),
+      type,
       majAxArcmin: positifOuNull(champs[COL_MAJ_AX]),
       minAxArcmin: positifOuNull(champs[COL_MIN_AX]),
       posAngDeg: positifOuNull(champs[COL_POS_ANG]),
-      vMag: magnitudeDso(champs[COL_V_MAG]),
-      bMag: magnitudeDso(champs[COL_B_MAG]),
+      vMag: obscure ? null : magnitudeDso(champs[COL_V_MAG]),
+      bMag: obscure ? null : magnitudeDso(champs[COL_B_MAG]),
       // Le catalogue DSO ne publie pas de brillance de surface.
       surfBr: null,
     })

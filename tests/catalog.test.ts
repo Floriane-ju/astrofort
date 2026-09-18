@@ -232,6 +232,23 @@ describe('Sharpless et Barnard §6.1', () => {
     expect(boucle!.majAxArcmin! / ARCMIN_PAR_DEG).toBeGreaterThan(10)
   })
 
+  /**
+   * T-0266 — le catalogue source range la classe d'opacité de Barnard dans la colonne V.
+   * Reprise comme magnitude, elle faisait de B144 une cible ŒIL_NU en tête du plan de nuit.
+   * Une nébuleuse obscure absorbe, elle n'émet pas : aucune magnitude intégrée n'existe.
+   */
+  it('ne donne aucune magnitude à une nébuleuse obscure §6.3', async () => {
+    const objets = await litObjets('deepsky')
+    if (objets === null) return
+
+    const obscures = objets.filter((o) => o.type === 'NEB_OBSCURE')
+    expect(obscures.length).toBeGreaterThan(300)
+    for (const objet of obscures) {
+      expect(objet.vMag, objet.designation).toBeNull()
+      expect(objet.bMag, objet.designation).toBeNull()
+    }
+  })
+
   it('ne redouble aucune entrée d’OpenNGC', async () => {
     const [complement, ngc] = await Promise.all([litObjets('deepsky'), litObjets('openngc')])
     if (complement === null || ngc === null) return

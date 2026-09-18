@@ -40,7 +40,7 @@
     "version": "1",
     "nombreEntrees": 614,
     "octets": 17192,
-    "sha256": "00b8dcc17ca30ec3acef6281ad74247cb20d5f948f5109b66a4afca55860c91f",
+    "sha256": "1b1c8377d28581fa43f018c4d6e43946ef53c40ddd564df3a5eb669316cd50e9",
     "source": "Sharpless et Barnard, catalogue DSO Stellarium v3.23 — https://raw.githubusercontent.com/Stellarium/stellarium/9ca023a97f344975e1faa96f91b20a4c18a7c02b/nebulae/default/catalog.txt + https://raw.githubusercontent.com/Stellarium/stellarium/9ca023a97f344975e1faa96f91b20a4c18a7c02b/nebulae/default/names.dat ; entrées doublant un NGC/IC d'OpenNGC écartées, Caldwell hors périmètre (redésignations NGC/IC)",
     "obligatoire": true
   },
