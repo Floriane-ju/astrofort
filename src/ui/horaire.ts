@@ -6,7 +6,7 @@
  * tenir. Un plan de séance et le verdict qui le justifie citent les mêmes créneaux ; qu'ils
  * les datent au même format n'est pas une coïncidence à entretenir à la main.
  *
- * T-0162 — la barre basse ne se contente plus d'écrire l'instant, elle le règle champ par
+ * T-0162 — le panneau du temps ne se contente plus d'écrire l'instant, il le règle champ par
  * champ : le format est celui de la locale, et `partiesJour` en rend les morceaux sans le
  * réécrire — découper l'instant en compteurs ne doit pas en changer l'ordre ni la ponctuation.
  */
@@ -19,13 +19,18 @@ export function heure(date: Date): string {
 }
 
 /**
- * T-0164 — le jour en chiffres, et non plus le mois en toutes lettres : « août » et « mai »
- * n'ont pas la même largeur, et la date de la barre basse se tire champ par champ. Un mois
- * littéral déplacerait les compteurs voisins sous le doigt d'un cran à l'autre.
+ * T-0314 — le jour de semaine, le quantième, le mois abrégé, l'année.
+ *
+ * T-0164 avait mis ce jour tout en chiffres : « août » et « mai » n'ont pas la même largeur, et
+ * la date se tire champ par champ. Le glisser capture le pointeur — le compteur tiré reste sous
+ * le doigt quelle que soit sa largeur, et seuls ses voisins bougent, après coup. Ce que la date
+ * gagne en échange est ce qu'on cherche en préparant une nuit : le jour de la semaine, qu'aucune
+ * suite de chiffres ne donne.
  */
 const OPTIONS_JOUR: Intl.DateTimeFormatOptions = {
-  day: '2-digit',
-  month: '2-digit',
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
   year: 'numeric',
 }
 
@@ -63,7 +68,7 @@ export function pourChampDateHeure(date: Date): string {
   return `${jourLocalIso(date)}T${h}:${m}:${s}`
 }
 
-/** Les six champs que la barre basse règle séparément. Le mois est humain : 1 à 12. */
+/** Les six champs que le panneau du temps règle séparément. Le mois est humain : 1 à 12. */
 export type ChampInstant = 'annee' | 'mois' | 'jour' | 'heure' | 'minute' | 'seconde'
 
 /**

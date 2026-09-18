@@ -1,5 +1,6 @@
 /**
- * §3.2 / T-0137 — le temps se pilote depuis la barre basse, comme un lecteur.
+ * §3.2 / T-0137 / T-0314 — le temps se pilote depuis un panneau posé en haut à droite, comme
+ * un lecteur.
  *
  * Ce qui est vérifié n'est pas une apparence mais un câblage : quatre chevrons portent les
  * deux vitesses du registre dans les deux sens, la lecture et la pause se lisent sur leur
@@ -14,7 +15,7 @@ import { facteurDefilement } from '../src/core/curseur-temps.ts'
 import { K } from '../src/registry/constants.ts'
 import { jourLocalIso } from '../src/core/nuit-datee.ts'
 import { pourChampDateHeure } from '../src/ui/horaire.ts'
-import { BarreTemps } from '../src/ui/BarreTemps.tsx'
+import { PanneauTemps, transportActif } from '../src/ui/PanneauTemps.tsx'
 import {
   etatScene,
   instant,
@@ -23,10 +24,11 @@ import {
   reinitialiseScene,
   reprend,
   vaA,
+  type TempsScene,
 } from '../src/ui/scene-etat.ts'
 
 function barre(): string {
-  return renderToStaticMarkup(<BarreTemps surNuitIso={() => undefined} />)
+  return renderToStaticMarkup(<PanneauTemps surNuitIso={() => undefined} />)
 }
 
 /**
@@ -49,7 +51,7 @@ afterEach(() => {
   reinitialiseScene()
 })
 
-describe('T-0137 — la barre basse pilote le temps', () => {
+describe('T-0137 — le panneau du temps pilote le ciel', () => {
   it('porte les quatre chevrons, le cadran et la lecture', () => {
     const html = barre()
     for (const libelle of ['Reculer vite', 'Reculer', 'Avancer', 'Avancer vite']) {
@@ -62,16 +64,37 @@ describe('T-0137 — la barre basse pilote le temps', () => {
     expect(html).toContain('Mettre le temps en pause')
   })
 
-  it('encadre le cadran : les reculs à gauche, les avances à droite', () => {
-    // L'ordre EST l'information : deux chevrons posés du même côté du cadran ne diraient plus
-    // dans quel sens ils emmènent le ciel.
+  it('encadre la LECTURE : les reculs à sa gauche, les avances à sa droite', () => {
+    // L'ordre EST l'information : deux chevrons posés du même côté ne diraient plus dans quel
+    // sens ils emmènent le ciel. T-0314 — c'est la lecture qui tient le milieu du transport,
+    // et non plus le cadran : l'heure a pris le bord gauche de la rangée.
     const html = barre()
     const ou = (libelle: string) => place(html, libelle)
+    expect(ou('Heure')).toBeLessThan(ou('Reculer vite'))
     expect(ou('Reculer vite')).toBeLessThan(ou('Reculer'))
-    expect(ou('Reculer')).toBeLessThan(ou('Jour'))
-    expect(ou('Seconde')).toBeLessThan(ou('Avancer'))
+    expect(ou('Reculer')).toBeLessThan(ou('Mettre le temps en pause'))
+    expect(ou('Mettre le temps en pause')).toBeLessThan(ou('Avancer'))
     expect(ou('Avancer')).toBeLessThan(ou('Avancer vite'))
-    expect(ou('Avancer vite')).toBeLessThan(ou('Mettre le temps en pause'))
+  })
+
+  it('pose la date et le retour au présent au-dessus de l’heure', () => {
+    const html = barre()
+    expect(html.indexOf('panneau-temps-jour')).toBeLessThan(
+      html.indexOf('panneau-temps-maintenant'),
+    )
+    expect(html.indexOf('panneau-temps-maintenant')).toBeLessThan(
+      html.indexOf('panneau-temps-heure'),
+    )
+  })
+
+  it('offre un retour à l’instant présent, en un bouton', () => {
+    // Le défaut que ça corrige : retrouver ce soir depuis une date choisie demandait de tirer
+    // six compteurs jusqu'à l'heure qu'il est. Le glyphe passe par la police d'icônes, comme
+    // tout le reste du panneau.
+    const html = barre()
+    expect(html).toContain('panneau-temps-maintenant')
+    expect(html).toContain('Maintenant')
+    expect(html).toContain('update')
   })
 
   it('dessine ses commandes avec des glyphes de la police d’icônes, pas des caractères', () => {
@@ -88,13 +111,17 @@ describe('T-0137 — la barre basse pilote le temps', () => {
     expect(html).not.toMatch(/[‹›»«▶⏸]/)
   })
 
-  it('marque le chevron actif, et lui seul', () => {
+  it('marque le chevron actif, et lui seul — la lecture comprise', () => {
+    // T-0314 — le groupe est EXCLUSIF. Avant, la lecture restait allumée pendant un défilement :
+    // deux commandes enfoncées, et rien pour dire laquelle tenait la vitesse.
     majTemps({ modeTemps: 'DEFILEMENT', facteur: -facteurDefilement(true) })
     const html = barre()
     expect(controle(html, 'Reculer vite')).toContain('aria-pressed="true"')
     for (const inactif of ['Reculer', 'Avancer', 'Avancer vite']) {
       expect(controle(html, inactif), inactif).toContain('aria-pressed="false"')
     }
+    expect(controle(html, 'Revenir au temps réel')).toContain('aria-pressed="false"')
+    expect(html).toContain('play_arrow')
   })
 
   it('tire ses deux vitesses du registre', () => {
@@ -108,6 +135,11 @@ describe('T-0137 — la barre basse pilote le temps', () => {
     const enPause = barre()
     expect(place(enPause, 'Reprendre l’écoulement du temps')).toBeGreaterThan(-1)
     expect(enPause).toContain('play_arrow')
+
+    // T-0314 — depuis un défilement, la commande ne reprend rien et ne met rien en pause : elle
+    // ramène au temps réel, et elle le dit.
+    majTemps({ modeTemps: 'DEFILEMENT', facteur: facteurDefilement(false) })
+    expect(place(barre(), 'Revenir au temps réel')).toBeGreaterThan(-1)
   })
 
   it('reprend la lecture DEPUIS l’instant choisi, sans sauter à l’heure du jour', () => {
@@ -127,30 +159,40 @@ describe('T-0137 — la barre basse pilote le temps', () => {
     expect(etatScene().temps.decalageMs).toBe(0)
   })
 
-  it('affiche le facteur réellement appliqué et la raison de l’écrêtage', () => {
-    // §3.2 — à 5° de champ sur 1920 px, le plafond tombe à ×374 : la vitesse rapide y est
-    // ramenée, et l'app le dit plutôt que de laisser l'image se replier.
+  /**
+   * T-0314 — le panneau ne dit ni la vitesse appliquée ni son écrêtage.
+   *
+   * Le plafond de lisibilité de §3.2 s'applique toujours — il vit dans `Planetarium`, qui
+   * dessine — mais l'annoncer demandait au panneau une largeur variable : « ×1500 » puis rien,
+   * une phrase de trois lignes puis rien, alors qu'il coiffe le panneau de séance et doit
+   * garder exactement sa largeur. Ce qui se vérifie ici est donc une ABSENCE, dans les deux
+   * régimes : vitesse écrêtée, et vitesse qui tient.
+   */
+  it('ne montre ni facteur ni écrêtage, quelle que soit la vitesse', () => {
+    // §3.2 — à 5° de champ sur 1920 px, le plafond tombe à ×374 : c'est le cas qui produisait
+    // les deux lectures.
     majVue({ fovDeg: 5, largeurPx: 1920 })
     majTemps({ modeTemps: 'DEFILEMENT', facteur: facteurDefilement(true) })
-    const html = barre()
-    // La pastille porte le facteur APPLIQUÉ ; le ×1500 demandé ne survit que dans la phrase
-    // qui explique son écrêtage.
-    expect(html).toMatch(/barretemps-facteur">×374</)
-    expect(html).toMatch(/ramenée de ×1500 à ×374/)
-  })
+    const ecrete = barre()
+    expect(ecrete).not.toMatch(/×\d/)
+    expect(ecrete).not.toMatch(/ramené/)
 
-  it('ne signale rien quand la vitesse tient dans la plage lisible', () => {
     majTemps({ modeTemps: 'DEFILEMENT', facteur: facteurDefilement(false) })
-    const html = barre()
-    expect(html).toMatch(new RegExp(`barretemps-facteur">×${K('FACTEUR_DEFILEMENT_NORMAL')}<`))
-    expect(html).not.toMatch(/ramené/)
+    expect(barre()).not.toMatch(new RegExp(`×${K('FACTEUR_DEFILEMENT_NORMAL')}`))
   })
 
-  it('date l’instant à la seconde, jour compris', () => {
+  it('date l’instant à la seconde, jour de semaine compris', () => {
     // T-0162 — chaque champ est un compteur : c'est le texte rendu, balises retirées, qui
-    // porte encore la date et l'heure à la seconde. T-0164 — le jour est tout en chiffres.
+    // porte encore la date et l'heure à la seconde. T-0314 — le jour de semaine et le mois
+    // abrégé ouvrent la date ; le format reste celui de la locale, il n'est pas réécrit ici.
     const texte = barre().replaceAll('<!-- -->', '').replace(/<[^>]*>/g, '')
-    expect(texte).toMatch(/\d{2}\/\d{2}\/\d{4}/)
+    const attendu = new Intl.DateTimeFormat('fr-FR', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(etatScene().msAffiche))
+    expect(texte).toContain(attendu)
     expect(texte).toMatch(/\d{2}:\d{2}:\d{2}/)
   })
 
@@ -159,7 +201,53 @@ describe('T-0137 — la barre basse pilote le temps', () => {
     expect(ecran).not.toContain('tiroir-temps')
     expect(ecran).not.toContain('type="date"')
     expect(ecran).not.toContain('Pas astronomiques')
-    expect(ecran).toContain('barretemps')
+    expect(ecran).toContain('panneau-temps')
+  })
+})
+
+/**
+ * T-0314 — les cinq commandes du transport sont UN groupe exclusif.
+ *
+ * Le rendu statique dit ce qui s'ALLUME ; la règle qui décide, elle, est une fonction, et c'est
+ * elle qu'on vérifie ici — le clic n'existe pas dans un rendu serveur. Deux promesses : une
+ * seule commande allumée quel que soit l'état, et la commande allumée est celle dont le clic
+ * suivant fige le temps.
+ */
+describe('T-0314 — le transport est un groupe exclusif', () => {
+  const NORMAL = facteurDefilement(false)
+  const RAPIDE = facteurDefilement(true)
+  /** Les cinq commandes, dans l'ordre du transport. `null` est la lecture. */
+  const COMMANDES: readonly (number | null)[] = [-RAPIDE, -NORMAL, null, NORMAL, RAPIDE]
+
+  /** Ce qui est allumé pour un état donné du temps : au plus une commande. */
+  function allumees(temps: TempsScene): readonly (number | null)[] {
+    return COMMANDES.filter((facteur) => transportActif(temps, facteur))
+  }
+
+  it('n’allume que le temps réel quand le temps s’écoule à la vitesse du ciel', () => {
+    majTemps({ modeTemps: 'MAINTENANT' })
+    expect(allumees(etatScene().temps)).toEqual([null])
+  })
+
+  it('éteint la lecture dès qu’une vitesse prend la main', () => {
+    // Le défaut que ça corrige : la lecture s'allumait pour tout temps qui s'écoule, défilement
+    // compris — deux commandes enfoncées, et aucune qui dise laquelle tenait la vitesse.
+    for (const facteur of [NORMAL, RAPIDE, -NORMAL, -RAPIDE]) {
+      majTemps({ modeTemps: 'DEFILEMENT', facteur })
+      expect(allumees(etatScene().temps), `×${facteur}`).toEqual([facteur])
+    }
+  })
+
+  it('n’allume rien en pause : c’est l’état qu’un second clic rend', () => {
+    majTemps({ modeTemps: 'FIGE' })
+    expect(allumees(etatScene().temps)).toEqual([])
+  })
+
+  it('ne confond pas les deux sens d’une même vitesse', () => {
+    // Le facteur porte le sens : sans ce signe, reculer vite allumerait le chevron d'avance.
+    majTemps({ modeTemps: 'DEFILEMENT', facteur: -RAPIDE })
+    expect(transportActif(etatScene().temps, -RAPIDE)).toBe(true)
+    expect(transportActif(etatScene().temps, RAPIDE)).toBe(false)
   })
 })
 

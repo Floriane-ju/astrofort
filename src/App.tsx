@@ -2,9 +2,9 @@
  * L'application : un lieu, un matériel, une intention, et la scène au centre.
  *
  * Ce fichier ne dessine plus rien et ne calcule plus rien. Il tient les magasins partagés,
- * appelle la chaîne de calcul (`app-calcul.ts`) et distribue ses sorties aux six régions de
- * la coque : la barre haute, la scène, les cartes du matériel, les autres cartes posées dessus,
- * le panneau latéral et la barre basse.
+ * appelle la chaîne de calcul (`app-calcul.ts`) et distribue ses sorties aux sept régions de
+ * la coque : la barre haute, la scène, le panneau du temps, les cartes du matériel, les autres
+ * cartes posées dessus, le panneau latéral et la barre basse.
  *
  * Chaque nombre affiché reste dépliable jusqu'à sa formule, et chaque terme technique porte
  * sa définition au contact (§1.5.2, §10.1) — c'est le contrat, pas la mise en page.
@@ -21,6 +21,7 @@ import { useTrancheScene, type EtatScene } from './ui/scene-etat.ts'
 import { ouvreCible, useSeance } from './ui/seance-etat.ts'
 import { BarreHaut } from './ui/BarreHaut.tsx'
 import { BarreBas } from './ui/BarreBas.tsx'
+import { PanneauTemps } from './ui/PanneauTemps.tsx'
 import { CartesSeance, LateralSeance } from './ui/RegionSeance.tsx'
 import { useSaisieLieu, useSaisieMateriel, useSaisiePoids } from './ui/app-saisie.ts'
 import {
@@ -205,7 +206,6 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
       surBortle={lieu.surBortle}
       sqm={lieu.sqm}
       surSqm={lieu.surSqm}
-      surNuitIso={lieu.surNuitIso}
       site={chaine.site}
       gaiaCharge={gaia}
       modeNuit={modeNuit.actif}
@@ -221,6 +221,7 @@ function AppPrete({ restauree }: { readonly restauree: SaisieRestauree }) {
     <Coque
       topbar={topbar}
       scene={scene}
+      temps={<PanneauTemps surNuitIso={lieu.surNuitIso} />}
       materiel={panneauMateriel}
       cartes={<CartesSeance {...regions} />}
       lateral={<LateralSeance {...regions} />}

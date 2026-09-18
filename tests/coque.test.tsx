@@ -100,10 +100,12 @@ function ongletsPanneau(html: string): string {
 }
 
 describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
-  it('monte les six régions : deux barres, la scène, le matériel, les cartes, le panneau', () => {
+  it('monte les sept régions : deux barres, la scène, le temps, le matériel, les cartes, le panneau', () => {
     const html = ecran()
     expect(html).toContain('coque-topbar')
     expect(html).toContain('coque-scene')
+    expect(html).toContain('coque-droite')
+    expect(html).toContain('panneau-temps')
     expect(html).toContain('cartes-materiel')
     expect(html).toContain('coque-cartes')
     expect(html).toContain('coque-lateral')
@@ -146,6 +148,37 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
     expect(html.indexOf('cartes-materiel')).toBeLessThan(html.indexOf('coque-cartes'))
   })
 
+  /**
+   * T-0314 — le panneau du temps coiffe le panneau de séance, dans la colonne de droite.
+   *
+   * C'est la COLONNE qui porte la largeur, et non plus le panneau de séance seul : les deux
+   * boîtes la remplissent exactement, si bien que le temps ne se redimensionne jamais sous la
+   * main et que les deux cadres empilés s'alignent. La hauteur restante revient au panneau de
+   * séance, qui est ce qui défile.
+   */
+  it('range le temps au-dessus du panneau, dans une colonne qui tient la largeur', () => {
+    const html = ecran()
+    expect(html.indexOf('coque-droite')).toBeGreaterThan(html.indexOf('coque-scene'))
+    expect(html.indexOf('panneau-temps')).toBeLessThan(html.indexOf('coque-lateral'))
+
+    const debut = CSS_COQUE.indexOf('.coque-droite {')
+    expect(debut).toBeGreaterThan(-1)
+    const colonne = CSS_COQUE.slice(debut, CSS_COQUE.indexOf('}', debut))
+    expect(colonne).toContain('right: var(--jour-carte)')
+    expect(colonne).toContain('top: calc(var(--barre-haut) + var(--jour-carte))')
+    expect(colonne).toContain('bottom: calc(var(--barre-bas) + var(--jour-carte))')
+    expect(colonne).toContain('width: var(--lateral)')
+    expect(colonne).toContain('flex-direction: column')
+
+    // Ni le temps ni le panneau ne redéclarent de largeur : elle vient de la colonne, une fois.
+    const temps = CSS_COQUE.slice(
+      CSS_COQUE.indexOf('.panneau-temps {'),
+      CSS_COQUE.indexOf('}', CSS_COQUE.indexOf('.panneau-temps {')),
+    )
+    expect(temps).toContain('flex: none')
+    expect(temps).not.toMatch(/\bwidth:/)
+  })
+
   it('replie une carte du matériel sans toucher à l’autre', () => {
     basculeCarte('BOITIER')
     const html = ecran()
@@ -173,18 +206,20 @@ describe('T-0113 — la scène occupe tout, le reste se pose dessus', () => {
   // T-0238 — un seul dessin pour tout ce qui se pose sur le ciel : filet et équerres. Les
   // équerres ne viennent qu'à la carte dépliée.
   // T-0243 — le panneau latéral, qui ne se replie pas, les porte toujours.
-  it('donne aux cartes dépliées et au panneau le cadre d’instrument des rubriques', () => {
+  // T-0314 — le panneau du temps les prend en coiffant le panneau de séance.
+  it('donne aux cartes dépliées et aux panneaux le cadre d’instrument des rubriques', () => {
     expect(CSS_COQUE).toMatch(
-      /section:not\(\[class\]\)::before,\n\.carte\[data-ouverte='true'\]::before,\n\.coque-lateral::before \{/,
+      /section:not\(\[class\]\)::before,\n\.carte\[data-ouverte='true'\]::before,\n\.panneau-temps::before,\n\.coque-lateral::before \{/,
     )
   })
 
   it('décolle le panneau des bords comme une carte, filet complet', () => {
+    // T-0314 — le décollement est porté par la colonne qui le contient ; lui prend la hauteur
+    // qu'elle lui laisse sous le panneau du temps, et garde son filet.
     const debut = CSS_COQUE.indexOf('.coque-lateral {')
     const panneau = CSS_COQUE.slice(debut, CSS_COQUE.indexOf('}', debut))
-    expect(panneau).toContain('right: var(--jour-carte)')
-    expect(panneau).toContain('top: calc(var(--barre-haut) + var(--jour-carte))')
-    expect(panneau).toContain('bottom: calc(var(--barre-bas) + var(--jour-carte))')
+    expect(panneau).toContain('flex: 1')
+    expect(panneau).toContain('min-height: 0')
     expect(panneau).toContain('border: var(--trait) solid var(--bordure)')
     // Il ne se replie pas : aucun en-tête-bouton, aucun signe de repli.
     const html = ecran()
@@ -609,22 +644,23 @@ describe('T-0153 — la barre basse porte la phrase qui date l’image', () => {
     return html.slice(html.indexOf('coque-barrebas'))
   }
 
-  it('pose la phrase au centre de la barre basse, entre le lieu et le transport', () => {
+  it('pose la phrase dans la barre basse, après le lieu', () => {
     const bas = barreBasse(ecran()).replaceAll('<!-- -->', '')
     expect(bas).toMatch(/visée[\s\S]*AD[\s\S]*azimut[\s\S]*hauteur[\s\S]*champ/)
     expect(bas).toContain('barrebas-visee')
-    // Entre les deux : le lieu la précède, le transport la suit.
+    // Le lieu la précède. T-0314 — le transport ne la suit plus : il a quitté la barre pour
+    // le panneau du temps, et la barre ne porte plus que les deux repères du lieu.
     expect(bas.indexOf('barrebas-lieu')).toBeLessThan(bas.indexOf('barrebas-visee'))
-    expect(bas.indexOf('barrebas-visee')).toBeLessThan(bas.indexOf('barretemps'))
+    expect(bas).not.toContain('panneau-temps')
   })
 
-  it('la centre en lui laissant ce que le lieu et le transport ne prennent pas', () => {
+  it('la centre en lui laissant ce que le lieu ne prend pas', () => {
     const debut = CSS_COQUE.indexOf('.coque-barrebas > .barrebas-visee {')
     expect(debut).toBeGreaterThan(-1)
     const corps = CSS_COQUE.slice(debut, CSS_COQUE.indexOf('}', debut))
     expect(corps).toContain('flex: 1')
     expect(corps).toContain('text-align: center')
-    // Elle est la seule à se rogner : un transport amputé ne se rattrape pas.
+    // Elle est la seule à se rogner : un contrôle amputé ne se rattrape pas.
     expect(corps).toContain('text-overflow: ellipsis')
   })
 

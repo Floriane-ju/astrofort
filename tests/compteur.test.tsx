@@ -116,9 +116,12 @@ describe('T-0162 — un champ de l’instant réécrit', () => {
   it('découpe l’instant sans en changer le format', () => {
     const recompose = (parties: readonly Intl.DateTimeFormatPart[]) =>
       parties.map((p) => p.value).join('')
+    // T-0314 — jour de semaine et mois abrégé : le découpage suit la locale, il ne la réécrit
+    // pas, et c'est justement ce que cette recomposition vérifie.
     expect(recompose(partiesJour(nuit))).toBe(nuit.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
       year: 'numeric',
     }))
     expect(recompose(partiesHeure(nuit))).toMatch(/\d{2}:\d{2}:\d{2}/)

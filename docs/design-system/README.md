@@ -103,6 +103,12 @@ décollé des bords d'un `--jour-carte`, filet, en-tête teinté, équerres — 
 jamais. Il reste hors de `Carte` : son en-tête porte les onglets de mode (`.onglets`), et sur
 la fiche un retour et des commandes — ce qu'un en-tête-bouton ne peut contenir.
 
+Le panneau du temps (`.panneau-temps`) porte le même cadre et coiffe le panneau latéral : les
+deux partagent la colonne de droite (`.coque-droite`), **qui porte la largeur pour eux deux**.
+Il ne se replie pas non plus et n'a pas d'en-tête — la date qu'il affiche le nomme déjà — et il
+n'affiche rien d'intermittent : une lecture qui apparaît puis disparaît changerait sa taille, et
+deux cadres empilés qui ne s'alignent pas se lisent comme un défaut de montage.
+
 Un aplat de surface ou une ombre n'auraient pas tenu : §11.1 confisque la luminance, et un
 trait se lit à n'importe laquelle. Les quatre sections **nommées** — `.scene`, `.cibles`,
 `.carte`, `.menu-reglages` — posent leur propre disposition et n'ont pas de cadre.

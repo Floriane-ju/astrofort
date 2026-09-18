@@ -461,12 +461,11 @@ body {
   margin-left: calc(-1 * (var(--jour-barre) + var(--trait)));
 }
 
-/* La phrase qui date l'image tient le centre de la barre basse : elle prend ce que le
-   lieu et le transport laissent, et s'y centre. Elle est la SEULE chose qui se rogne ici — un
-   transport amputé ne se rattrape pas, une phrase tronquée se relit en élargissant la fenêtre. */
+/* La phrase qui dit où pointe la scène tient le centre de la barre basse : elle prend ce que
+   le lieu laisse, et s'y centre. Elle est la SEULE chose qui se rogne ici — une phrase
+   tronquée se relit en élargissant la fenêtre, un contrôle amputé ne se rattrape pas. */
 /* Le rognage est horizontal par intention, mais `overflow: hidden` rogne aussi en bas : sans
-   cette réserve, le soulignement des compteurs de la phrase serait coupé alors que celui du
-   transport, dans une boîte non rognée, resterait visible. */
+   cette réserve, le soulignement des compteurs de la phrase serait coupé. */
 .coque-barrebas > .barrebas-visee {
   flex: 1;
   min-width: 0;
@@ -584,95 +583,6 @@ body {
   background: none;
 }
 
-/* Le transport ferme la barre : il se pousse à droite et y reste. */
-.barretemps {
-  position: relative;
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--pas-0);
-  flex: none;
-}
-
-/* Un chevron porte un glyphe, pas un mot : il perd le rembourrage et la casse d'un bouton
-   de formulaire, mais garde la cible de clic gantée de §11.2. */
-.barretemps-cran,
-.barretemps-lecture,
-.barretemps-instant {
-  min-height: calc(var(--cible-clic) - 0.5rem);
-  border-color: transparent;
-}
-
-.barretemps-cran,
-.barretemps-lecture {
-  min-width: calc(var(--cible-clic) - 0.5rem);
-  padding: var(--pas-1) var(--pas-1);
-}
-
-/* La vitesse active et la lecture se voient, sinon deux états identiques à l'œil font croire
-   que le clic n'a rien fait. */
-.barretemps-cran[aria-pressed='true'],
-.barretemps-lecture[aria-pressed='true'] {
-  border-color: var(--accent);
-}
-
-/* La boîte fait la hauteur de cible gantée (§11.2), plus haute que sa ligne de texte : sans
-   centrage, cette ligne se colle en haut et l'instant flotte au-dessus des chevrons.
-   Le jour et l'heure partagent désormais la même taille — leur ligne de base coïncide avec
-   leur centre, et l'alignement sur la ligne de base n'apporte plus rien. */
-.barretemps-instant {
-  display: flex;
-  align-items: center;
-  gap: var(--pas-2);
-  padding: var(--pas-1) var(--pas-2);
-  font-size: var(--texte-legende);
-  color: var(--attenue);
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-/* En saisie, l'instant n'est plus une lecture : il reprend la couleur du texte actif. */
-input.barretemps-instant {
-  font: var(--texte-appui)/1.4 var(--police-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--texte);
-}
-
-/* Un seul instant, donc une seule typographie, et c'est celle des autres lectures
-   de la barre : la visée dit son azimut en `.etat`, le transport dit son heure de même. La
-   date atténuée en 0,8 rem devant une heure en 1 rem se lisait comme deux informations. Le
-   point médian les sépare sans les distinguer. */
-.barretemps-jour,
-.barretemps-heure {
-  font-variant-numeric: tabular-nums;
-}
-
-.barretemps-heure::before {
-  content: '·';
-  margin-right: var(--pas-2);
-  color: var(--attenue);
-}
-
-.barretemps-facteur {
-  font-size: var(--texte-legende);
-  font-variant-numeric: tabular-nums;
-  color: var(--accent);
-  letter-spacing: var(--suivi-micro);
-}
-
-/* L'écrêtage se pose AU-DESSUS de la barre, dont la hauteur est fixe. Il s'affiche en clair
-   plutôt qu'en infobulle : sur le terrain, rien de critique ne dépend du survol (§11.2). */
-.barretemps-message {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + var(--pas-1));
-  width: min(28rem, calc(100vw - var(--jour-ecran)));
-  margin: 0;
-  padding: var(--pas-2) var(--pas-2);
-  background: var(--surface-haute);
-  border: var(--trait) solid var(--bordure);
-}
-
 .coque-scene {
   position: absolute;
   inset: 0;
@@ -758,14 +668,14 @@ input.barretemps-instant {
   bottom: calc(var(--barre-bas) + var(--jour-carte));
 }
 
-/* LES CARTES DU MATÉRIEL : Boîtier au-dessus d'Optique, en haut à droite, contre le
-   panneau (T-0247).
+/* LES CARTES DU MATÉRIEL : Boîtier au-dessus d'Optique, en haut à droite, contre la colonne
+   de droite (T-0247).
 
    Deux cartes de hauteur variable ne s'ancrent pas l'une sous l'autre en absolu — la
    première grandit dès qu'on la déplie ou qu'on passe au mode avancé, et viendrait couvrir la
    seconde. Le conteneur les met en colonne et tient la hauteur laissée par les deux barres ;
    quand elles n'y tiennent plus ensemble, chacune rétrécit et son corps défile chez lui.
-   Alignées à droite, une carte repliée reste collée au panneau. Le panneau est décollé du
+   Alignées à droite, une carte repliée reste collée à la colonne. Celle-ci est décollée du
    bord d'un jour de carte (T-0243), d'où les deux jours.
 
    Le conteneur laisse passer le pointeur : l'air entre les cartes et sous elles reste du ciel
@@ -790,6 +700,112 @@ input.barretemps-instant {
   min-height: 0;
   max-width: none;
   pointer-events: auto;
+}
+
+/* LE PANNEAU DU TEMPS (T-0314) : la date et l'heure, en tête de la colonne de droite.
+
+   Il porte le cadre d'instrument des autres objets posés sur le ciel — filet, fond de surface,
+   et les équerres déclarées avec celles des cartes plus bas dans la feuille.
+
+   SA LARGEUR EST CELLE DE LA COLONNE, jamais celle de son contenu : il coiffe le panneau de
+   séance, et deux boîtes empilées qui ne s'alignent pas au pixel près lisent comme un défaut de
+   montage. C'est aussi pourquoi il n'affiche plus le facteur de défilement ni l'écrêtage qui le
+   borne — deux lectures qui apparaissent et disparaissent, donc deux tailles de panneau.
+
+   `flex: none` : la hauteur restante appartient au panneau de séance, qui est ce qui défile. */
+.panneau-temps {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pas-2);
+  padding: var(--jour-carte);
+  border: var(--trait) solid var(--bordure);
+  background: var(--surface);
+}
+
+/* Première rangée : la date à gauche, le retour à l'instant présent à droite. */
+.panneau-temps-date {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pas-3);
+}
+
+/* La date est une VALEUR compacte, écrite comme le lieu de la barre basse : petite, en
+   capitales espacées. C'est la grammaire de §11.1 — la casse distingue ce qui se lit d'un coup
+   d'œil de ce qui se lit en phrase, là où la luminance ne le peut plus. */
+.panneau-temps-jour {
+  font-size: var(--texte-micro);
+  letter-spacing: var(--suivi-micro);
+  text-transform: uppercase;
+  color: var(--attenue);
+  white-space: nowrap;
+}
+
+/* Le bouton porte un glyphe ET un mot : il garde la casse d'un bouton, prend la hauteur de
+   cible que la rangée peut lui donner, et serre son icône contre son libellé. */
+.panneau-temps-maintenant {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pas-1);
+  min-height: calc(var(--cible-clic) - 0.5rem);
+  padding: var(--pas-1) var(--pas-2);
+  white-space: nowrap;
+}
+
+/* Le glyphe accompagne un mot de micro-libellé : à 1,25 rem il pèserait deux fois son texte. */
+.panneau-temps-maintenant .icone {
+  font-size: var(--texte-appui);
+}
+
+/* Seconde rangée : l'heure prend le bord gauche, le transport ferme à droite. */
+.panneau-temps-transport {
+  display: flex;
+  align-items: center;
+  gap: var(--pas-0);
+}
+
+/* L'HEURE EST LA PLUS GROSSE CHOSE DU PANNEAU, et c'est tout ce qui la distingue : §11.1
+   confisque la luminance, il reste la taille. Les secondes retombent de deux rangs et prennent
+   la couleur des lectures secondaires — on les surveille, on ne les lit pas. */
+.panneau-temps-heure {
+  margin-inline-end: auto;
+  padding-inline-end: var(--pas-2);
+  font-size: var(--texte-titre);
+  white-space: nowrap;
+}
+
+.panneau-temps-secondes {
+  font-size: var(--texte-legende);
+  color: var(--attenue);
+}
+
+/* Un chevron porte un glyphe, pas un mot : il perd le rembourrage et la casse d'un bouton
+   de formulaire, mais garde la cible de clic gantée de §11.2. */
+.panneau-temps-cran,
+.panneau-temps-lecture {
+  min-height: calc(var(--cible-clic) - 0.5rem);
+  min-width: calc(var(--cible-clic) - 0.5rem);
+  padding: var(--pas-1) var(--pas-1);
+  border-color: transparent;
+}
+
+/* La vitesse active et la lecture se voient, sinon deux états identiques à l'œil font croire
+   que le clic n'a rien fait. */
+.panneau-temps-cran[aria-pressed='true'],
+.panneau-temps-lecture[aria-pressed='true'] {
+  border-color: var(--accent);
+}
+
+/* En saisie, l'instant n'est plus une lecture : il prend la rangée entière et la couleur du
+   texte actif. */
+.panneau-temps-saisie {
+  flex: 1;
+  min-width: 0;
+  font: var(--texte-appui)/1.4 var(--police-mono);
+  color: var(--texte);
 }
 
 
@@ -968,16 +984,15 @@ input.barretemps-instant {
   margin-top: var(--pas-2);
 }
 
-/* Le panneau latéral : ce qui se lit en longueur, à côté de la scène.
+/* LA COLONNE DE DROITE (T-0314) : le panneau du temps, puis le panneau de séance.
 
-   Il ne se ferme plus : le mode décide de son contenu, jamais de sa présence. Sa largeur est
-   donc toujours réservée, à la scène comme au bornage des cartes.
+   C'est ELLE qui porte la largeur, et non plus le panneau de séance seul. Les deux boîtes la
+   remplissent exactement : le temps ne se redimensionne donc jamais sous la main, quoi qu'il
+   affiche, et deux cadres empilés s'alignent au pixel près plutôt que de lire comme un défaut de
+   montage. La hauteur, elle, revient au panneau de séance — c'est lui qui défile.
 
-   T-0243 — il se pose sur le ciel comme une carte dépliée — filet, en-tête teinté, équerres —
-   et non plus comme une colonne collée au bord : quatre objets posés sur la scène, un seul
-   dessin. Il ne se replie pas, et c'est ce qui le garde hors de `Carte` : replié, le catalogue
-   ne laisserait rien à lire, et son en-tête porte des commandes qu'un bouton ne peut contenir. */
-.coque-lateral {
+   Elle est décollée des bords d'un jour de carte (T-0243), comme tout ce qui flotte. */
+.coque-droite {
   position: absolute;
   right: var(--jour-carte);
   top: calc(var(--barre-haut) + var(--jour-carte));
@@ -985,6 +1000,27 @@ input.barretemps-instant {
   z-index: 3;
   width: var(--lateral);
   max-width: calc(100% - 2 * var(--jour-carte));
+  display: flex;
+  flex-direction: column;
+  gap: var(--jour-carte);
+}
+
+/* Le panneau de séance : ce qui se lit en longueur, à côté de la scène.
+
+   Il ne se ferme plus : le mode décide de son contenu, jamais de sa présence. La largeur de sa
+   colonne est donc toujours réservée, à la scène comme au bornage des cartes.
+
+   T-0243 — il se pose sur le ciel comme une carte dépliée — filet, en-tête teinté, équerres —
+   et non plus comme une colonne collée au bord : quatre objets posés sur la scène, un seul
+   dessin. Il ne se replie pas, et c'est ce qui le garde hors de `Carte` : replié, le catalogue
+   ne laisserait rien à lire, et son en-tête porte des commandes qu'un bouton ne peut contenir.
+
+   `position: relative` : ses équerres se posent par rapport à lui, et il n'est plus lui-même le
+   bloc englobant qu'un ancrage absolu lui donnait. */
+.coque-lateral {
+  position: relative;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   border: var(--trait) solid var(--bordure);
@@ -1043,6 +1079,7 @@ input.barretemps-instant {
   .coque-barrebas,
   .coque-scene,
   .carte,
+  .panneau-temps,
   .coque-rail,
   .coque-lateral {
     position: static;
@@ -1050,11 +1087,13 @@ input.barretemps-instant {
     width: auto;
     max-width: none;
     height: auto;
+    flex: none;
     flex-wrap: wrap;
   }
 
-  /* Les cartes du matériel rejoignent le flux comme les autres : leur colonne n'a plus rien
-     à tenir. */
+  /* La colonne de droite et les cartes du matériel rejoignent le flux comme le reste : elles
+     n'ont plus ni largeur ni hauteur à tenir. */
+  .coque-droite,
   .cartes-materiel {
     display: contents;
   }
@@ -1062,6 +1101,7 @@ input.barretemps-instant {
   /* Pleine largeur et bordées d'un seul filet haut, les cartes n'ont plus de cadre à
      marquer : des équerres qui débordent sortiraient de l'écran. */
   .carte::before,
+  .panneau-temps::before,
   .coque-lateral::before {
     display: none;
   }
@@ -1072,7 +1112,7 @@ input.barretemps-instant {
     padding: var(--pas-2) var(--pas-3);
   }
 
-  /* Sous le repli, le lieu et le transport remplissent déjà la rangée : la phrase
+  /* Sous le repli, le lieu et la légende remplissent déjà la rangée : la phrase
      y serait réduite à ses points de suspension. Elle prend donc sa propre ligne. */
   .coque-barrebas > .barrebas-visee {
     flex-basis: 100%;
@@ -1080,9 +1120,16 @@ input.barretemps-instant {
   }
 
   .carte,
+  .panneau-temps,
   .coque-lateral {
     border: 0;
     border-top: var(--trait) solid var(--bordure);
+  }
+
+  /* Le transport tient sur une rangée de cinq boutons et d'une horloge : sous le repli il
+     passe à la ligne plutôt que de pousser la page hors de l'écran. */
+  .panneau-temps-transport {
+    flex-wrap: wrap;
   }
 
   /* Sous le repli le rail devient une rangée de boutons dans le flux, à la place qu'il tenait
@@ -1364,9 +1411,11 @@ section:not([class]) > h2:first-child {
    rubriques de colonne ; devenues cartes, elles le gardent, et le plan de nuit le prend : trois
    objets posés sur le ciel, un seul dessin. Son filet, elle l'a déjà. Repliée, elle n'est
    plus qu'un titre : des équerres autour d'une ligne la désigneraient comme un objet ouvert.
-   T-0243 — le panneau latéral, qui ne se replie pas, les porte toujours. */
+   T-0243 — le panneau latéral, qui ne se replie pas, les porte toujours. T-0314 — le panneau du
+   temps les prend en arrivant dans la même colonne : quatre objets sur le ciel, un seul dessin. */
 section:not([class])::before,
 .carte[data-ouverte='true']::before,
+.panneau-temps::before,
 .coque-lateral::before {
   content: '';
   position: absolute;
@@ -2109,6 +2158,7 @@ button:disabled {
   .coque-barrebas,
   .coque-scene,
   .cartes-materiel,
+  .panneau-temps,
   .coque-lateral,
   .carte {
     display: none;

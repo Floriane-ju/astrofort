@@ -6,17 +6,18 @@
  * un champ de date au milieu de la barre, et la section « Temps » d'un onglet parmi quatre.
  * Rien ne justifiait de les séparer sinon l'ordre dans lequel les panneaux avaient été écrits.
  *
- * T-0137 — le temps n'est plus un tiroir de réglages mais un transport (`BarreTemps`), et la
- * date a rejoint l'heure : une seule date à l'écran, donc plus de nuit planifiée qui diffère
- * du ciel regardé.
+ * T-0137 — le temps n'est plus un tiroir de réglages mais un transport, et la date a rejoint
+ * l'heure : une seule date à l'écran, donc plus de nuit planifiée qui diffère du ciel regardé.
+ * T-0314 — ce transport a quitté la barre pour un panneau posé en haut à droite
+ * (`PanneauTemps`) : il ne reste ici que le lieu et ce que la scène vise.
  *
  * T-0153 — la phrase qui dit où pointe la scène occupe le centre. Elle était rangée dans le
  * tiroir des lectures, avec le diagnostic de rendu ; c'est la seule qu'on consulte en visant,
- * et elle complète les deux autres repères de la barre : le lieu à gauche, l'instant à droite.
+ * et elle complète le repère de gauche : le lieu.
  *
- * T-0163 — elle ne date plus l'image : le transport porte le même instant à sa droite, et il
- * est réglable. La phrase ne garde que ce qui lui appartient — la visée, le cap, le champ —
- * et ses cinq nombres se tirent à l'horizontale.
+ * T-0163 — elle ne date plus l'image : le panneau du temps porte le même instant, réglable.
+ * La phrase ne garde que ce qui lui appartient — la visée, le cap, le champ — et ses cinq
+ * nombres se tirent à l'horizontale.
  *
  * Le lieu, lui, affiche ses VALEURS en clair et range ses CHAMPS dans un tiroir : il se lit
  * sans un clic, se règle en un. Un `<details>` natif porte l'état ouvert/fermé, le clavier et
@@ -27,7 +28,6 @@ import { Fragment, useMemo } from 'react'
 import type { Site } from '../core/ephem.ts'
 import { cielInstantane } from '../core/horloges.ts'
 import { bornesZoom } from '../core/projection.ts'
-import { BarreTemps } from './BarreTemps.tsx'
 import { ChampsSite, type ChampsSiteProps } from './ChampsSite.tsx'
 import { Compteur } from './Compteur.tsx'
 import { LegendeCouleurs } from './LegendeCouleurs.tsx'
@@ -42,8 +42,6 @@ import {
 } from './scene-lecture.ts'
 
 export interface BarreBasProps extends ChampsSiteProps {
-  /** La nuit du plan de séance suit l'instant choisi dans le transport. */
-  readonly surNuitIso: (v: string) => void
   /** §3.3 — le site oriente le ciel : sans lui, la visée n'a pas de coordonnées J2000. */
   readonly site: Site
   /** §3.3 — le paquet Gaia décide jusqu'où le champ peut se refermer sans vider le ciel. */
@@ -119,14 +117,14 @@ function Visee(props: { readonly site: Site; readonly gaiaCharge: boolean }) {
     </Fragment>
   )
 
-  // T-0163 — la phrase ne date plus l'image : le transport porte le même instant à deux
-  // centimètres de là, et deux horloges côte à côte se contredisent à la seconde près.
+  // T-0163 — la phrase ne date plus l'image : le panneau du temps porte le même instant, et
+  // deux horloges à l'écran se contredisent à la seconde près.
   return <p className="etat barrebas-visee">{segments.map(compteur)}</p>
 }
 
 export function BarreBas(props: BarreBasProps) {
   // `gaiaCharge` sort du lot : il borne le champ de la visée, il n'est pas un champ du lieu.
-  const { surNuitIso, site: siteCalcul, gaiaCharge, modeNuit, ...site } = props
+  const { site: siteCalcul, gaiaCharge, modeNuit, ...site } = props
 
   return (
     <>
@@ -148,8 +146,6 @@ export function BarreBas(props: BarreBasProps) {
       <LegendeCouleurs modeNuit={modeNuit} />
 
       <Visee site={siteCalcul} gaiaCharge={gaiaCharge} />
-
-      <BarreTemps surNuitIso={surNuitIso} />
     </>
   )
 }
