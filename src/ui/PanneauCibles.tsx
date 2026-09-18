@@ -32,7 +32,11 @@ import {
   type LigneCible,
   type PoseCible,
 } from '../core/cibles-liste.ts'
-import { bornesTailleCadre, compteTropPetites } from '../core/session-candidates.ts'
+import {
+  bornesTailleCadre,
+  compteTropPetites,
+  type BornesTailleCadre,
+} from '../core/session-candidates.ts'
 import { dureeLisible } from '../core/exposure.ts'
 import { cielInstantane } from '../core/horloges.ts'
 import type { Site } from '../core/ephem.ts'
@@ -42,6 +46,7 @@ import { DOMAINES } from '../registry/domains.ts'
 import { I } from '../registry/imagerie.ts'
 import { TYPES_OBJET, type ObjetCielProfond, type TypeObjet } from '../data/deepsky.ts'
 import { BoutonVisee } from './BoutonVisee.tsx'
+import { Bulle } from './Bulle.tsx'
 import { Curseur } from './Curseur.tsx'
 import { Icone } from './Icone.tsx'
 import { Interrupteur } from './Interrupteur.tsx'
@@ -67,6 +72,29 @@ const POURCENT = 100
 export const RIEN_SOUS_CE_NOM =
   'Aucune désignation ni aucun nom d’usage ne correspond. La recherche porte sur les ' +
   'désignations (M42, NGC 7000) et sur les noms d’usage, français comme anglais.'
+
+/**
+ * Ce que la case « photographiables » coupe, en une glose de survol plutôt qu'en paragraphe
+ * sous la liste (T-0278 en avait fait un texte permanent) : la phrase décrit le contrôle,
+ * elle se lit quand on l'interroge et ne pousse plus les lignes vers le bas à chaque
+ * changement de matériel. Le compte des trop petites reste dedans — c'est lui qui explique
+ * qu'un objectif plus court RACCOURCISSE la liste au lieu de l'allonger.
+ */
+function aidePortee(
+  seuilDeg: number,
+  taille: BornesTailleCadre,
+  tropPetites: number,
+): string {
+  const pluriel = tropPetites > 1
+  return (
+    `Objets à plus de ${seuilDeg}° cette nuit, dont le grand axe mesure de ` +
+    `${taille.minArcmin.toFixed(0)}’ à ${taille.maxArcmin.toFixed(0)}’ — plus petit, ` +
+    `l’objet ne fait que quelques pixels ; plus grand, il déborde du cadre. ` +
+    `${tropPetites.toLocaleString('fr-FR')} objet${pluriel ? 's' : ''} du catalogue ` +
+    `${pluriel ? 'sont écartés' : 'est écarté'} comme trop petit${pluriel ? 's' : ''} ` +
+    `pour ce cadre.`
+  )
+}
 
 export interface PanneauCiblesProps {
   readonly catalogue: readonly ObjetCielProfond[]
@@ -168,23 +196,14 @@ export function PanneauCibles(props: PanneauCiblesProps) {
         onChange={(e) => majCatalogue({ recherche: e.target.value })}
       />
 
-      <Interrupteur
-        actif={photographiablesSeules}
-        surChangement={(actif) => majCatalogue({ photographiablesSeules: actif })}
-      >
-        Ne montrer que les objets photographiables
-      </Interrupteur>
-
-      {photographiablesSeules && (
-        <p className="etat">
-          Objets à plus de {seuil}° cette nuit, dont le grand axe mesure de{' '}
-          {taille.minArcmin.toFixed(0)}’ à {taille.maxArcmin.toFixed(0)}’ — plus petit, l’objet
-          ne fait que quelques pixels ; plus grand, il déborde du cadre.{' '}
-          {tropPetites.toLocaleString('fr-FR')} objet{tropPetites > 1 ? 's' : ''} du catalogue
-          {tropPetites > 1 ? ' sont écartés' : ' est écarté'} comme trop petit
-          {tropPetites > 1 ? 's' : ''} pour ce cadre.
-        </p>
-      )}
+      <Bulle texte={aidePortee(seuil, taille, tropPetites)} place="bas">
+        <Interrupteur
+          actif={photographiablesSeules}
+          surChangement={(actif) => majCatalogue({ photographiablesSeules: actif })}
+        >
+          <span className="aide">Ne montrer que les objets photographiables</span>
+        </Interrupteur>
+      </Bulle>
 
       <div className="cibles-filtres">
         <details className="cibles-types">

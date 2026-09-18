@@ -19,16 +19,26 @@ import type { ReactNode } from 'react'
 export interface InterrupteurProps {
   readonly actif: boolean
   readonly surChangement: (actif: boolean) => void
+  /** La glose qu'une `<Bulle>` greffe en l'enveloppant : elle DÉCRIT la case, elle ne la
+      nomme pas — le libellé s'en charge. Portée par l'`<input>` et non par le `<label>` :
+      c'est la case qui est annoncée, la description doit venir avec elle. */
+  readonly 'aria-describedby'?: string | undefined
   /** La phrase qui dit ce que l'interrupteur fait, pas le nom d'un champ. */
   readonly children: ReactNode
 }
 
-export function Interrupteur({ actif, surChangement, children }: InterrupteurProps) {
+export function Interrupteur({
+  actif,
+  surChangement,
+  'aria-describedby': decritPar,
+  children,
+}: InterrupteurProps) {
   return (
     <label className="interrupteur">
       <input
         type="checkbox"
         checked={actif}
+        aria-describedby={decritPar}
         onChange={(e) => surChangement(e.target.checked)}
       />
       {children}
