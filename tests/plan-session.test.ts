@@ -277,14 +277,23 @@ describe('sur le catalogue OpenNGC embarqué', () => {
 })
 
 /**
- * T-0079 — le noyau promis au débutant grand champ, vérifié bout en bout.
+ * T-0079 puis T-0266 — ce que le grand champ tient vraiment, mesuré sur le CATALOGUE RÉEL.
  *
- * Les trois enfants de l'épique livrés, il reste à voir ce que l'utilisateur obtient : un plan
- * produit depuis le site de référence, sur le CATALOGUE RÉEL, doit citer une cible du domaine
- * grand champ que ni NGC ni IC ne portent. Sans ce test, Sharpless et Barnard peuvent être
- * dans le paquet sans jamais ressortir du scoring, et l'épique se solderait sur une promesse.
+ * L'épique exigeait qu'un plan cite une cible Sharpless ou Barnard. Ce critère ne passait que
+ * par la classe d'opacité de Barnard lue comme une magnitude : T-0266 l'a retirée, et la
+ * promesse est tombée avec. Les 344 objets Barnard ne portent aucune photométrie — une
+ * nébuleuse obscure absorbe, elle n'émet pas — et les Sharpless qui en portent une plafonnent
+ * sous la borne basse de remplissage du profil grand champ. Les deux ensembles sont disjoints.
+ *
+ * Ce qui se vérifie ici n'est donc plus la promesse, c'est l'honnêteté : le complément est
+ * écarté pour la raison vraie, nommée, au lieu de disparaître en silence ou de remonter sur
+ * une magnitude inventée. Faire repasser l'ancien critère demanderait de réintroduire le flux
+ * que §6.3 interdit.
  */
-describe('grand champ bout en bout §6.1 (T-0079)', () => {
+describe('grand champ bout en bout §6.1 (T-0079, T-0266)', () => {
+  /** Sharpless et Barnard — le complément que ni NGC ni IC ne portent. */
+  const EST_COMPLEMENT = /^(Sh2-|B)\d+$/
+
   function catalogueReel(): readonly ObjetCielProfond[] {
     const lit = (nom: string): ArrayBuffer => {
       const octets = readFileSync(join(import.meta.dirname, '..', 'public', 'data', nom))
@@ -305,11 +314,28 @@ describe('grand champ bout en bout §6.1 (T-0079)', () => {
     ]
   }
 
-  it('cite une cible Sharpless ou Barnard dans un plan de grand champ', () => {
-    const plan = planSession(contexte(), catalogueReel())
+  it('tient un plan sur le catalogue réel, et compte ce que le grand champ n’y trouve pas', () => {
+    const catalogue = catalogueReel()
+    const plan = planSession(contexte(), catalogue)
     expect(plan.etapes.length).toBeGreaterThan(0)
-    const complement = plan.etapes.filter((e) => /^(Sh2-|B)\d+$/.test(e.objet.designation))
-    expect(complement.length, plan.etapes.map((e) => e.objet.designation).join(', ')).toBeGreaterThan(0)
+
+    // Sans magnitude intégrée, aucune brillance de surface n'est calculable, donc aucun
+    // verdict : le complément ne peut pas entrer dans le plan. L'y faire remonter demanderait
+    // un flux que ni OpenNGC ni le catalogue DSO ne publient.
+    const planifiees = plan.etapes.filter((e) => EST_COMPLEMENT.test(e.objet.designation))
+    expect(planifiees.map((e) => e.objet.designation).join(', ')).toBe('')
+
+    // Il n'est pas perdu en silence pour autant. Le pré-filtrage compte les cibles sans donnée
+    // plutôt que de les lister une par une (elles sont des milliers), et la note de couverture
+    // porte ce décompte jusqu'à l'écran : le seuil se dérive du paquet, jamais d'un nombre écrit.
+    const sansPhotometrie = catalogue.filter(
+      (objet) => EST_COMPLEMENT.test(objet.designation) && objet.vMag === null,
+    )
+    expect(sansPhotometrie.length).toBeGreaterThan(0)
+    expect(plan.comptesEcartees.DONNEE_MANQUANTE ?? 0).toBeGreaterThanOrEqual(
+      sansPhotometrie.length,
+    )
+    expect(plan.noteCouvertureCatalogue).toMatch(/faute de taille ou de magnitude/)
   })
 })
 
