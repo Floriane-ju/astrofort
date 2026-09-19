@@ -14,6 +14,8 @@ import {
   type ManifestePaquet,
 } from '../src/data/catalog.ts'
 import { decodeObjets, encodeObjets, type ObjetCielProfond } from '../src/data/deepsky.ts'
+import { aireEllipseArcsec2 } from '../src/core/detectability.ts'
+import { K } from '../src/registry/constants.ts'
 import { chercheCatalogue } from '../src/core/recherche-catalogue.ts'
 import {
   chargeObjetsCielProfond,
@@ -246,6 +248,55 @@ describe('Sharpless et Barnard §6.1', () => {
     for (const objet of obscures) {
       expect(objet.vMag, objet.designation).toBeNull()
       expect(objet.bMag, objet.designation).toBeNull()
+    }
+  })
+
+  /**
+   * T-0317 — la colonne de magnitude d'une nébuleuse diffuse porte parfois celle de l'étoile
+   * qui l'éclaire. Sh2-9 prenait V = 2,89, la magnitude de σ Sco : étalée sur 17′ × 3′ elle
+   * donnait SB = 15,79 mag/arcsec² et le verdict ŒIL_NU.
+   *
+   * Le critère est physique, pas empirique : une brillance MOYENNE ne peut pas dépasser le PIC
+   * de la nébuleuse diffuse la plus brillante du ciel. Les planétaires et les amas sont hors
+   * du garde-fou — la première est compacte et dépasse ce pic pour de bon, le second est un
+   * paquet de sources ponctuelles dont la brillance de surface ne veut rien dire.
+   */
+  it('ne laisse aucune nébuleuse diffuse plus brillante que le pic de M42 §6.3', async () => {
+    const [complement, ngc] = await Promise.all([litObjets('deepsky'), litObjets('openngc')])
+    if (complement === null || ngc === null) return
+
+    // AUTRE porte les nébuleuses qu'OpenNGC range sous `Neb` sans les qualifier — M8, M16,
+    // M17, M20. Le garde-fou de construction s'y applique, le test le vérifie donc aussi.
+    const DIFFUS = new Set(['EMISSION', 'REFLEXION', 'RESTE_SUPERNOVA', 'AUTRE'])
+    const diffuses = [...ngc, ...complement].filter((o) => DIFFUS.has(o.type))
+    expect(diffuses.length).toBeGreaterThan(0)
+
+    for (const objet of diffuses) {
+      if (objet.majAxArcmin === null) continue
+      const aire = aireEllipseArcsec2(objet.majAxArcmin, objet.minAxArcmin ?? objet.majAxArcmin)
+      for (const magnitude of [objet.vMag, objet.bMag]) {
+        if (magnitude === null) continue
+        const sb = magnitude + K('POGSON') * Math.log10(aire)
+        expect(sb, `${objet.designation} (${objet.type})`).toBeGreaterThanOrEqual(
+          K('SB_PIC_M42_MAG'),
+        )
+      }
+    }
+  })
+
+  /**
+   * T-0317 — une taille arrondie à zéro par l'encodage donne une aire nulle, donc une
+   * brillance de surface infiniment brillante. Sous la résolution du paquet, la dimension est
+   * absente, pas nulle.
+   */
+  it('n’encode jamais une taille nulle, seulement une taille absente §12.2', async () => {
+    const [complement, ngc] = await Promise.all([litObjets('deepsky'), litObjets('openngc')])
+    if (complement === null || ngc === null) return
+
+    for (const objet of [...ngc, ...complement]) {
+      for (const taille of [objet.majAxArcmin, objet.minAxArcmin]) {
+        if (taille !== null) expect(taille, objet.designation).toBeGreaterThan(0)
+      }
     }
   })
 

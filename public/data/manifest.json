@@ -13,7 +13,7 @@
     "version": "1",
     "nombreEntrees": 12518,
     "octets": 350504,
-    "sha256": "d9fb6268575d0487d4265895f51ac578ad4af209a2466493f2e52e514356b4ff",
+    "sha256": "3a8f618e2bd99009bfc252fd39f0439cd07cc0c1048c3fdd44f0072b9383b224",
     "source": "OpenNGC — https://raw.githubusercontent.com/mattiaverga/OpenNGC/da90466031b0372c896588b85be6016c617e205b/database_files/NGC.csv + https://raw.githubusercontent.com/mattiaverga/OpenNGC/9609f2f29e2d6b108b16f2bfe810aab82f27aa95/database_files/addendum.csv",
     "obligatoire": true
   },
@@ -40,7 +40,7 @@
     "version": "1",
     "nombreEntrees": 614,
     "octets": 17192,
-    "sha256": "1b1c8377d28581fa43f018c4d6e43946ef53c40ddd564df3a5eb669316cd50e9",
+    "sha256": "51afc280cee51f3796c78e3131c5fa073614d855ae4a9b838856a0e498c246a0",
     "source": "Sharpless et Barnard, catalogue DSO Stellarium v3.23 — https://raw.githubusercontent.com/Stellarium/stellarium/9ca023a97f344975e1faa96f91b20a4c18a7c02b/nebulae/default/catalog.txt + https://raw.githubusercontent.com/Stellarium/stellarium/9ca023a97f344975e1faa96f91b20a4c18a7c02b/nebulae/default/names.dat ; entrées doublant un NGC/IC d'OpenNGC écartées, Caldwell hors périmètre (redésignations NGC/IC)",
     "obligatoire": true
   },

@@ -33,19 +33,29 @@ const APSC = profilOptique({
   ...capteurEffectif(BOITIER_REFERENCE, 'APSC_CROP'),
 })
 
+function lit(nom: string): ArrayBuffer {
+  const octets = readFileSync(join(import.meta.dirname, '..', 'public', 'data', nom))
+  return octets.buffer.slice(octets.byteOffset, octets.byteOffset + octets.byteLength) as ArrayBuffer
+}
+
 function catalogue(): readonly ObjetCielProfond[] {
-  const racine = join(import.meta.dirname, '..', 'public', 'data')
-  const lit = (nom: string): ArrayBuffer => {
-    const octets = readFileSync(join(racine, nom))
-    return octets.buffer.slice(octets.byteOffset, octets.byteOffset + octets.byteLength) as ArrayBuffer
-  }
   return decodeObjets({
     enregistrements: lit('openngc-1.bin'),
     chaines: lit('openngc-noms-1.bin'),
   })
 }
 
+/** Le complément §6.1 : Sharpless et Barnard, que ni NGC ni IC ne portent. */
+function complement(): readonly ObjetCielProfond[] {
+  return decodeObjets({
+    enregistrements: lit('deepsky-1.bin'),
+    chaines: lit('deepsky-noms-1.bin'),
+  })
+}
+
 const OPENNGC = catalogue()
+const COMPLET = [...OPENNGC, ...complement()]
+const EST_COMPLEMENT = /^(Sh2-|B)\d+$/
 
 describe('verdict de domaine §6.1', () => {
   it('annonce un très grand champ et sa fenêtre de cadrage pour le profil de référence', () => {
@@ -74,6 +84,33 @@ describe('verdict de domaine §6.1', () => {
       expect(tailleDeg).toBeLessThanOrEqual(verdict.tailleMaxDeg.value)
     }
     expect(verdict.causeAbsence).toBeUndefined()
+  })
+
+  /**
+   * §6.1, dépendances données — « Sharpless et Barnard obligatoires au MVP : sans eux, le
+   * domaine d'un setup grand champ est quasi vide dans les catalogues standard ».
+   *
+   * C'est ICI que la promesse grand champ se vérifie, et nulle part ailleurs : le verdict de
+   * domaine sélectionne sur la TAILLE seule, quand le plan de séance exige en plus une
+   * magnitude intégrée pour rendre un verdict de détectabilité (§6.3, §6.4). Une grande
+   * nébuleuse sans photométrie publiée a donc toute sa place ici, et aucune dans le plan.
+   * T-0079 avait posé l'exigence sur le plan : elle n'y était tenable que par une magnitude
+   * inventée (T-0266).
+   */
+  it('peuple le très grand champ avec le complément, que NGC et IC ne portent pas', () => {
+    const verdict = verdictDomaine(OPTIQUE.fovHDeg.value, COMPLET)
+    expect(verdict.domaine).toBe('DOMAINE_TRES_GRAND_CHAMP')
+    expect(verdict.causeAbsence).toBeUndefined()
+
+    const issuesDuComplement = verdict.cibles.filter((o) => EST_COMPLEMENT.test(o.designation))
+    expect(
+      issuesDuComplement.length,
+      verdict.cibles.map((o) => o.designation).join(', '),
+    ).toBeGreaterThan(0)
+
+    // Sans lui, la même fenêtre se vide — c'est ce qui rend les deux catalogues obligatoires.
+    const sansComplement = verdictDomaine(OPTIQUE.fovHDeg.value, OPENNGC)
+    expect(sansComplement.cibles.length).toBeLessThan(verdict.cibles.length)
   })
 
   it('annonce l’absence de cible plutôt qu’une liste par défaut hors fenêtre', () => {

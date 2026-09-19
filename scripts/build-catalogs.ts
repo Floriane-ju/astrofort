@@ -12,6 +12,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { K } from '../src/registry/constants.ts'
+import { aireEllipseArcsec2 } from '../src/core/detectability.ts'
 import { encodeEtoiles, sha256Hex, type Etoile } from '../src/data/catalog.ts'
 import {
   encodeObjets,
@@ -283,6 +285,13 @@ function construitObjets(csv: string): ObjetCielProfond[] {
 
     const messier = (ligne.get('M') ?? '').trim()
     const nom = (ligne.get('Name') ?? '').trim()
+    const type = TYPES_OPENNGC[codeType] ?? 'INCONNU'
+    const diffuse = TYPES_DIFFUS.has(type) || codeType === CODE_NEBULEUSE_GENERIQUE
+    // T-0317 — `positifOuNull` et non `nombreOuNull` : OpenNGC écrit 0 pour une dimension
+    // qu'il ne connaît pas, et un grand axe nul donne une aire nulle, donc une brillance de
+    // surface infiniment brillante. Le complément lisait déjà ses tailles ainsi.
+    const majAxArcmin = positifOuNull(ligne.get('MajAx'))
+    const minAxArcmin = positifOuNull(ligne.get('MinAx'))
     objets.push({
       // OpenNGC écrit le numéro Messier sur trois chiffres : « 031 » devient « M31 ».
       designation: messier === '' ? nom : `M${Number(messier)}`,
@@ -291,12 +300,12 @@ function construitObjets(csv: string): ObjetCielProfond[] {
         .join('|'),
       adDeg,
       decDeg,
-      type: TYPES_OPENNGC[codeType] ?? 'INCONNU',
-      majAxArcmin: nombreOuNull(ligne.get('MajAx')),
-      minAxArcmin: nombreOuNull(ligne.get('MinAx')),
-      posAngDeg: nombreOuNull(ligne.get('PosAng')),
-      vMag: nombreOuNull(ligne.get('V-Mag')),
-      bMag: nombreOuNull(ligne.get('B-Mag')),
+      type,
+      majAxArcmin,
+      minAxArcmin,
+      posAngDeg: positifOuNull(ligne.get('PosAng')),
+      vMag: magnitudeDeNebuleuse(diffuse, nombreOuNull(ligne.get('V-Mag')), majAxArcmin, minAxArcmin),
+      bMag: magnitudeDeNebuleuse(diffuse, nombreOuNull(ligne.get('B-Mag')), majAxArcmin, minAxArcmin),
       surfBr: nombreOuNull(ligne.get('SurfBr')),
     })
   }
@@ -415,6 +424,53 @@ function magnitudeDso(brut: string | undefined): number | null {
 }
 
 /**
+ * T-0317 — les nébuleuses diffuses dont la colonne de magnitude porte celle d'une étoile.
+ *
+ * Même piège que la classe d'opacité de Barnard (T-0266), et repéré de la même façon : la
+ * valeur est plausible en colonne, absurde une fois rapportée à la surface de l'objet. Sh2-9
+ * porte V = 2,89, qui est la magnitude de σ Sco, son étoile excitatrice ; étalée sur 17′ × 3′
+ * elle donne SB = 15,79 mag/arcsec², et le verdict ŒIL_NU sur une nébuleuse que personne n'a
+ * jamais vue à l'œil.
+ *
+ * Le critère ne se règle pas à l'estime : une brillance MOYENNE ne peut pas dépasser le PIC de
+ * la nébuleuse diffuse la plus brillante du ciel, mesuré sur M42. Plus brillant que ce pic, la
+ * magnitude n'est pas celle de l'objet étendu.
+ *
+ * Borné aux trois types diffus, et c'est le point délicat : une nébuleuse PLANÉTAIRE est
+ * compacte et dépasse légitimement ce pic (NGC7027 calcule 13,6), un amas est un paquet de
+ * sources ponctuelles dont la « surface » ne veut rien dire. Les étendre au garde-fou
+ * effacerait de la vraie photométrie.
+ */
+const TYPES_DIFFUS: ReadonlySet<TypeObjet> = new Set<TypeObjet>([
+  'EMISSION',
+  'REFLEXION',
+  'RESTE_SUPERNOVA',
+])
+
+/**
+ * OpenNGC range sous `Neb` les nébuleuses diffuses qu'il ne qualifie pas plus finement — M8,
+ * M16, M17, M20 en sont. Elles arrivent sur le type fourre-tout AUTRE, qui porte aussi `Nova`,
+ * un objet ponctuel : le garde-fou se déclenche donc sur le CODE SOURCE, pas sur le type, pour
+ * ne pas prétendre qu'une nova est étendue. NGC6164 et NGC6165 portaient ainsi V = 6,71, la
+ * magnitude de HD 148937, et décrochaient un verdict JUMELLES.
+ */
+const CODE_NEBULEUSE_GENERIQUE = 'Neb'
+
+function magnitudeDeNebuleuse(
+  diffuse: boolean,
+  magnitude: number | null,
+  majAxArcmin: number | null,
+  minAxArcmin: number | null,
+): number | null {
+  if (magnitude === null || majAxArcmin === null || !diffuse) return magnitude
+  // La même aire que §6.3, par la même fonction : un garde-fou qui calculerait autrement que
+  // le moteur laisserait passer ce que le moteur, lui, jugerait absurde.
+  const petitAxe = minAxArcmin ?? majAxArcmin
+  const sb = magnitude + K('POGSON') * Math.log10(aireEllipseArcsec2(majAxArcmin, petitAxe))
+  return sb < K('SB_PIC_M42_MAG') ? null : magnitude
+}
+
+/**
  * §6.1 — les entrées Sharpless et Barnard du catalogue DSO qu'OpenNGC ne porte pas déjà.
  *
  * Le filtre est un filtre de doublons, pas un filtre de qualité : une entrée Sharpless qui
@@ -458,6 +514,8 @@ function construitCataloguesComplementaires(
     const designation = sharpless > 0 ? `Sh2-${sharpless}` : `B${barnard}`
     const type = typeDso((champs[COL_TYPE] ?? '').trim(), sharpless)
     const obscure = type === 'NEB_OBSCURE'
+    const majAxArcmin = positifOuNull(champs[COL_MAJ_AX])
+    const minAxArcmin = positifOuNull(champs[COL_MIN_AX])
 
     objets.push({
       designation,
@@ -465,11 +523,25 @@ function construitCataloguesComplementaires(
       adDeg,
       decDeg,
       type,
-      majAxArcmin: positifOuNull(champs[COL_MAJ_AX]),
-      minAxArcmin: positifOuNull(champs[COL_MIN_AX]),
+      majAxArcmin,
+      minAxArcmin,
       posAngDeg: positifOuNull(champs[COL_POS_ANG]),
-      vMag: obscure ? null : magnitudeDso(champs[COL_V_MAG]),
-      bMag: obscure ? null : magnitudeDso(champs[COL_B_MAG]),
+      vMag: obscure
+        ? null
+        : magnitudeDeNebuleuse(
+            TYPES_DIFFUS.has(type),
+            magnitudeDso(champs[COL_V_MAG]),
+            majAxArcmin,
+            minAxArcmin,
+          ),
+      bMag: obscure
+        ? null
+        : magnitudeDeNebuleuse(
+            TYPES_DIFFUS.has(type),
+            magnitudeDso(champs[COL_B_MAG]),
+            majAxArcmin,
+            minAxArcmin,
+          ),
       // Le catalogue DSO ne publie pas de brillance de surface.
       surfBr: null,
     })

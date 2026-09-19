@@ -300,6 +300,22 @@ const CONVENTIONNELLES = {
     ordreDeGrandeur: false,
     sections: ['5.1'],
   }),
+  SB_PIC_M42_MAG: entree({
+    ref: 'C-SB42',
+    libelle: 'Brillance de surface de pic du cœur de M42',
+    valeur: 17,
+    unite: 'mag/arcsec²',
+    source:
+      'Clark, « Surface Brightness of Deep Sky Objects » (2004) — même auteur que le modèle ' +
+      'de seuil de contraste de §6.3. M42 est la nébuleuse diffuse la plus brillante du ciel : ' +
+      'son pic borne par le haut la brillance de TOUTE nébuleuse diffuse, et une moyenne sur ' +
+      'l’objet entier ne peut pas dépasser son propre pic. Une SB calculée plus brillante que ' +
+      'celle-là ne mesure donc pas la nébuleuse — c’est une magnitude ponctuelle, celle de ' +
+      'l’étoile excitatrice ou d’un objet apparié (T-0317).',
+    tolerance: '±0,5 mag/arcsec² — la borne sert d’ordre de grandeur, pas de seuil fin',
+    ordreDeGrandeur: false,
+    sections: ['6.3', '12.2'],
+  }),
   REMPLISSAGE_CADRE_MIN: entree({
     ref: 'C-05',
     libelle: 'Remplissage de cadre, borne basse',

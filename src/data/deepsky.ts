@@ -87,6 +87,19 @@ function decodeU16(brut: number, echelle: number): number | null {
   return brut === ABSENT_U16 ? null : brut / echelle
 }
 
+/**
+ * T-0317 — une taille sous la résolution du paquet (0,05′) s'encode ABSENTE, jamais nulle.
+ *
+ * Arrondie à zéro, elle donne une aire nulle, donc SB = m + 2,5 log10(0) = −∞ (§6.3) : la
+ * cible se retrouve infiniment brillante alors que le paquet ne sait simplement pas la
+ * mesurer. Neuf nébuleuses planétaires de quelques secondes d'arc étaient dans ce cas.
+ * L'angle de position garde `encodeU16` : pour lui, zéro est une vraie valeur.
+ */
+function encodeTailleU16(valeur: number | null): number {
+  const brut = encodeU16(valeur, ECHELLE_ARCMIN)
+  return brut === 0 ? ABSENT_U16 : brut
+}
+
 function encodeI16(valeur: number | null, echelle: number): number {
   if (valeur === null || !Number.isFinite(valeur)) return ABSENT_I16
   const brut = Math.round(valeur * echelle)
@@ -113,8 +126,8 @@ export function encodeObjets(objets: readonly ObjetCielProfond[]): PaquetCielPro
 
     vue.setFloat32(base + OFFSET_AD, o.adDeg, LITTLE_ENDIAN)
     vue.setFloat32(base + OFFSET_DEC, o.decDeg, LITTLE_ENDIAN)
-    vue.setUint16(base + OFFSET_MAJ_AX, encodeU16(o.majAxArcmin, ECHELLE_ARCMIN), LITTLE_ENDIAN)
-    vue.setUint16(base + OFFSET_MIN_AX, encodeU16(o.minAxArcmin, ECHELLE_ARCMIN), LITTLE_ENDIAN)
+    vue.setUint16(base + OFFSET_MAJ_AX, encodeTailleU16(o.majAxArcmin), LITTLE_ENDIAN)
+    vue.setUint16(base + OFFSET_MIN_AX, encodeTailleU16(o.minAxArcmin), LITTLE_ENDIAN)
     vue.setUint16(base + OFFSET_POS_ANG, encodeU16(o.posAngDeg, ECHELLE_DEG), LITTLE_ENDIAN)
     vue.setInt16(base + OFFSET_V_MAG, encodeI16(o.vMag, ECHELLE_MAG), LITTLE_ENDIAN)
     vue.setInt16(base + OFFSET_B_MAG, encodeI16(o.bMag, ECHELLE_MAG), LITTLE_ENDIAN)

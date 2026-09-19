@@ -122,6 +122,11 @@ function evalue(
   poids: PoidsScoring,
 ): Candidate | CibleEcartee {
   const majAxArcmin = objet.majAxArcmin
+  // §6.3 compare SB_obj au fond de ciel de §2.2, qui est une brillance en V. Une magnitude B
+  // prise pour une V y entrerait sans terme de couleur, et l'écart B−V n'est pas une constante
+  // — sur une nébuleuse en émission il dépend du rapport des raies. NGC7000, NGC1499, NGC6960
+  // et NGC3372 ne portent que B : elles sont écartées faute de mesure utilisable, pas par
+  // oubli. Les faire remonter demande une source, pas une conversion (T-0317).
   if (majAxArcmin === null || objet.vMag === null) {
     return {
       designation: objet.designation,
