@@ -72,7 +72,9 @@ function FenetreNocturneVue({
         contexte={`${nuit.dureeReferenceH.toFixed(2)} h exploitables`}
       />
       {nuit.cause !== undefined && <Mention ton="cause">{nuit.cause}</Mention>}
-      <table>
+      {/* T-0264 — `instants` : chaque valeur est une date ET une heure, et elle tient sur une
+          ligne. C'est l'intitulé qui se replie quand la carte se resserre. */}
+      <table className="instants">
         <tbody>
           <tr>
             <th>Coucher du Soleil</th>

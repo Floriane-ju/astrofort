@@ -167,17 +167,17 @@ function ChampsSuivi(props: PanneauMaterielProps) {
           valeur={choixMonture(props)}
           surChangement={surMonture}
         >
+          {/* T-0264 — quatre intitulés courts. Ils demandaient jusqu'à 490 px là où un
+              `<select>` fermé en offre 276 : « mise en station » tombait de la moitié
+              d'entre eux, et rien dans un champ fermé ne dit qu'il manque une fin. Ce qui
+              reste est ce qui DISTINGUE — le type de monture, puis comment elle est mise en
+              station. Le reste (le retournement au méridien, ce que la boussole coûte en
+              pose) est la glose de `type_monture`, à un survol du champ. */}
           <option value="AUCUN">Pas de suivi</option>
-          <option value="TRACKER_SOIGNE">
-            Monture sur rotule (tracker) — viseur polaire réglé
-          </option>
-          <option value="TRACKER_APPROX">
-            Monture sur rotule (tracker) — mise en station à la boussole
-          </option>
-          <option value="GEM_SOIGNE">Équatoriale allemande — viseur polaire réglé</option>
-          <option value="GEM_APPROX">
-            Équatoriale allemande — mise en station à la boussole
-          </option>
+          <option value="TRACKER_SOIGNE">Tracker — viseur polaire</option>
+          <option value="TRACKER_APPROX">Tracker — à la boussole</option>
+          <option value="GEM_SOIGNE">Équatoriale — viseur polaire</option>
+          <option value="GEM_APPROX">Équatoriale — à la boussole</option>
         </ChampChoix>
       </div>
       {/* §5.2 — fermer le ciel profond et le justifier sont un seul geste (core/tracking.ts) :

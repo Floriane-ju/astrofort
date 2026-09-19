@@ -269,7 +269,8 @@ export const GLOSSAIRE = Object.freeze({
     glose: 'taille du capteur',
     explication:
       'C’est la taille physique du capteur : plein format, APS-C, micro 4/3. Elle figure sur la ' +
-      'fiche technique de l’appareil.',
+      'fiche technique de l’appareil. L’APS-C de Nikon, Sony, Pentax et Fujifilm mesure ' +
+      '23,5 × 15,6 mm ; celui de Canon est un peu plus petit, et a sa propre ligne.',
     consequence: 'Se tromper de format fausse le champ sans alerte.',
     sections: ['5.1'],
   }),

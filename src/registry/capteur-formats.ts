@@ -29,7 +29,10 @@ export const TABLE_FORMATS_CAPTEUR: readonly LigneFormatCapteur[] = Object.freez
     },
     {
       format: 'APSC_NIKON',
-      libelle: 'APS-C Nikon / Sony / Pentax / Fujifilm — 23,5 × 15,6 mm',
+      // T-0264 — les quatre marques ont quitté l'intitulé : il demandait 450 px là où un
+      // `<select>` fermé en offre 276, et rien n'y signalait la coupure. Elles sont dans la
+      // glose de `format_capteur`, où la question « lequel est le mien ? » se pose vraiment.
+      libelle: 'APS-C — 23,5 × 15,6 mm',
       capteurLMm: 23.5,
       capteurHMm: 15.6,
       source: 'documentation constructeur — même valeur que le recadrage APS-C de référence',

@@ -148,6 +148,19 @@ bouton devient une cellule à côté d'un champ.
 
 `echelles.test.ts` échoue si une grille contient l'un d'eux, ou si elle est vide.
 
+Deux règles de disposition s'y ajoutent, et elles disent la même chose : **une lecture ne se
+tronque pas** (T-0264).
+
+- **Un `<select>` prend la rangée entière** (`.champs > label:has(select)`). Fermé, il
+  n'affiche que l'option choisie, sans un signe pour dire qu'elle est coupée — une colonne
+  suffit à un nombre et à son unité, une phrase a besoin de la rangée. Corollaire : **un
+  intitulé d'option se mesure**. À 22 rem de carte, le navigateur réserve 40 px pour la
+  flèche ; il reste 276 px, soit ~33 signes en `--police-mono`. Ce qui n'y tient pas va dans
+  la glose du champ, pas dans l'intitulé.
+- **Les champs d'une rangée commencent à la même hauteur** (`.champs > label` en
+  `justify-content: end`). Le contrôle se pose en bas de sa cellule : une étiquette qui passe
+  sur deux lignes prend l'air au-dessus d'elle, au lieu de pousser son champ sous ses voisins.
+
 ### Typographie — six rangs
 
 | Jeton | Valeur | Rôle |
@@ -214,8 +227,8 @@ rupture (1100px) : un jeton pour une valeur unique serait une abstraction « au 
 
 <ChampChoix cle="type_monture" valeur={choixMonture(props)} surChangement={surMonture}>
   <option value="AUCUN">Pas de suivi</option>
-  <option value="TRACKER_SOIGNE">Monture sur rotule (tracker) — viseur polaire réglé</option>
-  <option value="GEM_SOIGNE">Équatoriale allemande — viseur polaire réglé</option>
+  <option value="TRACKER_SOIGNE">Tracker — viseur polaire</option>
+  <option value="GEM_SOIGNE">Équatoriale — viseur polaire</option>
 </ChampChoix>
 
 <Interrupteur actif={typeObjectif === 'FISHEYE'} surChangement={surFisheye}>

@@ -223,8 +223,13 @@ body {
   /* Le rail des bascules de vue : une cible de clic de large, filet compris. Il est cité
      deux fois — par le rail lui-même et par les cartes qui se posent à sa droite. */
   --rail: var(--cible-clic);
-  --carte-large: 19rem;
-  /* Le plan porte une table de budget de nuit : à 19 rem elle défilerait horizontalement, et
+  /* T-0264 — 22 rem, la largeur de la colonne de droite : à 19 rem, l'intitulé de l'option
+     choisie ne tenait dans aucun des trois `<select>` de la carte Boîtier — le navigateur
+     réserve 40 px pour la flèche, et « Recadrage APS-C — 23,5 × 15,6 mm » en demandait 261
+     pour 228 disponibles. Une lecture tronquée dans un champ FERMÉ ne se rattrape pas : rien
+     ne dit qu'il y avait une suite. La carte prend donc la largeur du panneau qu'elle borde. */
+  --carte-large: 22rem;
+  /* Le plan porte une table de budget de nuit : à 22 rem elle défilerait horizontalement, et
      un tableau qu'on fait glisser ne se compare plus d'une ligne à l'autre. Sa carte a donc
      son propre gabarit. */
   --carte-plan: 29rem;
@@ -489,6 +494,9 @@ body {
   user-select: none;
   border-bottom: var(--trait) solid var(--alerte);
   padding-bottom: var(--jour-trait);
+  /* T-0264 — la valeur et son unité tiennent ensemble : là où la phrase se replie, « 221.09°
+     AD » se couperait au blanc, et le trait qui annonce le geste se retrouverait à cheval. */
+  white-space: nowrap;
 }
 
 /* Le compteur et le curseur sont les deux contrôles qu'on TIRE, tous deux peints en
@@ -1029,9 +1037,15 @@ body {
 
 /* L'en-tête se lit de gauche à droite : le retour, ce qu'on lit, puis ce que la
    cible vaut. Le rappel se serre à droite par sa marge, pas par une répartition — trois
-   éléments répartis auraient poussé le titre au milieu, loin du bouton qui le précède. */
+   éléments répartis auraient poussé le titre au milieu, loin du bouton qui le précède.
+
+   T-0264 — et il PASSE À LA LIGNE quand les trois n'y tiennent plus. La facilité et la visée
+   se calaient à droite sans jamais céder : le titre recevait les 81 px restants, et
+   « ESO056-115 » s'y coupait en deux. C'est la désignation qui nomme la fiche ouverte — elle
+   garde sa ligne, les commandes prennent la suivante. Rien ne bouge tant que tout tient. */
 .lateral-entete {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--pas-2);
   min-height: var(--cible-clic);
@@ -1113,10 +1127,16 @@ body {
   }
 
   /* Sous le repli, le lieu et la légende remplissent déjà la rangée : la phrase
-     y serait réduite à ses points de suspension. Elle prend donc sa propre ligne. */
+     y serait réduite à ses points de suspension. Elle prend donc sa propre ligne.
+
+     T-0264 — et elle s'y replie plutôt que de se rogner : à 390 px, une ligne unique en
+     laissait 263 px dehors, soit deux compteurs sur six. La barre n'a plus de hauteur fixe
+     ici — elle est dans le flux —, donc rien n'interdit la seconde ligne. `.compteur` garde
+     la sienne insécable : une lecture coupée en deux ne se relit pas mieux que tronquée. */
   .coque-barrebas > .barrebas-visee {
     flex-basis: 100%;
     text-align: left;
+    white-space: normal;
   }
 
   .carte,
@@ -1353,6 +1373,28 @@ h3 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   gap: var(--pas-2);
+}
+
+/* T-0264 — LES CHAMPS D'UNE MÊME RANGÉE COMMENCENT À LA MÊME HAUTEUR.
+ *
+ * Un `label` est une colonne — l'étiquette, puis le contrôle — et la grille l'étire à la
+ * hauteur de sa rangée. Le contenu restait en haut : l'étiquette la plus longue passait sur
+ * deux lignes et poussait SON champ de 18 px sous ses voisins, si bien qu'une rangée de
+ * quatre saisies se lisait comme quatre rangées d'une. Posé en bas, le contrôle s'aligne sur
+ * ceux de sa rangée — ils ont tous la même hauteur — et l'étiquette reste collée au-dessus du
+ * champ qu'elle nomme. L'air pris par la plus longue se répartit au-dessus des autres. */
+.champs > label {
+  justify-content: end;
+}
+
+/* UN SÉLECTEUR PORTE UNE PHRASE, UNE SAISIE PORTE UN NOMBRE (T-0264).
+ *
+ * Fermé, un `<select>` n'affiche que l'option choisie, sans un signe pour dire qu'elle est
+ * coupée : « Plein format — 35,9 × 23,9 mm » y devenait « … 23,9 m », et l'unité tombait.
+ * Sous le repli, la grille donne quatre colonnes de 195 px à des intitulés qui en demandent
+ * jusqu'à 359. Une colonne suffit à un nombre et à son unité ; une phrase prend la rangée. */
+.champs > label:has(select) {
+  grid-column: 1 / -1;
 }
 
 /* DEUX CHAMPS QUI SE LISENT ENSEMBLE TIENNENT SUR UNE LIGNE.
@@ -1640,6 +1682,18 @@ td {
   padding: var(--pas-1) var(--pas-2);
   border-bottom: var(--trait) solid var(--bordure-faible);
   vertical-align: top;
+}
+
+/* T-0264 — UN INSTANT NE SE COUPE PAS EN DEUX.
+ *
+ * La colonne des valeurs de la fenêtre nocturne reçoit ~140 px et la date y passait avant
+ * l'heure : « 17/09/2026 » sur une ligne, « 19:40:53 » sous elle. Ces cinq lignes se
+ * comparent entre elles — le coucher, le début de nuit, le milieu —, et deux lignes par
+ * valeur cassent la colonne qu'on parcourt. La valeur garde sa ligne, l'intitulé prend la
+ * sienne : c'est lui qui a de quoi se replier. Nommé, parce que la table des cibles écartées
+ * porte des phrases dans ses cellules — insécables, elles feraient défiler la carte. */
+.instants td {
+  white-space: nowrap;
 }
 
 /* L'en-tête de colonne est un micro-libellé, pas une cellule en gras. */
