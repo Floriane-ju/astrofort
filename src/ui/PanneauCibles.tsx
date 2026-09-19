@@ -45,8 +45,10 @@ import { K } from '../registry/constants.ts'
 import { DOMAINES } from '../registry/domains.ts'
 import { I } from '../registry/imagerie.ts'
 import { TYPES_OBJET, type ObjetCielProfond, type TypeObjet } from '../data/deepsky.ts'
+import { RECALCUL_EN_COURS } from './app-calcul.ts'
 import { BoutonVisee } from './BoutonVisee.tsx'
 import { Bulle } from './Bulle.tsx'
+import { Mention } from './Mention.tsx'
 import { Curseur } from './Curseur.tsx'
 import { Icone } from './Icone.tsx'
 import { Interrupteur } from './Interrupteur.tsx'
@@ -99,26 +101,29 @@ function aidePortee(
 export interface PanneauCiblesProps {
   readonly catalogue: readonly ObjetCielProfond[]
   readonly site: Site
-  readonly sbCiel: number
-  readonly mLimOeil: number | null
-  readonly dMm: number
-  readonly fovHDeg: number
-  readonly echApx: number
-  readonly capteurHMm: number
-  /** §8.3 — absent tant que la nuit n'est pas chiffrable : aucune pose n'est alors annoncée. */
-  readonly contexteSession: ContexteSession | null
+  /**
+   * §8.3 — le ciel, le site et le matériel de la nuit. La liste n'en reçoit plus de copie
+   * champ par champ : T-0291 — le fond de ciel, le champ, l'échantillonnage et l'ouverture y
+   * étaient recopiés depuis `calcul` et `ciel`, donc rafraîchis dans le rendu de la TOUCHE,
+   * pendant que le plan, lui, était différé. Une seule entrée, une seule cadence.
+   */
+  readonly contexteSession: ContexteSession
   /**
    * §6.4 — la pose et la note par désignation, calculées par la chaîne. Ce panneau ne les
    * calcule pas : la carte Cible lit la MÊME map, et deux calculs séparés se sont déjà
    * contredits une fois — la carte notait ce que la liste laissait vide.
    */
   readonly etats: ReadonlyMap<string, EtatCible>
+  /** T-0291 — vrai quand ce qui est affiché est le résultat de la saisie précédente. */
+  readonly recalcul: boolean
   /** T-0188 — le champ de recherche est le repli du focus au retour de la fiche. */
   readonly inputRef?: React.RefObject<HTMLInputElement | null>
 }
 
 export function PanneauCibles(props: PanneauCiblesProps) {
-  const { catalogue, site, sbCiel, mLimOeil, dMm, fovHDeg, echApx, capteurHMm, etats } = props
+  const { catalogue, site, etats, contexteSession } = props
+  const { fovHDeg, echApx, dMm, capteurHMm, mLimOeil } = contexteSession
+  const sbCiel = contexteSession.sbCielNoir
   // T-0182 — la saisie vit dans le magasin : la fiche démonte cette liste, et une recherche
   // perdue au retour ferait recommencer le tri à chaque cible consultée.
   const { photographiablesSeules, recherche, types, magMax } = useCatalogue()
@@ -171,7 +176,7 @@ export function PanneauCibles(props: PanneauCiblesProps) {
   // Le verrou ne vaut que case cochée : le catalogue reste consultable sans suivi, c'est la
   // SÉANCE qui est fermée, pas la base d'objets.
   const domaineCpFerme = photographiablesSeules
-    ? (props.contexteSession?.domaineCpFerme ?? null)
+    ? contexteSession.domaineCpFerme
     : null
 
   // T-0278 — le filtre coupe par la TAILLE, dans les deux sens, et surtout par le bas :
@@ -182,10 +187,14 @@ export function PanneauCibles(props: PanneauCiblesProps) {
 
   const plafond = K('CIBLES_LISTEES_MAX')
   const listees = retenues.slice(0, plafond)
-  const seuil = props.contexteSession?.seuilHauteurDeg ?? K('SEUIL_HAUTEUR_IMAGERIE_DEG')
+  const seuil = contexteSession.seuilHauteurDeg ?? K('SEUIL_HAUTEUR_IMAGERIE_DEG')
 
   return (
-    <section className="cibles">
+    /* T-0291 — `aria-busy` pendant que le calcul est en vol : la phrase ci-dessous le dit à
+       l'œil, cet attribut le dit à la technologie d'assistance, qui n'a pas à lire une liste
+       en train d'être remplacée. Hors région vive — l'annoncer à chaque touche ne dirait rien
+       de neuf, et couvrirait le compte que T-0187 fait annoncer. */
+    <section className="cibles" aria-busy={props.recalcul}>
       <input
         ref={props.inputRef}
         className="cibles-recherche"
@@ -296,6 +305,8 @@ export function PanneauCibles(props: PanneauCiblesProps) {
         </div>
       )}
 
+      {props.recalcul && <Mention ton="etat">{RECALCUL_EN_COURS}</Mention>}
+
       <ul className="cibles-liste">
         {listees.map((ligne) => (
           <LigneListe
@@ -306,11 +317,9 @@ export function PanneauCibles(props: PanneauCiblesProps) {
         ))}
       </ul>
 
-      {props.contexteSession !== null && (
-        <p className="etat cibles-note">
-          Temps de pose total pour un signal/bruit de {props.contexteSession.snrCible}.
-        </p>
-      )}
+      <p className="etat cibles-note">
+        Temps de pose total pour un signal/bruit de {contexteSession.snrCible}.
+      </p>
     </section>
   )
 }

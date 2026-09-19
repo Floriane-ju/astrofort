@@ -35,7 +35,8 @@ import { modeObjectif } from './PanneauMateriel.tsx'
 import { montreListeCibles, useSeance, type VueCibles } from './seance-etat.ts'
 import { AIDE_MATERIEL_INCOMPLET } from './Inconnu.tsx'
 import type { SaisieLieu, SaisieMateriel } from './app-saisie.ts'
-import type { ChaineCalcul } from './app-calcul.ts'
+import { RECALCUL_EN_COURS, type ChaineCalcul } from './app-calcul.ts'
+import { Mention } from './Mention.tsx'
 import { cibleFocus, idLigneCible } from './focus-panneau.ts'
 
 export interface RegionSeanceProps {
@@ -113,7 +114,13 @@ export function CartesSeance(props: RegionSeanceProps) {
             planIndisponible={chaine.plan === null && props.catalogue.length === 0}
           />
         )}
-        <div className="plan-session">{planImprimable}</div>
+        {/* T-0291 — le plan est calculé hors du rendu de la frappe : tant qu'il est en vol,
+            ce bloc montre celui de la saisie précédente, et le dit. Un horaire de créneau qui
+            ne correspond plus à la focale tapée est faux s'il ne s'annonce pas. */}
+        {chaine.recalculEnCours && <Mention ton="etat">{RECALCUL_EN_COURS}</Mention>}
+        <div className="plan-session" aria-busy={chaine.recalculEnCours}>
+          {planImprimable}
+        </div>
       </Carte>
     </>
   )
@@ -159,7 +166,6 @@ function RappelFacilite({ etat }: { readonly etat: EtatCible }) {
  */
 export function LateralSeance(props: RegionSeanceProps) {
   const { chaine, catalogue } = props
-  const { calcul, ciel } = chaine
   const { mode, vueCibles } = useSeance()
 
   /* §3.4 — la fiche n'existe que sur une cible désignée : `ouvreCible` pose les deux d'un
@@ -249,19 +255,17 @@ export function LateralSeance(props: RegionSeanceProps) {
         ) : (
           <PanneauFile {...chaine.panneauFile} />
         )
-      ) : /* T-0149 — la liste chiffre un cadrage : sans optique, elle dit ce qui manque. */
-      calcul.ok && ciel.ok ? (
+      ) : /* T-0149 — la liste chiffre un cadrage : sans optique, elle dit ce qui manque.
+             T-0291 — c'est le contexte de séance qui la monte, et non `calcul.ok && ciel.ok` :
+             les deux conditions sont équivalentes, mais la première est celle dont la liste
+             tire ses lectures, et c'est elle qui porte la cadence différée. */
+      chaine.contexteSession !== null ? (
         <PanneauCibles
           catalogue={catalogue}
           site={chaine.site}
-          sbCiel={ciel.ciel.sbCiel.value}
-          mLimOeil={ciel.ciel.mLimOeil.value}
-          dMm={calcul.optique.dMm.value}
-          fovHDeg={calcul.optique.fovHDeg.value}
-          echApx={calcul.optique.echApx.value}
-          capteurHMm={calcul.capteur.capteurHMm}
           contexteSession={chaine.contexteSession}
           etats={chaine.etatsCibles}
+          recalcul={chaine.recalculEnCours}
           inputRef={rechercheRef}
         />
       ) : (

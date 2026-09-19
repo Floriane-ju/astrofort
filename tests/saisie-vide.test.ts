@@ -9,7 +9,13 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { cielAffiche, evalueCiel, evalueMateriel } from '../src/ui/app-calcul.ts'
+import {
+  cielAffiche,
+  evalueCiel,
+  evalueMateriel,
+  grandeursLieu,
+  grandeursMateriel,
+} from '../src/ui/app-calcul.ts'
 import { DEFAUT, type SaisieLieu, type SaisieMateriel } from '../src/ui/app-saisie.ts'
 import type { Site } from '../src/core/ephem.ts'
 
@@ -75,17 +81,17 @@ const LIEU = lieu({ bortle: DEFAUT.bortle, sqm: '' })
 
 describe('saisie transitoirement vide', () => {
   it('Bortle et SQM effacés : erreur nommée, pas d’exception', () => {
-    const ciel = evalueCiel(SITE, lieu({ bortle: '', sqm: '' }))
+    const ciel = evalueCiel(SITE, grandeursLieu(lieu({ bortle: '', sqm: '' })))
     expect(ciel.ok).toBe(false)
     if (!ciel.ok) expect(ciel.erreur).toContain('fond de ciel')
   })
 
   it('le Bortle du départ reste calculable', () => {
-    expect(evalueCiel(SITE, LIEU).ok).toBe(true)
+    expect(evalueCiel(SITE, grandeursLieu(LIEU)).ok).toBe(true)
   })
 
   it('le matériel du départ se chiffre', () => {
-    expect(evalueMateriel(MATERIEL).ok).toBe(true)
+    expect(evalueMateriel(MATERIEL, grandeursMateriel(MATERIEL)).ok).toBe(true)
   })
 })
 
@@ -94,23 +100,23 @@ describe('champ matériel effacé', () => {
   const CHAMPS = ['focale', 'ouverture'] as const
 
   it.each(CHAMPS)('%s effacée : le matériel est refusé en nommant le champ', (champ) => {
-    const calcul = evalueMateriel({ ...MATERIEL, [champ]: '' })
+    const saisie = { ...MATERIEL, [champ]: '' }
+    const calcul = evalueMateriel(saisie, grandeursMateriel(saisie))
     expect(calcul.ok).toBe(false)
     if (!calcul.ok) expect(calcul.erreur).toContain('Saisie refusée')
   })
 
   it('résolution effacée : le matériel est refusé', () => {
-    const calcul = evalueMateriel({
-      ...MATERIEL,
-      boitier: { ...MATERIEL.boitier, resolutionMpx: '' },
-    })
+    const saisie = { ...MATERIEL, boitier: { ...MATERIEL.boitier, resolutionMpx: '' } }
+    const calcul = evalueMateriel(saisie, grandeursMateriel(saisie))
     expect(calcul.ok).toBe(false)
   })
 
   it.each(CHAMPS)('%s effacée : le ciel du lieu reste dessinable', (champ) => {
     // La scène ne demande que ces deux grandeurs-là : elles ne viennent pas du matériel.
-    const ciel = evalueCiel(SITE, LIEU)
-    expect(evalueMateriel({ ...MATERIEL, [champ]: '' }).ok).toBe(false)
+    const ciel = evalueCiel(SITE, grandeursLieu(LIEU))
+    const saisie = { ...MATERIEL, [champ]: '' }
+    expect(evalueMateriel(saisie, grandeursMateriel(saisie)).ok).toBe(false)
     expect(ciel.ok).toBe(true)
     if (ciel.ok) {
       expect(Number.isFinite(ciel.ciel.sbCiel.value)).toBe(true)
@@ -125,8 +131,8 @@ describe('champ matériel effacé', () => {
  * sous les champs.
  */
 describe('champ du lieu effacé : la scène garde le dernier ciel', () => {
-  const VALIDE = evalueCiel(SITE, LIEU)
-  const REFUS = evalueCiel(SITE, lieu({ bortle: '', sqm: '' }))
+  const VALIDE = evalueCiel(SITE, grandeursLieu(LIEU))
+  const REFUS = evalueCiel(SITE, grandeursLieu(lieu({ bortle: '', sqm: '' })))
 
   it('le refus ne remplace pas un ciel déjà calculé', () => {
     if (!VALIDE.ok) throw new Error('le ciel du départ doit être calculable')
@@ -139,7 +145,7 @@ describe('champ du lieu effacé : la scène garde le dernier ciel', () => {
 
   it('une saisie de nouveau valide reprend la main', () => {
     if (!VALIDE.ok) throw new Error('le ciel du départ doit être calculable')
-    const autre = evalueCiel(SITE, lieu({ bortle: '3', sqm: '' }))
+    const autre = evalueCiel(SITE, grandeursLieu(lieu({ bortle: '3', sqm: '' })))
     expect(cielAffiche(autre, VALIDE)).toBe(autre)
   })
 })

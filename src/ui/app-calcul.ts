@@ -7,7 +7,7 @@
  * l'application (§12.5).
  */
 
-import { useMemo, useRef } from 'react'
+import { useDeferredValue, useMemo, useRef } from 'react'
 import { fenetreNocturne, offsetMidiSolaireMin, type FenetreNocturne } from '../core/night.ts'
 import { midiDeLaNuit } from '../core/nuit-datee.ts'
 import { etatsCibles, type EtatCible } from '../core/cibles-liste.ts'
@@ -69,6 +69,16 @@ import type { PanneauFileProps } from './PanneauFile.tsx'
  * 10 écrits à deux endroits finissent par ne plus valoir la même chose.
  */
 const PRESET_SNR_PLAN = PRESET_SNR_DEFAUT
+
+/**
+ * T-0291 — ce que disent les régions dont le calcul est encore en vol.
+ *
+ * La phrase nomme l'état ET sa conséquence. « Calcul en cours… » seul laisserait croire que
+ * l'écran est vide ; ce qu'il montre est un résultat, juste celui d'avant, et c'est la seule
+ * chose qu'un observateur doit savoir pour ne pas se fier à un chiffre périmé.
+ */
+export const RECALCUL_EN_COURS =
+  'Recalcul en cours : les chiffres affichés sont ceux de la saisie précédente.'
 
 /**
  * T-0149 — ce que le LIEU et la DATE donnent, sans rien savoir du matériel.
@@ -141,6 +151,14 @@ export interface ChaineCalcul {
   /** Le matériel et le ciel sous lesquels la fiche évalue une cible (§6, §7). */
   readonly contexteFiche: ContexteFiche | null
   readonly panneauFile: PanneauFileProps | null
+  /**
+   * T-0291 — vrai tant que le plan, les notes et la liste affichés sont ceux de la saisie
+   * PRÉCÉDENTE : le calcul lourd est parti, il n'a pas encore rendu.
+   *
+   * Les régions concernées le DISENT. Un chiffre en retard qui ne s'annonce pas est un chiffre
+   * faux : c'est la seule contrepartie du report, et elle se paie à l'écran, pas en silence.
+   */
+  readonly recalculEnCours: boolean
 }
 
 export interface EntreeChaine {
@@ -154,8 +172,72 @@ export interface EntreeChaine {
   readonly poids: PoidsScoring
 }
 
+/**
+ * T-0291 — le LIEU ramené à ses GRANDEURS, avant le moindre mémo.
+ *
+ * La chaîne mémoïsait sur les CHAÎNES tapées. « 45.5 » puis « 45.50 » désignent la même
+ * latitude mais pas le même texte : la nuit entière se recalculait pour un caractère sans
+ * effet — 480 ms à CPU ×4. Le bornage se refait à chaque rendu, ce qui ne coûte rien — lire
+ * un texte n'est pas calculer une nuit —, et ce sont ses NOMBRES qui servent de dépendances.
+ * Deux saisies qui décrivent le même lieu partagent alors la même clé.
+ *
+ * `NaN` s'y compare à lui-même sous `Object.is`, celui dont React se sert : un champ vidé le
+ * temps d'être retapé ne relance donc rien non plus.
+ */
+export interface GrandeursLieu {
+  readonly latitudeDeg: number
+  readonly longitudeDeg: number
+  readonly altitudeM: number
+  /** §2.3 — `undefined` quand le champ est vide : la grandeur est déclarée inconnue. */
+  readonly bortleDeclare: number | undefined
+  readonly sqmMesure: number | undefined
+  readonly nuitIso: string
+}
+
+export function grandeursLieu(lieu: SaisieLieu): GrandeursLieu {
+  return {
+    latitudeDeg: nombreSaisi('latitude_deg', lieu.latitude).valeur,
+    longitudeDeg: nombreSaisi('longitude_deg', lieu.longitude).valeur,
+    altitudeM: nombreSaisi('altitude_m', lieu.altitude).valeur,
+    bortleDeclare: nombreSiRenseigne('bortle_declare', lieu.bortle).valeur,
+    sqmMesure: nombreSiRenseigne('sqm_mesure', lieu.sqm).valeur,
+    nuitIso: lieu.nuitIso,
+  }
+}
+
+/** T-0291 — le MATÉRIEL ramené à ses grandeurs, pour la même raison que le lieu. */
+export interface GrandeursMateriel {
+  readonly focaleMm: number
+  readonly ouvertureN: number
+  /**
+   * §7.2 — l'ISO que la saisie fixe, `undefined` quand rien ne le fixe.
+   *
+   * T-0206 — sous un boîtier de la base, c'est le seuil de double gain de sa ligne qui désigne
+   * l'ISO, et la valeur saisie est ignorée. Le filtre est ici et non dans `evalueMateriel`
+   * pour que taper dans ce champ sous un boîtier de la base ne change AUCUNE dépendance :
+   * sans effet sur le calcul, donc sans effet sur la nuit.
+   */
+  readonly isoSaisi: number | undefined
+}
+
+export function grandeursMateriel(materiel: SaisieMateriel): GrandeursMateriel {
+  return {
+    focaleMm: nombreSaisi('focale_mm', materiel.focale).valeur,
+    ouvertureN: nombreSaisi('ouverture_N', materiel.ouverture).valeur,
+    isoSaisi:
+      ligneBoitier(materiel.boitierId) !== null
+        ? undefined
+        : nombreSiRenseigne('iso_capture', materiel.iso).valeur,
+  }
+}
+
 export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
   const { lieu, materiel, catalogue, etoiles, tPoseFileS, poids } = entree
+
+  // T-0291 — les deux saisies bornées, recalculées à chaque rendu : ce sont les clés de tout
+  // ce qui suit, et une clé mémoïsée sur elle-même n'en serait plus une.
+  const lieuBorne = grandeursLieu(lieu)
+  const materielBorne = grandeursMateriel(materiel)
 
   /**
    * §4.1 — le relief relevé à la main l'emporte sur toute hypothèse. Sans relevé, le masque
@@ -181,11 +263,11 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
    */
   const siteSaisi = useMemo(
     () => ({
-      latitudeDeg: nombreSaisi('latitude_deg', lieu.latitude).valeur,
-      longitudeDeg: nombreSaisi('longitude_deg', lieu.longitude).valeur,
-      altitudeM: nombreSaisi('altitude_m', lieu.altitude).valeur,
+      latitudeDeg: lieuBorne.latitudeDeg,
+      longitudeDeg: lieuBorne.longitudeDeg,
+      altitudeM: lieuBorne.altitudeM,
     }),
-    [lieu.latitude, lieu.longitude, lieu.altitude],
+    [lieuBorne.latitudeDeg, lieuBorne.longitudeDeg, lieuBorne.altitudeM],
   )
 
   /**
@@ -199,9 +281,9 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
   const site = dernierSite.current ?? siteSaisi
 
   const cielSaisi = useMemo(
-    () => evalueCiel(site, lieu),
+    () => evalueCiel(site, lieuBorne),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [site, lieu.bortle, lieu.sqm, lieu.nuitIso],
+    [site, lieuBorne.bortleDeclare, lieuBorne.sqmMesure, lieuBorne.nuitIso],
   )
 
   /**
@@ -222,14 +304,11 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
   const cielRefus = cielSaisi.ok ? null : cielSaisi.erreur
 
   const calcul = useMemo(
-    () => evalueMateriel(materiel),
+    () => evalueMateriel(materiel, materielBorne),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       materiel.boitierId,
       materiel.boitier,
-      materiel.iso,
-      materiel.focale,
-      materiel.ouverture,
       materiel.capteurMode,
       // T-0270 — la projection de l'objectif entre dans le champ calculé : sans elle ici,
       // cocher « fisheye » ne changeait rien tant qu'un autre champ n'était pas touché.
@@ -237,6 +316,9 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
       materiel.suiviActif,
       materiel.qualiteMes,
       materiel.typeMonture,
+      materielBorne.focaleMm,
+      materielBorne.ouvertureN,
+      materielBorne.isoSaisi,
     ],
   )
 
@@ -251,7 +333,7 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
   const profilsCadre = useMemo(
     () => profilsDeCadre(calcul, materiel),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [calcul, materiel.focale, materiel.ouverture, materiel.capteurMode, materiel.typeObjectif],
+    [calcul, materiel.capteurMode, materiel.typeObjectif],
   )
 
   /**
@@ -296,7 +378,7 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
       sbCiel: ciel.ciel.sbCiel.value,
       tMaxSuiviS: calcul.suivi.tMaxSuiviS.value,
     }
-  }, [calcul, ciel, profondeurFile, materiel.focale])
+  }, [calcul, ciel, profondeurFile])
 
   /**
    * §8.3 — le ciel, le site et le matériel sous lesquels une cible est évaluée pour la nuit.
@@ -335,10 +417,32 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     }
   }, [calcul, ciel, masque, materiel.typeMonture, site, fenetreUtile, poids])
 
+  /**
+   * T-0291 — LA FRONTIÈRE DU CALCUL LOURD. Ce qui est en aval suit la frappe, il ne la porte
+   * pas.
+   *
+   * Tout ce qui précède est chiffré en quelques millisecondes — le ciel du site, le profil
+   * optique, le cadre. Tout ce qui suit balaie le catalogue entier : le plan de la nuit, les
+   * notes de facilité, et les lectures que la liste en tire. Ensemble, une soixantaine de
+   * millisecondes sans bridage, quatre fois plus sur la tablette que §11.2 vise — dans le
+   * rendu de la touche, la saisie décrochait.
+   *
+   * `useDeferredValue` les déplace dans un rendu de moindre priorité : la touche est peinte
+   * avec le contexte PRÉCÉDENT, puis React reprend avec le nouveau. Ce n'est pas un
+   * amincissement du calcul — le plan reste le même plan — c'est un changement d'ordre.
+   *
+   * La contrepartie est un décalage visible, et elle est assumée à une condition : les régions
+   * en retard le disent (`recalculEnCours`). Le contexte rendu à l'application est le DIFFÉRÉ,
+   * jamais celui de la saisie en cours — deux régions qui liraient l'un et l'autre
+   * s'afficheraient contradictoires le temps d'un rendu.
+   */
+  const contexteDiffere = useDeferredValue(contexteSession)
+  const recalculEnCours = contexteDiffere !== contexteSession
+
   const plan = useMemo(() => {
-    if (contexteSession === null || catalogue.length === 0) return null
-    return planSession(contexteSession, catalogue)
-  }, [contexteSession, catalogue])
+    if (contexteDiffere === null || catalogue.length === 0) return null
+    return planSession(contexteDiffere, catalogue)
+  }, [contexteDiffere, catalogue])
 
   /**
    * §6.4 — même dépendances que le plan, et pour la même raison : un créneau est une propriété
@@ -346,10 +450,10 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
    */
   const etats = useMemo(
     () =>
-      contexteSession === null
+      contexteDiffere === null
         ? new Map<string, EtatCible>()
-        : etatsCibles(contexteSession, catalogue),
-    [contexteSession, catalogue],
+        : etatsCibles(contexteDiffere, catalogue),
+    [contexteDiffere, catalogue],
   )
 
   return {
@@ -362,7 +466,8 @@ export function useChaineCalcul(entree: EntreeChaine): ChaineCalcul {
     index,
     profilsCadre,
     materielFile,
-    contexteSession,
+    contexteSession: contexteDiffere,
+    recalculEnCours,
     plan,
     etatsCibles: etats,
     contexteFiche:
@@ -394,22 +499,27 @@ export function siteChiffrable(site: Site): boolean {
   )
 }
 
-/** §4.1 et §2.2 — ce que le lieu et la date donnent, ou la cause du refus. */
-export function evalueCiel(site: Site, lieu: SaisieLieu): CalculCiel {
+/**
+ * §4.1 et §2.2 — ce que le lieu et la date donnent, ou la cause du refus.
+ *
+ * T-0291 — l'entrée est le lieu BORNÉ, jamais le texte saisi : ce moteur est le premier de la
+ * chaîne lourde, et ce qui décide de le relancer doit être un nombre, pas une frappe.
+ */
+export function evalueCiel(site: Site, grandeurs: GrandeursLieu): CalculCiel {
   try {
     if (!siteChiffrable(site)) {
       return { ok: false, erreur: 'Saisie refusée : le lieu doit être entièrement chiffré.' }
     }
-    const depart = midiDeLaNuit(lieu.nuitIso)
+    const depart = midiDeLaNuit(grandeurs.nuitIso)
     const offsetFuseauH = -new Date().getTimezoneOffset() / 60
-    const sqm = nombreSiRenseigne('sqm_mesure', lieu.sqm)
-    const bortle = nombreSiRenseigne('bortle_declare', lieu.bortle)
     return {
       ok: true,
       nuit: fenetreNocturne(site, depart),
       ciel: fondDeCiel({
-        ...(sqm.valeur === undefined ? {} : { sqmMesure: sqm.valeur }),
-        ...(bortle.valeur === undefined ? {} : { bortleDeclare: bortle.valeur }),
+        ...(grandeurs.sqmMesure === undefined ? {} : { sqmMesure: grandeurs.sqmMesure }),
+        ...(grandeurs.bortleDeclare === undefined
+          ? {}
+          : { bortleDeclare: grandeurs.bortleDeclare }),
       }),
       seuils: seuilsDeclinaison(site.latitudeDeg),
       offsetMidi: offsetMidiSolaireMin(site.longitudeDeg, offsetFuseauH),
@@ -441,22 +551,15 @@ function boitierCourant(materiel: SaisieMateriel): Boitier {
     : boitierDeBase(ligne, materiel.boitier.tailleRawMo)
 }
 
-export function evalueMateriel(materiel: SaisieMateriel): Calcul {
+export function evalueMateriel(
+  materiel: SaisieMateriel,
+  grandeurs: GrandeursMateriel,
+): Calcul {
   try {
     const boitier = boitierCourant(materiel)
     const capteur = capteurEffectif(boitier, materiel.capteurMode)
-    const focale = nombreSaisi('focale_mm', materiel.focale)
-    const ouverture = nombreSaisi('ouverture_N', materiel.ouverture)
-    const focaleMm = focale.valeur
-    const ouvertureN = ouverture.valeur
-    // T-0206 — sous un boîtier de la base, l'ISO ne se force plus : c'est le seuil de double
-    // gain de sa ligne qui le désigne. Ignorer ici la valeur saisie évite qu'un ISO tapé avant
-    // le choix du boîtier — ou relu d'un profil enregistré — pilote en douce la pose calculée
-    // alors que l'écran affiche le palier du seuil.
-    const iso =
-      ligneBoitier(materiel.boitierId) !== null
-        ? { valeur: undefined, refus: null }
-        : nombreSiRenseigne('iso_capture', materiel.iso)
+    const focaleMm = grandeurs.focaleMm
+    const ouvertureN = grandeurs.ouvertureN
     return {
       ok: true,
       optique: profilOptique({ focaleMm, ouvertureN, typeObjectif: materiel.typeObjectif, ...capteur }),
@@ -474,7 +577,7 @@ export function evalueMateriel(materiel: SaisieMateriel): Calcul {
       ouvertureN,
       boitier,
       zeroSysteme: pointZeroSysteme(boitier),
-      iso: isoRecommande(boitier, iso.valeur ?? null),
+      iso: isoRecommande(boitier, grandeurs.isoSaisi ?? null),
       ...(capteur.noteRecadrage === undefined ? {} : { noteRecadrage: capteur.noteRecadrage }),
     }
   } catch (erreur) {

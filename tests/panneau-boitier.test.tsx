@@ -14,7 +14,7 @@ import { BASE_BOITIERS, boitierDeBase, ligneBoitier } from '../src/data/boitiers
 import { isoRecommande, type SaisieBoitier } from '../src/data/equipment.ts'
 import { K } from '../src/registry/constants.ts'
 import { GLOSSAIRE } from '../src/registry/glossaire.ts'
-import { evalueMateriel } from '../src/ui/app-calcul.ts'
+import { evalueMateriel, grandeursMateriel } from '../src/ui/app-calcul.ts'
 import { DEFAUT, type SaisieMateriel } from '../src/ui/app-saisie.ts'
 
 const rien = () => undefined
@@ -184,7 +184,8 @@ describe('T-0206 — un ISO forcé ne survit pas au choix d’un boîtier', () =
 
   it('le moteur retient le palier du seuil, pas l’ISO resté dans la saisie', () => {
     const attendu = isoRecommande(boitierDeBase(AVEC_SEUIL)).iso
-    const calcul = evalueMateriel(materiel(AVEC_SEUIL.id, '100'))
+    const saisie = materiel(AVEC_SEUIL.id, '100')
+    const calcul = evalueMateriel(saisie, grandeursMateriel(saisie))
     expect(calcul.ok).toBe(true)
     if (!calcul.ok) return
     expect(calcul.iso.iso).toBe(attendu)
@@ -192,7 +193,8 @@ describe('T-0206 — un ISO forcé ne survit pas au choix d’un boîtier', () =
   })
 
   it('en mode personnalisé, le même ISO est bien retenu : c’est le boîtier qui le neutralise', () => {
-    const calcul = evalueMateriel(materiel('', '100'))
+    const saisie = materiel('', '100')
+    const calcul = evalueMateriel(saisie, grandeursMateriel(saisie))
     expect(calcul.ok).toBe(true)
     if (!calcul.ok) return
     expect(calcul.iso.iso).toBe(100)

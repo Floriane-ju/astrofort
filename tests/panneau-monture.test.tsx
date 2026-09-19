@@ -17,7 +17,7 @@ import {
 } from '../src/ui/PanneauMateriel.tsx'
 import { profilSuivi, type QualiteMiseEnStation, type TypeMonture } from '../src/core/tracking.ts'
 import { DEFAUT, type SaisieMateriel } from '../src/ui/app-saisie.ts'
-import { evalueMateriel } from '../src/ui/app-calcul.ts'
+import { evalueMateriel, grandeursMateriel } from '../src/ui/app-calcul.ts'
 import { ouvreCarte } from '../src/ui/coque-etat.ts'
 
 const rien = () => undefined
@@ -63,7 +63,7 @@ function rendu(champs: Partial<SaisieMateriel> = {}): string {
   // n'est pas monté et il n'y a rien à lire.
   ouvreCarte('BOITIER')
   const saisie = materiel(champs)
-  const calcul = evalueMateriel(saisie)
+  const calcul = evalueMateriel(saisie, grandeursMateriel(saisie))
   return renderToStaticMarkup(
     <PanneauMateriel {...saisie} {...(calcul.ok ? { lectures: calcul } : {})} />,
   )

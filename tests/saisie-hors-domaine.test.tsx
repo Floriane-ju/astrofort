@@ -18,7 +18,13 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { ChampsSite } from '../src/ui/ChampsSite.tsx'
 import { PanneauMateriel } from '../src/ui/PanneauMateriel.tsx'
-import { evalueCiel, evalueMateriel, siteChiffrable } from '../src/ui/app-calcul.ts'
+import {
+  evalueCiel,
+  evalueMateriel,
+  grandeursLieu,
+  grandeursMateriel,
+  siteChiffrable,
+} from '../src/ui/app-calcul.ts'
 import { DEFAUT, type SaisieLieu, type SaisieMateriel } from '../src/ui/app-saisie.ts'
 import { masquePlat } from '../src/core/site.ts'
 import { DOMAINES, borne, type DomaineId } from '../src/registry/domains.ts'
@@ -109,8 +115,8 @@ describe('le lieu hors domaine ne fait plus tomber la chaîne', () => {
     const site = siteBorne(saisie)
     expect(siteChiffrable(site)).toBe(true)
     // C'est L'ABSENCE de levée qui est vérifiée ici : c'est elle qui vidait l'écran.
-    expect(() => evalueCiel(site, saisie)).not.toThrow()
-    expect(evalueCiel(site, saisie).ok).toBe(true)
+    expect(() => evalueCiel(site, grandeursLieu(saisie))).not.toThrow()
+    expect(evalueCiel(site, grandeursLieu(saisie)).ok).toBe(true)
   })
 
   it('la latitude de 456° est retenue à la borne du domaine', () => {
@@ -122,7 +128,7 @@ describe('le lieu hors domaine ne fait plus tomber la chaîne', () => {
     // Le site NON borné, tel que la chaîne le construisait avant T-0208 : `astronomy-engine`
     // lève ici une chaîne de caractères. `refus()` la relançait depuis un rendu React.
     const brut = { latitudeDeg: 456, longitudeDeg: 5, altitudeM: 200 }
-    const calcul = evalueCiel(brut, lieu({}))
+    const calcul = evalueCiel(brut, grandeursLieu(lieu({})))
     expect(calcul.ok).toBe(false)
     expect(calcul.ok === false && calcul.erreur).toContain('456')
   })
@@ -132,7 +138,7 @@ describe('le lieu hors domaine ne fait plus tomber la chaîne', () => {
     // remonte, et la scène garde le dernier ciel valable plutôt que d'inventer un lieu.
     const saisie = lieu({ latitude: '' })
     expect(siteChiffrable(siteBorne(saisie))).toBe(false)
-    expect(evalueCiel(siteBorne(saisie), saisie).ok).toBe(false)
+    expect(evalueCiel(siteBorne(saisie), grandeursLieu(saisie)).ok).toBe(false)
   })
 })
 
@@ -144,12 +150,14 @@ describe('le matériel hors domaine ne fait plus tomber la chaîne', () => {
   ] as const
 
   it.each(CHAMPS_MATERIEL)('%s hors plage : le matériel se chiffre quand même', (champ, domaine) => {
-    const calcul = evalueMateriel(materiel({ [champ]: horsPlage(domaine) }))
+    const saisie = materiel({ [champ]: horsPlage(domaine) })
+    const calcul = evalueMateriel(saisie, grandeursMateriel(saisie))
     expect(calcul.ok).toBe(true)
   })
 
   it('la focale retenue est celle dont tout le reste est déduit', () => {
-    const calcul = evalueMateriel(materiel({ focale: horsPlage('focale_mm') }))
+    const saisie = materiel({ focale: horsPlage('focale_mm') })
+    const calcul = evalueMateriel(saisie, grandeursMateriel(saisie))
     expect(calcul.ok && calcul.focaleMm).toBe(DOMAINES.focale_mm.max)
   })
 })

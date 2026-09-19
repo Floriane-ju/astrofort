@@ -14,6 +14,7 @@
     "data:build": "node scripts/build-catalogs.ts",
     "icones:build": "node scripts/build-icones.ts",
     "bench:file": "node scripts/bench-incrustation.ts",
+    "bench:frappe": "node scripts/bench-frappe.ts",
     "bench:ciel": "node scripts/bench-ciel.ts",
     "bench:catalogue": "node scripts/bench-catalogue.ts"
   },
